@@ -1,0 +1,11 @@
+{
+  "extraKnownMarketplaces": {
+    "kreante": {
+      "source": { "source": "github", "repo": "Kreante/kreante-skills" }
+    }
+  },
+  "enabledPlugins": {
+    "core@kreante": true,
+    "engineering@kreante": true
+  }
+}
