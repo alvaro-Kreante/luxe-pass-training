@@ -1,0 +1,253 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,500&family=Manrope:wght@400;500;600;700;800&display=swap">
+  <style>
+    :root {
+      --bg-blush-1: #F8EAE1; --bg-blush-2: #FCF4EE;
+      --ink-900: #221A14; --ink-700: #55483D; --ink-400: #9C8D80;
+      --gold-500: #C9A876; --gold-600: #AD8A5C; --gold-100: #F1E3D0;
+      --border: #E7D9C9; --white: #FFFFFF; --panel-black: #15110D;
+      --dark-ink-100: #F1E3D0; --dark-ink-300: #C9BDAF; --dark-ink-500: #8A7C6C;
+      --dark-border: #3A322A; --dark-card: #1E1813; --dark-hover: #241D17;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Manrope', 'Segoe UI', sans-serif; color: var(--dark-ink-100); }
+    h1, h2, h3 { font-family: 'Bodoni Moda', Georgia, 'Times New Roman', serif; margin: 0; font-weight: 500; }
+    a { color: var(--gold-600); text-decoration: none; }
+    a:hover { color: var(--gold-500); }
+    .dk-nav { transition: background .15s ease; cursor: pointer; }
+    .dk-nav:hover { background: var(--dark-hover); }
+    .dk-gold { transition: background .15s ease; }
+    .dk-gold:hover { background: var(--gold-600) !important; }
+    .dk-ghost { transition: background .15s ease, border-color .15s ease; cursor: pointer; }
+    .dk-ghost:hover { background: var(--dark-hover); border-color: var(--gold-500); }
+    .dk-link { transition: color .15s ease; cursor: pointer; }
+    .dk-link:hover { color: var(--gold-500); }
+  </style>
+</helmet>
+
+<div style="display:flex; width:1440px; height:900px; background:var(--panel-black); overflow:hidden; font-family:'Manrope',sans-serif;">
+
+  <!-- Admin sidebar -->
+  <div style="width:248px; min-width:248px; height:900px; background:var(--panel-black); border-right:1px solid var(--dark-border); display:flex; flex-direction:column; padding:30px 18px;">
+
+    <img src="logo.png" alt="En Soleil" style="width:46px; height:auto; margin:0 0 14px 12px;">
+    <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0 0 24px 12px;">Admin console</p>
+
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 14.5v-2.5a7.5 7.5 0 0 1 15 0v2.5"/><rect x="2.8" y="13.2" width="4.2" height="6.4" rx="1.8"/><rect x="17" y="13.2" width="4.2" height="6.4" rx="1.8"/><path d="M19.1 19.6v.4a2.6 2.6 0 0 1-2.6 2.6H13"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--dark-ink-300);">Support</span>
+      <div style="flex:1;"></div>
+      <span style="min-width:22px; height:20px; padding:0 7px; border-radius:10px; background:rgba(201,168,118,0.18); border:1px solid var(--gold-600); color:var(--dark-ink-300); font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center;">22</span>
+    </div>
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.6" r="3.2"/><path d="M3.2 19.6a5.8 5.8 0 0 1 11.6 0"/><path d="M16.2 6.4a3.2 3.2 0 0 1 0 6.4"/><path d="M17.6 14.4a5.8 5.8 0 0 1 3.2 5.2"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--dark-ink-300);">Members</span>
+    </div>
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--dark-ink-300);">Bookings</span>
+    </div>
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 20.5h17"/><path d="M5.5 20.5V9.5l6.5-4.5 6.5 4.5v11"/><path d="M10 20.5v-5h4v5"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--dark-ink-300);">Lounges</span>
+    </div>
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M6.5 20v-5.5M12 20V6M17.5 20v-8.5"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--dark-ink-300);">Analytics</span>
+    </div>
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:rgba(201,168,118,0.16); margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h7l5 5v12H6z"/><path d="M13 3.5v5h5"/><path d="M9 13h6M9 16.5h4"/></svg>
+      <span style="font-size:14px; font-weight:700; color:var(--dark-ink-100);">Reports</span>
+    </div>
+
+    <div style="flex:1;"></div>
+
+    <div class="dk-nav" style="display:flex; align-items:center; gap:11px; padding-top:18px; border-top:1px solid var(--dark-border);">
+      <div style="width:36px; height:36px; min-width:36px; border-radius:10px; background:rgba(201,168,118,0.14); border:1px solid var(--gold-600); display:flex; align-items:center; justify-content:center; font-family:'Bodoni Moda',serif; font-size:16px; color:var(--gold-500);">P</div>
+      <div style="flex:1; overflow:hidden;">
+        <p style="font-size:13px; font-weight:700; color:var(--dark-ink-100); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Priya Raghunathan</p>
+        <p style="font-size:11.5px; color:var(--dark-ink-500); margin:2px 0 0;">Support lead · En Soleil</p>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m8 10 4 4 4-4"/></svg>
+    </div>
+
+  </div>
+
+  <!-- Content -->
+  <div style="position:relative; flex:1; height:900px; display:flex; flex-direction:column; background:radial-gradient(circle at 30% 0%, #2c241c, #15110d 62%); overflow:hidden;">
+    <div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.10) 1px, transparent 1.5px); background-size:18px 18px;"></div>
+
+    <!-- Top bar -->
+    <div style="position:relative; height:64px; min-height:64px; display:flex; align-items:center; gap:12px; padding:0 40px; background:rgba(21,17,13,0.72); border-bottom:1px solid var(--dark-border);">
+      <span class="dk-link" style="font-size:13.5px; font-weight:700; color:var(--dark-ink-500);">Reports</span>
+      <span style="font-size:13.5px; color:var(--dark-ink-500);">›</span>
+      <span style="font-size:13.5px; font-weight:700; color:var(--dark-ink-100);">New export</span>
+      <div style="flex:1;"></div>
+      <span style="display:inline-flex; align-items:center; gap:9px; padding:8px 15px; border-radius:20px; border:1px solid var(--dark-border);">
+        <span style="width:6px; height:6px; border-radius:50%; background:var(--gold-500); box-shadow:0 0 0 3px rgba(201,168,118,0.28);"></span>
+        <span style="font-size:12px; font-weight:700; color:var(--dark-ink-300);">Every action logged</span>
+      </span>
+      <div class="dk-ghost" style="position:relative; width:40px; height:40px; min-width:40px; border-radius:11px; border:1.5px solid var(--dark-border); display:flex; align-items:center; justify-content:center;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8.5a6 6 0 0 0-12 0c0 6-2.2 7.5-2.2 7.5h16.4S18 14.5 18 8.5"/><path d="M13.7 19.5a2 2 0 0 1-3.4 0"/></svg>
+        <span style="position:absolute; top:-6px; right:-6px; min-width:19px; height:19px; padding:0 5px; border-radius:10px; background:var(--gold-500); border:2px solid var(--panel-black); color:var(--panel-black); font-size:10.5px; font-weight:800; display:flex; align-items:center; justify-content:center;">3</span>
+      </div>
+      <div class="dk-ghost" style="width:40px; height:40px; min-width:40px; border-radius:11px; border:1.5px solid var(--dark-border); display:flex; align-items:center; justify-content:center;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-13.7-5.2L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 13.7 5.2L20 16"/><path d="M20 20v-4h-4"/></svg>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div style="position:relative; flex:1; min-height:0; display:flex; flex-direction:column; padding:24px 40px 22px;">
+
+      <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">CSV · delivered now or on a schedule</p>
+      <h1 style="font-size:34px; color:var(--dark-ink-100); margin:9px 0 0;">Export data</h1>
+
+      <div style="display:flex; gap:16px; margin-top:18px; min-height:0;">
+
+        <!-- Form -->
+        <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:14px;">
+
+          <div style="background:var(--dark-card); border:1px solid var(--dark-border); border-radius:20px; padding:20px 22px;">
+            <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">What are you exporting?</p>
+            <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:10px; margin-top:12px;">
+              <div style="display:flex; align-items:center; gap:13px; padding:14px 16px; border-radius:14px; border:1.5px solid var(--gold-500); box-shadow:0 0 0 3px rgba(201,168,118,0.15);">
+                <div style="width:22px; height:22px; min-width:22px; border-radius:50%; border:1.5px solid var(--gold-500); display:flex; align-items:center; justify-content:center;"><div style="width:11px; height:11px; border-radius:50%; background:var(--gold-500);"></div></div>
+                <div style="min-width:0;"><p style="font-size:13.5px; font-weight:700; color:var(--dark-ink-100); margin:0;">Bookings</p><p style="font-size:11.5px; color:var(--dark-ink-500); margin:3px 0 0;">one row per reservation</p></div>
+              </div>
+              <div style="display:flex; align-items:center; gap:13px; padding:14px 16px; border-radius:14px; border:1px solid var(--dark-border);">
+                <div style="width:22px; height:22px; min-width:22px; border-radius:50%; border:1.5px solid var(--dark-border);"></div>
+                <div style="min-width:0;"><p style="font-size:13.5px; font-weight:700; color:var(--dark-ink-300); margin:0;">Members</p><p style="font-size:11.5px; color:var(--dark-ink-500); margin:3px 0 0;">anonymised by default</p></div>
+              </div>
+              <div style="display:flex; align-items:center; gap:13px; padding:14px 16px; border-radius:14px; border:1px solid var(--dark-border);">
+                <div style="width:22px; height:22px; min-width:22px; border-radius:50%; border:1.5px solid var(--dark-border);"></div>
+                <div style="min-width:0;"><p style="font-size:13.5px; font-weight:700; color:var(--dark-ink-300); margin:0;">Revenue by partner</p><p style="font-size:11.5px; color:var(--dark-ink-500); margin:3px 0 0;">one row per lounge and period</p></div>
+              </div>
+              <div style="display:flex; align-items:center; gap:13px; padding:14px 16px; border-radius:14px; border:1px solid var(--dark-border);">
+                <div style="width:22px; height:22px; min-width:22px; border-radius:50%; border:1.5px solid var(--dark-border);"></div>
+                <div style="min-width:0;"><p style="font-size:13.5px; font-weight:700; color:var(--dark-ink-300); margin:0;">No-shows and cancellations</p><p style="font-size:11.5px; color:var(--dark-ink-500); margin:3px 0 0;">with the fee charged on each</p></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:var(--dark-card); border:1px solid var(--dark-border); border-radius:20px; padding:20px 22px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Date range and filters</p>
+              <div style="flex:1;"></div>
+              <span class="dk-link" style="font-size:11.5px; font-weight:700; color:var(--gold-600);">Clear all</span>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:10px; margin-top:12px;">
+              <div style="display:flex; align-items:center; gap:12px; height:50px; padding:0 16px; background:var(--panel-black); border:1.5px solid var(--gold-500); border-radius:12px; box-shadow:0 0 0 3px rgba(201,168,118,0.15);">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg>
+                <span style="font-size:13.5px; font-weight:700; color:var(--dark-ink-100);">September 1 – September 14</span>
+              </div>
+              <span style="padding:8px 16px; border-radius:20px; border:1px solid var(--dark-border);"><span style="font-size:11.5px; font-weight:700; color:var(--dark-ink-300);">Last 7 days</span></span>
+              <span style="padding:8px 16px; border-radius:20px; border:1px solid var(--dark-border);"><span style="font-size:11.5px; font-weight:700; color:var(--dark-ink-300);">Last month</span></span>
+              <span style="padding:8px 16px; border-radius:20px; border:1px solid var(--dark-border);"><span style="font-size:11.5px; font-weight:700; color:var(--dark-ink-300);">Quarter to date</span></span>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:9px; margin-top:12px;">
+              <span style="display:inline-flex; align-items:center; gap:9px; padding:6px 10px 6px 14px; border-radius:20px; background:rgba(201,168,118,0.18); border:1px solid var(--gold-500);"><span style="font-size:11.5px; font-weight:700; color:var(--dark-ink-100);">New York</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-100)" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span>
+              <span style="display:inline-flex; align-items:center; gap:9px; padding:6px 10px 6px 14px; border-radius:20px; background:rgba(201,168,118,0.18); border:1px solid var(--gold-500);"><span style="font-size:11.5px; font-weight:700; color:var(--dark-ink-100);">All 12 lounges</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-100)" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span>
+              <span style="display:inline-flex; align-items:center; gap:9px; padding:6px 10px 6px 14px; border-radius:20px; background:rgba(201,168,118,0.18); border:1px solid var(--gold-500);"><span style="font-size:11.5px; font-weight:700; color:var(--dark-ink-100);">Annual and day pass</span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-100)" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span>
+              <span class="dk-ghost" style="display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:20px; border:1.5px dashed var(--dark-ink-500);"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span style="font-size:11.5px; font-weight:700; color:var(--dark-ink-300);">Add a filter</span></span>
+            </div>
+          </div>
+
+          <div style="background:var(--dark-card); border:1px solid var(--dark-border); border-radius:20px; padding:20px 22px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Columns · 9 of 12 selected</p>
+              <div style="flex:1;"></div>
+              <span class="dk-link" style="font-size:11.5px; font-weight:700; color:var(--gold-600);">Select all</span>
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px 20px; margin-top:14px;">
+              <div style="display:flex; align-items:center; gap:11px;"><div style="width:18px; height:18px; min-width:18px; border-radius:5px; background:var(--gold-500); display:flex; align-items:center; justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg></div><span style="font-size:13px; color:var(--dark-ink-100);">Booking reference</span></div>
+              <div style="display:flex; align-items:center; gap:11px;"><div style="width:18px; height:18px; min-width:18px; border-radius:5px; background:var(--gold-500); display:flex; align-items:center; justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg></div><span style="font-size:13px; color:var(--dark-ink-100);">Member ID</span></div>
+              <div style="display:flex; align-items:center; gap:11px;"><div style="width:18px; height:18px; min-width:18px; border-radius:5px; border:1.5px solid var(--dark-border);"></div><span style="font-size:13px; color:var(--dark-ink-500);">Member name</span></div>
+
+              <div style="display:flex; align-items:center; gap:11px;"><div style="width:18px; height:18px; min-width:18px; border-radius:5px; background:var(--gold-500); display:flex; align-items:center; justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg></div><span style="font-size:13px; color:var(--dark-ink-100);">Lounge</span></div>
+              <div style="display:flex; align-items:center; gap:11px;"><div style="width:18px; height:18px; min-width:18px; border-radius:5px; background:var(--gold-500); display:flex; align-items:center; justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg></div><span style="font-size:13px; color:var(--dark-ink-100);">City</span></div>
+              <div style="display:flex; align-items:center; gap:11px;"><div style="width:18px; height:18px; min-width:18px; border-radius:5px; border:1.5px solid var(--dark-border);"></div><span style="font-size:13px; color:var(--dark-ink-500);">Email address</span></div>
+
+              <div style="display:flex; align-items:center; gap:11px;"><div style="width:18px; height:18px; min-width:18px; border-radius:5px; background:var(--gold-500); display:flex; align-items:center; justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg></div><span style="font-size:13px; color:var(--dark-ink-100);">Booked date</span></div>
+              <div style="display:flex; align-items:center; gap:11px;"><div style="width:18px; height:18px; min-width:18px; border-radius:5px; background:var(--gold-500); display:flex; align-items:center; justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg></div><span style="font-size:13px; color:var(--dark-ink-100);">Arrival time</span></div>
+              <div style="display:flex; align-items:center; gap:11px;"><div style="width:18px; height:18px; min-width:18px; border-radius:5px; border:1.5px solid var(--dark-border);"></div><span style="font-size:13px; color:var(--dark-ink-500);">Phone number</span></div>
+
+              <div style="display:flex; align-items:center; gap:11px;"><div style="width:18px; height:18px; min-width:18px; border-radius:5px; background:var(--gold-500); display:flex; align-items:center; justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg></div><span style="font-size:13px; color:var(--dark-ink-100);">Status</span></div>
+              <div style="display:flex; align-items:center; gap:11px;"><div style="width:18px; height:18px; min-width:18px; border-radius:5px; background:var(--gold-500); display:flex; align-items:center; justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg></div><span style="font-size:13px; color:var(--dark-ink-100);">Amount charged</span></div>
+              <div style="display:flex; align-items:center; gap:11px;"><div style="width:18px; height:18px; min-width:18px; border-radius:5px; background:var(--gold-500); display:flex; align-items:center; justify-content:center;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg></div><span style="font-size:13px; color:var(--dark-ink-100);">Payment method</span></div>
+            </div>
+
+            <div style="margin-top:16px; padding:15px 17px; background:var(--panel-black); border:1px dashed var(--gold-600); border-radius:14px;">
+              <p style="font-size:12px; color:var(--dark-ink-300); margin:0; line-height:1.55;">Names, emails and phone numbers are off by default and replaced by a stable member ID, so the same person can be followed across exports without being identified. Ticking one of the three asks for a reason and puts your name, the reason and the row count in the audit log.</p>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Rail -->
+        <div style="width:344px; min-width:344px; display:flex; flex-direction:column; gap:14px; height:fit-content;">
+
+          <div style="background:var(--dark-card); border:1px solid var(--dark-border); border-radius:20px; padding:20px 22px;">
+            <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">This export</p>
+
+            <div style="display:flex; justify-content:space-between; gap:12px; padding:11px 0; border-top:1px solid rgba(58,50,42,0.6); margin-top:12px;">
+              <span style="font-size:12.5px; color:var(--dark-ink-500);">Rows</span>
+              <span style="font-size:12.5px; font-weight:700; color:var(--dark-ink-100);">1,208 bookings</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; gap:12px; padding:11px 0; border-top:1px solid rgba(58,50,42,0.6);">
+              <span style="font-size:12.5px; color:var(--dark-ink-500);">Columns</span>
+              <span style="font-size:12.5px; font-weight:700; color:var(--dark-ink-100);">9 · no personal data</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; gap:12px; padding:11px 0; border-top:1px solid rgba(58,50,42,0.6);">
+              <span style="font-size:12.5px; color:var(--dark-ink-500);">Format</span>
+              <span style="font-size:12.5px; font-weight:700; color:var(--dark-ink-100);">CSV · UTF-8</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; gap:12px; padding:11px 0 0; border-top:1px solid rgba(58,50,42,0.6);">
+              <span style="font-size:12.5px; color:var(--dark-ink-500);">Estimated size</span>
+              <span style="font-size:12.5px; font-weight:700; color:var(--dark-ink-100);">412 KB</span>
+            </div>
+          </div>
+
+          <div style="background:var(--dark-card); border:1px solid var(--dark-border); border-radius:20px; padding:20px 22px;">
+            <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Delivery</p>
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:12px;">
+              <div style="display:flex; align-items:center; gap:13px; padding:14px 16px; border-radius:14px; border:1.5px solid var(--gold-500); box-shadow:0 0 0 3px rgba(201,168,118,0.15);">
+                <div style="width:22px; height:22px; min-width:22px; border-radius:50%; border:1.5px solid var(--gold-500); display:flex; align-items:center; justify-content:center;"><div style="width:11px; height:11px; border-radius:50%; background:var(--gold-500);"></div></div>
+                <p style="flex:1; font-size:13.5px; font-weight:700; color:var(--dark-ink-100); margin:0;">Download now</p>
+              </div>
+              <div style="display:flex; align-items:center; gap:13px; padding:14px 16px; border-radius:14px; border:1px solid var(--dark-border);">
+                <div style="width:22px; height:22px; min-width:22px; border-radius:50%; border:1.5px solid var(--dark-border);"></div>
+                <div style="flex:1; min-width:0;"><p style="font-size:13.5px; font-weight:700; color:var(--dark-ink-300); margin:0;">Email it to me</p><p style="font-size:11.5px; color:var(--dark-ink-500); margin:3px 0 0;">link valid for 7 days</p></div>
+              </div>
+              <div style="display:flex; align-items:center; gap:13px; padding:14px 16px; border-radius:14px; border:1px solid var(--dark-border);">
+                <div style="width:22px; height:22px; min-width:22px; border-radius:50%; border:1.5px solid var(--dark-border);"></div>
+                <div style="flex:1; min-width:0;"><p style="font-size:13.5px; font-weight:700; color:var(--dark-ink-300); margin:0;">Save as a scheduled report</p><p style="font-size:11.5px; color:var(--dark-ink-500); margin:3px 0 0;">daily, weekly or monthly</p></div>
+              </div>
+            </div>
+
+            <div class="dk-gold" style="display:flex; align-items:center; justify-content:center; gap:10px; height:52px; min-height:52px; margin-top:14px; background:var(--gold-500); border-radius:12px; cursor:pointer;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11"/><path d="m8 11 4 4 4-4"/><path d="M5 19h14"/></svg><span style="font-size:13px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#FFFFFF;">Download CSV</span></div>
+            <p style="font-size:11.5px; color:var(--dark-ink-500); margin:12px 0 0;">Exports over 50,000 rows are built in the background and emailed when they are ready.</p>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

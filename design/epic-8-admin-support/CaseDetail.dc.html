@@ -1,0 +1,276 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,500&family=Manrope:wght@400;500;600;700;800&display=swap">
+  <style>
+    :root {
+      --bg-blush-1: #F8EAE1; --bg-blush-2: #FCF4EE;
+      --ink-900: #221A14; --ink-700: #55483D; --ink-400: #9C8D80;
+      --gold-500: #C9A876; --gold-600: #AD8A5C; --gold-100: #F1E3D0;
+      --border: #E7D9C9; --white: #FFFFFF; --panel-black: #15110D;
+      --dark-ink-100: #F1E3D0; --dark-ink-300: #C9BDAF; --dark-ink-500: #8A7C6C;
+      --dark-border: #3A322A; --dark-card: #1E1813; --dark-hover: #241D17;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Manrope', 'Segoe UI', sans-serif; color: var(--dark-ink-100); }
+    h1, h2, h3 { font-family: 'Bodoni Moda', Georgia, 'Times New Roman', serif; margin: 0; font-weight: 500; }
+    a { color: var(--gold-600); text-decoration: none; }
+    a:hover { color: var(--gold-500); }
+    .dk-nav { transition: background .15s ease; cursor: pointer; }
+    .dk-nav:hover { background: var(--dark-hover); }
+    .dk-gold { transition: background .15s ease; }
+    .dk-gold:hover { background: var(--gold-600) !important; }
+    .dk-ghost { transition: background .15s ease, border-color .15s ease; cursor: pointer; }
+    .dk-ghost:hover { background: var(--dark-hover); border-color: var(--gold-500); }
+    .dk-tr { transition: background .15s ease; cursor: pointer; }
+    .dk-tr:hover { background: var(--dark-hover); }
+    .dk-link { transition: color .15s ease; cursor: pointer; }
+    .dk-link:hover { color: var(--gold-500); }
+  </style>
+</helmet>
+
+<div style="display:flex; width:1440px; height:900px; background:var(--panel-black); overflow:hidden; font-family:'Manrope',sans-serif;">
+
+  <!-- Admin sidebar -->
+  <div style="width:248px; min-width:248px; height:900px; background:var(--panel-black); border-right:1px solid var(--dark-border); display:flex; flex-direction:column; padding:30px 18px;">
+
+    <img src="logo.png" alt="En Soleil" style="width:46px; height:auto; margin:0 0 14px 12px;">
+    <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0 0 24px 12px;">Admin console</p>
+
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:rgba(201,168,118,0.16); margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 14.5v-2.5a7.5 7.5 0 0 1 15 0v2.5"/><rect x="2.8" y="13.2" width="4.2" height="6.4" rx="1.8"/><rect x="17" y="13.2" width="4.2" height="6.4" rx="1.8"/><path d="M19.1 19.6v.4a2.6 2.6 0 0 1-2.6 2.6H13"/></svg>
+      <span style="font-size:14px; font-weight:700; color:var(--dark-ink-100);">Support</span>
+      <div style="flex:1;"></div>
+      <span style="min-width:22px; height:20px; padding:0 7px; border-radius:10px; background:var(--gold-500); color:var(--panel-black); font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center;">22</span>
+    </div>
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.6" r="3.2"/><path d="M3.2 19.6a5.8 5.8 0 0 1 11.6 0"/><path d="M16.2 6.4a3.2 3.2 0 0 1 0 6.4"/><path d="M17.6 14.4a5.8 5.8 0 0 1 3.2 5.2"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--dark-ink-300);">Members</span>
+    </div>
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--dark-ink-300);">Bookings</span>
+    </div>
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 20.5h17"/><path d="M5.5 20.5V9.5l6.5-4.5 6.5 4.5v11"/><path d="M10 20.5v-5h4v5"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--dark-ink-300);">Lounges</span>
+    </div>
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M6.5 20v-5.5M12 20V6M17.5 20v-8.5"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--dark-ink-300);">Analytics</span>
+    </div>
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h7l5 5v12H6z"/><path d="M13 3.5v5h5"/><path d="M9 13h6M9 16.5h4"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--dark-ink-300);">Reports</span>
+    </div>
+
+    <div style="flex:1;"></div>
+
+    <div class="dk-nav" style="display:flex; align-items:center; gap:11px; padding-top:18px; border-top:1px solid var(--dark-border);">
+      <div style="width:36px; height:36px; min-width:36px; border-radius:10px; background:rgba(201,168,118,0.14); border:1px solid var(--gold-600); display:flex; align-items:center; justify-content:center; font-family:'Bodoni Moda',serif; font-size:16px; color:var(--gold-500);">P</div>
+      <div style="flex:1; overflow:hidden;">
+        <p style="font-size:13px; font-weight:700; color:var(--dark-ink-100); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Priya Raghunathan</p>
+        <p style="font-size:11.5px; color:var(--dark-ink-500); margin:2px 0 0;">Support lead · En Soleil</p>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m8 10 4 4 4-4"/></svg>
+    </div>
+
+  </div>
+
+  <!-- Content -->
+  <div style="position:relative; flex:1; height:900px; display:flex; flex-direction:column; background:radial-gradient(circle at 30% 0%, #2c241c, #15110d 62%); overflow:hidden;">
+    <div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.10) 1px, transparent 1.5px); background-size:18px 18px;"></div>
+
+    <!-- Top bar -->
+    <div style="position:relative; height:64px; min-height:64px; display:flex; align-items:center; gap:12px; padding:0 40px; background:rgba(21,17,13,0.72); border-bottom:1px solid var(--dark-border);">
+      <span class="dk-link" style="font-size:13.5px; font-weight:700; color:var(--dark-ink-500);">Support</span>
+      <span style="font-size:13.5px; color:var(--dark-ink-500);">›</span>
+      <span style="font-size:13.5px; font-weight:700; color:var(--dark-ink-100);">CS-4417</span>
+      <div style="flex:1;"></div>
+      <span style="display:inline-flex; align-items:center; gap:9px; padding:8px 15px; border-radius:20px; border:1px solid var(--dark-border);">
+        <span style="width:6px; height:6px; border-radius:50%; background:var(--gold-500); box-shadow:0 0 0 3px rgba(201,168,118,0.28);"></span>
+        <span style="font-size:12px; font-weight:700; color:var(--dark-ink-300);">Every action logged</span>
+      </span>
+      <div class="dk-ghost" style="position:relative; width:40px; height:40px; min-width:40px; border-radius:11px; border:1.5px solid var(--dark-border); display:flex; align-items:center; justify-content:center;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8.5a6 6 0 0 0-12 0c0 6-2.2 7.5-2.2 7.5h16.4S18 14.5 18 8.5"/><path d="M13.7 19.5a2 2 0 0 1-3.4 0"/></svg>
+        <span style="position:absolute; top:-6px; right:-6px; min-width:19px; height:19px; padding:0 5px; border-radius:10px; background:var(--gold-500); border:2px solid var(--panel-black); color:var(--panel-black); font-size:10.5px; font-weight:800; display:flex; align-items:center; justify-content:center;">3</span>
+      </div>
+      <div class="dk-ghost" style="width:40px; height:40px; min-width:40px; border-radius:11px; border:1.5px solid var(--dark-border); display:flex; align-items:center; justify-content:center;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-13.7-5.2L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 13.7 5.2L20 16"/><path d="M20 20v-4h-4"/></svg>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div style="position:relative; flex:1; min-height:0; display:flex; flex-direction:column; padding:22px 40px 20px;">
+
+      <div style="display:flex; align-items:center; gap:24px;">
+        <div style="flex:1; min-width:0;">
+          <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Case CS-4417 · opened today 9:12 AM · Camille Duforest · LP-840388</p>
+          <div style="display:flex; align-items:center; gap:12px; margin-top:9px;">
+            <h1 style="font-size:30px; color:var(--dark-ink-100); margin:0;">No-show fee disputed</h1>
+            <span style="display:inline-flex; align-items:center; gap:7px; padding:6px 13px; border-radius:20px; background:transparent; border:1.5px solid var(--gold-500); box-shadow:0 0 0 3px rgba(201,168,118,0.28);"><span style="width:6px; height:6px; border-radius:50%; background:var(--gold-500);"></span><span style="font-size:11.5px; font-weight:700; color:var(--dark-ink-100);">New · unassigned</span></span>
+          </div>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <div class="dk-ghost" style="display:flex; align-items:center; justify-content:center; gap:9px; padding:0 16px; height:44px; min-height:44px; border:1.5px solid var(--dark-border); border-radius:11px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg><span style="font-size:12.5px; font-weight:700; letter-spacing:0.06em; color:var(--dark-ink-300);">Assign to me</span></div>
+          <div class="dk-ghost" style="display:flex; align-items:center; justify-content:center; gap:9px; padding:0 16px; height:44px; min-height:44px; border:1.5px solid var(--dark-border); border-radius:11px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m6 13 6-6 6 6"/><path d="m6 19 6-6 6 6"/></svg><span style="font-size:12.5px; font-weight:700; letter-spacing:0.06em; color:var(--dark-ink-300);">Escalate</span></div>
+          <div class="dk-gold" style="display:flex; align-items:center; justify-content:center; gap:9px; padding:0 20px; height:44px; min-height:44px; background:var(--gold-500); border-radius:11px; cursor:pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg><span style="font-size:12.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#FFFFFF;">Resolve</span></div>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:16px; margin-top:18px; min-height:0;">
+
+        <!-- Communication log -->
+        <div style="flex:1; min-width:0; display:flex; flex-direction:column;">
+
+          <div style="display:flex; align-items:center; gap:12px;">
+            <h2 style="font-size:22px; color:var(--dark-ink-100); margin:0;">Communication log</h2>
+            <span style="font-size:12px; color:var(--dark-ink-500);">5 entries · newest last</span>
+          </div>
+
+          <div style="margin-top:13px; background:var(--dark-card); border:1px solid var(--dark-border); border-radius:20px; padding:6px 22px 18px;">
+
+            <div style="display:flex; gap:14px; padding:16px 0; border-bottom:1px solid rgba(58,50,42,0.6);">
+              <div style="width:36px; height:36px; min-width:36px; border-radius:10px; background:var(--panel-black); border:1px solid var(--dark-border); display:flex; align-items:center; justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4.5 3.5 19h17z"/><path d="M12 10.5v4M12 17h.01"/></svg></div>
+              <div style="flex:1; min-width:0;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <p style="font-size:13px; font-weight:700; color:var(--dark-ink-300); margin:0;">System · no-show reported</p>
+                  <div style="flex:1;"></div>
+                  <p style="font-size:11.5px; color:var(--dark-ink-500); margin:0;">Sat Sep 14 · 4:02 PM</p>
+                </div>
+                <p style="font-size:12.5px; color:var(--dark-ink-300); margin:6px 0 0;">The Ainsworth (Dana O.) reported the 10:30 AM arrival as a no-show. The admission window closed at 2:30 PM. The flat fee of $35.00 was charged to the card on file, Visa 4242.</p>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:14px; padding:16px 0; border-bottom:1px solid rgba(58,50,42,0.6);">
+              <div style="width:36px; height:36px; min-width:36px; border-radius:10px; background:var(--panel-black); border:1px solid var(--dark-border); display:flex; align-items:center; justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><path d="m4 7.5 8 5.5 8-5.5"/></svg></div>
+              <div style="flex:1; min-width:0;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <p style="font-size:13px; font-weight:700; color:var(--dark-ink-300); margin:0;">Email sent to member · automatic</p>
+                  <div style="flex:1;"></div>
+                  <p style="font-size:11.5px; color:var(--dark-ink-500); margin:0;">Sat Sep 14 · 4:03 PM</p>
+                </div>
+                <p style="font-size:12.5px; color:var(--dark-ink-300); margin:6px 0 0;">"No-show recorded — The Ainsworth, September 14" · <span class="dk-link" style="color:var(--gold-600); font-weight:700;">view the email as she received it</span></p>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:14px; padding:16px 0; border-bottom:1px solid rgba(58,50,42,0.6);">
+              <div style="width:36px; height:36px; min-width:36px; border-radius:50%; background:var(--gold-500); display:flex; align-items:center; justify-content:center; color:var(--white); font-family:'Bodoni Moda',serif; font-size:13px; font-weight:700;">CD</div>
+              <div style="flex:1; min-width:0;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <p style="font-size:13px; font-weight:700; color:var(--dark-ink-100); margin:0;">Camille Duforest · by email</p>
+                  <div style="flex:1;"></div>
+                  <p style="font-size:11.5px; color:var(--dark-ink-500); margin:0;">Today · 9:12 AM</p>
+                </div>
+                <div style="margin-top:9px; padding:14px 16px; background:var(--panel-black); border:1px solid var(--gold-600); border-radius:14px;">
+                  <p style="font-size:13px; color:var(--dark-ink-100); margin:0; line-height:1.55;">I did go. I was at the door at 10:35 and the person at reception told me they were at capacity and to come back later. I came back a little after 1 PM and got the same answer. I would rather not be charged for a visit the lounge could not take.</p>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:14px; padding:16px 0; border-bottom:1px solid rgba(58,50,42,0.6);">
+              <div style="width:36px; height:36px; min-width:36px; border-radius:10px; background:rgba(201,168,118,0.16); border:1px solid var(--gold-600); display:flex; align-items:center; justify-content:center; font-family:'Bodoni Moda',serif; font-size:13px; color:var(--gold-500);">P</div>
+              <div style="flex:1; min-width:0;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <p style="font-size:13px; font-weight:700; color:var(--dark-ink-100); margin:0;">Priya Raghunathan</p>
+                  <span style="display:inline-flex; align-items:center; padding:4px 10px; border-radius:20px; border:1px dashed var(--dark-ink-500);"><span style="font-size:10.5px; font-weight:700; color:var(--dark-ink-300);">Internal note · not sent to the member</span></span>
+                  <div style="flex:1;"></div>
+                  <p style="font-size:11.5px; color:var(--dark-ink-500); margin:0;">Today · 9:40 AM</p>
+                </div>
+                <p style="font-size:12.5px; color:var(--dark-ink-300); margin:6px 0 0;">Partner list confirms the 10:30 AM slot and no tick against her name. Asked The Ainsworth whether front of house turned people away around 10:35.</p>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:14px; padding:16px 0 0;">
+              <div style="width:36px; height:36px; min-width:36px; border-radius:10px; background:rgba(201,168,118,0.14); border:1px solid var(--gold-600); display:flex; align-items:center; justify-content:center; font-family:'Bodoni Moda',serif; font-size:14px; color:var(--gold-500);">A</div>
+              <div style="flex:1; min-width:0;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <p style="font-size:13px; font-weight:700; color:var(--dark-ink-100); margin:0;">Dana O. · The Ainsworth</p>
+                  <div style="flex:1;"></div>
+                  <p style="font-size:11.5px; color:var(--dark-ink-500); margin:0;">Today · 10:08 AM</p>
+                </div>
+                <p style="font-size:12.5px; color:var(--dark-ink-300); margin:6px 0 0;">"We were full from about 10:20 to 11:15 on Saturday and did turn a few people away at the door. If she was one of them we would not have ticked her in — the fee should not stand."</p>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Composer -->
+          <div style="margin-top:14px; background:var(--dark-card); border:1px solid var(--dark-border); border-radius:20px; padding:16px 20px 18px;">
+            <div style="display:flex; align-items:center; gap:5px; width:298px; padding:5px; background:var(--panel-black); border:1px solid var(--dark-border); border-radius:12px;">
+              <div style="flex:1; height:36px; border-radius:9px; background:var(--gold-500); display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; font-weight:700; color:#FFFFFF;">Reply to member</span></div>
+              <div style="flex:1; height:36px; border-radius:9px; display:flex; align-items:center; justify-content:center;"><span style="font-size:12px; font-weight:700; color:var(--dark-ink-300);">Internal note</span></div>
+            </div>
+            <div style="margin-top:12px; min-height:76px; padding:13px 15px; background:var(--panel-black); border:1px solid var(--dark-border); border-radius:12px;">
+              <p style="font-size:13px; color:var(--dark-ink-500); margin:0; line-height:1.55;">Write to Camille. Anything you send here goes to camille.duforest@example.com and is kept on this case…</p>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px; margin-top:12px;">
+              <div class="dk-ghost" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 14px; border:1.5px solid var(--dark-border); border-radius:11px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5 12 19.5a4.5 4.5 0 0 1-6.4-6.4l8-8a3 3 0 0 1 4.3 4.3l-8 8a1.5 1.5 0 0 1-2.2-2.2l7.3-7.3"/></svg><span style="font-size:12px; font-weight:700; color:var(--dark-ink-300);">Attach</span></div>
+              <div class="dk-ghost" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 14px; border:1.5px solid var(--dark-border); border-radius:11px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12v16l-6-3.5L6 20z"/></svg><span style="font-size:12px; font-weight:700; color:var(--dark-ink-300);">Insert a template</span></div>
+              <div style="flex:1;"></div>
+              <p style="font-size:11.5px; color:var(--dark-ink-500); margin:0;">Replies arrive as email and as a notification in her app</p>
+              <div class="dk-gold" style="display:flex; align-items:center; justify-content:center; gap:9px; padding:0 20px; height:44px; min-height:44px; background:var(--gold-500); border-radius:11px; cursor:pointer;"><span style="font-size:12.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#FFFFFF;">Send reply</span></div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Rail -->
+        <div style="width:344px; min-width:344px; display:flex; flex-direction:column; gap:14px;">
+
+          <div style="background:var(--dark-card); border:1px solid var(--dark-border); border-radius:20px; padding:20px 22px;">
+            <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Resolution</p>
+
+            <p style="font-size:12px; font-weight:700; color:var(--dark-ink-300); margin:14px 0 7px;">Reason</p>
+            <div style="display:flex; align-items:center; gap:10px; height:44px; padding:0 15px; background:var(--panel-black); border:1.5px solid var(--gold-500); border-radius:11px; box-shadow:0 0 0 3px rgba(201,168,118,0.15);">
+              <span style="flex:1; font-size:13px; font-weight:600; color:var(--dark-ink-100);">Lounge was at capacity</span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m8 10 4 4 4-4"/></svg>
+            </div>
+
+            <p style="font-size:12px; font-weight:700; color:var(--dark-ink-300); margin:14px 0 7px;">Resolution note</p>
+            <div style="min-height:70px; padding:12px 14px; background:var(--panel-black); border:1px solid var(--dark-border); border-radius:11px;">
+              <p style="font-size:12.5px; color:var(--dark-ink-300); margin:0; line-height:1.5;">Partner confirms the door was closed between 10:20 and 11:15. Fee waived and the no-show removed from her record.</p>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:14px;">
+              <div class="dk-gold" style="display:flex; align-items:center; justify-content:center; gap:9px; height:52px; min-height:52px; background:var(--gold-500); border-radius:12px; cursor:pointer;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M4 4v4h4"/></svg><span style="font-size:13px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#FFFFFF;">Waive and refund $35.00</span></div>
+              <div class="dk-ghost" style="display:flex; align-items:center; justify-content:center; gap:9px; height:44px; min-height:44px; border:1.5px solid var(--dark-border); border-radius:11px;"><span style="font-size:12.5px; font-weight:700; letter-spacing:0.06em; color:var(--dark-ink-300);">Keep the fee and reply</span></div>
+            </div>
+          </div>
+
+          <div style="background:var(--dark-card); border:1px solid var(--dark-border); border-radius:20px; padding:20px 22px;">
+            <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Escalate to a manager</p>
+            <p style="font-size:12.5px; color:var(--dark-ink-300); margin:11px 0 0;">A refund over $100.00, a second waiver in twelve months or anything touching a partner agreement needs a manager.</p>
+            <div style="display:flex; align-items:center; gap:11px; margin-top:13px; padding:11px 14px; background:var(--panel-black); border:1px solid var(--dark-border); border-radius:12px;">
+              <div style="width:32px; height:32px; min-width:32px; border-radius:50%; background:var(--gold-500); display:flex; align-items:center; justify-content:center; color:var(--white); font-family:'Bodoni Moda',serif; font-size:12px; font-weight:700;">DM</div>
+              <div style="flex:1; min-width:0;">
+                <p style="font-size:12.5px; font-weight:700; color:var(--dark-ink-100); margin:0;">Dana Mbeki</p>
+                <p style="font-size:11px; color:var(--dark-ink-500); margin:2px 0 0;">Duty manager today · 3 open escalations</p>
+              </div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m8 10 4 4 4-4"/></svg>
+            </div>
+            <div class="dk-ghost" style="display:flex; align-items:center; justify-content:center; gap:9px; height:44px; min-height:44px; margin-top:11px; border:1.5px solid var(--dark-border); border-radius:11px;"><span style="font-size:12.5px; font-weight:700; letter-spacing:0.06em; color:var(--dark-ink-300);">Escalate with this thread</span></div>
+          </div>
+
+          <div style="background:var(--panel-black); border:1px dashed var(--gold-600); border-radius:16px; padding:14px 16px;">
+            <p style="font-size:11.5px; color:var(--dark-ink-300); margin:0;">Escalating moves the case to the manager's queue and notifies them. Camille sees nothing change until someone replies to her.</p>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

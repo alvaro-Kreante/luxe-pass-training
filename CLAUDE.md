@@ -118,8 +118,7 @@ Al terminar una fase, actualizar la tabla de fases de `DESIGN-SYSTEM.md` con el 
 y, si la fase fijó un patrón o un componente nuevo, añadirlo a las secciones 4 y 5 del mismo
 documento antes de cerrarla.
 
-Estado: diseñados los Epics 1–7. Quedan el **Epic 8** (Admin & Support) y el **Epic 9**
-(Membership & Referrals).
+Estado: diseñados los Epics 1–8. Queda el **Epic 9** (Membership & Referrals).
 
 ## Al editar specs
 

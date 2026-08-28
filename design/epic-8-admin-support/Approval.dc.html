@@ -1,0 +1,276 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,500&family=Manrope:wght@400;500;600;700;800&display=swap">
+  <style>
+    :root {
+      --bg-blush-1: #F8EAE1; --bg-blush-2: #FCF4EE;
+      --ink-900: #221A14; --ink-700: #55483D; --ink-400: #9C8D80;
+      --gold-500: #C9A876; --gold-600: #AD8A5C; --gold-100: #F1E3D0;
+      --border: #E7D9C9; --white: #FFFFFF; --panel-black: #15110D;
+      --dark-ink-100: #F1E3D0; --dark-ink-300: #C9BDAF; --dark-ink-500: #8A7C6C;
+      --dark-border: #3A322A; --dark-card: #1E1813; --dark-hover: #241D17;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Manrope', 'Segoe UI', sans-serif; color: var(--dark-ink-100); }
+    h1, h2, h3 { font-family: 'Bodoni Moda', Georgia, 'Times New Roman', serif; margin: 0; font-weight: 500; }
+    a { color: var(--gold-600); text-decoration: none; }
+    a:hover { color: var(--gold-500); }
+    .dk-nav { transition: background .15s ease; cursor: pointer; }
+    .dk-nav:hover { background: var(--dark-hover); }
+    .dk-gold { transition: background .15s ease; }
+    .dk-gold:hover { background: var(--gold-600) !important; }
+    .dk-ghost { transition: background .15s ease, border-color .15s ease; cursor: pointer; }
+    .dk-ghost:hover { background: var(--dark-hover); border-color: var(--gold-500); }
+    .dk-tr { transition: background .15s ease; cursor: pointer; }
+    .dk-tr:hover { background: var(--dark-hover); }
+    .dk-link { transition: color .15s ease; cursor: pointer; }
+    .dk-link:hover { color: var(--gold-500); }
+  </style>
+</helmet>
+
+<div style="display:flex; width:1440px; height:900px; background:var(--panel-black); overflow:hidden; font-family:'Manrope',sans-serif;">
+
+  <!-- Admin sidebar -->
+  <div style="width:248px; min-width:248px; height:900px; background:var(--panel-black); border-right:1px solid var(--dark-border); display:flex; flex-direction:column; padding:30px 18px;">
+
+    <img src="logo.png" alt="En Soleil" style="width:46px; height:auto; margin:0 0 14px 12px;">
+    <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0 0 24px 12px;">Admin console</p>
+
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 14.5v-2.5a7.5 7.5 0 0 1 15 0v2.5"/><rect x="2.8" y="13.2" width="4.2" height="6.4" rx="1.8"/><rect x="17" y="13.2" width="4.2" height="6.4" rx="1.8"/><path d="M19.1 19.6v.4a2.6 2.6 0 0 1-2.6 2.6H13"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--dark-ink-300);">Support</span>
+      <div style="flex:1;"></div>
+      <span style="min-width:22px; height:20px; padding:0 7px; border-radius:10px; background:rgba(201,168,118,0.18); border:1px solid var(--gold-600); color:var(--dark-ink-300); font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center;">22</span>
+    </div>
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.6" r="3.2"/><path d="M3.2 19.6a5.8 5.8 0 0 1 11.6 0"/><path d="M16.2 6.4a3.2 3.2 0 0 1 0 6.4"/><path d="M17.6 14.4a5.8 5.8 0 0 1 3.2 5.2"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--dark-ink-300);">Members</span>
+    </div>
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--dark-ink-300);">Bookings</span>
+    </div>
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:rgba(201,168,118,0.16); margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 20.5h17"/><path d="M5.5 20.5V9.5l6.5-4.5 6.5 4.5v11"/><path d="M10 20.5v-5h4v5"/></svg>
+      <span style="font-size:14px; font-weight:700; color:var(--dark-ink-100);">Lounges</span>
+      <div style="flex:1;"></div>
+      <span style="min-width:22px; height:20px; padding:0 7px; border-radius:10px; background:var(--gold-500); color:var(--panel-black); font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center;">3</span>
+    </div>
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M6.5 20v-5.5M12 20V6M17.5 20v-8.5"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--dark-ink-300);">Analytics</span>
+    </div>
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h7l5 5v12H6z"/><path d="M13 3.5v5h5"/><path d="M9 13h6M9 16.5h4"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--dark-ink-300);">Reports</span>
+    </div>
+
+    <div style="flex:1;"></div>
+
+    <div class="dk-nav" style="display:flex; align-items:center; gap:11px; padding-top:18px; border-top:1px solid var(--dark-border);">
+      <div style="width:36px; height:36px; min-width:36px; border-radius:10px; background:rgba(201,168,118,0.14); border:1px solid var(--gold-600); display:flex; align-items:center; justify-content:center; font-family:'Bodoni Moda',serif; font-size:16px; color:var(--gold-500);">P</div>
+      <div style="flex:1; overflow:hidden;">
+        <p style="font-size:13px; font-weight:700; color:var(--dark-ink-100); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Priya Raghunathan</p>
+        <p style="font-size:11.5px; color:var(--dark-ink-500); margin:2px 0 0;">Support lead · En Soleil</p>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m8 10 4 4 4-4"/></svg>
+    </div>
+
+  </div>
+
+  <!-- Content -->
+  <div style="position:relative; flex:1; height:900px; display:flex; flex-direction:column; background:radial-gradient(circle at 30% 0%, #2c241c, #15110d 62%); overflow:hidden;">
+    <div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.10) 1px, transparent 1.5px); background-size:18px 18px;"></div>
+
+    <!-- Top bar -->
+    <div style="position:relative; height:64px; min-height:64px; display:flex; align-items:center; gap:12px; padding:0 40px; background:rgba(21,17,13,0.72); border-bottom:1px solid var(--dark-border);">
+      <span class="dk-link" style="font-size:13.5px; font-weight:700; color:var(--dark-ink-500);">Lounges</span>
+      <span style="font-size:13.5px; color:var(--dark-ink-500);">›</span>
+      <span style="font-size:13.5px; font-weight:700; color:var(--dark-ink-100);">Approvals</span>
+      <div style="flex:1;"></div>
+      <span style="display:inline-flex; align-items:center; gap:9px; padding:8px 15px; border-radius:20px; border:1px solid var(--dark-border);">
+        <span style="width:6px; height:6px; border-radius:50%; background:var(--gold-500); box-shadow:0 0 0 3px rgba(201,168,118,0.28);"></span>
+        <span style="font-size:12px; font-weight:700; color:var(--dark-ink-300);">Every action logged</span>
+      </span>
+      <div class="dk-ghost" style="position:relative; width:40px; height:40px; min-width:40px; border-radius:11px; border:1.5px solid var(--dark-border); display:flex; align-items:center; justify-content:center;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8.5a6 6 0 0 0-12 0c0 6-2.2 7.5-2.2 7.5h16.4S18 14.5 18 8.5"/><path d="M13.7 19.5a2 2 0 0 1-3.4 0"/></svg>
+        <span style="position:absolute; top:-6px; right:-6px; min-width:19px; height:19px; padding:0 5px; border-radius:10px; background:var(--gold-500); border:2px solid var(--panel-black); color:var(--panel-black); font-size:10.5px; font-weight:800; display:flex; align-items:center; justify-content:center;">3</span>
+      </div>
+      <div class="dk-ghost" style="width:40px; height:40px; min-width:40px; border-radius:11px; border:1.5px solid var(--dark-border); display:flex; align-items:center; justify-content:center;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-13.7-5.2L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 13.7 5.2L20 16"/><path d="M20 20v-4h-4"/></svg>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div style="position:relative; flex:1; min-height:0; display:flex; flex-direction:column; padding:24px 40px 22px;">
+
+      <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">3 changes · The Vestry · submitted 9:52 AM by Theo Baptiste</p>
+      <h1 style="font-size:34px; color:var(--dark-ink-100); margin:9px 0 0;">Approve before members see it</h1>
+
+      <div style="display:flex; gap:16px; margin-top:18px; min-height:0;">
+
+        <!-- Queue -->
+        <div style="width:380px; min-width:380px; background:var(--dark-card); border:1px solid var(--dark-border); border-radius:20px; overflow:hidden; height:fit-content;">
+          <div style="display:flex; align-items:center; height:42px; padding:0 22px; border-bottom:1px solid var(--dark-border);">
+            <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">The queue</p>
+          </div>
+
+          <div class="dk-tr" style="display:flex; align-items:center; gap:13px; padding:15px 22px; border-bottom:1px solid rgba(58,50,42,0.6); background:rgba(201,168,118,0.09); box-shadow:inset 3px 0 0 var(--gold-500);">
+            <div style="width:36px; height:36px; min-width:36px; border-radius:10px; background:rgba(201,168,118,0.16); border:1px solid var(--gold-600); display:flex; align-items:center; justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4v6M4.5 4h5M7 10c0 5 10 4 10 10"/><path d="M17 4v16"/></svg></div>
+            <div style="flex:1; min-width:0;">
+              <p style="font-size:13px; font-weight:700; color:var(--dark-ink-100); margin:0;">Showers added</p>
+              <p style="font-size:11.5px; color:var(--dark-ink-500); margin:3px 0 0;">The Vestry · amenity list · 9:52 AM</p>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m10 7 5 5-5 5"/></svg>
+          </div>
+
+          <div class="dk-tr" style="display:flex; align-items:center; gap:13px; padding:15px 22px; border-bottom:1px solid rgba(58,50,42,0.6);">
+            <div style="width:36px; height:36px; min-width:36px; border-radius:10px; background:var(--panel-black); border:1px solid var(--dark-border); display:flex; align-items:center; justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-300)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 1.8"/></svg></div>
+            <div style="flex:1; min-width:0;">
+              <p style="font-size:13px; font-weight:700; color:var(--dark-ink-300); margin:0;">Friday hours to 11 PM</p>
+              <p style="font-size:11.5px; color:var(--dark-ink-500); margin:3px 0 0;">The Vestry · opening hours · 9:52 AM</p>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m10 7 5 5-5 5"/></svg>
+          </div>
+
+          <div class="dk-tr" style="display:flex; align-items:center; gap:13px; padding:15px 22px; border-bottom:1px solid rgba(58,50,42,0.6);">
+            <div style="width:36px; height:36px; min-width:36px; border-radius:10px; background:var(--panel-black); border:1px solid var(--dark-border); display:flex; align-items:center; justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-300)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5.5" width="17" height="13" rx="2.5"/><path d="m6 15 4-4 3.5 3.5 2.5-2 2.5 2.5"/><circle cx="9" cy="9.5" r="1.2"/></svg></div>
+            <div style="flex:1; min-width:0;">
+              <p style="font-size:13px; font-weight:700; color:var(--dark-ink-300); margin:0;">Shower suite photo</p>
+              <p style="font-size:11.5px; color:var(--dark-ink-500); margin:3px 0 0;">The Vestry · gallery · 9:52 AM</p>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m10 7 5 5-5 5"/></svg>
+          </div>
+
+          <div style="padding:15px 22px;">
+            <p style="font-size:11.5px; color:var(--dark-ink-500); margin:0;">Approving all three at once publishes them together, so members never see half a change.</p>
+            <div class="dk-ghost" style="display:flex; align-items:center; justify-content:center; gap:9px; height:44px; min-height:44px; margin-top:12px; border:1.5px solid var(--dark-border); border-radius:11px;"><span style="font-size:12.5px; font-weight:700; letter-spacing:0.06em; color:var(--dark-ink-300);">Open the lounge editor</span></div>
+          </div>
+        </div>
+
+        <!-- Side by side preview -->
+        <div style="flex:1; min-width:0; display:flex; flex-direction:column;">
+
+          <div style="display:flex; gap:16px;">
+
+            <!-- Live now -->
+            <div style="flex:1; min-width:0;">
+              <div style="display:flex; align-items:center; gap:9px;">
+                <span style="width:7px; height:7px; border-radius:50%; background:var(--dark-ink-500);"></span>
+                <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Live now</p>
+              </div>
+              <div style="margin-top:11px; padding:16px; border-radius:20px; background:linear-gradient(180deg, var(--bg-blush-2), var(--bg-blush-1)); opacity:0.72;">
+                <div style="background:var(--white); border-radius:18px; box-shadow:0 10px 30px -14px rgba(34,26,20,0.14); overflow:hidden;">
+                  <div style="position:relative; height:104px; background:radial-gradient(circle at 30% 20%, #3a2f25, #15110d 72%);">
+                    <div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.14) 1px, transparent 1.5px); background-size:18px 18px;"></div>
+                    <span style="position:absolute; right:12px; bottom:11px; padding:4px 10px; border-radius:20px; background:rgba(21,17,13,0.62);"><span style="font-size:10.5px; font-weight:700; color:#F1E3D0;">1 / 2</span></span>
+                  </div>
+                  <div style="padding:16px 18px 18px;">
+                    <h2 style="font-size:19px; color:var(--ink-900); margin:0;">The Vestry</h2>
+                    <p style="font-size:12px; color:var(--ink-400); margin:6px 0 0;">Tribeca · New York · Open until 9 PM</p>
+                    <div style="display:flex; flex-wrap:wrap; gap:7px; margin-top:12px;">
+                      <span style="padding:6px 12px; border-radius:20px; background:var(--gold-100);"><span style="font-size:11px; font-weight:700; color:var(--ink-900);">WiFi</span></span>
+                      <span style="padding:6px 12px; border-radius:20px; background:var(--gold-100);"><span style="font-size:11px; font-weight:700; color:var(--ink-900);">Co-working</span></span>
+                      <span style="padding:6px 12px; border-radius:20px; background:var(--gold-100);"><span style="font-size:11px; font-weight:700; color:var(--ink-900);">Bar</span></span>
+                      <span style="padding:6px 12px; border-radius:20px; background:var(--gold-100);"><span style="font-size:11px; font-weight:700; color:var(--ink-900);">Luggage</span></span>
+                      <span style="padding:6px 12px; border-radius:20px; background:var(--gold-100);"><span style="font-size:11px; font-weight:700; color:var(--ink-900);">Day rooms</span></span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; gap:12px; padding:11px 0 0; border-top:1px solid var(--border); margin-top:14px;">
+                      <span style="font-size:12px; color:var(--ink-700);">Friday</span>
+                      <span style="font-size:12px; font-weight:700; color:var(--ink-900);">8 AM – 9 PM</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; gap:12px; padding:10px 0 0;">
+                      <span style="font-size:12px; color:var(--ink-700);">Photos</span>
+                      <span style="font-size:12px; font-weight:700; color:var(--ink-900);">2</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Proposed -->
+            <div style="flex:1; min-width:0;">
+              <div style="display:flex; align-items:center; gap:9px;">
+                <span style="width:7px; height:7px; border-radius:50%; background:var(--gold-500); box-shadow:0 0 0 3px rgba(201,168,118,0.28);"></span>
+                <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-500); margin:0;">Proposed</p>
+              </div>
+              <div style="margin-top:11px; padding:16px; border-radius:20px; background:linear-gradient(180deg, var(--bg-blush-2), var(--bg-blush-1)); border:1.5px solid var(--gold-500); box-shadow:0 0 0 3px rgba(201,168,118,0.15);">
+                <div style="background:var(--white); border-radius:18px; box-shadow:0 10px 30px -14px rgba(34,26,20,0.14); overflow:hidden;">
+                  <div style="position:relative; height:104px; background:radial-gradient(circle at 45% 60%, #3a2f25, #15110d 72%);">
+                    <div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.14) 1px, transparent 1.5px); background-size:18px 18px;"></div>
+                    <span style="position:absolute; right:12px; bottom:11px; padding:4px 10px; border-radius:20px; background:rgba(21,17,13,0.62);"><span style="font-size:10.5px; font-weight:700; color:#F1E3D0;">3 / 3</span></span>
+                  </div>
+                  <div style="padding:16px 18px 18px;">
+                    <h2 style="font-size:19px; color:var(--ink-900); margin:0;">The Vestry</h2>
+                    <p style="font-size:12px; color:var(--ink-400); margin:6px 0 0;">Tribeca · New York · Open until 11 PM</p>
+                    <div style="display:flex; flex-wrap:wrap; gap:7px; margin-top:12px;">
+                      <span style="padding:6px 12px; border-radius:20px; background:var(--gold-100);"><span style="font-size:11px; font-weight:700; color:var(--ink-900);">WiFi</span></span>
+                      <span style="padding:6px 12px; border-radius:20px; background:var(--gold-100);"><span style="font-size:11px; font-weight:700; color:var(--ink-900);">Co-working</span></span>
+                      <span style="padding:6px 12px; border-radius:20px; background:var(--gold-100);"><span style="font-size:11px; font-weight:700; color:var(--ink-900);">Bar</span></span>
+                      <span style="padding:6px 12px; border-radius:20px; background:var(--gold-500);"><span style="font-size:11px; font-weight:700; color:var(--white);">Showers</span></span>
+                      <span style="padding:6px 12px; border-radius:20px; background:var(--gold-100);"><span style="font-size:11px; font-weight:700; color:var(--ink-900);">Luggage</span></span>
+                      <span style="padding:6px 12px; border-radius:20px; background:var(--gold-100);"><span style="font-size:11px; font-weight:700; color:var(--ink-900);">Day rooms</span></span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; gap:12px; padding:11px 0 0; border-top:1px solid var(--border); margin-top:14px;">
+                      <span style="font-size:12px; color:var(--ink-700);">Friday</span>
+                      <span style="font-size:12px; font-weight:700; color:var(--gold-600);">8 AM – 11 PM</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; gap:12px; padding:10px 0 0;">
+                      <span style="font-size:12px; color:var(--ink-700);">Photos</span>
+                      <span style="font-size:12px; font-weight:700; color:var(--gold-600);">3</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Impact and actions -->
+          <div style="margin-top:16px; background:var(--dark-card); border:1px solid var(--dark-border); border-radius:20px; padding:18px 22px;">
+            <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">What approving does</p>
+            <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; margin-top:12px;">
+              <div style="padding:12px 14px; background:var(--panel-black); border:1px solid var(--dark-border); border-radius:14px;">
+                <p style="font-size:11px; color:var(--dark-ink-500); margin:0;">Appears in</p>
+                <p style="font-size:15px; font-weight:800; color:var(--dark-ink-100); margin:6px 0 0;">62% of searches</p>
+                <p style="font-size:11px; color:var(--dark-ink-500); margin:5px 0 0;">the Showers filter</p>
+              </div>
+              <div style="padding:12px 14px; background:var(--panel-black); border:1px solid var(--dark-border); border-radius:14px;">
+                <p style="font-size:11px; color:var(--dark-ink-500); margin:0;">Opens</p>
+                <p style="font-size:15px; font-weight:800; color:var(--dark-ink-100); margin:6px 0 0;">10 more seats</p>
+                <p style="font-size:11px; color:var(--dark-ink-500); margin:5px 0 0;">Fridays, 9–11 PM</p>
+              </div>
+              <div style="padding:12px 14px; background:var(--panel-black); border:1px solid var(--dark-border); border-radius:14px;">
+                <p style="font-size:11px; color:var(--dark-ink-500); margin:0;">Reaches members</p>
+                <p style="font-size:15px; font-weight:800; color:var(--dark-ink-100); margin:6px 0 0;">Immediately</p>
+                <p style="font-size:11px; color:var(--dark-ink-500); margin:5px 0 0;">no notification is sent</p>
+              </div>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:12px; margin-top:16px;">
+              <div class="dk-ghost" style="display:flex; align-items:center; justify-content:center; height:52px; min-height:52px; padding:0 22px; border:1.5px dashed var(--dark-ink-500); border-radius:12px;"><span style="font-size:12.5px; font-weight:700; letter-spacing:0.06em; color:var(--dark-ink-300);">Send back with a note</span></div>
+              <div style="flex:1;"></div>
+              <p style="font-size:11.5px; color:var(--dark-ink-500); margin:0;">Approved by you · Theo is told either way</p>
+              <div class="dk-gold" style="display:flex; align-items:center; justify-content:center; gap:10px; height:52px; min-height:52px; padding:0 26px; background:var(--gold-500); border-radius:12px; cursor:pointer;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg><span style="font-size:13px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#FFFFFF;">Approve and publish</span></div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

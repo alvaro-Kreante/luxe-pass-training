@@ -1,0 +1,25 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "1. Support desk" },
+    { "file": "MemberSearch.dc.html", "x": 1540, "y": 0, "w": 1440, "h": 900, "title": "2. Find a member" },
+    { "file": "MemberProfile.dc.html", "x": 3080, "y": 0, "w": 1440, "h": 900, "title": "3. Everything about one member" },
+    { "file": "CaseDetail.dc.html", "x": 0, "y": 1050, "w": 1440, "h": 900, "title": "4. One case, end to end" },
+    { "file": "BookingOverride.dc.html", "x": 1540, "y": 1050, "w": 1440, "h": 900, "title": "5. Modify a booking, with override" },
+    { "file": "Refund.dc.html", "x": 3080, "y": 1050, "w": 1440, "h": 900, "title": "6. Refund the fee" },
+    { "file": "Analytics.dc.html", "x": 0, "y": 2100, "w": 1440, "h": 900, "title": "7. Network performance" },
+    { "file": "Popularity.dc.html", "x": 1540, "y": 2100, "w": 1440, "h": 900, "title": "8. Where the demand is" },
+    { "file": "Export.dc.html", "x": 3080, "y": 2100, "w": 1440, "h": 900, "title": "9. Export data" },
+    { "file": "ScheduledReports.dc.html", "x": 4620, "y": 2100, "w": 1440, "h": 900, "title": "10. Reports that send themselves" },
+    { "file": "Lounges.dc.html", "x": 0, "y": 3150, "w": 1440, "h": 900, "title": "11. Lounges and bulk changes" },
+    { "file": "LoungeEdit.dc.html", "x": 1540, "y": 3150, "w": 1440, "h": 900, "title": "12. Edit a lounge" },
+    { "file": "Approval.dc.html", "x": 3080, "y": 3150, "w": 1440, "h": 900, "title": "13. Approve before members see it" }
+  ],
+  "annotations": [
+    { "id": "phase-note", "x": 0, "y": -150, "w": 940, "text": "LuxePass — Epic 8: Admin & Support\nThe second dark surface of the system: same gold, same Bodoni and Manrope, same control heights as the Partner Dashboard — a different navigation, not a different language. UI copy in English.\nThe week continues Epic 7: it is Monday, September 16, and the case on the desk is the no-show The Ainsworth reported on Saturday the 14th." },
+    { "id": "support-note", "x": 0, "y": 955, "w": 940, "text": "Story 8.1 · One member, one case, one thread. Search matches a name, an email, a phone number or an LP number; the member record holds the bookings, the payments and the account in one place; the case keeps every message — system, member, partner and internal note — in the order it happened. The two ways a case ends are here too: change the booking, overriding the lounge's own rules if support decides to, or reverse the fee. Both are written to the audit trail with the agent's name." },
+    { "id": "data-note", "x": 0, "y": 2005, "w": 940, "text": "Story 8.2 · The numbers behind the decisions. Every figure on these four screens reconciles: the fourteen bars add up to the 1,208 bookings, the 1,208 split into attended, no-shows and cancellations, and the revenue rail adds up to the net after what each partner is owed — The Ainsworth's $8,616.50 among it, the same number their own dashboard shows in Epic 7. Exports are anonymised by default and every schedule is one of those exports, saved." },
+    { "id": "content-note", "x": 0, "y": 3055, "w": 940, "text": "Story 8.3 · What members read is edited here. A change to a lounge — one lounge or twelve at once — is drafted, then waits for a content manager who sees it exactly as a member would, side by side with what is live. Nothing reaches the app before that." },
+    { "id": "seam-note", "x": 3080, "y": 4055, "w": 760, "text": "Seams declared, not designed here: the member's own view of a refunded fee and a moved booking is Epic 6; the partner side of the same no-show is Epic 7; membership plans, pauses and referrals are Epic 9. Roles and permissions for the console itself (who may refund, who may approve) exist in the navigation but sit outside the three stories." }
+  ],
+  "launch": { "view": "canvas" }
+}

@@ -120,6 +120,12 @@ label 13px/600 · hint 12–12.5px · eyebrow 12px/700 uppercase `letter-spacing
 | Barra de volumen | Fijada en la Fase 2. Barra vertical de `border-radius: 6px 6px 3px 3px` en `--gold-500`, con la cifra encima en 11px/700 y la etiqueta del día debajo en 10.5px, ambas `--dark-ink-500`. El día en curso se dibuja **abierto** (`background: transparent` + `border: 1.5px dashed var(--gold-500)`) y sus dos etiquetas pasan a `--gold-500`. La versión horizontal (distribución por día de la semana) es un carril de 9px sobre `--panel-black` con el relleno en `--gold-500` |
 | Toast (oscuro) | Fijado en la Fase 2. Card de 396px en `--dark-card` con `border: 1px solid var(--gold-500)`, `border-left: 4px solid var(--gold-500)`, `border-radius: 14px` y `box-shadow: 0 24px 50px -18px rgba(0,0,0,.7)`, anclada a `bottom: 26px; right: 32px`. Icono en cuadro de 38px sobre `rgba(201,168,118,.16)`, título 13px/700, cuerpo 12.5px y dos acciones de 12px/700 (la principal `--gold-600`, la de descartar `--dark-ink-500`) |
 
+| Chip de estado de caso (oscuro) | Fijado en la Fase 8. Misma geometría que el chip de asistencia. **New** transparente con `border: 1.5px solid var(--gold-500)` y halo `0 0 0 3px rgba(201,168,118,.28)`, punto dorado · **Open** fondo `rgba(201,168,118,.18)` + `border: 1px solid var(--gold-500)`, punto dorado · **Waiting** transparente con `border: 1px dashed var(--dark-ink-500)` · **Escalated** igual que Open pero con un doble chevron hacia arriba de 11px en lugar del punto · **Resolved** transparente con `border: 1px solid var(--dark-border)`, punto y texto `--dark-ink-300`. Los mismos estados sirven para el estado de un lounge (Live / N to approve / Draft) |
+| Badge de nav (oscuro) | Fijado en la Fase 8. Píldora de 20px al final de un item de la sidebar con el recuento pendiente en 11px/800. En el item activo: fondo `--gold-500` con texto `--panel-black`; en uno inactivo: fondo `rgba(201,168,118,.18)` con `border: 1px solid var(--gold-600)` y texto `--dark-ink-300` |
+| Barra de acción masiva | Fijada en la Fase 8. Franja de 52px sobre la lista, `background: rgba(201,168,118,.16)`, `border: 1.5px solid var(--gold-500)`, `border-radius: 14px`, `padding: 0 20px`: casilla de 20px en estado indeterminado (barra blanca), el recuento en 13.5px/700 y, a la derecha, los botones de acción de 36px con `border: 1.5px solid var(--gold-600)` más un "Clear" en `--gold-600`. La acción destructiva va con borde discontinuo `--dark-ink-500` |
+| Entrada de log de comunicación | Fijada en la Fase 8. `display: flex; gap: 14px; padding: 16px 0` con `border-bottom: 1px solid rgba(58,50,42,.6)`: a la izquierda un cuadro de 36px (avatar circular para una persona, cuadrado `--panel-black` con `border: 1px solid var(--dark-border)` para el sistema o un email automático), y a la derecha el autor en 13px/700, la hora a la derecha en 11.5px `--dark-ink-500` y el cuerpo en 12.5px. El mensaje del miembro va dentro de una caja `--panel-black` con `border: 1px solid var(--gold-600)` y `border-radius: 14px`; una nota interna lleva el chip discontinuo "Internal note · not sent to the member" |
+| Diff de aprobación | Fijado en la Fase 8. Una línea por cambio: el valor anterior en 12px `--dark-ink-500` con `text-decoration: line-through`, una flecha de 14px `--gold-500` y el valor nuevo en 12px/700 `--dark-ink-100`, con una nota de 11px debajo cuando el cambio arrastra otra cosa |
+
 Links: siempre definir `a` (`--gold-600`) y `a:hover` (`--ink-900`) en el `<helmet>`.
 Transiciones: `.15s ease`.
 
@@ -244,6 +250,32 @@ Cuatro plantillas fijadas en la Fase 1. Reutilizarlas antes de inventar una nuev
    15px/700), banda oscura con el logo y el dato principal en Bodoni, cuerpo con los detalles sobre
    `--bg-blush-2`, los botones de acción y el desglose de importes, y un pie centrado de 11.5px con
    la dirección postal y los enlaces de gestión.
+21. **App shell del admin (oscuro)** — fijado en la Fase 8. Misma anatomía que el patrón 15 con
+   otra navegación: eyebrow "Admin console" y los items **Support · Members · Bookings · Lounges ·
+   Analytics · Reports**, donde Support y Lounges pueden llevar el badge de nav con lo pendiente.
+   Abajo, el bloque de la persona (no del local): cuadro de 36px con la inicial en Bodoni dorada,
+   nombre y rol (`Support lead · En Soleil`) y chevron. La topbar de 64px lleva la miga a la
+   izquierda y, a la derecha, el chip **"Every action logged"** (punto dorado con halo, en lugar
+   del "Live · updated …" del partner), la campana y el botón de refrescar.
+22. **Ficha de miembro (360)** — fijada en la Fase 8 sobre el patrón 21. Header con avatar de 56px,
+   el nombre en Bodoni 30px y el chip de membresía, la línea de contacto en 13px `--dark-ink-500` y
+   las acciones a la derecha; debajo, una fila de cuatro tiles de métrica; y luego `display: flex;
+   gap: 16px` con la lista de datos oscura del historial a la izquierda y el rail de 344px a la
+   derecha con las cards de membresía y de pagos, cerrando con el aviso de que los datos de tarjeta
+   viven en Stripe.
+23. **Caso con log de comunicación** — fijado en la Fase 8. Cabecera con el eyebrow del caso
+   (número, hora de apertura, miembro y reserva), el h1 de 30px, el chip de estado y las tres
+   acciones (asignar, escalar, resolver); cuerpo con la columna del log — card de `--dark-card` con
+   las entradas de comunicación y, debajo, el composer: segmented "Reply to member / Internal note",
+   caja de texto de 76px y la fila de acciones con el primario a la derecha — y el rail de 344px con
+   la card de resolución (motivo, nota, primario de 52px), la de escalado y el aviso.
+24. **Comparación live / propuesto** — fijada en la Fase 8. Dos previews del lado miembro **en tema
+   claro** lado a lado dentro del shell oscuro: cada una es una caja de `border-radius: 20px` con el
+   degradado blush y la card blanca del lounge dentro. La de "Live now" va a `opacity: .72` con un
+   punto `--dark-ink-500` en su eyebrow; la de "Proposed" lleva `border: 1.5px solid var(--gold-500)`
+   con el halo dorado y marca cada valor cambiado en `--gold-600`. Debajo, la card de impacto con
+   tres datos y la fila de acciones. Es la única pantalla donde conviven las dos mitades del tema, y
+   esa es exactamente su función: enseñar lo que verá el miembro.
 
 ### Mapa
 
@@ -302,7 +334,8 @@ Debajo, leyenda con muestras de 16px. El sello de frescura (`Updated N min ago �
 | 5 | Epic 4 — Booking System (tema claro) | ✅ Completa — 9 artboards |
 | 6 | Epic 5 — QR Code & Check-in (claro + primeras pantallas oscuras) | ✅ Completa — 9 artboards |
 | 7 | Epic 6 — Member Experience & Notifications (tema claro) | ✅ Completa — 11 artboards |
-| 8+ | Epics 8 y 9 | Pendiente |
+| 8 | Epic 8 — Admin & Support (tema oscuro) | ✅ Completa — 13 artboards |
+| 9 | Epic 9 — Membership & Referrals | Pendiente |
 
 Cada fase vive en `design/epic-N-slug/` con sus `.dc.html`, su `canvas.json` y una copia de
 `logo.png`, y se publica como un canvas propio.
@@ -588,6 +621,75 @@ que es la misma del Epic 5) y hay que mantenerlo si se añaden pantallas — los
 coherentes entre sí pero no corresponden al calendario real de 2026, igual que en las fases
 anteriores; y el contacto de emergencia mostrado en `Privacy` arrastra el mismo asunto legal
 declarado en la Fase 6.
+
+### Fase 8 — `design/epic-8-admin-support/`
+
+Canvas: https://claude.ai/code/artifact/ddeecc33-ddd1-476d-92a2-c13252903bc9
+
+Segunda fase íntegramente oscura y la que fija el App shell del admin (patrón 21). 13 artboards en
+4 filas:
+
+| Fila | Artboards | Historia |
+|---|---|---|
+| 1 | `Main` (support desk) → `MemberSearch` → `MemberProfile` | 8.1 |
+| 2 | `CaseDetail` → `BookingOverride` → `Refund` | 8.1 |
+| 3 | `Analytics` → `Popularity` → `Export` → `ScheduledReports` | 8.2 |
+| 4 | `Lounges` → `LoungeEdit` → `Approval` | 8.3 |
+
+Cobertura de criterios: búsqueda de miembro por nombre, email, teléfono o número de reserva, con
+desambiguación entre coincidencias parecidas; ficha con el historial completo de reservas, las
+transacciones de pago (importe, tarjeta, ID de Stripe), el estado de la cuenta y el nivel de
+membresía; cola de casos con estado, responsable y antigüedad, que recibe automáticamente los
+reportes de no-show de los partners; caso con notas de resolución y log de comunicación completo
+(evento de sistema, email automático, mensaje del miembro, nota interna y respuesta del partner) más
+el composer que distingue responder de anotar; modificación de reserva con cambio de fecha/hora,
+traslado de lounge o cancelación y override explícito de las restricciones del local; reembolso
+total o parcial con motivo, retirada del no-show del historial y aviso de lo que se reversa al
+partner; escalado a manager con el criterio que lo exige; export de reservas, miembros, ingresos y
+no-shows con rango de fechas, filtros removibles y selección de columnas, anonimizado por defecto;
+tasa de no-show, adquisición, retención y churn; volumen diario que cuadra con el total; ingresos por
+partner y período; lounges y amenities más demandados y reparto geográfico por ciudad; reportes
+automáticos diarios, semanales, mensuales y trimestrales con entrega por email y registro de
+entregas; alta/edición/archivo de lounges con estados live, draft y pendiente de aprobación;
+gestión de hasta 3 fotos con redimensionado declarado; amenities, horarios, cierres estacionales,
+capacidad por franja y restricciones de reserva; cambios masivos sobre varios lounges; y flujo de
+aprobación con la comparación entre lo publicado y lo propuesto tal como lo ve el miembro.
+
+Decisiones de producto de esta fase (a confirmar con En Soleil):
+
+- **La red son 12 lounges en 3 ciudades**: 8 en Nueva York (los de las Fases 3 y 4), 2 en Miami y 2
+  en Los Ángeles, más un draft en Brooklyn. Ninguna historia fija el tamaño de la red; hacía falta
+  para que "geographic usage patterns" tuviera algo que enseñar.
+- **Un no-show reportado por un partner abre un caso automáticamente**, con la tarifa ya cobrada y
+  reversible desde soporte. El flow solo dice "receive reports from partners".
+- **Soporte puede saltarse las reglas del lounge** (antelación mínima, aforo de una franja) dejando
+  constancia con su nombre y el número de caso, que el partner ve en su lista. El diagrama original
+  dejaba esta pregunta abierta en una nota adhesiva.
+- **El límite de aprobación de soporte son $100.00**; por encima, o ante un segundo waiver en doce
+  meses, hace falta un manager.
+- **Los exports son anónimos por defecto**: nombre, email y teléfono se sustituyen por un ID de
+  miembro estable, y marcar una de esas tres columnas exige un motivo que queda registrado. La
+  Story 8.2 solo pide "anonymized for privacy" para el export de usuarios; aquí se aplica a todos.
+- **Todo cambio de contenido pasa por aprobación**, también los masivos, y se publican juntos para
+  que el miembro no vea media modificación.
+
+Costuras declaradas en pantalla, no diseñadas aquí: la vista del miembro de una tarifa reembolsada o
+una reserva movida es el Epic 6; el mismo no-show visto desde el partner es el Epic 7; el plan, la
+pausa de membresía y los referidos son el Epic 9; y los roles y permisos de la propia consola
+(quién puede reembolsar, quién puede aprobar) se nombran pero quedan fuera de las tres historias.
+
+Pendientes conocidos: nombres, emails, teléfonos (rango 555), números de caso (CS-4xxx), IDs de
+Stripe, importes y recuentos son datos de muestra, pero **cuadran entre sí y con la Fase 2** — las
+catorce barras de `Analytics` suman las 1,208 reservas del tile, que se reparten en 1,102 asistidas +
+62 no-shows + 44 cancelaciones; el rail de ingresos suma $336,250.00 brutos menos $53,913.00 de
+atribución a partners = $282,337.00 netos; las 187 reservas de The Ainsworth y sus $8,616.50 son
+exactamente los que muestra el Partner Dashboard del Epic 7; y las ocho filas de `Popularity` más la
+línea plegada suman el 100% de las 1,208. La línea temporal es **lunes 16 de septiembre por la
+mañana**, dos días después del sábado del Epic 7: el caso central es el no-show de Camille Duforest
+en The Ainsworth (LP-840388, $35.00), y el período de toda la analítica es el 1–14 de septiembre.
+Los importes de membresía ($2,400.00/año) y day pass ($75.00 + impuesto) vienen de las Fases 5 y 7 y
+arrastran las mismas dudas; las fotos de `LoungeEdit` siguen siendo bloques de marca a sustituir por
+fotografía real.
 
 ## 7. Cómo regenerar y publicar un canvas
 
