@@ -1,0 +1,252 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,500&family=Manrope:wght@400;500;600;700;800&display=swap">
+  <style>
+    :root {
+      --bg-blush-1: #F8EAE1; --bg-blush-2: #FCF4EE;
+      --ink-900: #221A14; --ink-700: #55483D; --ink-400: #9C8D80;
+      --gold-500: #C9A876; --gold-600: #AD8A5C; --gold-100: #F1E3D0;
+      --border: #E7D9C9; --white: #FFFFFF; --panel-black: #15110D;
+      --dark-ink-100: #F1E3D0; --dark-ink-300: #C9BDAF; --dark-ink-500: #8A7C6C; --dark-border: #3A322A;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Manrope', 'Segoe UI', sans-serif; color: var(--ink-900); }
+    h1, h2, h3 { font-family: 'Bodoni Moda', Georgia, 'Times New Roman', serif; margin: 0; font-weight: 500; }
+    a { color: var(--gold-600); text-decoration: none; }
+    a:hover { color: var(--ink-900); }
+    .amn { width: 17px; height: 17px; fill: none; stroke: var(--gold-600); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .nav-item { transition: background .15s ease; }
+    .nav-item:hover { background: var(--gold-100); }
+    .btn-gold { transition: background .15s ease; }
+    .btn-gold:hover { background: var(--gold-600) !important; }
+    .btn-outline { transition: background .15s ease, border-color .15s ease; }
+    .btn-outline:hover { background: var(--gold-100); }
+    .qr { shape-rendering: crispEdges; }
+    .tab { transition: color .15s ease, border-color .15s ease; cursor: pointer; }
+    .tab:hover { color: var(--ink-900); }
+    .bk-card { transition: box-shadow .15s ease, border-color .15s ease; cursor: pointer; }
+    .bk-card:hover { box-shadow: 0 24px 50px -18px rgba(34,26,20,0.22); border-color: var(--gold-500); }
+    .row-link { transition: background .15s ease; cursor: pointer; }
+    .row-link:hover { background: var(--gold-100); }
+    .panel-scroll { overflow-y: auto; }
+    .panel-scroll::-webkit-scrollbar { width: 6px; }
+    .panel-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .dk-gold { transition: background .15s ease; }
+    .dk-gold:hover { background: var(--gold-600) !important; }
+    .dk-ghost { transition: background .15s ease, border-color .15s ease; }
+    .dk-ghost:hover { background: #241D17; border-color: var(--gold-500); }
+    .dk-row { transition: border-color .15s ease; }
+    .dk-row:hover { border-color: var(--gold-500); }
+  </style>
+</helmet>
+
+<div style="position:relative; display:flex; width:1440px; height:900px; background:var(--bg-blush-2); overflow:hidden; font-family:'Manrope',sans-serif;">
+
+  <!-- Sidebar -->
+  <div style="width:248px; min-width:248px; height:900px; background:var(--white); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:32px 20px;">
+
+    <img src="logo.png" alt="En Soleil" style="width:52px; height:auto; margin:0 0 40px 12px;">
+
+    <div class="nav-item" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--ink-700);">Home</span>
+    </div>
+    <div class="nav-item" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="m15 9-2 6-6 2 2-6 6-2Z"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--ink-700);">Explore</span>
+    </div>
+    <div class="nav-item" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:var(--gold-100); margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4V8Z"/><path d="M14 6v2M14 11v2M14 16v2" stroke-dasharray="2 3"/></svg>
+      <span style="font-size:14px; font-weight:700; color:var(--ink-900);">My Pass</span>
+    </div>
+    <div class="nav-item" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.5"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--ink-700);">Profile</span>
+    </div>
+
+    <div style="flex:1;"></div>
+
+    <div style="display:flex; align-items:center; gap:10px; padding:12px 14px; border-top:1px solid var(--border); padding-top:20px;">
+      <div style="width:36px; height:36px; min-width:36px; border-radius:50%; background:var(--gold-500); display:flex; align-items:center; justify-content:center; color:var(--white); font-size:13px; font-weight:700; font-family:'Bodoni Moda',serif;">AR</div>
+      <div style="flex:1; overflow:hidden;">
+        <p style="font-size:13px; font-weight:700; color:var(--ink-900); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Alexandra Rivas</p>
+        <p style="font-size:11.5px; color:var(--ink-400); margin:2px 0 0;">Annual member</p>
+      </div>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><path d="M15 16l4-4-4-4"/><path d="M19 12H9"/></svg>
+    </div>
+
+  </div>
+
+  <!-- Expired pass -->
+  <div style="flex:1; height:900px; display:flex; flex-direction:column; overflow:hidden;">
+
+    <!-- Top bar -->
+    <div style="height:64px; min-height:64px; background:var(--white); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:16px; padding:0 32px;">
+      <span style="font-size:13.5px; color:var(--ink-400);">My Pass</span>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m10 6 6 6-6 6"/></svg>
+      <span style="font-size:13.5px; color:var(--ink-400);">Past</span>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m10 6 6 6-6 6"/></svg>
+      <span style="font-size:13.5px; font-weight:700; color:var(--ink-900);">LP-842193</span>
+      <div style="flex:1;"></div>
+      <button class="btn-outline" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 16px; background:var(--white); border:1.5px solid var(--border); border-radius:11px; color:var(--ink-700); font-family:'Manrope',sans-serif; font-size:12.5px; font-weight:700; letter-spacing:0.06em; cursor:pointer;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h9l4 4v14H6Z"/><path d="M9.5 12h6M9.5 16h4"/></svg>
+        View receipt
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div style="flex:1; min-height:0; display:flex; gap:32px; padding:32px 40px 30px;">
+
+      <div style="flex:1; min-width:0;">
+
+        <div style="display:flex; align-items:center; gap:18px;">
+          <span style="width:72px; height:72px; min-width:72px; border-radius:50%; background:var(--bg-blush-1); border:1px dashed var(--border); display:flex; align-items:center; justify-content:center;">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5l3 2"/></svg>
+          </span>
+          <div>
+            <h1 style="font-size:34px; color:var(--ink-900);">This pass has expired</h1>
+            <p style="font-size:13.5px; color:var(--ink-700); margin:8px 0 0;">The booking window closed at 7:30 PM on Saturday, September 14. The code no longer opens anything.</p>
+          </div>
+        </div>
+
+        <!-- Timeline -->
+        <div style="margin-top:24px; background:var(--white); border:1px solid var(--border); border-radius:18px; box-shadow:0 10px 30px -14px rgba(34,26,20,0.14); padding:22px 24px;">
+
+          <p style="font-size:12px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-600); margin:0 0 16px;">What happened with this booking</p>
+
+          <div style="display:flex; flex-direction:column; gap:0;">
+
+            <div style="display:flex; gap:14px;">
+              <div style="display:flex; flex-direction:column; align-items:center; width:16px;">
+                <span style="width:11px; height:11px; border-radius:50%; background:var(--gold-500);"></span>
+                <span style="flex:1; width:1.5px; background:var(--border);"></span>
+              </div>
+              <div style="flex:1; padding-bottom:18px;">
+                <p style="font-size:13.5px; font-weight:700; color:var(--ink-900); margin:0;">Booked and paid</p>
+                <p style="font-size:12px; color:var(--ink-400); margin:3px 0 0;">Thursday, September 12 at 3:14 PM · $81.66 · Visa 4242</p>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:14px;">
+              <div style="display:flex; flex-direction:column; align-items:center; width:16px;">
+                <span style="width:11px; height:11px; border-radius:50%; background:var(--gold-500);"></span>
+                <span style="flex:1; width:1.5px; background:var(--border);"></span>
+              </div>
+              <div style="flex:1; padding-bottom:18px;">
+                <p style="font-size:13.5px; font-weight:700; color:var(--ink-900); margin:0;">Reminder sent</p>
+                <p style="font-size:12px; color:var(--ink-400); margin:3px 0 0;">Friday, September 13 at 3:30 PM · 24 hours before arrival</p>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:14px;">
+              <div style="display:flex; flex-direction:column; align-items:center; width:16px;">
+                <span style="width:11px; height:11px; border-radius:50%; background:var(--gold-500);"></span>
+                <span style="flex:1; width:1.5px; background:var(--border);"></span>
+              </div>
+              <div style="flex:1; padding-bottom:18px;">
+                <p style="font-size:13.5px; font-weight:700; color:var(--ink-900); margin:0;">Checked in at reception</p>
+                <p style="font-size:12px; color:var(--ink-400); margin:3px 0 0;">Saturday, September 14 at 3:34 PM · welcomed by Dana O.</p>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:14px;">
+              <div style="display:flex; flex-direction:column; align-items:center; width:16px;">
+                <span style="width:11px; height:11px; border-radius:50%; background:var(--white); border:1.5px solid var(--ink-400);"></span>
+              </div>
+              <div style="flex:1;">
+                <p style="font-size:13.5px; font-weight:700; color:var(--ink-900); margin:0;">Window closed, pass expired</p>
+                <p style="font-size:12px; color:var(--ink-400); margin:3px 0 0;">Saturday, September 14 at 7:30 PM · visit counted as attended</p>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Actions -->
+        <div style="display:flex; gap:12px; margin-top:20px;">
+          <button class="btn-gold" style="display:flex; align-items:center; justify-content:center; gap:10px; flex:1; height:52px; background:var(--gold-500); border:none; border-radius:12px; color:var(--white); font-family:'Manrope',sans-serif; font-size:13px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--white)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 1 2.5 5.8"/><path d="M4 19v-5h5"/></svg>
+            Book The Ainsworth again
+          </button>
+          <button class="btn-outline" style="flex:1; height:52px; background:var(--white); border:1.5px solid var(--border); border-radius:12px; color:var(--ink-700); font-family:'Manrope',sans-serif; font-size:13px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer;">Leave a review</button>
+        </div>
+
+        <p style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--ink-400); margin:18px 0 0;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></svg>
+          Expired passes stay in your history for your records, but cannot be used for entry again.
+        </p>
+
+      </div>
+
+      <!-- Expired pass card -->
+      <div style="width:380px; min-width:380px; height:fit-content; border-radius:24px; overflow:hidden; box-shadow:0 20px 44px -22px rgba(34,26,20,0.22);">
+
+        <div style="position:relative; background:radial-gradient(circle at 30% 12%, #2a251f, #191510 68%); padding:26px 26px 24px;">
+          <div style="position:absolute; inset:0; background-image:radial-gradient(rgba(154,141,128,0.14) 1px, transparent 1.5px); background-size:18px 18px;"></div>
+
+          <!-- Expired stamp -->
+          <div style="position:absolute; top:196px; left:-14px; right:-14px; display:flex; justify-content:center; z-index:2; transform:rotate(-8deg);">
+            <span style="padding:9px 26px; border:2px solid #8A7C6C; border-radius:8px; background:rgba(21,17,13,0.72); font-size:16px; font-weight:800; letter-spacing:0.22em; text-transform:uppercase; color:#C9BDAF;">Expired</span>
+          </div>
+
+          <div style="position:relative;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <img src="logo.png" alt="En Soleil" style="width:40px; height:auto; opacity:0.55;">
+              <span style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#8A7C6C;">Past visit</span>
+            </div>
+
+            <h2 style="font-size:40px; color:#8A7C6C; margin-top:18px; letter-spacing:0.02em;">LP-842193</h2>
+            <p style="font-size:12px; color:#6E6255; margin:8px 0 0;">No longer valid for entry</p>
+
+            <div style="margin-top:18px; background:#E6DED4; border-radius:16px; padding:16px 16px 12px; text-align:center;">
+              <svg class="qr" viewBox="0 0 25 25" width="190" height="190" fill="#221A14" style="display:block; margin:0 auto; opacity:0.22;"><rect x="0" y="0" width="7" height="1"/><rect x="8" y="0" width="2" height="1"/><rect x="11" y="0" width="2" height="1"/><rect x="15" y="0" width="1" height="1"/><rect x="18" y="0" width="7" height="1"/><rect x="0" y="1" width="1" height="1"/><rect x="6" y="1" width="1" height="1"/><rect x="11" y="1" width="2" height="1"/><rect x="14" y="1" width="2" height="1"/><rect x="18" y="1" width="1" height="1"/><rect x="24" y="1" width="1" height="1"/><rect x="0" y="2" width="1" height="1"/><rect x="2" y="2" width="3" height="1"/><rect x="6" y="2" width="1" height="1"/><rect x="8" y="2" width="1" height="1"/><rect x="10" y="2" width="2" height="1"/><rect x="13" y="2" width="1" height="1"/><rect x="15" y="2" width="1" height="1"/><rect x="18" y="2" width="1" height="1"/><rect x="20" y="2" width="3" height="1"/><rect x="24" y="2" width="1" height="1"/><rect x="0" y="3" width="1" height="1"/><rect x="2" y="3" width="3" height="1"/><rect x="6" y="3" width="1" height="1"/><rect x="10" y="3" width="3" height="1"/><rect x="14" y="3" width="3" height="1"/><rect x="18" y="3" width="1" height="1"/><rect x="20" y="3" width="3" height="1"/><rect x="24" y="3" width="1" height="1"/><rect x="0" y="4" width="1" height="1"/><rect x="2" y="4" width="3" height="1"/><rect x="6" y="4" width="1" height="1"/><rect x="9" y="4" width="2" height="1"/><rect x="12" y="4" width="1" height="1"/><rect x="18" y="4" width="1" height="1"/><rect x="20" y="4" width="3" height="1"/><rect x="24" y="4" width="1" height="1"/><rect x="0" y="5" width="1" height="1"/><rect x="6" y="5" width="1" height="1"/><rect x="8" y="5" width="7" height="1"/><rect x="16" y="5" width="1" height="1"/><rect x="18" y="5" width="1" height="1"/><rect x="24" y="5" width="1" height="1"/><rect x="0" y="6" width="7" height="1"/><rect x="8" y="6" width="1" height="1"/><rect x="10" y="6" width="1" height="1"/><rect x="12" y="6" width="1" height="1"/><rect x="14" y="6" width="1" height="1"/><rect x="16" y="6" width="1" height="1"/><rect x="18" y="6" width="7" height="1"/><rect x="8" y="7" width="3" height="1"/><rect x="12" y="7" width="2" height="1"/><rect x="15" y="7" width="2" height="1"/><rect x="0" y="8" width="1" height="1"/><rect x="2" y="8" width="2" height="1"/><rect x="5" y="8" width="2" height="1"/><rect x="9" y="8" width="3" height="1"/><rect x="13" y="8" width="1" height="1"/><rect x="15" y="8" width="1" height="1"/><rect x="19" y="8" width="3" height="1"/><rect x="24" y="8" width="1" height="1"/><rect x="0" y="9" width="1" height="1"/><rect x="2" y="9" width="2" height="1"/><rect x="7" y="9" width="2" height="1"/><rect x="10" y="9" width="1" height="1"/><rect x="12" y="9" width="1" height="1"/><rect x="15" y="9" width="1" height="1"/><rect x="20" y="9" width="1" height="1"/><rect x="23" y="9" width="1" height="1"/><rect x="1" y="10" width="8" height="1"/><rect x="10" y="10" width="3" height="1"/><rect x="14" y="10" width="1" height="1"/><rect x="18" y="10" width="3" height="1"/><rect x="4" y="11" width="1" height="1"/><rect x="7" y="11" width="2" height="1"/><rect x="11" y="11" width="1" height="1"/><rect x="13" y="11" width="1" height="1"/><rect x="16" y="11" width="2" height="1"/><rect x="20" y="11" width="2" height="1"/><rect x="23" y="11" width="1" height="1"/><rect x="0" y="12" width="1" height="1"/><rect x="6" y="12" width="4" height="1"/><rect x="11" y="12" width="4" height="1"/><rect x="16" y="12" width="3" height="1"/><rect x="23" y="12" width="1" height="1"/><rect x="0" y="13" width="3" height="1"/><rect x="4" y="13" width="1" height="1"/><rect x="9" y="13" width="1" height="1"/><rect x="11" y="13" width="2" height="1"/><rect x="14" y="13" width="1" height="1"/><rect x="16" y="13" width="3" height="1"/><rect x="23" y="13" width="1" height="1"/><rect x="0" y="14" width="1" height="1"/><rect x="4" y="14" width="4" height="1"/><rect x="10" y="14" width="4" height="1"/><rect x="15" y="14" width="1" height="1"/><rect x="18" y="14" width="2" height="1"/><rect x="21" y="14" width="2" height="1"/><rect x="24" y="14" width="1" height="1"/><rect x="1" y="15" width="3" height="1"/><rect x="7" y="15" width="3" height="1"/><rect x="11" y="15" width="2" height="1"/><rect x="14" y="15" width="1" height="1"/><rect x="18" y="15" width="1" height="1"/><rect x="20" y="15" width="2" height="1"/><rect x="23" y="15" width="2" height="1"/><rect x="0" y="16" width="1" height="1"/><rect x="6" y="16" width="1" height="1"/><rect x="9" y="16" width="3" height="1"/><rect x="14" y="16" width="1" height="1"/><rect x="16" y="16" width="5" height="1"/><rect x="8" y="17" width="1" height="1"/><rect x="10" y="17" width="1" height="1"/><rect x="15" y="17" width="2" height="1"/><rect x="20" y="17" width="2" height="1"/><rect x="23" y="17" width="2" height="1"/><rect x="0" y="18" width="7" height="1"/><rect x="8" y="18" width="3" height="1"/><rect x="12" y="18" width="2" height="1"/><rect x="15" y="18" width="2" height="1"/><rect x="18" y="18" width="1" height="1"/><rect x="20" y="18" width="2" height="1"/><rect x="23" y="18" width="2" height="1"/><rect x="0" y="19" width="1" height="1"/><rect x="6" y="19" width="1" height="1"/><rect x="10" y="19" width="1" height="1"/><rect x="12" y="19" width="5" height="1"/><rect x="20" y="19" width="2" height="1"/><rect x="23" y="19" width="1" height="1"/><rect x="0" y="20" width="1" height="1"/><rect x="2" y="20" width="3" height="1"/><rect x="6" y="20" width="1" height="1"/><rect x="8" y="20" width="1" height="1"/><rect x="10" y="20" width="2" height="1"/><rect x="13" y="20" width="8" height="1"/><rect x="22" y="20" width="3" height="1"/><rect x="0" y="21" width="1" height="1"/><rect x="2" y="21" width="3" height="1"/><rect x="6" y="21" width="1" height="1"/><rect x="12" y="21" width="1" height="1"/><rect x="15" y="21" width="4" height="1"/><rect x="24" y="21" width="1" height="1"/><rect x="0" y="22" width="1" height="1"/><rect x="2" y="22" width="3" height="1"/><rect x="6" y="22" width="1" height="1"/><rect x="9" y="22" width="4" height="1"/><rect x="14" y="22" width="1" height="1"/><rect x="17" y="22" width="1" height="1"/><rect x="22" y="22" width="1" height="1"/><rect x="0" y="23" width="1" height="1"/><rect x="6" y="23" width="1" height="1"/><rect x="8" y="23" width="1" height="1"/><rect x="10" y="23" width="1" height="1"/><rect x="13" y="23" width="2" height="1"/><rect x="21" y="23" width="1" height="1"/><rect x="23" y="23" width="1" height="1"/><rect x="0" y="24" width="7" height="1"/><rect x="8" y="24" width="4" height="1"/><rect x="13" y="24" width="2" height="1"/><rect x="16" y="24" width="1" height="1"/><rect x="19" y="24" width="2" height="1"/><rect x="23" y="24" width="1" height="1"/></svg>
+              <p style="font-size:11px; color:var(--ink-400); margin:10px 0 0;">Code deactivated on September 14</p>
+            </div>
+
+            <div style="height:1px; background:#3A322A; margin:20px 0;"></div>
+
+            <div style="display:flex; flex-direction:column; gap:12px;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:12.5px; color:#6E6255;">Member</span>
+                <span style="font-size:12.5px; font-weight:700; color:#C9BDAF;">Alexandra Rivas</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:12.5px; color:#6E6255;">Lounge</span>
+                <span style="font-size:12.5px; font-weight:700; color:#C9BDAF;">The Ainsworth</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:12.5px; color:#6E6255;">Visited</span>
+                <span style="font-size:12.5px; font-weight:700; color:#C9BDAF;">Sat, Sep 14 · 3:34 PM</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:12.5px; color:#6E6255;">Outcome</span>
+                <span style="font-size:12.5px; font-weight:700; color:#C9BDAF;">Attended</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:var(--white); padding:16px 20px; display:flex; align-items:center; gap:10px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="m8 12 3 3 5-6"/></svg>
+          <p style="flex:1; font-size:11.5px; color:var(--ink-400); line-height:1.5; margin:0;">Passes expire on their own when the booking window closes — nothing to cancel or delete.</p>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+</x-dc>
+</body>
+</html>

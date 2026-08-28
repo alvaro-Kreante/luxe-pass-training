@@ -1,0 +1,263 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,500&family=Manrope:wght@400;500;600;700;800&display=swap">
+  <style>
+    :root {
+      --bg-blush-1: #F8EAE1; --bg-blush-2: #FCF4EE;
+      --ink-900: #221A14; --ink-700: #55483D; --ink-400: #9C8D80;
+      --gold-500: #C9A876; --gold-600: #AD8A5C; --gold-100: #F1E3D0;
+      --border: #E7D9C9; --white: #FFFFFF; --panel-black: #15110D;
+      --dark-ink-100: #F1E3D0; --dark-ink-300: #C9BDAF; --dark-ink-500: #8A7C6C; --dark-border: #3A322A;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Manrope', 'Segoe UI', sans-serif; color: var(--ink-900); }
+    h1, h2, h3 { font-family: 'Bodoni Moda', Georgia, 'Times New Roman', serif; margin: 0; font-weight: 500; }
+    a { color: var(--gold-600); text-decoration: none; }
+    a:hover { color: var(--ink-900); }
+    .amn { width: 17px; height: 17px; fill: none; stroke: var(--gold-600); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .nav-item { transition: background .15s ease; }
+    .nav-item:hover { background: var(--gold-100); }
+    .btn-gold { transition: background .15s ease; }
+    .btn-gold:hover { background: var(--gold-600) !important; }
+    .btn-outline { transition: background .15s ease, border-color .15s ease; }
+    .btn-outline:hover { background: var(--gold-100); }
+    .qr { shape-rendering: crispEdges; }
+    .tab { transition: color .15s ease, border-color .15s ease; cursor: pointer; }
+    .tab:hover { color: var(--ink-900); }
+    .bk-card { transition: box-shadow .15s ease, border-color .15s ease; cursor: pointer; }
+    .bk-card:hover { box-shadow: 0 24px 50px -18px rgba(34,26,20,0.22); border-color: var(--gold-500); }
+    .row-link { transition: background .15s ease; cursor: pointer; }
+    .row-link:hover { background: var(--gold-100); }
+    .panel-scroll { overflow-y: auto; }
+    .panel-scroll::-webkit-scrollbar { width: 6px; }
+    .panel-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .dk-gold { transition: background .15s ease; }
+    .dk-gold:hover { background: var(--gold-600) !important; }
+    .dk-ghost { transition: background .15s ease, border-color .15s ease; }
+    .dk-ghost:hover { background: #241D17; border-color: var(--gold-500); }
+    .dk-row { transition: border-color .15s ease; }
+    .dk-row:hover { border-color: var(--gold-500); }
+  </style>
+</helmet>
+
+<div style="position:relative; display:flex; width:1440px; height:900px; background:var(--bg-blush-2); overflow:hidden; font-family:'Manrope',sans-serif;">
+
+  <!-- Sidebar -->
+  <div style="width:248px; min-width:248px; height:900px; background:var(--white); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:32px 20px;">
+
+    <img src="logo.png" alt="En Soleil" style="width:52px; height:auto; margin:0 0 40px 12px;">
+
+    <div class="nav-item" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--ink-700);">Home</span>
+    </div>
+    <div class="nav-item" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="m15 9-2 6-6 2 2-6 6-2Z"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--ink-700);">Explore</span>
+    </div>
+    <div class="nav-item" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:var(--gold-100); margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4V8Z"/><path d="M14 6v2M14 11v2M14 16v2" stroke-dasharray="2 3"/></svg>
+      <span style="font-size:14px; font-weight:700; color:var(--ink-900);">My Pass</span>
+    </div>
+    <div class="nav-item" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.5"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--ink-700);">Profile</span>
+    </div>
+
+    <div style="flex:1;"></div>
+
+    <div style="display:flex; align-items:center; gap:10px; padding:12px 14px; border-top:1px solid var(--border); padding-top:20px;">
+      <div style="width:36px; height:36px; min-width:36px; border-radius:50%; background:var(--gold-500); display:flex; align-items:center; justify-content:center; color:var(--white); font-size:13px; font-weight:700; font-family:'Bodoni Moda',serif;">AR</div>
+      <div style="flex:1; overflow:hidden;">
+        <p style="font-size:13px; font-weight:700; color:var(--ink-900); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Alexandra Rivas</p>
+        <p style="font-size:11.5px; color:var(--ink-400); margin:2px 0 0;">Annual member</p>
+      </div>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><path d="M15 16l4-4-4-4"/><path d="M19 12H9"/></svg>
+    </div>
+
+  </div>
+
+  <!-- My Pass -->
+  <div style="flex:1; height:900px; display:flex; flex-direction:column; overflow:hidden;">
+
+    <!-- Top bar -->
+    <div style="height:64px; min-height:64px; background:var(--white); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:16px; padding:0 32px;">
+      <span style="font-size:13.5px; font-weight:700; color:var(--ink-900);">My Pass</span>
+      <div style="flex:1;"></div>
+      <button class="btn-outline" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 16px; background:var(--white); border:1.5px solid var(--border); border-radius:11px; color:var(--ink-700); font-family:'Manrope',sans-serif; font-size:12.5px; font-weight:700; letter-spacing:0.06em; cursor:pointer;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
+        Book a visit
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div style="flex:1; min-height:0; display:flex; gap:28px; padding:32px 40px 30px;">
+
+      <div style="flex:1; min-width:0;">
+
+        <h1 style="font-size:34px; color:var(--ink-900);">My Pass</h1>
+        <p style="font-size:13.5px; color:var(--ink-700); margin:8px 0 0;">Every booking you make lives here, with the confirmation number reception asks for.</p>
+
+        <!-- Tabs -->
+        <div style="display:flex; gap:26px; margin-top:22px; border-bottom:1px solid var(--border);">
+          <div class="tab" style="padding:0 2px 12px; border-bottom:2px solid var(--gold-500); font-size:13.5px; font-weight:700; color:var(--ink-900);">Upcoming <span style="color:var(--gold-600);">3</span></div>
+          <div class="tab" style="padding:0 2px 12px; border-bottom:2px solid transparent; font-size:13.5px; font-weight:600; color:var(--ink-400);">Past <span>14</span></div>
+        </div>
+
+        <!-- Next visit -->
+        <div class="bk-card" style="display:flex; gap:18px; margin-top:20px; background:var(--white); border:1.5px solid var(--gold-500); border-radius:18px; box-shadow:0 10px 30px -14px rgba(34,26,20,0.14); padding:20px;">
+
+          <div style="position:relative; width:88px; height:88px; min-width:88px; border-radius:14px; overflow:hidden; background:radial-gradient(circle at 30% 20%, #3a3128, #15110d 72%);">
+            <div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.20) 1px, transparent 1.5px); background-size:9px 9px;"></div>
+          </div>
+
+          <div style="flex:1; min-width:0;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <span style="font-size:11.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-600);">Next visit · in 2 days</span>
+              <span style="display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:20px; background:var(--gold-100);">
+                <span style="width:6px; height:6px; border-radius:50%; background:var(--gold-500);"></span>
+                <span style="font-size:11.5px; font-weight:700; color:var(--ink-900);">Confirmed</span>
+              </span>
+            </div>
+            <h2 style="font-size:22px; color:var(--ink-900); margin-top:8px;">The Ainsworth</h2>
+            <p style="font-size:12.5px; color:var(--ink-400); margin:4px 0 0;">Saturday, September 14 · arrive 3:30 PM · stay up to 4 hours</p>
+            <p style="font-size:12.5px; color:var(--ink-400); margin:3px 0 0;">122 E 45th St, New York, NY 10017 · Reception on Level 2</p>
+
+            <div style="display:flex; gap:10px; margin-top:16px;">
+              <button class="btn-gold" style="display:flex; align-items:center; gap:9px; height:44px; padding:0 20px; background:var(--gold-500); border:none; border-radius:12px; color:var(--white); font-family:'Manrope',sans-serif; font-size:12.5px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--white)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4V8Z"/></svg>
+                View pass
+              </button>
+              <button class="btn-outline" style="display:flex; align-items:center; gap:8px; height:44px; padding:0 16px; background:var(--white); border:1.5px solid var(--border); border-radius:12px; color:var(--ink-700); font-family:'Manrope',sans-serif; font-size:12.5px; font-weight:700; letter-spacing:0.06em; cursor:pointer;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 3.5 3.5 10.4l7 2.6 2.6 7 7.4-16.5Z"/></svg>
+                Directions
+              </button>
+              <button class="btn-outline" style="display:flex; align-items:center; gap:8px; height:44px; padding:0 16px; background:var(--white); border:1.5px solid var(--border); border-radius:12px; color:var(--ink-700); font-family:'Manrope',sans-serif; font-size:12.5px; font-weight:700; letter-spacing:0.06em; cursor:pointer;">Manage</button>
+            </div>
+          </div>
+
+          <!-- Inline pass preview -->
+          <div style="position:relative; width:158px; min-width:158px; border-radius:14px; overflow:hidden; background:radial-gradient(circle at 30% 12%, #2c241c, #15110d 68%); padding:14px 14px 12px; text-align:center;">
+            <div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.16) 1px, transparent 1.5px); background-size:18px 18px;"></div>
+            <div style="position:relative;">
+              <p style="font-size:9.5px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#8A7C6C; margin:0;">Confirmation</p>
+              <h3 style="font-size:19px; color:#F1E3D0; margin-top:5px; letter-spacing:0.02em;">LP-842193</h3>
+              <div style="margin-top:10px; background:var(--white); border-radius:9px; padding:7px;">
+                <svg class="qr" viewBox="0 0 25 25" width="102" height="102" fill="#221A14" style="display:block;"><rect x="0" y="0" width="7" height="1"/><rect x="8" y="0" width="2" height="1"/><rect x="11" y="0" width="2" height="1"/><rect x="15" y="0" width="1" height="1"/><rect x="18" y="0" width="7" height="1"/><rect x="0" y="1" width="1" height="1"/><rect x="6" y="1" width="1" height="1"/><rect x="11" y="1" width="2" height="1"/><rect x="14" y="1" width="2" height="1"/><rect x="18" y="1" width="1" height="1"/><rect x="24" y="1" width="1" height="1"/><rect x="0" y="2" width="1" height="1"/><rect x="2" y="2" width="3" height="1"/><rect x="6" y="2" width="1" height="1"/><rect x="8" y="2" width="1" height="1"/><rect x="10" y="2" width="2" height="1"/><rect x="13" y="2" width="1" height="1"/><rect x="15" y="2" width="1" height="1"/><rect x="18" y="2" width="1" height="1"/><rect x="20" y="2" width="3" height="1"/><rect x="24" y="2" width="1" height="1"/><rect x="0" y="3" width="1" height="1"/><rect x="2" y="3" width="3" height="1"/><rect x="6" y="3" width="1" height="1"/><rect x="10" y="3" width="3" height="1"/><rect x="14" y="3" width="3" height="1"/><rect x="18" y="3" width="1" height="1"/><rect x="20" y="3" width="3" height="1"/><rect x="24" y="3" width="1" height="1"/><rect x="0" y="4" width="1" height="1"/><rect x="2" y="4" width="3" height="1"/><rect x="6" y="4" width="1" height="1"/><rect x="9" y="4" width="2" height="1"/><rect x="12" y="4" width="1" height="1"/><rect x="18" y="4" width="1" height="1"/><rect x="20" y="4" width="3" height="1"/><rect x="24" y="4" width="1" height="1"/><rect x="0" y="5" width="1" height="1"/><rect x="6" y="5" width="1" height="1"/><rect x="8" y="5" width="7" height="1"/><rect x="16" y="5" width="1" height="1"/><rect x="18" y="5" width="1" height="1"/><rect x="24" y="5" width="1" height="1"/><rect x="0" y="6" width="7" height="1"/><rect x="8" y="6" width="1" height="1"/><rect x="10" y="6" width="1" height="1"/><rect x="12" y="6" width="1" height="1"/><rect x="14" y="6" width="1" height="1"/><rect x="16" y="6" width="1" height="1"/><rect x="18" y="6" width="7" height="1"/><rect x="8" y="7" width="3" height="1"/><rect x="12" y="7" width="2" height="1"/><rect x="15" y="7" width="2" height="1"/><rect x="0" y="8" width="1" height="1"/><rect x="2" y="8" width="2" height="1"/><rect x="5" y="8" width="2" height="1"/><rect x="9" y="8" width="3" height="1"/><rect x="13" y="8" width="1" height="1"/><rect x="15" y="8" width="1" height="1"/><rect x="19" y="8" width="3" height="1"/><rect x="24" y="8" width="1" height="1"/><rect x="0" y="9" width="1" height="1"/><rect x="2" y="9" width="2" height="1"/><rect x="7" y="9" width="2" height="1"/><rect x="10" y="9" width="1" height="1"/><rect x="12" y="9" width="1" height="1"/><rect x="15" y="9" width="1" height="1"/><rect x="20" y="9" width="1" height="1"/><rect x="23" y="9" width="1" height="1"/><rect x="1" y="10" width="8" height="1"/><rect x="10" y="10" width="3" height="1"/><rect x="14" y="10" width="1" height="1"/><rect x="18" y="10" width="3" height="1"/><rect x="4" y="11" width="1" height="1"/><rect x="7" y="11" width="2" height="1"/><rect x="11" y="11" width="1" height="1"/><rect x="13" y="11" width="1" height="1"/><rect x="16" y="11" width="2" height="1"/><rect x="20" y="11" width="2" height="1"/><rect x="23" y="11" width="1" height="1"/><rect x="0" y="12" width="1" height="1"/><rect x="6" y="12" width="4" height="1"/><rect x="11" y="12" width="4" height="1"/><rect x="16" y="12" width="3" height="1"/><rect x="23" y="12" width="1" height="1"/><rect x="0" y="13" width="3" height="1"/><rect x="4" y="13" width="1" height="1"/><rect x="9" y="13" width="1" height="1"/><rect x="11" y="13" width="2" height="1"/><rect x="14" y="13" width="1" height="1"/><rect x="16" y="13" width="3" height="1"/><rect x="23" y="13" width="1" height="1"/><rect x="0" y="14" width="1" height="1"/><rect x="4" y="14" width="4" height="1"/><rect x="10" y="14" width="4" height="1"/><rect x="15" y="14" width="1" height="1"/><rect x="18" y="14" width="2" height="1"/><rect x="21" y="14" width="2" height="1"/><rect x="24" y="14" width="1" height="1"/><rect x="1" y="15" width="3" height="1"/><rect x="7" y="15" width="3" height="1"/><rect x="11" y="15" width="2" height="1"/><rect x="14" y="15" width="1" height="1"/><rect x="18" y="15" width="1" height="1"/><rect x="20" y="15" width="2" height="1"/><rect x="23" y="15" width="2" height="1"/><rect x="0" y="16" width="1" height="1"/><rect x="6" y="16" width="1" height="1"/><rect x="9" y="16" width="3" height="1"/><rect x="14" y="16" width="1" height="1"/><rect x="16" y="16" width="5" height="1"/><rect x="8" y="17" width="1" height="1"/><rect x="10" y="17" width="1" height="1"/><rect x="15" y="17" width="2" height="1"/><rect x="20" y="17" width="2" height="1"/><rect x="23" y="17" width="2" height="1"/><rect x="0" y="18" width="7" height="1"/><rect x="8" y="18" width="3" height="1"/><rect x="12" y="18" width="2" height="1"/><rect x="15" y="18" width="2" height="1"/><rect x="18" y="18" width="1" height="1"/><rect x="20" y="18" width="2" height="1"/><rect x="23" y="18" width="2" height="1"/><rect x="0" y="19" width="1" height="1"/><rect x="6" y="19" width="1" height="1"/><rect x="10" y="19" width="1" height="1"/><rect x="12" y="19" width="5" height="1"/><rect x="20" y="19" width="2" height="1"/><rect x="23" y="19" width="1" height="1"/><rect x="0" y="20" width="1" height="1"/><rect x="2" y="20" width="3" height="1"/><rect x="6" y="20" width="1" height="1"/><rect x="8" y="20" width="1" height="1"/><rect x="10" y="20" width="2" height="1"/><rect x="13" y="20" width="8" height="1"/><rect x="22" y="20" width="3" height="1"/><rect x="0" y="21" width="1" height="1"/><rect x="2" y="21" width="3" height="1"/><rect x="6" y="21" width="1" height="1"/><rect x="12" y="21" width="1" height="1"/><rect x="15" y="21" width="4" height="1"/><rect x="24" y="21" width="1" height="1"/><rect x="0" y="22" width="1" height="1"/><rect x="2" y="22" width="3" height="1"/><rect x="6" y="22" width="1" height="1"/><rect x="9" y="22" width="4" height="1"/><rect x="14" y="22" width="1" height="1"/><rect x="17" y="22" width="1" height="1"/><rect x="22" y="22" width="1" height="1"/><rect x="0" y="23" width="1" height="1"/><rect x="6" y="23" width="1" height="1"/><rect x="8" y="23" width="1" height="1"/><rect x="10" y="23" width="1" height="1"/><rect x="13" y="23" width="2" height="1"/><rect x="21" y="23" width="1" height="1"/><rect x="23" y="23" width="1" height="1"/><rect x="0" y="24" width="7" height="1"/><rect x="8" y="24" width="4" height="1"/><rect x="13" y="24" width="2" height="1"/><rect x="16" y="24" width="1" height="1"/><rect x="19" y="24" width="2" height="1"/><rect x="23" y="24" width="1" height="1"/></svg>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Later visits -->
+        <div class="bk-card" style="display:flex; align-items:center; gap:18px; margin-top:14px; background:var(--white); border:1px solid var(--border); border-radius:18px; box-shadow:0 10px 30px -14px rgba(34,26,20,0.14); padding:18px 20px;">
+          <div style="position:relative; width:64px; height:64px; min-width:64px; border-radius:12px; overflow:hidden; background:radial-gradient(circle at 30% 20%, #3a3128, #15110d 72%);">
+            <div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.20) 1px, transparent 1.5px); background-size:9px 9px;"></div>
+          </div>
+          <div style="flex:1; min-width:0;">
+            <h3 style="font-size:19px; color:var(--ink-900);">Bergdorf Lounge</h3>
+            <p style="font-size:12.5px; color:var(--ink-400); margin:4px 0 0;">Wednesday, October 2 · arrive 11:00 AM · LP-849017</p>
+          </div>
+          <span style="display:inline-flex; align-items:center; gap:6px; padding:6px 13px; border-radius:20px; background:var(--gold-100);">
+            <span style="width:6px; height:6px; border-radius:50%; background:var(--gold-500);"></span>
+            <span style="font-size:11.5px; font-weight:700; color:var(--ink-900);">Confirmed</span>
+          </span>
+          <button class="btn-outline" style="height:40px; padding:0 16px; background:var(--white); border:1.5px solid var(--border); border-radius:11px; color:var(--ink-700); font-family:'Manrope',sans-serif; font-size:12.5px; font-weight:700; letter-spacing:0.06em; cursor:pointer;">View pass</button>
+        </div>
+
+        <div class="bk-card" style="display:flex; align-items:center; gap:18px; margin-top:12px; background:var(--white); border:1px solid var(--border); border-radius:18px; box-shadow:0 10px 30px -14px rgba(34,26,20,0.14); padding:18px 20px;">
+          <div style="position:relative; width:64px; height:64px; min-width:64px; border-radius:12px; overflow:hidden; background:radial-gradient(circle at 30% 20%, #3a3128, #15110d 72%);">
+            <div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.20) 1px, transparent 1.5px); background-size:9px 9px;"></div>
+          </div>
+          <div style="flex:1; min-width:0;">
+            <h3 style="font-size:19px; color:var(--ink-900);">The Ainsworth</h3>
+            <p style="font-size:12.5px; color:var(--ink-400); margin:4px 0 0;">Wednesday, October 9 · 6:00 PM · position 2 on the waitlist</p>
+          </div>
+          <span style="display:inline-flex; align-items:center; gap:6px; padding:6px 13px; border-radius:20px; border:1px solid var(--border);">
+            <span style="width:6px; height:6px; border-radius:50%; background:var(--ink-400);"></span>
+            <span style="font-size:11.5px; font-weight:700; color:var(--ink-400);">Waitlisted · no pass yet</span>
+          </span>
+          <button class="btn-outline" style="height:40px; padding:0 16px; background:var(--white); border:1.5px solid var(--border); border-radius:11px; color:var(--ink-700); font-family:'Manrope',sans-serif; font-size:12.5px; font-weight:700; letter-spacing:0.06em; cursor:pointer;">Manage</button>
+        </div>
+
+        <p style="display:flex; align-items:center; gap:8px; font-size:12px; color:var(--ink-400); margin:18px 0 0;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5l3 2"/></svg>
+          A pass stays here until its booking window closes, then it moves to Past.
+        </p>
+
+      </div>
+
+      <!-- Rail -->
+      <div style="width:344px; min-width:344px; display:flex; flex-direction:column; gap:14px;">
+
+        <div style="background:var(--white); border:1px solid var(--border); border-radius:18px; box-shadow:0 10px 30px -14px rgba(34,26,20,0.14); padding:20px;">
+          <p style="font-size:12px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-600); margin:0;">Your reference</p>
+          <h2 style="font-size:27px; color:var(--ink-900); margin-top:10px; letter-spacing:0.02em;">LP-842193</h2>
+          <p style="font-size:12.5px; color:var(--ink-700); line-height:1.55; margin:8px 0 0;">Reception can find your booking with this number alone. Scanning the code is only a shortcut.</p>
+
+          <div style="height:1px; background:var(--border); margin:16px 0;"></div>
+
+          <div style="display:flex; flex-direction:column; gap:11px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:12.5px; color:var(--ink-700);">Member</span>
+              <span style="font-size:12.5px; font-weight:700; color:var(--ink-900);">Alexandra Rivas</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:12.5px; color:var(--ink-700);">Duration</span>
+              <span style="font-size:12.5px; font-weight:700; color:var(--ink-900);">Up to 4 hours</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:12.5px; color:var(--ink-700);">Window closes</span>
+              <span style="font-size:12.5px; font-weight:700; color:var(--ink-900);">7:30 PM</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:var(--white); border:1px solid var(--border); border-radius:18px; box-shadow:0 10px 30px -14px rgba(34,26,20,0.14); padding:20px;">
+          <div style="display:flex; align-items:baseline; justify-content:space-between;">
+            <p style="font-size:12px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-600); margin:0;">Visits this month</p>
+            <span style="font-size:13px; font-weight:700; color:var(--ink-900);">3 of 8</span>
+          </div>
+          <div style="display:flex; gap:5px; margin-top:14px;">
+            <span style="flex:1; height:4px; border-radius:2px; background:var(--gold-500);"></span>
+            <span style="flex:1; height:4px; border-radius:2px; background:var(--gold-500);"></span>
+            <span style="flex:1; height:4px; border-radius:2px; background:var(--gold-500);"></span>
+            <span style="flex:1; height:4px; border-radius:2px; background:var(--border);"></span>
+            <span style="flex:1; height:4px; border-radius:2px; background:var(--border);"></span>
+            <span style="flex:1; height:4px; border-radius:2px; background:var(--border);"></span>
+            <span style="flex:1; height:4px; border-radius:2px; background:var(--border);"></span>
+            <span style="flex:1; height:4px; border-radius:2px; background:var(--border);"></span>
+          </div>
+          <p style="font-size:11.5px; color:var(--ink-400); line-height:1.55; margin:12px 0 0;">Included in your annual membership. Extra visits are billed as a day pass.</p>
+        </div>
+
+        <div class="row-link" style="display:flex; align-items:center; gap:12px; background:var(--white); border:1px solid var(--border); border-radius:14px; padding:14px 16px;">
+          <span style="width:34px; height:34px; min-width:34px; border-radius:10px; background:var(--gold-100); display:flex; align-items:center; justify-content:center;">
+            <svg class="amn" viewBox="0 0 24 24"><path d="M20 15.5v2.7a2 2 0 0 1-2.2 2 17 17 0 0 1-7.4-2.6 16.6 16.6 0 0 1-5.1-5.1A17 17 0 0 1 2.7 5a2 2 0 0 1 2-2.2h2.7a2 2 0 0 1 2 1.7c.1.9.3 1.7.6 2.5a2 2 0 0 1-.5 2.1l-1 1a13 13 0 0 0 5 5l1-1a2 2 0 0 1 2.1-.5c.8.3 1.6.5 2.5.6a2 2 0 0 1 1.7 2Z"/></svg>
+          </span>
+          <div style="flex:1;">
+            <p style="font-size:13px; font-weight:700; color:var(--ink-900); margin:0;">Something wrong with a booking?</p>
+            <p style="font-size:11.5px; color:var(--ink-400); margin:3px 0 0;">Member support answers in under 5 minutes</p>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m10 6 6 6-6 6"/></svg>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+</x-dc>
+</body>
+</html>

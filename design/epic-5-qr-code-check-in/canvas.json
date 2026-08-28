@@ -1,0 +1,21 @@
+{
+  "artboards": [
+    { "file": "MyBookings.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "1. My Pass — bookings" },
+    { "file": "Main.dc.html", "x": 1540, "y": 0, "w": 1440, "h": 900, "title": "2. Digital pass" },
+    { "file": "Expired.dc.html", "x": 3080, "y": 0, "w": 1440, "h": 900, "title": "3. Pass expired" },
+    { "file": "Reminder.dc.html", "x": 0, "y": 1050, "w": 1440, "h": 900, "title": "4. 24-hour reminder email" },
+    { "file": "ArrivalDay.dc.html", "x": 1540, "y": 1050, "w": 1440, "h": 900, "title": "5. Arrival day" },
+    { "file": "Reception.dc.html", "x": 3080, "y": 1050, "w": 1440, "h": 900, "title": "6. Reception — verify and check in" },
+    { "file": "CheckedIn.dc.html", "x": 0, "y": 2100, "w": 1440, "h": 900, "title": "7. Checked in" },
+    { "file": "CheckInError.dc.html", "x": 1540, "y": 2100, "w": 1440, "h": 900, "title": "8. Reception — check-in error" },
+    { "file": "NoShow.dc.html", "x": 3080, "y": 2100, "w": 1440, "h": 900, "title": "9. Past visits — no-show" }
+  ],
+  "annotations": [
+    { "id": "phase-note", "x": 0, "y": -150, "w": 900, "text": "LuxePass — Epic 5: QR Code & Check-in\nSame light design system and app shell as Phases 1, 3, 4 and 5; the two reception screens are the first use of the dark theme. UI copy in English.\nThe pass and where it lives → the reminder and arrival day → check-in at the desk and what it leaves behind." },
+    { "id": "pass-note", "x": 0, "y": 955, "w": 900, "text": "Story 5.1 · The confirmation number is the pass: it is generated with the booking, carries member, lounge, date, arrival and duration, is reachable from My Pass and is built to be screenshotted. The QR only encodes that same LP number, so a scan is a shortcut and never a requirement. The pass deactivates itself when the booking window closes." },
+    { "id": "arrival-note", "x": 1540, "y": 2005, "w": 940, "text": "Story 5.3 · The reminder email goes out 24 hours before arrival with the number, the address and the cancellation deadline. Story 5.2 · On the day the pass turns live, and reception verifies it instantly: the member's booking, their special requests and the emergency contact, then one button checks them in." },
+    { "id": "outcome-note", "x": 0, "y": 3055, "w": 940, "text": "Story 5.2 · Check-in reaches the member's app immediately, the code is spent, and the visit closes on its own at the end of the window. When nothing matches, reception gets the likely reasons, the close matches and a way to reach support — nothing changes on the member's side. A window that closes with no check-in is recorded as a no-show in the booking history." },
+    { "id": "seam-note", "x": 3080, "y": 3055, "w": 700, "text": "The reception screens stop at one guest. The daily guest list, real-time booking alerts and no-show reporting for partners belong to Story 7.1 and are designed with the Partner Dashboard." }
+  ],
+  "launch": { "view": "canvas" }
+}

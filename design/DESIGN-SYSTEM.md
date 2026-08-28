@@ -45,7 +45,10 @@ Se declaran como custom properties en `<helmet><style>` de cada artboard. Copiar
 ```
 
 Grises del tema oscuro ya usados: `#F1E3D0` (texto sobre negro), `#C9BDAF` (secundario),
-`#8A7C6C` (terciario), `#3A322A` (borde sobre negro).
+`#8A7C6C` (terciario), `#3A322A` (borde sobre negro). Superficie elevada sobre el negro:
+`#1E1813` (fijada en la Fase 6, para las cards de la consola de recepción). Cuando un artboard
+usa el tema oscuro, estos grises se declaran también como custom properties
+(`--dark-ink-100/300/500`, `--dark-border`) para no repetir hexadecimales sueltos.
 
 ## 3. Tipografía
 
@@ -83,6 +86,10 @@ label 13px/600 · hint 12–12.5px · eyebrow 12px/700 uppercase `letter-spacing
 | Fila de opción / método de pago | `border-radius: 14px`, `padding: 14px 16px`, `display: flex; gap: 13px`; radio de 22px (borde `--border`; activo borde `--gold-500` con punto interior de 11px). Inactiva: blanco + `border: 1px solid var(--border)`. Activa: `border: 1.5px solid var(--gold-500)` + `box-shadow: 0 0 0 3px rgba(201,168,118,.15)` (el mismo halo del focus de input). Sirve también para las alternativas de una lista de decisión |
 | Marca de tarjeta | Rectángulo 44×30, `border-radius: 7px`, texto 10.5px/800 `letter-spacing: .06em`. Activa: fondo `--gold-100` y texto `--ink-900`; el resto `--bg-blush-1` y texto `--ink-400`. Las marcas aceptadas se listan como badges de 10.5px con `border: 1px solid var(--border)` |
 | Item de nav | `padding: 12px 14px`, `border-radius: 10px`; activo: fondo `--gold-100` + texto `--ink-900`/700; inactivo: icono `--ink-400` + texto `--ink-700`/600 |
+| Código QR del pase | Fijado en la Fase 6. SVG dibujado a mano de 25×25 módulos (`viewBox="0 0 25 25"`, `shape-rendering: crispEdges`, `fill: #221A14`) sobre caja blanca de `border-radius: 16px` y padding 16px. Tamaños en uso: 190–212px en el pase, 118px en el email, 102px en la preview de la lista. **Codifica el mismo LP#**, nunca un dato distinto; siempre acompañado del número en texto |
+| Sello de expirado | Banda rotada `-8deg` centrada sobre la tarjeta: `padding: 9px 26px`, `border: 2px solid #8A7C6C`, `border-radius: 8px`, fondo `rgba(21,17,13,.72)`, texto 16px/800 uppercase `letter-spacing: .22em` en `#C9BDAF`. El QR bajo él pasa a `opacity: .22` sobre `#E6DED4` |
+| Fila de historial | Card de contenido en `display: flex; align-items: center; gap: 16px`, thumbnail de 56px, título en Bodoni 19px, meta de 12.5px `--ink-400`, chip de resultado y botón de 38px. Chip: atendido = `--gold-100` con punto `--gold-500`; no-show = `border: 1px dashed var(--ink-400)` con punto y texto `--ink-400` |
+| Campo de lookup (oscuro) | Alto 64px, fondo `--panel-black`, `border-radius: 14px`, icono de 22px a la izquierda y el LP# en 18px/700 `letter-spacing: .08em`. Activo: `border: 1.5px solid var(--gold-500)` + el halo dorado de focus. Sin resultado: `border: 1.5px dashed #8A7C6C` y chip "Not recognised" |
 
 Links: siempre definir `a` (`--gold-600`) y `a:hover` (`--ink-900`) en el `<helmet>`.
 Transiciones: `.15s ease`.
@@ -133,7 +140,23 @@ Cuatro plantillas fijadas en la Fase 1. Reutilizarlas antes de inventar una nuev
    sobre `--panel-black` y el patrón de puntos dorados a 18px: logo de 40px y eyebrow arriba, el
    número de reserva en Bodoni 32px `#F1E3D0`, separador `#3A322A` y filas etiqueta/valor
    (`#8A7C6C` / `#F1E3D0`). Cierra con una franja blanca de 16px con la nota de captura de pantalla.
-11. **Email de marca** — artboard sin app shell: fondo blush a pantalla completa y una card de 660px
+11. **Pase digital (rail de 380px)** — fijado en la Fase 6, extiende el patrón 10. Dentro del App
+   shell: topbar de 64px con la miga "My Pass › LP-…" y las quick actions, columna izquierda con el
+   detalle de la visita y los pasos de recepción, y a la derecha la tarjeta oscura de **380px**
+   (no 344) con el LP# en Bodoni 40px, el QR sobre caja blanca, el separador `#3A322A` y las filas
+   etiqueta/valor. Cierra con la franja blanca de la nota de captura. Cuatro estados de la misma
+   tarjeta: próxima (neutra), del día (`border: 2px solid var(--gold-500)` + halo
+   `0 0 0 6px rgba(201,168,118,.18)`, QR primero y LP# debajo), con check-in hecho (el QR se
+   sustituye por el medallón dorado de 96px) y expirada (grises, sello y QR atenuado).
+12. **Consola de recepción (tema oscuro)** — fijado en la Fase 6. Artboard completo sobre el radial
+   de `--panel-black` con el patrón de puntos: topbar de 72px (`rgba(21,17,13,.72)`, logo de 34px,
+   nombre del lounge en Bodoni 19px, fecha y hora, contador del día y el usuario del staff) y cuerpo
+   centrado en una columna de **900px**: campo de lookup de 64px + card de resultado de `#1E1813`
+   con `border-radius: 20px` (cabecera con avatar de 56px y chip de validez, grid de 4 datos,
+   peticiones especiales y contacto de emergencia lado a lado, y la fila de acciones de 52px).
+   El bloque de contacto de emergencia va sobre `--panel-black` con `border: 1px dashed var(--gold-600)`
+   y declara siempre que el acceso queda registrado.
+13. **Email de marca** — artboard sin app shell: fondo blush a pantalla completa y una card de 660px
    centrada con cabecera de cliente de correo (avatar de 36px, remitente, destinatario y asunto en
    15px/700), banda oscura con el logo y el dato principal en Bodoni, cuerpo con los detalles sobre
    `--bg-blush-2`, los botones de acción y el desglose de importes, y un pie centrado de 11.5px con
@@ -194,7 +217,8 @@ Debajo, leyenda con muestras de 16px. El sello de frescura (`Updated N min ago �
 | 3 | Epic 2 — Location Discovery & Search (tema claro) | ✅ Completa — 9 artboards |
 | 4 | Epic 3 — Lounge Profiles & Details (tema claro) | ✅ Completa — 9 artboards |
 | 5 | Epic 4 — Booking System (tema claro) | ✅ Completa — 9 artboards |
-| 6+ | Epics 5, 6, 8, 9 | Pendiente |
+| 6 | Epic 5 — QR Code & Check-in (claro + primeras pantallas oscuras) | ✅ Completa — 9 artboards |
+| 7+ | Epics 6, 8, 9 | Pendiente |
 
 Cada fase vive en `design/epic-N-slug/` con sus `.dc.html`, su `canvas.json` y una copia de
 `logo.png`, y se publica como un canvas propio.
@@ -308,6 +332,47 @@ usan iconografía propia como marcador, no los assets de marca oficiales, que de
 implementar; el texto de la política de cancelación (24 h gratis, 50 % después, no-show sin
 reembolso) es una propuesta a validar; y la ventana de retención del slot durante el checkout
 ("Slot held for M:SS") es una decisión de producto que debe confirmarse.
+
+### Fase 6 — `design/epic-5-qr-code-check-in/`
+
+Canvas: https://claude.ai/code/artifact/92a731f6-999e-4903-8383-55ef1b52d0a9
+
+9 artboards en 3 filas, continuando desde la confirmación de la Fase 5:
+
+| Fila | Artboards | Historia |
+|---|---|---|
+| 1 | `MyBookings` → `Main` (pase digital) → `Expired` | 5.1 |
+| 2 | `Reminder` (email 24 h) → `ArrivalDay` → `Reception` | 5.3 / 5.2 |
+| 3 | `CheckedIn` → `CheckInError` → `NoShow` | 5.2 |
+
+Cobertura de criterios: número de confirmación LP único generado con la reserva; nombre del
+miembro, lounge, fecha/hora y duración en el pase; acceso desde la sección My Pass con pestañas
+Upcoming/Past; diseño pensado para captura de pantalla (la tarjeta se sostiene sola, sin conexión,
+con botón de guardar como imagen); expiración automática al cerrar la ventana de la reserva, con
+el pase sellado y movido a Past; email de recordatorio 24 h antes con el número, la dirección y el
+plazo de cancelación; verificación instantánea en recepción por escaneo o por número; contacto de
+emergencia accesible al staff con aviso de registro de acceso; confirmación del check-in en la app
+del miembro en el momento; error de check-in con las causas probables, las coincidencias cercanas
+y el teléfono de soporte; y registro de no-show en el historial con el efecto sobre la política.
+
+Decisiones de producto de esta fase (a confirmar con En Soleil):
+
+- **El QR es un atajo, no el mecanismo.** Ninguna historia del Epic 5 pide un QR — la 5.1 pide el
+  número LP y el flujo dice "present confirmation at reception". El pase lleva el LP# como dato
+  principal y un QR que **codifica ese mismo número**, de modo que recepción puede escanear o
+  teclear indistintamente. Si En Soleil quiere un check-in solo por número, se retira el QR sin
+  tocar la estructura de ninguna pantalla.
+- **Las dos pantallas oscuras son solo el momento del check-in de un invitado.** La lista diaria
+  de invitados, las notificaciones en tiempo real y el reporte de no-show del partner son la
+  Story 7.1 y se diseñan en la fase del Partner Dashboard; aquí se deja el punto de costura
+  declarado en pantalla.
+- **Ventana de llegada.** Se dibuja como "llegada a las 3:30 PM, admisión hasta las 5:30 PM,
+  ventana cerrada a las 7:30 PM". Ni las historias ni los flujos fijan esa tolerancia.
+
+Pendientes conocidos: el QR es un SVG dibujado con módulos plausibles (al implementar se genera
+con una librería real sobre el LP#); nombres, direcciones, teléfonos (rango 555), horas, números
+de reserva y el contacto de emergencia son datos de muestra; el consentimiento y la retención del
+contacto de emergencia mostrado al staff son un asunto legal a validar antes de implementar.
 
 ## 7. Cómo regenerar y publicar un canvas
 
