@@ -1,0 +1,23 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "1. My bookings — upcoming" },
+    { "file": "Cancel.dc.html", "x": 1540, "y": 0, "w": 1440, "h": 900, "title": "2. Cancel — more than 24 hours ahead" },
+    { "file": "CancelFee.dc.html", "x": 3080, "y": 0, "w": 1440, "h": 900, "title": "3. Cancel — inside the 24-hour window" },
+    { "file": "History.dc.html", "x": 0, "y": 1050, "w": 1440, "h": 900, "title": "4. My bookings — past" },
+    { "file": "Notifications.dc.html", "x": 1540, "y": 1050, "w": 1440, "h": 900, "title": "5. Notifications" },
+    { "file": "MorningAlert.dc.html", "x": 3080, "y": 1050, "w": 1440, "h": 900, "title": "6. The 6 AM reminder" },
+    { "file": "NotificationSettings.dc.html", "x": 0, "y": 2100, "w": 1440, "h": 900, "title": "7. Notification settings" },
+    { "file": "Profile.dc.html", "x": 1540, "y": 2100, "w": 1440, "h": 900, "title": "8. Profile details" },
+    { "file": "Preferences.dc.html", "x": 3080, "y": 2100, "w": 1440, "h": 900, "title": "9. Preferences" },
+    { "file": "Privacy.dc.html", "x": 0, "y": 3150, "w": 1440, "h": 900, "title": "10. Privacy and data" },
+    { "file": "DeleteAccount.dc.html", "x": 1540, "y": 3150, "w": 1440, "h": 900, "title": "11. Delete account" }
+  ],
+  "annotations": [
+    { "id": "phase-note", "x": 0, "y": -150, "w": 900, "text": "LuxePass — Epic 6: Member Experience & Notifications\nSame light design system and app shell as Phases 1, 3, 4, 5 and 6. UI copy in English.\nManaging what you booked → what we tell you and when → who you are and what we keep about you." },
+    { "id": "bookings-note", "x": 0, "y": 955, "w": 940, "text": "Story 6.1 · One section holds the four states a booking can be in — confirmed, in progress, completed, cancelled — plus the waitlist that has no pass yet. Cancelling is the only change a member can make, and the policy decides which of the two dialogs opens: free more than 24 hours ahead, a flat $35.00 fee inside the window. Past visits keep the confirmation number, so any booking email can be sent again, and a no-show is written into the record with what it cost." },
+    { "id": "notif-note", "x": 1540, "y": 2005, "w": 940, "text": "Story 6.2 · Six kinds of message live in one centre: booking confirmations, the 6 AM reminder on the day of a visit, new partner lounges, membership renewal, offers, and the birthday month. Booking news is unmissable — email is always on and quiet hours never hold it back. Everything else is a switch per channel, and the day-of reminder carries the time control that makes 6 AM a default rather than a rule." },
+    { "id": "profile-note", "x": 0, "y": 4105, "w": 940, "text": "Story 6.3 · Account keeps a sub-nav of its own: the same fields captured at sign-up, the favorites and amenities that order Explore, the notification switches, and privacy. Membership status and the referral code sit beside the profile as read-only cards — the plan itself and the referral rewards are Epic 9. Deleting the account says out loud what it cancels and what it charges, and offers pausing instead." },
+    { "id": "seam-note", "x": 3080, "y": 3150, "w": 720, "text": "Seams declared, not designed here: the support conversation behind every \"contact support\" row is Epic 8; managing the plan, pausing it and the referral rewards are Epic 9; the partner's side of a no-show is Story 7.1." }
+  ],
+  "launch": { "view": "canvas" }
+}

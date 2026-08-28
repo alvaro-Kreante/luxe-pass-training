@@ -89,6 +89,12 @@ label 13px/600 · hint 12–12.5px · eyebrow 12px/700 uppercase `letter-spacing
 | Código QR del pase | Fijado en la Fase 6. SVG dibujado a mano de 25×25 módulos (`viewBox="0 0 25 25"`, `shape-rendering: crispEdges`, `fill: #221A14`) sobre caja blanca de `border-radius: 16px` y padding 16px. Tamaños en uso: 190–212px en el pase, 118px en el email, 102px en la preview de la lista. **Codifica el mismo LP#**, nunca un dato distinto; siempre acompañado del número en texto |
 | Sello de expirado | Banda rotada `-8deg` centrada sobre la tarjeta: `padding: 9px 26px`, `border: 2px solid #8A7C6C`, `border-radius: 8px`, fondo `rgba(21,17,13,.72)`, texto 16px/800 uppercase `letter-spacing: .22em` en `#C9BDAF`. El QR bajo él pasa a `opacity: .22` sobre `#E6DED4` |
 | Fila de historial | Card de contenido en `display: flex; align-items: center; gap: 16px`, thumbnail de 56px, título en Bodoni 19px, meta de 12.5px `--ink-400`, chip de resultado y botón de 38px. Chip: atendido = `--gold-100` con punto `--gold-500`; no-show = `border: 1px dashed var(--ink-400)` con punto y texto `--ink-400` |
+| Chip de estado de reserva | Fijado en la Fase 7. Píldora de `padding: 6px 13px`, `border-radius: 20px`, texto 11.5px/700, con punto de 6px a la izquierda. Cinco estados, sin colores semánticos: **Confirmed** fondo `--gold-100` + punto `--gold-500` · **In progress** fondo blanco, `border: 1.5px solid var(--gold-500)` y punto `--gold-500` con halo `0 0 0 3px rgba(201,168,118,.28)` · **Completed** blanco con `border: 1px solid var(--border)`, punto `--ink-400` y texto `--ink-700` · **Cancelled** blanco con `border: 1px dashed var(--ink-400)`, sin punto, texto `--ink-400` · **No-show** `border: 1px dashed var(--ink-400)` con punto y texto `--ink-400`. La card de una reserva cancelada va sobre `--bg-blush-1` con borde discontinuo y el thumbnail a `opacity: .45` |
+| Switch de ajuste | Fijado en la Fase 7. Píldora de 44×26, `border-radius: 13px`, `padding: 3px`, con manija de 20px blanca y `box-shadow: 0 1px 3px rgba(34,26,20,.28)`. Activo: fondo `--gold-500`, manija a la derecha. Inactivo: fondo `--border`, manija a la izquierda. Cuando un canal no se puede desactivar, en su lugar va un chip `--gold-100` de 11px que dice "Always" |
+| Fila de ajuste por canal | Fijado en la Fase 7. `display: flex; gap: 16px; padding: 14px 0` con `border-bottom: 1px solid var(--border)`: título 14px/700, subtítulo 12px `--ink-400` y tres columnas fijas de 72px centradas (Push · Email · SMS) con el switch o el chip "Always". La cabecera repite esas tres columnas en eyebrow de 11px |
+| Campana de notificaciones | Fijado en la Fase 7. Botón de 40×40, `border-radius: 11px`, icono de 18px `--gold-600`. Inactiva: fondo blanco + `border: 1.5px solid var(--border)`. Activa: fondo `--gold-100` + `border: 1.5px solid var(--gold-500)`. El badge es una píldora de 19px de alto en `--gold-500` con `border: 2px solid var(--white)` en la esquina superior derecha. Vive en la topbar del App shell, a la derecha |
+| Fila de notificación | Fijado en la Fase 7. Card de contenido en `display: flex; gap: 14px` con icono en cuadro de 38px. **Sin leer**: fondo blanco, `border: 1px solid var(--border)`, sombra de card e icono sobre `--gold-100`; el título lleva delante un punto de 8px `--gold-500` y el cuerpo se indenta 17px para alinearse con él. **Leída**: fondo `--bg-blush-2`, sin sombra, icono sobre blanco con borde y textos en `--ink-400`. La hora va a la derecha del título en 12px `--ink-400` |
+| Código de referido | Fijado en la Fase 7. Caja de 50px con `border: 1.5px dashed var(--gold-500)`, `border-radius: 12px` y fondo `--bg-blush-2`: el código en 15px/800 `letter-spacing: .1em` y un botón "Copy" de 36px a la derecha |
 | Campo de lookup (oscuro) | Alto 64px, fondo `--panel-black`, `border-radius: 14px`, icono de 22px a la izquierda y el LP# en 18px/700 `letter-spacing: .08em`. Activo: `border: 1.5px solid var(--gold-500)` + el halo dorado de focus. Sin resultado: `border: 1.5px dashed #8A7C6C` y chip "Not recognised" |
 
 Links: siempre definir `a` (`--gold-600`) y `a:hover` (`--ink-900`) en el `<helmet>`.
@@ -106,7 +112,9 @@ Cuatro plantillas fijadas en la Fase 1. Reutilizarlas antes de inventar una nuev
    con check, h1 de 40px en blanco. Sirve para: welcome y cualquier estado de éxito terminal.
 3. **App shell** — sidebar blanca de 248px (logo 52px, items de nav, bloque de usuario abajo con
    avatar de 36px) + área de contenido con `padding: 52px 56px`. **Fija la navegación del área de
-   miembro para los Epics 2–6.** Nav actual: Home · Explore · My Pass · Profile.
+   miembro para los Epics 2–6.** Nav actual: Home · Explore · My Pass · Profile. Desde la Fase 7 la
+   topbar de cualquier vista del área de miembro lleva la campana de notificaciones a la derecha,
+   antes o después del botón de acción de la vista.
 4. **Modal sobre pantalla** — la pantalla de fondo con `filter: blur(3px)`, scrim
    `rgba(21,17,13,.55)`, card de 640px con header + cuerpo scrolleable + footer separado por
    `border-top`. Usado en la aceptación de términos y en los diálogos de ubicación (520–540px).
@@ -156,7 +164,20 @@ Cuatro plantillas fijadas en la Fase 1. Reutilizarlas antes de inventar una nuev
    peticiones especiales y contacto de emergencia lado a lado, y la fila de acciones de 52px).
    El bloque de contacto de emergencia va sobre `--panel-black` con `border: 1px dashed var(--gold-600)`
    y declara siempre que el acceso queda registrado.
-13. **Email de marca** — artboard sin app shell: fondo blush a pantalla completa y una card de 660px
+13. **Sección de cuenta con sub-nav** — fijado en la Fase 7 dentro del App shell, para la sección
+   **Profile**. La columna de contenido no lleva padding: topbar de 64px con la miga
+   "Account › Nombre de la vista" a la izquierda y, a la derecha, el chip "Saved as you change them"
+   (o el botón primario "Save changes" cuando la vista tiene formulario) más la campana; debajo, una
+   fila con un sub-nav blanco de **232px** (`border-right`, eyebrow "Account" y los items de nav del
+   sistema: Profile details · Preferences · Notifications · Privacy and data · Membership, con una
+   nota de 11.5px abajo) y el cuerpo con `padding: 30px 40px 28px`. El cuerpo va a ancho completo o
+   con el rail de 344px del patrón 9 cuando hay datos de solo lectura que acompañan al formulario.
+14. **Panel de notificaciones** — fijado en la Fase 7. Desplegable de 380px anclado a la campana
+   (`position: absolute; right: 32px; top: 74px`), card blanca de `border-radius: 18px` con
+   `box-shadow: 0 30px 60px -20px rgba(34,26,20,.32)`: cabecera de 16px con el título y
+   "Mark all as read", tres filas de notificación separadas por `border-top`, y un pie centrado sobre
+   `--bg-blush-2` con "See all notifications". La lista completa vive en su propia pantalla.
+15. **Email de marca** — artboard sin app shell: fondo blush a pantalla completa y una card de 660px
    centrada con cabecera de cliente de correo (avatar de 36px, remitente, destinatario y asunto en
    15px/700), banda oscura con el logo y el dato principal en Bodoni, cuerpo con los detalles sobre
    `--bg-blush-2`, los botones de acción y el desglose de importes, y un pie centrado de 11.5px con
@@ -218,7 +239,8 @@ Debajo, leyenda con muestras de 16px. El sello de frescura (`Updated N min ago �
 | 4 | Epic 3 — Lounge Profiles & Details (tema claro) | ✅ Completa — 9 artboards |
 | 5 | Epic 4 — Booking System (tema claro) | ✅ Completa — 9 artboards |
 | 6 | Epic 5 — QR Code & Check-in (claro + primeras pantallas oscuras) | ✅ Completa — 9 artboards |
-| 7+ | Epics 6, 8, 9 | Pendiente |
+| 7 | Epic 6 — Member Experience & Notifications (tema claro) | ✅ Completa — 11 artboards |
+| 8+ | Epics 8 y 9 | Pendiente |
 
 Cada fase vive en `design/epic-N-slug/` con sus `.dc.html`, su `canvas.json` y una copia de
 `logo.png`, y se publica como un canvas propio.
@@ -373,6 +395,70 @@ Pendientes conocidos: el QR es un SVG dibujado con módulos plausibles (al imple
 con una librería real sobre el LP#); nombres, direcciones, teléfonos (rango 555), horas, números
 de reserva y el contacto de emergencia son datos de muestra; el consentimiento y la retención del
 contacto de emergencia mostrado al staff son un asunto legal a validar antes de implementar.
+
+### Fase 7 — `design/epic-6-member-experience-notifications/`
+
+Canvas: https://claude.ai/code/artifact/950e79f4-011a-40be-a8fc-72366e8b64c4
+
+11 artboards en 4 filas, continuando desde el pase de la Fase 6:
+
+| Fila | Artboards | Historia |
+|---|---|---|
+| 1 | `Main` (upcoming) → `Cancel` (>24 h) → `CancelFee` (<24 h) | 6.1 |
+| 2 | `History` (past) → `Notifications` → `MorningAlert` (aviso de las 6 AM) | 6.1 / 6.2 |
+| 3 | `NotificationSettings` → `Profile` → `Preferences` | 6.2 / 6.3 |
+| 4 | `Privacy` → `DeleteAccount` | 6.3 |
+
+Cobertura de criterios: sección My Bookings con pestañas Upcoming/Past; los cuatro estados de una
+reserva (Confirmed, In progress, Completed, Cancelled) más el waitlist sin pase; cancelar como única
+modificación posible, con las dos ramas de la política de 24 h; tarifa plana por cancelación tardía
+y por no-show, cobrada a la tarjeta de la membresía y anotada en el historial; historial filtrable
+con el número de confirmación de cada visita y reenvío del email; contacto de soporte desde el rail
+de cada vista de reservas; centro de notificaciones con los seis tipos que pide la 6.2
+(confirmación de reserva, aviso de las 6 AM el día de la visita, nuevo lounge partner, renovación de
+membresía, ofertas y promoción del mes de cumpleaños); panel desplegable de la campana con el aviso
+recién llegado; ajustes de notificación por canal (push/email/SMS) con el email de reservas siempre
+activo, el control horario del aviso matinal y las horas de silencio; edición de todos los campos
+capturados en el onboarding; lounges favoritos, amenities preferidas e intereses; estado de la
+membresía Active con renovación y consumo; código de referido con copiar y compartir; ajustes de
+privacidad de uso de datos, contacto de emergencia con aviso de registro de accesos, exportación de
+datos personales (GDPR) y descarga del historial; y borrado de cuenta con confirmación que declara
+lo que cancela, lo que cobra y los 30 días de gracia, ofreciendo pausar la membresía en su lugar.
+
+Decisiones de producto de esta fase (a confirmar con En Soleil):
+
+- **La tarifa plana sustituye a la propuesta de la Fase 5.** La Story 6.1 dice explícitamente
+  "no show policy enforcement - flat fee", así que la política que se dibuja es: gratis con más de
+  24 h, **$35.00 fijos** dentro de las 24 h, los mismos $35.00 por no-show. Esto reemplaza el
+  "50 % después de las 24 h" que la Fase 5 dejó como propuesta; si En Soleil valida otro importe,
+  cambia el número en `Main`, `Cancel`, `CancelFee`, `History` y `DeleteAccount`, no la estructura.
+- **Cancelar dentro de la ventana no devuelve la visita** al cupo del mes; cancelar a tiempo sí.
+- **Tres no-shows en doce meses pausan las reservas 30 días.** Ninguna historia lo fija; se dibuja
+  porque "policy enforcement" necesita una consecuencia acumulada visible.
+- **El aviso de las 6 AM** se interpreta como el recordatorio del día de la visita, a las 6:00 AM
+  hora local, con la hora de llegada y la dirección. La hora es un ajuste del miembro, no una regla.
+- **La promoción del mes de cumpleaños** se dibuja como un day pass de cortesía válido durante todo
+  el mes, encima de las visitas incluidas.
+- **El corazón de favorito no existe todavía en el perfil de lounge** (Fase 4). `Preferences` lo da
+  por hecho ("Tap the heart on any lounge profile to save it here"), así que al implementar hay que
+  añadir ese control a la pantalla de la Fase 4.
+- **La exportación de datos** se promete por email en 48 h con un enlace válido 7 días, y el borrado
+  de cuenta conserva los datos 30 días antes de eliminarlos. Ambos plazos son propuestas legales a
+  validar.
+
+Costuras declaradas en pantalla, no diseñadas aquí: la conversación de soporte que abre cada fila de
+"contact support" es el Epic 8; el plan, la pausa de la membresía y el seguimiento de los referidos
+son el Epic 9 (por eso el sub-nav incluye "Membership" pero esa vista no se diseña en esta fase); y
+el no-show visto desde el partner es la Story 7.1.
+
+Pendientes conocidos: nombres, direcciones, teléfonos (rango 555), fechas, números de reserva
+(LP-8xxxxx), el código de referido y los importes son datos de muestra; el calendario narrativo de
+todos los artboards es **jueves 12 de septiembre** (visita en curso en The Vestry, reserva de mañana
+viernes 13 en Bergdorf dentro de la ventana de 24 h y reserva libre del sábado 14 en The Ainsworth,
+que es la misma del Epic 5) y hay que mantenerlo si se añaden pantallas — los días de la semana son
+coherentes entre sí pero no corresponden al calendario real de 2026, igual que en las fases
+anteriores; y el contacto de emergencia mostrado en `Privacy` arrastra el mismo asunto legal
+declarado en la Fase 6.
 
 ## 7. Cómo regenerar y publicar un canvas
 
