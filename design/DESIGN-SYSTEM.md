@@ -297,7 +297,10 @@ Story 4.2; si el modelo real es otro, cambian los importes de `Main`, `Payment`,
 
 El pago se sitúa entre el detalle de la visita y el resumen con términos, siguiendo la nota de
 `specs/flows/flow-complete-booking-journey.md` sobre el hueco de la Story 4.2 en el diagrama
-original.
+original. El paso 2 **solo selecciona el método de pago** — no cobra, y así lo declara en pantalla;
+**el cargo ocurre en el paso 3**, con el botón "Confirm and pay $81.66" que es el "one-tap booking
+confirmation" de la Story 4.1, y la pantalla de confirmación lo acredita con "Paid $81.66 · Visa
+4242" antes del recibo por email.
 
 Pendientes conocidos: los importes, impuestos, números de reserva (LP-842193), referencias de
 recibo y últimos dígitos de tarjeta son datos de muestra; los botones de Apple Pay y Google Pay
