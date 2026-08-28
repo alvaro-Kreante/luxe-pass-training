@@ -1,0 +1,277 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,500&family=Manrope:wght@400;500;600;700;800&display=swap">
+  <style>
+    :root {
+      --bg-blush-1: #F8EAE1; --bg-blush-2: #FCF4EE;
+      --ink-900: #221A14; --ink-700: #55483D; --ink-400: #9C8D80;
+      --gold-500: #C9A876; --gold-600: #AD8A5C; --gold-100: #F1E3D0;
+      --border: #E7D9C9; --white: #FFFFFF; --panel-black: #15110D;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Manrope', 'Segoe UI', sans-serif; color: var(--ink-900); }
+    h1, h2, h3 { font-family: 'Bodoni Moda', Georgia, 'Times New Roman', serif; margin: 0; font-weight: 500; }
+    a { color: var(--gold-600); text-decoration: none; }
+    a:hover { color: var(--ink-900); }
+    .amn { width: 17px; height: 17px; fill: none; stroke: var(--gold-600); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .nav-item { transition: background .15s ease; }
+    .nav-item:hover { background: var(--gold-100); }
+    .btn-gold { transition: background .15s ease; }
+    .btn-gold:hover { background: var(--gold-600) !important; }
+    .btn-outline { transition: background .15s ease, border-color .15s ease; }
+    .btn-outline:hover { background: var(--gold-100); }
+    .day { height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: border-color .15s ease; }
+    .day:hover { border-color: var(--gold-500); }
+    .d-open { background: var(--gold-100); color: var(--ink-900); }
+    .d-sel { background: var(--gold-500); color: var(--white); }
+    .d-today { background: var(--white); border: 1.5px solid var(--gold-500); color: var(--ink-900); }
+    .d-full { background: var(--white); border: 1px solid var(--border); color: var(--ink-400); }
+    .d-closed { background: var(--bg-blush-1); border: 1px dashed var(--border); color: var(--ink-400); }
+    .d-past { background: var(--bg-blush-1); color: var(--ink-400); cursor: default; }
+    .d-past:hover { border-color: transparent; }
+    .slot { border-radius: 12px; padding: 10px 8px; text-align: center; cursor: pointer; transition: border-color .15s ease, background .15s ease; }
+    .slot:hover { border-color: var(--gold-500); }
+    .s-open { background: var(--white); border: 1px solid var(--border); }
+    .s-sel { background: var(--gold-500); border: 1px solid var(--gold-500); }
+    .s-full { background: var(--bg-blush-1); border: 1px dashed var(--border); cursor: default; }
+    .s-full:hover { border-color: var(--border); }
+    .pay { border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; gap: 13px; cursor: pointer; transition: border-color .15s ease; }
+    .pay:hover { border-color: var(--gold-500); }
+    .p-idle { background: var(--white); border: 1px solid var(--border); }
+    .p-sel { background: var(--white); border: 1.5px solid var(--gold-500); box-shadow: 0 0 0 3px rgba(201,168,118,.15); }
+    .cal-target { transition: border-color .15s ease, background .15s ease; }
+    .cal-target:hover { border-color: var(--gold-500); background: var(--gold-100); }
+    .panel-scroll { overflow-y: auto; }
+    .panel-scroll::-webkit-scrollbar { width: 6px; }
+    .panel-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</helmet>
+
+<div style="position:relative; display:flex; width:1440px; height:900px; background:var(--bg-blush-2); overflow:hidden; font-family:'Manrope',sans-serif;">
+
+  <!-- Sidebar -->
+  <div style="width:248px; min-width:248px; height:900px; background:var(--white); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:32px 20px;">
+
+    <img src="logo.png" alt="En Soleil" style="width:52px; height:auto; margin:0 0 40px 12px;">
+
+    <div class="nav-item" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--ink-700);">Home</span>
+    </div>
+    <div class="nav-item" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:var(--gold-100); margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="m15 9-2 6-6 2 2-6 6-2Z"/></svg>
+      <span style="font-size:14px; font-weight:700; color:var(--ink-900);">Explore</span>
+    </div>
+    <div class="nav-item" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4V8Z"/><path d="M14 6v2M14 11v2M14 16v2" stroke-dasharray="2 3"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--ink-700);">My Pass</span>
+    </div>
+    <div class="nav-item" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.5"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--ink-700);">Profile</span>
+    </div>
+
+    <div style="flex:1;"></div>
+
+    <div style="display:flex; align-items:center; gap:10px; padding:12px 14px; border-top:1px solid var(--border); padding-top:20px;">
+      <div style="width:36px; height:36px; min-width:36px; border-radius:50%; background:var(--gold-500); display:flex; align-items:center; justify-content:center; color:var(--white); font-size:13px; font-weight:700; font-family:'Bodoni Moda',serif;">AR</div>
+      <div style="flex:1; overflow:hidden;">
+        <p style="font-size:13px; font-weight:700; color:var(--ink-900); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Alexandra Rivas</p>
+        <p style="font-size:11.5px; color:var(--ink-400); margin:2px 0 0;">Annual member</p>
+      </div>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><path d="M15 16l4-4-4-4"/><path d="M19 12H9"/></svg>
+    </div>
+
+  </div>
+
+  <!-- Payment -->
+  <div style="flex:1; height:900px; display:flex; flex-direction:column; overflow:hidden;">
+
+    <!-- Top bar -->
+    <div style="height:64px; min-height:64px; background:var(--white); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:16px; padding:0 32px;">
+      <div style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-700)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg>
+        <span style="font-size:13.5px; font-weight:600; color:var(--ink-700);">Back to visit details</span>
+      </div>
+      <div style="flex:1;"></div>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.5"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/></svg>
+        <span style="font-size:12.5px; font-weight:700; color:var(--ink-700); letter-spacing:0.04em;">Secure checkout</span>
+      </div>
+    </div>
+
+    <!-- Lounge header -->
+    <div style="height:84px; min-height:84px; background:var(--white); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:14px; padding:0 32px;">
+      <div style="position:relative; width:52px; height:52px; min-width:52px; border-radius:14px; overflow:hidden; background:radial-gradient(circle at 30% 20%, #3a3128, #15110d 72%);">
+        <div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.20) 1px, transparent 1.5px); background-size:9px 9px;"></div>
+      </div>
+      <div>
+        <h2 style="font-size:22px; color:var(--ink-900);">The Ainsworth</h2>
+        <p style="font-size:12.5px; color:var(--ink-400); margin:3px 0 0;">Saturday, September 14 · 3:30 PM · Admission for one</p>
+      </div>
+      <div style="flex:1;"></div>
+      <span style="display:inline-flex; align-items:center; gap:7px; padding:7px 14px; border-radius:20px; background:var(--gold-100);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5l3 2"/></svg>
+        <span style="font-size:12.5px; font-weight:700; color:var(--ink-900);">Slot held for 9:41</span>
+      </span>
+    </div>
+
+    <!-- Body -->
+    <div style="flex:1; min-height:0; display:flex; gap:28px; padding:24px 32px 28px;">
+
+      <div style="flex:1; min-width:0;">
+
+        <p style="font-size:12px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-600); margin:0 0 9px;">Step 2 of 3 · Payment</p>
+        <div style="display:flex; gap:6px;">
+          <span style="flex:1; height:4px; border-radius:2px; background:var(--gold-500);"></span>
+          <span style="flex:1; height:4px; border-radius:2px; background:var(--gold-500);"></span>
+          <span style="flex:1; height:4px; border-radius:2px; background:var(--border);"></span>
+        </div>
+
+        <!-- Express checkout -->
+        <p style="font-size:15px; font-weight:700; color:var(--ink-900); margin:22px 0 10px;">Express checkout</p>
+        <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px;">
+          <button class="btn-outline" style="display:flex; align-items:center; justify-content:center; gap:10px; height:52px; background:var(--white); border:1.5px solid var(--border); border-radius:12px; color:var(--ink-900); font-family:'Manrope',sans-serif; font-size:14px; font-weight:700; cursor:pointer;">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-900)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M15.6 12.4c0-2.3 1.9-3.4 2-3.5-1.1-1.6-2.8-1.8-3.4-1.8-1.5-.2-2.9.8-3.6.8-.7 0-1.9-.8-3.1-.8-1.6 0-3.1.9-3.9 2.4-1.7 2.9-.4 7.2 1.2 9.5.8 1.1 1.7 2.4 3 2.4 1.2 0 1.6-.8 3.1-.8 1.4 0 1.8.8 3.1.7 1.3 0 2.1-1.1 2.9-2.3.9-1.3 1.3-2.6 1.3-2.7-.1 0-2.5-1-2.6-3.9Z"/><path d="M13.4 5.3c.7-.8 1.1-1.9 1-3-1 0-2.2.7-2.9 1.5-.6.7-1.1 1.8-1 2.9 1.1.1 2.2-.6 2.9-1.4Z"/></svg>
+            Apple&nbsp;Pay
+          </button>
+          <button class="btn-outline" style="display:flex; align-items:center; justify-content:center; gap:10px; height:52px; background:var(--white); border:1.5px solid var(--border); border-radius:12px; color:var(--ink-900); font-family:'Manrope',sans-serif; font-size:14px; font-weight:700; cursor:pointer;">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-900)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.7-6"/><path d="M20 12h-7.5"/></svg>
+            Google&nbsp;Pay
+          </button>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:14px; margin:20px 0;">
+          <span style="flex:1; height:1px; background:var(--border);"></span>
+          <span style="font-size:11.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-400);">or pay by card</span>
+          <span style="flex:1; height:1px; background:var(--border);"></span>
+        </div>
+
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:11px;">
+          <p style="font-size:15px; font-weight:700; color:var(--ink-900); margin:0;">Saved cards</p>
+          <span style="display:flex; align-items:center; gap:8px;">
+            <span style="padding:4px 9px; border-radius:6px; border:1px solid var(--border); font-size:10.5px; font-weight:700; letter-spacing:0.06em; color:var(--ink-400);">VISA</span>
+            <span style="padding:4px 9px; border-radius:6px; border:1px solid var(--border); font-size:10.5px; font-weight:700; letter-spacing:0.06em; color:var(--ink-400);">MASTERCARD</span>
+            <span style="padding:4px 9px; border-radius:6px; border:1px solid var(--border); font-size:10.5px; font-weight:700; letter-spacing:0.06em; color:var(--ink-400);">AMEX</span>
+            <span style="padding:4px 9px; border-radius:6px; border:1px solid var(--border); font-size:10.5px; font-weight:700; letter-spacing:0.06em; color:var(--ink-400);">DISCOVER</span>
+          </span>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:10px;">
+
+          <div class="pay p-sel">
+            <span style="width:22px; height:22px; min-width:22px; border-radius:50%; border:1.5px solid var(--gold-500); display:flex; align-items:center; justify-content:center;">
+              <span style="width:11px; height:11px; border-radius:50%; background:var(--gold-500);"></span>
+            </span>
+            <span style="width:44px; height:30px; min-width:44px; border-radius:7px; background:var(--gold-100); display:flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:800; letter-spacing:0.06em; color:var(--ink-900);">VISA</span>
+            <div style="flex:1;">
+              <p style="font-size:13.5px; font-weight:700; color:var(--ink-900); margin:0;">Visa ending in 4242</p>
+              <p style="font-size:12px; color:var(--ink-400); margin:3px 0 0;">Alexandra Rivas · expires 04/28</p>
+            </div>
+            <span style="padding:6px 12px; border-radius:20px; background:var(--gold-100); font-size:11.5px; font-weight:700; color:var(--ink-900);">Default</span>
+          </div>
+
+          <div class="pay p-idle">
+            <span style="width:22px; height:22px; min-width:22px; border-radius:50%; border:1.5px solid var(--border);"></span>
+            <span style="width:44px; height:30px; min-width:44px; border-radius:7px; background:var(--bg-blush-1); display:flex; align-items:center; justify-content:center; font-size:9.5px; font-weight:800; letter-spacing:0.04em; color:var(--ink-400);">MC</span>
+            <div style="flex:1;">
+              <p style="font-size:13.5px; font-weight:700; color:var(--ink-900); margin:0;">Mastercard ending in 8801</p>
+              <p style="font-size:12px; color:var(--ink-400); margin:3px 0 0;">Alexandra Rivas · expires 11/27</p>
+            </div>
+            <a href="#" style="font-size:12px; font-weight:600;">Remove</a>
+          </div>
+
+          <div class="pay p-idle">
+            <span style="width:22px; height:22px; min-width:22px; border-radius:50%; border:1.5px solid var(--border);"></span>
+            <span style="width:44px; height:30px; min-width:44px; border-radius:7px; background:var(--bg-blush-1); display:flex; align-items:center; justify-content:center;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6v12M6 12h12"/></svg>
+            </span>
+            <div style="flex:1;">
+              <p style="font-size:13.5px; font-weight:700; color:var(--ink-900); margin:0;">Use a new card</p>
+              <p style="font-size:12px; color:var(--ink-400); margin:3px 0 0;">Credit or debit · entered on Stripe's secure form</p>
+            </div>
+          </div>
+
+        </div>
+
+        <div style="display:flex; align-items:center; gap:11px; margin-top:16px;">
+          <span style="width:18px; height:18px; min-width:18px; border-radius:5px; background:var(--gold-500); display:flex; align-items:center; justify-content:center;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--white)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
+          </span>
+          <span style="font-size:13px; color:var(--ink-700);">Save this card for future bookings</span>
+        </div>
+
+        <div style="display:flex; align-items:flex-start; gap:12px; margin-top:20px; padding:15px 17px; background:var(--white); border:1px solid var(--border); border-radius:14px;">
+          <span style="width:34px; height:34px; min-width:34px; border-radius:10px; background:var(--gold-100); display:flex; align-items:center; justify-content:center;">
+            <svg class="amn" viewBox="0 0 24 24"><rect x="4.5" y="10.5" width="15" height="9.5" rx="2.5"/><path d="M8 10.5V7.8a4 4 0 0 1 8 0v2.7"/></svg>
+          </span>
+          <div>
+            <p style="font-size:13px; font-weight:700; color:var(--ink-900); margin:0;">Payments are processed by Stripe</p>
+            <p style="font-size:12px; color:var(--ink-400); line-height:1.55; margin:4px 0 0;">Card details are entered in Stripe's PCI DSS Level 1 environment and never reach LuxePass servers. A receipt is emailed to alexandra.rivas@example.com after payment.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Summary rail -->
+      <div style="width:344px; min-width:344px; height:fit-content; background:var(--white); border:1px solid var(--border); border-radius:18px; box-shadow:0 10px 30px -14px rgba(34,26,20,0.14); padding:22px;">
+
+        <p style="font-size:12px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-600); margin:0 0 14px;">Order summary</p>
+
+        <div style="display:flex; flex-direction:column; gap:11px; padding-bottom:16px; border-bottom:1px solid var(--border);">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:13px; color:var(--ink-700);">Visit</span>
+            <span style="font-size:13px; font-weight:700; color:var(--ink-900);">Sat, Sep 14 · 3:30 PM</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:13px; color:var(--ink-700);">Admission</span>
+            <span style="font-size:13px; font-weight:700; color:var(--ink-900);">1 member</span>
+          </div>
+        </div>
+
+        <div style="padding:16px 0; border-bottom:1px solid var(--border);">
+          <p style="font-size:12px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-600); margin:0 0 10px;">Your membership</p>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:13px; color:var(--ink-700);">Annual · renews Mar 3</span>
+            <span style="font-size:13px; font-weight:700; color:var(--ink-900);">$2,400 / year</span>
+          </div>
+          <p style="font-size:11.5px; color:var(--ink-400); line-height:1.5; margin:8px 0 0;">8 of 8 visits used this month. Extra visits are charged as day passes.</p>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:11px; padding:16px 0;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:13px; color:var(--ink-700);">Day pass</span>
+            <span style="font-size:13px; font-weight:700; color:var(--ink-900);">$75.00</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:13px; color:var(--ink-700);">Sales tax · NY 8.875%</span>
+            <span style="font-size:13px; font-weight:700; color:var(--ink-900);">$6.66</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding-top:11px; border-top:1px solid var(--border);">
+            <span style="font-size:14px; font-weight:700; color:var(--ink-900);">Total due today</span>
+            <span style="font-size:20px; font-weight:800; color:var(--ink-900);">$81.66</span>
+          </div>
+        </div>
+
+        <button class="btn-gold" style="width:100%; height:52px; background:var(--gold-500); border:none; border-radius:12px; color:var(--white); font-family:'Manrope',sans-serif; font-size:13px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer;">Review and confirm</button>
+
+        <p style="font-size:11.5px; color:var(--ink-400); line-height:1.55; margin:13px 0 0; text-align:center;">Your card is not charged until you confirm the booking on the next step.</p>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+</x-dc>
+</body>
+</html>

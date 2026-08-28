@@ -1,0 +1,147 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,500&family=Manrope:wght@400;500;600;700;800&display=swap">
+  <style>
+    :root {
+      --bg-blush-1: #F8EAE1; --bg-blush-2: #FCF4EE;
+      --ink-900: #221A14; --ink-700: #55483D; --ink-400: #9C8D80;
+      --gold-500: #C9A876; --gold-600: #AD8A5C; --gold-100: #F1E3D0;
+      --border: #E7D9C9; --white: #FFFFFF; --panel-black: #15110D;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Manrope', 'Segoe UI', sans-serif; color: var(--ink-900); }
+    h1, h2, h3 { font-family: 'Bodoni Moda', Georgia, 'Times New Roman', serif; margin: 0; font-weight: 500; }
+    a { color: var(--gold-600); text-decoration: none; }
+    a:hover { color: var(--ink-900); }
+    .amn { width: 17px; height: 17px; fill: none; stroke: var(--gold-600); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .nav-item { transition: background .15s ease; }
+    .nav-item:hover { background: var(--gold-100); }
+    .btn-gold { transition: background .15s ease; }
+    .btn-gold:hover { background: var(--gold-600) !important; }
+    .btn-outline { transition: background .15s ease, border-color .15s ease; }
+    .btn-outline:hover { background: var(--gold-100); }
+    .day { height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; cursor: pointer; border: 1px solid transparent; transition: border-color .15s ease; }
+    .day:hover { border-color: var(--gold-500); }
+    .d-open { background: var(--gold-100); color: var(--ink-900); }
+    .d-sel { background: var(--gold-500); color: var(--white); }
+    .d-today { background: var(--white); border: 1.5px solid var(--gold-500); color: var(--ink-900); }
+    .d-full { background: var(--white); border: 1px solid var(--border); color: var(--ink-400); }
+    .d-closed { background: var(--bg-blush-1); border: 1px dashed var(--border); color: var(--ink-400); }
+    .d-past { background: var(--bg-blush-1); color: var(--ink-400); cursor: default; }
+    .d-past:hover { border-color: transparent; }
+    .slot { border-radius: 12px; padding: 10px 8px; text-align: center; cursor: pointer; transition: border-color .15s ease, background .15s ease; }
+    .slot:hover { border-color: var(--gold-500); }
+    .s-open { background: var(--white); border: 1px solid var(--border); }
+    .s-sel { background: var(--gold-500); border: 1px solid var(--gold-500); }
+    .s-full { background: var(--bg-blush-1); border: 1px dashed var(--border); cursor: default; }
+    .s-full:hover { border-color: var(--border); }
+    .pay { border-radius: 14px; padding: 14px 16px; display: flex; align-items: center; gap: 13px; cursor: pointer; transition: border-color .15s ease; }
+    .pay:hover { border-color: var(--gold-500); }
+    .p-idle { background: var(--white); border: 1px solid var(--border); }
+    .p-sel { background: var(--white); border: 1.5px solid var(--gold-500); box-shadow: 0 0 0 3px rgba(201,168,118,.15); }
+    .cal-target { transition: border-color .15s ease, background .15s ease; }
+    .cal-target:hover { border-color: var(--gold-500); background: var(--gold-100); }
+    .panel-scroll { overflow-y: auto; }
+    .panel-scroll::-webkit-scrollbar { width: 6px; }
+    .panel-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</helmet>
+
+<div style="position:relative; display:flex; align-items:flex-start; justify-content:center; width:1440px; height:900px; background:linear-gradient(160deg, var(--bg-blush-2) 0%, var(--bg-blush-1) 100%); overflow:hidden; font-family:'Manrope',sans-serif;">
+
+  <div style="width:660px; margin-top:34px; background:var(--white); border:1px solid var(--border); border-radius:20px; box-shadow:0 30px 60px -20px rgba(34,26,20,0.28); overflow:hidden;">
+
+    <!-- Mail client header -->
+    <div style="padding:18px 26px; border-bottom:1px solid var(--border); background:var(--white);">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span style="width:36px; height:36px; min-width:36px; border-radius:50%; background:var(--gold-500); display:flex; align-items:center; justify-content:center; color:var(--white); font-size:13px; font-weight:700; font-family:'Bodoni Moda',serif;">ES</span>
+        <div style="flex:1;">
+          <p style="font-size:13.5px; font-weight:700; color:var(--ink-900); margin:0;">En Soleil · LuxePass <span style="font-weight:500; color:var(--ink-400);">&lt;bookings@luxepass.co&gt;</span></p>
+          <p style="font-size:12px; color:var(--ink-400); margin:3px 0 0;">to alexandra.rivas@example.com · Sep 12, 3:14 PM</p>
+        </div>
+        <span style="padding:5px 11px; border-radius:20px; background:var(--gold-100); font-size:11px; font-weight:700; color:var(--ink-900);">Receipt</span>
+      </div>
+      <p style="font-size:15px; font-weight:700; color:var(--ink-900); margin:14px 0 0;">Your visit at The Ainsworth is confirmed — LP-842193</p>
+    </div>
+
+    <!-- Brand band -->
+    <div style="position:relative; background:radial-gradient(circle at 28% 10%, #2c241c, #15110d 70%); padding:26px 32px 24px; text-align:center;">
+      <div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.16) 1px, transparent 1.5px); background-size:18px 18px;"></div>
+      <div style="position:relative;">
+        <img src="logo.png" alt="En Soleil" style="width:46px; height:auto;">
+        <p style="font-size:11.5px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:#8A7C6C; margin:14px 0 0;">Booking confirmed</p>
+        <h2 style="font-size:30px; color:#F1E3D0; margin-top:10px;">LP-842193</h2>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:24px 32px 26px;">
+
+      <p style="font-size:14px; color:var(--ink-700); line-height:1.6; margin:0;">Alexandra, your lounge visit is booked. Show the reference number above at reception — no printing needed.</p>
+
+      <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px 24px; margin-top:20px; padding:18px 20px; background:var(--bg-blush-2); border:1px solid var(--border); border-radius:16px;">
+        <div>
+          <p style="font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-400); margin:0;">Lounge</p>
+          <p style="font-size:13.5px; font-weight:700; color:var(--ink-900); margin:4px 0 0;">The Ainsworth</p>
+          <p style="font-size:12px; color:var(--ink-700); line-height:1.5; margin:3px 0 0;">122 E 45th St, New York, NY 10017 · Level 2</p>
+        </div>
+        <div>
+          <p style="font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-400); margin:0;">When</p>
+          <p style="font-size:13.5px; font-weight:700; color:var(--ink-900); margin:4px 0 0;">Saturday, September 14</p>
+          <p style="font-size:12px; color:var(--ink-700); line-height:1.5; margin:3px 0 0;">Arrive 3:30 PM · stay up to 4 hours</p>
+        </div>
+        <div>
+          <p style="font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-400); margin:0;">Admission</p>
+          <p style="font-size:13.5px; font-weight:700; color:var(--ink-900); margin:4px 0 0;">1 member · Alexandra Rivas</p>
+        </div>
+        <div>
+          <p style="font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-400); margin:0;">Special requests</p>
+          <p style="font-size:12.5px; color:var(--ink-900); line-height:1.5; margin:4px 0 0;">Quiet desk near a window, still water on arrival.</p>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:12px; margin-top:18px;">
+        <button class="btn-gold" style="flex:1; height:48px; background:var(--gold-500); border:none; border-radius:12px; color:var(--white); font-family:'Manrope',sans-serif; font-size:12.5px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer;">Add to calendar</button>
+        <button class="btn-outline" style="flex:1; height:48px; background:var(--white); border:1.5px solid var(--border); border-radius:12px; color:var(--ink-700); font-family:'Manrope',sans-serif; font-size:12.5px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer;">Get directions</button>
+      </div>
+
+      <p style="font-size:12px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-600); margin:24px 0 12px;">Payment receipt</p>
+
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:13px; color:var(--ink-700);">Day pass · 1 visit</span>
+          <span style="font-size:13px; font-weight:700; color:var(--ink-900);">$75.00</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:13px; color:var(--ink-700);">Sales tax · NY 8.875%</span>
+          <span style="font-size:13px; font-weight:700; color:var(--ink-900);">$6.66</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding-top:11px; border-top:1px solid var(--border);">
+          <span style="font-size:14px; font-weight:700; color:var(--ink-900);">Total charged</span>
+          <span style="font-size:20px; font-weight:800; color:var(--ink-900);">$81.66</span>
+        </div>
+        <p style="font-size:11.5px; color:var(--ink-400); line-height:1.55; margin:2px 0 0;">Charged to Visa ending in 4242 on September 12 · Receipt LP-RC-20489 · Processed by Stripe</p>
+      </div>
+
+      <p style="font-size:12px; color:var(--ink-700); line-height:1.6; margin:20px 0 0;">Plans changed? Cancel free of charge until <strong style="color:var(--ink-900);">Friday, September 13 at 3:30 PM</strong> from My Pass. After that, half of the day pass is refunded.</p>
+
+    </div>
+
+    <div style="padding:18px 32px 22px; border-top:1px solid var(--border); background:var(--bg-blush-2); text-align:center;">
+      <p style="font-size:11.5px; color:var(--ink-400); line-height:1.6; margin:0;">En Soleil LuxePass · 445 Park Avenue, New York, NY 10022<br><a href="#" style="font-weight:600;">Manage booking</a> · <a href="#" style="font-weight:600;">Contact support</a> · <a href="#" style="font-weight:600;">Email preferences</a></p>
+    </div>
+
+  </div>
+
+</div>
+
+</x-dc>
+</body>
+</html>

@@ -78,6 +78,10 @@ label 13px/600 · hint 12–12.5px · eyebrow 12px/700 uppercase `letter-spacing
 | Chip seleccionable | `padding: 8px 16px`, `border-radius: 20px`. Activo: fondo `--gold-500` + texto blanco. Inactivo: `border: 1px solid var(--border)` + texto `--ink-700` |
 | Chip removible | `padding: 6px 8px 6px 14px`, fondo `--gold-100`, con "×" de 13px |
 | Progress de pasos | N barras `flex: 1`, alto 4px, `border-radius: 2px`; completadas `--gold-500`, pendientes `--border`; encima el eyebrow "Step N of M · Nombre" |
+| Date picker mensual | Fijado en la Fase 5. Cabecera con mes en Bodoni 18px entre dos botones cuadrados de 32px (el de "mes anterior" deshabilitado cuando el mes actual es el de hoy), fila de días en 11px/700 `--ink-400`, y grid `repeat(7, minmax(0,1fr))` con `gap: 4px`. Celda de 38px, `border-radius: 10px`, 13px/600. Estados: disponible `--gold-100` · seleccionado `--gold-500` + texto blanco · hoy blanco con `border: 1.5px solid var(--gold-500)` · completo blanco con `border: 1px solid var(--border)` y texto `--ink-400` · cerrado `--bg-blush-1` con `border: 1px dashed var(--border)` · pasado `--bg-blush-1` sin borde, sin hover ni cursor |
+| Slot de hora | `border-radius: 12px`, `padding: 10px 8px`, centrado, con la hora en 13.5px/700 y las plazas en 11.5px debajo. Libre: blanco + `border: 1px solid var(--border)`. Seleccionado: fondo y borde `--gold-500`, texto blanco. Completo: `--bg-blush-1` + `border: 1px dashed var(--border)`, texto `--ink-400`, sin cursor |
+| Fila de opción / método de pago | `border-radius: 14px`, `padding: 14px 16px`, `display: flex; gap: 13px`; radio de 22px (borde `--border`; activo borde `--gold-500` con punto interior de 11px). Inactiva: blanco + `border: 1px solid var(--border)`. Activa: `border: 1.5px solid var(--gold-500)` + `box-shadow: 0 0 0 3px rgba(201,168,118,.15)` (el mismo halo del focus de input). Sirve también para las alternativas de una lista de decisión |
+| Marca de tarjeta | Rectángulo 44×30, `border-radius: 7px`, texto 10.5px/800 `letter-spacing: .06em`. Activa: fondo `--gold-100` y texto `--ink-900`; el resto `--bg-blush-1` y texto `--ink-400`. Las marcas aceptadas se listan como badges de 10.5px con `border: 1px solid var(--border)` |
 | Item de nav | `padding: 12px 14px`, `border-radius: 10px`; activo: fondo `--gold-100` + texto `--ink-900`/700; inactivo: icono `--ink-400` + texto `--ink-700`/600 |
 
 Links: siempre definir `a` (`--gold-600`) y `a:hover` (`--ink-900`) en el `<helmet>`.
@@ -118,6 +122,22 @@ Cuatro plantillas fijadas en la Fase 1. Reutilizarlas antes de inventar una nuev
 8. **Sub-vista de lounge** — misma columna sin hero: topbar de 64px + header de 84px (thumbnail de
    52px, nombre en Bodoni 22px, barrio y dirección, y a la derecha el sello "Updated … · refreshes
    every 5 min") + cuerpo de dos columnas. Usado en disponibilidad semanal y en reviews.
+9. **Flujo por pasos con rail de resumen** — fijado en la Fase 5 sobre la sub-vista de lounge:
+   topbar de 64px con "Back to …" a la izquierda, header de 84px del lounge (a la derecha, el chip
+   del estado o el contador "Slot held for M:SS") y cuerpo `display: flex; gap: 28px;
+   padding: 24px 32px 28px`. La columna izquierda abre siempre con el progress de pasos y contiene
+   el formulario; la derecha es un rail fijo de 344px (card de contenido, `height: fit-content`)
+   con el resumen, el desglose de precio, el botón primario de 52px a ancho completo y una línea de
+   11.5px en `--ink-400` bajo él. Usado en los tres pasos de la reserva.
+10. **Tarjeta de confirmación oscura** — card de 344px, `border-radius: 24px`, cuerpo con el radial
+   sobre `--panel-black` y el patrón de puntos dorados a 18px: logo de 40px y eyebrow arriba, el
+   número de reserva en Bodoni 32px `#F1E3D0`, separador `#3A322A` y filas etiqueta/valor
+   (`#8A7C6C` / `#F1E3D0`). Cierra con una franja blanca de 16px con la nota de captura de pantalla.
+11. **Email de marca** — artboard sin app shell: fondo blush a pantalla completa y una card de 660px
+   centrada con cabecera de cliente de correo (avatar de 36px, remitente, destinatario y asunto en
+   15px/700), banda oscura con el logo y el dato principal en Bodoni, cuerpo con los detalles sobre
+   `--bg-blush-2`, los botones de acción y el desglose de importes, y un pie centrado de 11.5px con
+   la dirección postal y los enlaces de gestión.
 
 ### Mapa
 
@@ -173,7 +193,8 @@ Debajo, leyenda con muestras de 16px. El sello de frescura (`Updated N min ago �
 | 2 | Epic 7 — Partner Dashboard (tema oscuro) | Pendiente |
 | 3 | Epic 2 — Location Discovery & Search (tema claro) | ✅ Completa — 9 artboards |
 | 4 | Epic 3 — Lounge Profiles & Details (tema claro) | ✅ Completa — 9 artboards |
-| 5+ | Epics 4–6, 8, 9 | Pendiente |
+| 5 | Epic 4 — Booking System (tema claro) | ✅ Completa — 9 artboards |
+| 6+ | Epics 5, 6, 8, 9 | Pendiente |
 
 Cada fase vive en `design/epic-N-slug/` con sus `.dc.html`, su `canvas.json` y una copia de
 `logo.png`, y se publica como un canvas propio.
@@ -241,6 +262,49 @@ Pendientes conocidos: las fotos son bloques de marca (degradado oscuro + patrón
 a sustituir por fotografía real; nombres, direcciones, teléfonos (rango 555) y textos de reviews
 son datos de muestra; la política de cancelación citada en las restricciones debe confirmarse con
 En Soleil.
+
+### Fase 5 — `design/epic-4-booking-system/`
+
+Canvas: https://claude.ai/code/artifact/22900e36-6b9d-485b-9353-797794e4cc47
+
+9 artboards en 3 filas, entrando desde "Book now" de la card de disponibilidad de la Fase 4:
+
+| Fila | Artboards | Historia |
+|---|---|---|
+| 1 | `Main` (visit details) → `Payment` → `Summary` (review & confirm) | 4.1 / 4.2 |
+| 2 | `MembershipCovered` → `Waitlist` → `PaymentError` | 4.2 / 4.1 |
+| 3 | `Confirmed` → `Calendar` → `Receipt` | 4.1 / 4.3 |
+
+Cobertura de criterios: date picker mensual que arranca en el día de hoy y llega a 60 días, con los
+días pasados, completos y cerrados diferenciados; slots de llegada con plazas restantes; admisión
+para uno declarada y sin opción de invitados; campo de peticiones especiales con contador de 100
+caracteres; resumen de la reserva antes de confirmar con enlaces de edición por dato; términos y
+política de cancelación con casilla de aceptación; confirmación de un solo toque que revalida la
+disponibilidad; pantalla de confirmación inmediata con el número LP; waitlist cuando el slot se
+llena en el chequeo final, con posición en la cola y alternativas de hora, día y lounge cercano;
+Stripe con Apple Pay y Google Pay, tarjetas guardadas, tarjeta nueva, guardado del método, marcas
+aceptadas y nota de PCI DSS; precio de la suscripción y del day pass con impuesto desglosado;
+variante sin cargo cuando la visita está incluida en la membresía, con el consumo del mes; recibo
+por email; error de pago con reintento, otro método, otra hora y contacto con soporte; y hoja "Add
+to calendar" con iOS, Google y `.ics` de Outlook sobre un evento pre-poblado con dirección, enlace
+de direcciones, número de reserva y recordatorio de 15 minutos.
+
+Decisión de producto asumida (a confirmar con En Soleil): la membresía anual incluye 8 visitas al
+mes y las visitas extra se cobran como day pass de $75 más impuesto. Es la lectura que permite
+cubrir a la vez "subscription pricing display" e "individual booking pricing for day passes" de la
+Story 4.2; si el modelo real es otro, cambian los importes de `Main`, `Payment`, `Summary`,
+`MembershipCovered` y `Receipt`, no la estructura.
+
+El pago se sitúa entre el detalle de la visita y el resumen con términos, siguiendo la nota de
+`specs/flows/flow-complete-booking-journey.md` sobre el hueco de la Story 4.2 en el diagrama
+original.
+
+Pendientes conocidos: los importes, impuestos, números de reserva (LP-842193), referencias de
+recibo y últimos dígitos de tarjeta son datos de muestra; los botones de Apple Pay y Google Pay
+usan iconografía propia como marcador, no los assets de marca oficiales, que deben sustituirse al
+implementar; el texto de la política de cancelación (24 h gratis, 50 % después, no-show sin
+reembolso) es una propuesta a validar; y la ventana de retención del slot durante el checkout
+("Slot held for M:SS") es una decisión de producto que debe confirmarse.
 
 ## 7. Cómo regenerar y publicar un canvas
 

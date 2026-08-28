@@ -1,0 +1,22 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "1. Visit details" },
+    { "file": "Payment.dc.html", "x": 1540, "y": 0, "w": 1440, "h": 900, "title": "2. Payment" },
+    { "file": "Summary.dc.html", "x": 3080, "y": 0, "w": 1440, "h": 900, "title": "3. Review and confirm" },
+    { "file": "MembershipCovered.dc.html", "x": 0, "y": 1050, "w": 1440, "h": 900, "title": "4. Covered by membership" },
+    { "file": "Waitlist.dc.html", "x": 1540, "y": 1050, "w": 1440, "h": 900, "title": "5. Slot taken — waitlist" },
+    { "file": "PaymentError.dc.html", "x": 3080, "y": 1050, "w": 1440, "h": 900, "title": "6. Payment declined" },
+    { "file": "Confirmed.dc.html", "x": 0, "y": 2100, "w": 1440, "h": 900, "title": "7. Booking confirmed" },
+    { "file": "Calendar.dc.html", "x": 1540, "y": 2100, "w": 1440, "h": 900, "title": "8. Add to calendar" },
+    { "file": "Receipt.dc.html", "x": 3080, "y": 2100, "w": 1440, "h": 900, "title": "9. Confirmation and receipt email" }
+  ],
+  "annotations": [
+    { "id": "phase-note", "x": 0, "y": -150, "w": 860, "text": "LuxePass — Epic 4: Booking System\nSame light design system and app shell as Phases 1, 3 and 4. UI copy in English.\nBook in three steps → payment variants and failure paths → confirmation, calendar and receipt." },
+    { "id": "flow-note", "x": 0, "y": 955, "w": 470, "text": "Story 4.1 · Step 1: date picker starting today, arrival slot, admission for one, special requests capped at 100 characters, with the running summary on the right." },
+    { "id": "pay-note", "x": 1540, "y": 955, "w": 900, "text": "Story 4.2 · Step 2: Apple Pay and Google Pay, saved cards, a new card through Stripe and the PCI DSS note. Story 4.1 · Step 3: full summary, cancellation policy to acknowledge, and one-tap confirmation." },
+    { "id": "variants-note", "x": 0, "y": 2005, "w": 470, "text": "Story 4.2 · The same payment step when the visit is included in the membership: subscription price, visits used this month and $0.00 due today." },
+    { "id": "edge-note", "x": 1540, "y": 2005, "w": 900, "text": "Story 4.1 · The final availability check finds the slot full: waitlist with the alternatives, and the payment/booking failure with retry, another method, another time or support." },
+    { "id": "confirm-note", "x": 0, "y": 3055, "w": 900, "text": "Story 4.1 and 4.3 · Immediate confirmation with the LP reference, the Add to Calendar sheet with the pre-populated event (address, directions link, reference, 15-minute reminder), and the confirmation email that doubles as the payment receipt." }
+  ],
+  "launch": { "view": "canvas" }
+}
