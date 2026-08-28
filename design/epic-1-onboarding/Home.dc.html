@@ -1,0 +1,148 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,500&family=Manrope:wght@400;500;600;700;800&display=swap">
+  <style>
+    :root {
+      --bg-blush-1: #F8EAE1; --bg-blush-2: #FCF4EE;
+      --ink-900: #221A14; --ink-700: #55483D; --ink-400: #9C8D80;
+      --gold-500: #C9A876; --gold-600: #AD8A5C; --gold-100: #F1E3D0;
+      --border: #E7D9C9; --white: #FFFFFF; --panel-black: #15110D;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Manrope', 'Segoe UI', sans-serif; color: var(--ink-900); }
+    h1, h2, h3 { font-family: 'Bodoni Moda', Georgia, 'Times New Roman', serif; margin: 0; font-weight: 500; }
+    a { color: var(--gold-600); text-decoration: none; }
+    a:hover { color: var(--ink-900); }
+    .nav-item { transition: background .15s ease; }
+    .nav-item:hover { background: var(--gold-100); }
+    .lounge-card { transition: box-shadow .15s ease; }
+    .lounge-card:hover { box-shadow: 0 24px 50px -18px rgba(34,26,20,0.22); }
+  </style>
+</helmet>
+
+<div style="display:flex; width:1440px; height:900px; background:var(--bg-blush-2); overflow:hidden; font-family:'Manrope',sans-serif;">
+
+  <!-- Sidebar -->
+  <div style="width:248px; min-width:248px; height:900px; background:var(--white); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:32px 20px;">
+
+    <img src="logo.png" alt="En Soleil" style="width:52px; height:auto; margin:0 0 40px 12px;">
+
+    <div class="nav-item" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:var(--gold-100); margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+      <span style="font-size:14px; font-weight:700; color:var(--ink-900);">Home</span>
+    </div>
+    <div class="nav-item" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="m15 9-2 6-6 2 2-6 6-2Z"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--ink-700);">Explore</span>
+    </div>
+    <div class="nav-item" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4V8Z"/><path d="M14 6v2M14 11v2M14 16v2" stroke-dasharray="2 3"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--ink-700);">My Pass</span>
+    </div>
+    <div class="nav-item" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.5"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--ink-700);">Profile</span>
+    </div>
+
+    <div style="flex:1;"></div>
+
+    <div style="display:flex; align-items:center; gap:10px; padding:12px 14px; border-top:1px solid var(--border); padding-top:20px;">
+      <div style="width:36px; height:36px; min-width:36px; border-radius:50%; background:var(--gold-500); display:flex; align-items:center; justify-content:center; color:var(--white); font-size:13px; font-weight:700; font-family:'Bodoni Moda',serif;">AR</div>
+      <div style="flex:1; overflow:hidden;">
+        <p style="font-size:13px; font-weight:700; color:var(--ink-900); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Alexandra Rivas</p>
+        <p style="font-size:11.5px; color:var(--ink-400); margin:2px 0 0;">Annual member</p>
+      </div>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><path d="M15 16l4-4-4-4"/><path d="M19 12H9"/></svg>
+    </div>
+
+  </div>
+
+  <!-- Main content -->
+  <div style="flex:1; height:900px; padding:52px 56px; overflow:hidden;">
+
+    <h1 style="font-size:32px; color:var(--ink-900); margin-bottom:8px;">Hello, Alexandra</h1>
+    <p style="font-size:15px; color:var(--ink-700); margin:0 0 44px;">Discover your next exclusive escape.</p>
+
+    <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:22px;">
+      <h2 style="font-size:22px; color:var(--ink-900);">Featured lounges</h2>
+      <a href="#" style="font-size:13px; font-weight:700;">View all →</a>
+    </div>
+
+    <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:24px;">
+
+      <div class="lounge-card" style="background:var(--white); border-radius:18px; overflow:hidden; box-shadow:0 10px 30px -14px rgba(34,26,20,0.14);">
+        <div style="height:150px; background:radial-gradient(circle at 30% 20%, #3a3128, #15110d 70%); position:relative;">
+          <div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.22) 1px, transparent 1.5px); background-size:14px 14px;"></div>
+        </div>
+        <div style="padding:18px 20px 20px;">
+          <p style="font-size:15.5px; font-weight:700; color:var(--ink-900); margin:0 0 6px;">The Ainsworth</p>
+          <div style="display:flex; align-items:center; gap:6px; color:var(--ink-400); margin-bottom:10px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.4"/></svg>
+            <span style="font-size:12.5px;">New York</span>
+          </div>
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <span style="display:inline-flex; align-items:center; gap:4px; font-size:12.5px; color:var(--ink-700); font-weight:600;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--gold-500)" stroke="none"><path d="m12 2.5 2.9 6 6.6.9-4.8 4.6 1.1 6.6L12 17.6 6.2 20.6l1.1-6.6-4.8-4.6 6.6-.9L12 2.5Z"/></svg>
+              4.9
+            </span>
+            <a href="#" style="font-size:12.5px; font-weight:700;">View details</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="lounge-card" style="background:var(--white); border-radius:18px; overflow:hidden; box-shadow:0 10px 30px -14px rgba(34,26,20,0.14);">
+        <div style="height:150px; background:radial-gradient(circle at 70% 30%, #4a3626, #15110d 70%); position:relative;">
+          <div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.22) 1px, transparent 1.5px); background-size:14px 14px;"></div>
+        </div>
+        <div style="padding:18px 20px 20px;">
+          <p style="font-size:15.5px; font-weight:700; color:var(--ink-900); margin:0 0 6px;">Marbella Sky Lounge</p>
+          <div style="display:flex; align-items:center; gap:6px; color:var(--ink-400); margin-bottom:10px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.4"/></svg>
+            <span style="font-size:12.5px;">Miami</span>
+          </div>
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <span style="display:inline-flex; align-items:center; gap:4px; font-size:12.5px; color:var(--ink-700); font-weight:600;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--gold-500)" stroke="none"><path d="m12 2.5 2.9 6 6.6.9-4.8 4.6 1.1 6.6L12 17.6 6.2 20.6l1.1-6.6-4.8-4.6 6.6-.9L12 2.5Z"/></svg>
+              4.7
+            </span>
+            <a href="#" style="font-size:12.5px; font-weight:700;">View details</a>
+          </div>
+        </div>
+      </div>
+
+      <div class="lounge-card" style="background:var(--white); border-radius:18px; overflow:hidden; box-shadow:0 10px 30px -14px rgba(34,26,20,0.14);">
+        <div style="height:150px; background:radial-gradient(circle at 40% 60%, #362d24, #15110d 70%); position:relative;">
+          <div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.22) 1px, transparent 1.5px); background-size:14px 14px;"></div>
+        </div>
+        <div style="padding:18px 20px 20px;">
+          <p style="font-size:15.5px; font-weight:700; color:var(--ink-900); margin:0 0 6px;">Belmont Terrace</p>
+          <div style="display:flex; align-items:center; gap:6px; color:var(--ink-400); margin-bottom:10px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.5 7-12a7 7 0 1 0-14 0c0 5.5 7 12 7 12Z"/><circle cx="12" cy="9" r="2.4"/></svg>
+            <span style="font-size:12.5px;">New York</span>
+          </div>
+          <div style="display:flex; align-items:center; justify-content:space-between;">
+            <span style="display:inline-flex; align-items:center; gap:4px; font-size:12.5px; color:var(--ink-700); font-weight:600;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="var(--gold-500)" stroke="none"><path d="m12 2.5 2.9 6 6.6.9-4.8 4.6 1.1 6.6L12 17.6 6.2 20.6l1.1-6.6-4.8-4.6 6.6-.9L12 2.5Z"/></svg>
+              4.8
+            </span>
+            <a href="#" style="font-size:12.5px; font-weight:700;">View details</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+</x-dc>
+</body>
+</html>

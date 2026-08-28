@@ -1,0 +1,21 @@
+{
+  "artboards": [
+    { "file": "LocationPermission.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "1. Location permission" },
+    { "file": "ManualLocation.dc.html", "x": 1540, "y": 0, "w": 1440, "h": 900, "title": "2. Manual location entry" },
+    { "file": "Main.dc.html", "x": 3080, "y": 0, "w": 1440, "h": 900, "title": "3. Map view" },
+    { "file": "Filters.dc.html", "x": 0, "y": 1050, "w": 1440, "h": 900, "title": "4. Filters" },
+    { "file": "ListView.dc.html", "x": 1540, "y": 1050, "w": 1440, "h": 900, "title": "5. List view" },
+    { "file": "ListLoading.dc.html", "x": 3080, "y": 1050, "w": 1440, "h": 900, "title": "6. List — loading" },
+    { "file": "NoResults.dc.html", "x": 0, "y": 2100, "w": 1440, "h": 900, "title": "7. No results" },
+    { "file": "MapError.dc.html", "x": 1540, "y": 2100, "w": 1440, "h": 900, "title": "8. Map failed to load" },
+    { "file": "Offline.dc.html", "x": 3080, "y": 2100, "w": 1440, "h": 900, "title": "9. Offline — cached lounges" }
+  ],
+  "annotations": [
+    { "id": "phase-note", "x": 0, "y": -150, "w": 820, "text": "LuxePass — Epic 2: Location Discovery & Search\nSame light design system and app shell as Phase 1 (Explore section of the member area). UI copy in English.\nPermission → location → map or list → filters → edge states." },
+    { "id": "map-note", "x": 3080, "y": -110, "w": 640, "text": "Story 2.1 · Map view: current location, En Soleil branded markers, distance in miles or km following the phone setting, zoom / pan / recentre, and a callout for the selected lounge that leads into Epic 3." },
+    { "id": "filters-note", "x": 0, "y": 955, "w": 440, "text": "Story 2.2 · Filter drawer: amenities, distance bands, availability calendar with time band, clear all. Shared by map and list view." },
+    { "id": "list-note", "x": 1540, "y": 955, "w": 460, "text": "Story 2.3 · List sorted by distance with thumbnails, amenity icons and availability; text search applied; infinite scroll at the bottom. Right: the loading state while data is fetched." },
+    { "id": "states-note", "x": 0, "y": 2005, "w": 520, "text": "Edge states from the flow diagram: no results with suggestions that would bring results back (2.2), map error with retry or switch to list (2.1), and offline mode on cached lounges (2.1)." }
+  ],
+  "launch": { "view": "canvas" }
+}

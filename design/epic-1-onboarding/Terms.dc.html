@@ -1,0 +1,111 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,500&family=Manrope:wght@400;500;600;700;800&display=swap">
+  <style>
+    :root {
+      --bg-blush-1: #F8EAE1; --bg-blush-2: #FCF4EE;
+      --ink-900: #221A14; --ink-700: #55483D; --ink-400: #9C8D80;
+      --gold-500: #C9A876; --gold-600: #AD8A5C; --gold-100: #F1E3D0;
+      --border: #E7D9C9; --white: #FFFFFF; --panel-black: #15110D;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Manrope', 'Segoe UI', sans-serif; color: var(--ink-900); }
+    h1, h2, h3 { font-family: 'Bodoni Moda', Georgia, 'Times New Roman', serif; margin: 0; font-weight: 500; }
+    a { color: var(--gold-600); text-decoration: none; }
+    .btn-gold { transition: background .15s ease; }
+    .btn-gold:hover { background: var(--gold-600) !important; }
+    .doc-scroll { overflow-y: auto; }
+    .doc-scroll::-webkit-scrollbar { width: 6px; }
+    .doc-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .doc-scroll p { font-size: 13px; line-height: 1.7; color: var(--ink-700); margin: 0 0 14px; }
+    .doc-scroll h4 { font-family:'Manrope',sans-serif; font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-900); margin: 0 0 10px; }
+    .tab { cursor: pointer; }
+  </style>
+</helmet>
+
+<div style="position:relative; width:1440px; height:900px; overflow:hidden; font-family:'Manrope',sans-serif;">
+
+  <!-- Sign-up screen behind the modal -->
+  <div style="position:absolute; inset:0; display:flex; filter:blur(3px); opacity:0.9;">
+    <div style="width:600px; min-width:600px; height:900px; background:radial-gradient(circle at 30% 22%, #2a221a 0%, var(--panel-black) 55%, #0c0a08 100%); position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:64px; text-align:center;">
+      <div style="position:absolute; inset:0; background-image: radial-gradient(rgba(201,168,118,0.16) 1px, transparent 1.5px); background-size: 18px 18px; opacity:0.6;"></div>
+      <img src="logo.png" alt="En Soleil" style="width:170px; height:auto; position:relative; z-index:1; margin-bottom:36px;">
+      <p style="position:relative; z-index:1; font-family:'Bodoni Moda', serif; font-size:22px; line-height:1.55; color:#F1E3D0; max-width:340px;">Join a community of discerning travelers.</p>
+    </div>
+    <div style="flex:1; height:900px; background:linear-gradient(160deg, var(--bg-blush-2) 0%, var(--bg-blush-1) 100%); display:flex; align-items:center; justify-content:center; padding:40px;">
+      <div style="width:440px; height:660px; background:var(--white); border-radius:24px; box-shadow:0 30px 60px -20px rgba(34,26,20,0.18);"></div>
+    </div>
+  </div>
+
+  <!-- Scrim -->
+  <div style="position:absolute; inset:0; background:rgba(21,17,13,0.55);"></div>
+
+  <!-- Modal -->
+  <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center;">
+    <div style="width:640px; max-height:760px; background:var(--white); border-radius:24px; box-shadow:0 40px 90px -25px rgba(10,8,6,0.55); display:flex; flex-direction:column; overflow:hidden;">
+
+      <!-- Header -->
+      <div style="padding:36px 40px 0;">
+        <p style="font-size:12px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-600); margin:0 0 8px;">Required before you continue</p>
+        <h1 style="font-size:27px; color:var(--ink-900); margin-bottom:8px;">Terms &amp; Privacy</h1>
+        <p style="font-size:14px; color:var(--ink-700); margin:0 0 22px; line-height:1.55;">Please review and accept both documents to activate your En Soleil membership account.</p>
+
+        <div style="display:flex; gap:26px; border-bottom:1px solid var(--border);">
+          <span class="tab" style="padding:0 2px 12px; font-size:13.5px; font-weight:700; color:var(--ink-900); border-bottom:2px solid var(--gold-500); margin-bottom:-1px;">Terms of Service</span>
+          <span class="tab" style="padding:0 2px 12px; font-size:13.5px; font-weight:600; color:var(--ink-400);">Privacy Policy</span>
+        </div>
+      </div>
+
+      <!-- Document -->
+      <div class="doc-scroll" style="flex:1; min-height:0; padding:24px 40px 8px; position:relative;">
+        <h4>1. Membership</h4>
+        <p>En Soleil grants you a personal, non-transferable right to access participating lounges through the LuxePass platform while your membership remains active. Access passes are issued to you individually and may not be shared, resold, or assigned.</p>
+        <h4>2. Bookings &amp; check-in</h4>
+        <p>Each reservation generates a single-use QR code valid only for the lounge, date, and time window shown. Partner venues may refuse entry when capacity, dress code, or house rules are not met. Cancellations made less than 24 hours before the reservation may count against your monthly allowance.</p>
+        <h4>3. Conduct</h4>
+        <p>Members are expected to observe each venue's standards of conduct. En Soleil may suspend or terminate a membership for repeated no-shows, misuse of access passes, or conduct reported by a partner venue.</p>
+        <h4>4. Billing</h4>
+        <p>Membership fees are billed in advance for the selected period and renew automatically unless cancelled before the renewal date. Fees already paid are non-refundable except where required by law.</p>
+        <h4>5. Changes to these terms</h4>
+        <p>We may update these terms from time to time. Material changes will be notified by email at least 30 days before they take effect, and continued use of the platform after that date constitutes acceptance.</p>
+        <div style="position:sticky; bottom:0; height:52px; margin:0 -40px; background:linear-gradient(to top, var(--white) 20%, rgba(255,255,255,0));"></div>
+      </div>
+
+      <!-- Footer -->
+      <div style="padding:4px 40px 34px; border-top:1px solid var(--border); padding-top:22px;">
+
+        <label style="display:flex; align-items:flex-start; gap:10px; margin-bottom:12px; cursor:pointer;">
+          <span style="width:18px; height:18px; min-width:18px; border-radius:5px; background:var(--gold-500); display:flex; align-items:center; justify-content:center; margin-top:1px;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m5 13 4 4 10-10"/></svg>
+          </span>
+          <span style="font-size:13px; color:var(--ink-700); line-height:1.5;">I have read and accept the <strong style="color:var(--ink-900); font-weight:700;">Terms of Service</strong>.</span>
+        </label>
+
+        <label style="display:flex; align-items:flex-start; gap:10px; margin-bottom:20px; cursor:pointer;">
+          <span style="width:18px; height:18px; min-width:18px; border-radius:5px; border:1.5px solid var(--border); background:var(--white); display:block; margin-top:1px;"></span>
+          <span style="font-size:13px; color:var(--ink-700); line-height:1.5;">I have read and accept the <strong style="color:var(--ink-900); font-weight:700;">Privacy Policy</strong>, including how my data is used to personalise recommendations.</span>
+        </label>
+
+        <div style="display:flex; gap:12px;">
+          <button style="flex:1; height:52px; background:var(--white); color:var(--ink-700); border:1.5px solid var(--border); border-radius:12px; font-family:'Manrope',sans-serif; font-weight:700; font-size:13px; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer;">Decline</button>
+          <button class="btn-gold" style="flex:1.6; height:52px; background:var(--gold-500); color:var(--white); border:none; border-radius:12px; font-family:'Manrope',sans-serif; font-weight:700; font-size:13px; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer; opacity:0.5;">Accept &amp; continue</button>
+        </div>
+        <p style="text-align:center; font-size:12px; color:var(--ink-400); margin:12px 0 0;">Both boxes must be checked. Acceptance is recorded with date and document version.</p>
+
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+</x-dc>
+</body>
+</html>

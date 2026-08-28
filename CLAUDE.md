@@ -9,7 +9,13 @@ No hay `package.json`, build ni tests que ejecutar aquí.
 ## Estructura
 
 ```
-docs/                    Documentación original del cliente/proyecto (briefs, planning, retrospectiva, assets de diseño, CSVs de Trello/planning)
+docs/                    Documentación original del cliente/proyecto (briefs, planning, retrospectiva, assets de diseño, CSVs de Trello/planning). NO versionado — solo consulta local.
+assets/
+  brand/logo.png          Logo oficial En Soleil (el que se usa en los diseños)
+design/
+  DESIGN-SYSTEM.md        Sistema de diseño: tokens, tipografía, componentes, patrones, fases
+  epic-N-slug/            Mockups de un epic: un .dc.html por pantalla + canvas.json + logo.png
+                          + luxepass-epicN-slug.html (canvas publicable generado, no editar a mano)
 specs/
   epic-N-slug/            Un folder por epic (9 en total)
     story-N.M-slug.md     Una historia de usuario por archivo
@@ -76,6 +82,24 @@ Mapeo diagrama → epics:
 | `flow-partner-experience.md` | Epic 7 |
 | `flow-admin-support-experience.md` | Epic 8 |
 | `flow-membership-referrals.md` | Epic 9 |
+
+## Diseño (`design/`)
+
+Mockups de las pantallas de cada epic, hechos con el skill `/design` (canvas multi-artboard
+publicado como Artifact). Cada pantalla es un `.dc.html`; `canvas.json` los distribuye.
+
+**Antes de diseñar cualquier epic, leer `design/DESIGN-SYSTEM.md`.** Ahí están los tokens de
+color exactos, la tipografía, las medidas de los componentes y los patrones de pantalla ya
+fijados — no se reinventan por epic, se extienden. Reglas que se aplican siempre:
+
+- La copy de la UI va en **inglés**; la documentación en español.
+- Tema **híbrido**: claro/boutique para las pantallas de miembro, oscuro/moderno para el
+  Partner Dashboard, compartiendo tokens y tipografía.
+- Los mockups `login.jpg` / `registration.jpg` del cliente son la **pauta principal**, no una
+  inspiración.
+- Cada pantalla debe cubrir los criterios de aceptación de su historia en `specs/`.
+
+Al terminar una fase, actualizar la tabla de fases de `DESIGN-SYSTEM.md` con el link del canvas.
 
 ## Al editar specs
 

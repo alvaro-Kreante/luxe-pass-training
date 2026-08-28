@@ -68,3 +68,7 @@ docs/
 # Otros
 .env.local.example
 .DS_Store
+
+# Canvas HTML generado por el skill /design (2.5MB, se regenera desde los .dc.html)
+design/**/*-onboarding.html
+design/**/luxepass-*.html
