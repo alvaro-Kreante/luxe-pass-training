@@ -11,7 +11,7 @@ No hay `package.json`, build ni tests que ejecutar aquí.
 ```
 docs/                    Documentación original del cliente/proyecto (briefs, planning, retrospectiva, assets de diseño, CSVs de Trello/planning). NO versionado — solo consulta local.
 assets/
-  brand/logo.png          Logo oficial En Soleil (el que se usa en los diseños)
+  brand/logo.png          Logo oficial En Soleil en tamaño original (907 KB — NO copiarlo al canvas)
 design/
   DESIGN-SYSTEM.md        Sistema de diseño: tokens, tipografía, componentes, patrones, fases
   epic-N-slug/            Mockups de un epic: un .dc.html por pantalla + canvas.json + logo.png
@@ -99,12 +99,27 @@ fijados — no se reinventan por epic, se extienden. Reglas que se aplican siemp
   inspiración.
 - Cada pantalla debe cubrir los criterios de aceptación de su historia en `specs/`.
 - Todo el trabajo de diseño va a la rama **`docs/design`** — no a `main` ni a una rama por epic.
+- El `logo.png` de cada carpeta de epic es una copia **ya reducida a 54 KB**. Copiarla desde otra
+  carpeta de epic, nunca desde `assets/brand/logo.png` (907 KB): el canvas incrusta las imágenes
+  en base64 y el original infla el HTML publicable sin ganar nada.
 - El `.html` publicable del canvas está en `.gitignore` (2–3 MB, se regenera desde los `.dc.html`);
   lo que se versiona son los `.dc.html`, el `canvas.json` y el `logo.png` de cada epic.
+- Los **datos de muestra tienen que cuadrar**: entre pantallas de una misma fase (un total es la
+  suma de las filas que lo componen) y entre fases (el calendario narrativo compartido: jueves 12,
+  viernes 13 y sábado 14 de septiembre, con The Ainsworth y la reserva LP-842193 atravesando los
+  Epics 4, 5, 6 y 7). Cada fase declara su línea temporal en `DESIGN-SYSTEM.md`; ampliarla, no
+  reinventarla.
+
+**Los números de fase no son cronológicos.** Se asignaron al principio y se mantienen: la Fase 2 es
+el Epic 7 (Partner Dashboard) aunque se diseñó después de la Fase 7 (Epic 6). Al leer "fijado en la
+Fase N" en `DESIGN-SYSTEM.md`, N identifica la fase, no el orden en que se hizo.
 
 Al terminar una fase, actualizar la tabla de fases de `DESIGN-SYSTEM.md` con el link del canvas
 y, si la fase fijó un patrón o un componente nuevo, añadirlo a las secciones 4 y 5 del mismo
 documento antes de cerrarla.
+
+Estado: diseñados los Epics 1–7. Quedan el **Epic 8** (Admin & Support) y el **Epic 9**
+(Membership & Referrals).
 
 ## Al editar specs
 
