@@ -98,8 +98,13 @@ fijados — no se reinventan por epic, se extienden. Reglas que se aplican siemp
 - Los mockups `login.jpg` / `registration.jpg` del cliente son la **pauta principal**, no una
   inspiración.
 - Cada pantalla debe cubrir los criterios de aceptación de su historia en `specs/`.
+- Todo el trabajo de diseño va a la rama **`docs/design`** — no a `main` ni a una rama por epic.
+- El `.html` publicable del canvas está en `.gitignore` (2–3 MB, se regenera desde los `.dc.html`);
+  lo que se versiona son los `.dc.html`, el `canvas.json` y el `logo.png` de cada epic.
 
-Al terminar una fase, actualizar la tabla de fases de `DESIGN-SYSTEM.md` con el link del canvas.
+Al terminar una fase, actualizar la tabla de fases de `DESIGN-SYSTEM.md` con el link del canvas
+y, si la fase fijó un patrón o un componente nuevo, añadirlo a las secciones 4 y 5 del mismo
+documento antes de cerrarla.
 
 ## Al editar specs
 

@@ -107,6 +107,17 @@ Cuatro plantillas fijadas en la Fase 1. Reutilizarlas antes de inventar una nuev
 6. **Drawer lateral** — variante del modal para formularios largos: scrim `rgba(21,17,13,.35)` y
    panel de 436px pegado a la derecha, con la misma anatomía header / cuerpo scrolleable / footer.
    Usado en el panel de filtros.
+7. **Perfil de lounge (detalle)** — fijado en la Fase 4 dentro del App shell. Columna de contenido
+   sin padding: topbar de 64px con "Back to results" a la izquierda y las quick actions
+   (Call · Directions · Share, botones outline de 40px) a la derecha + hero carousel de 268px
+   (grid `1fr 348px`: imagen principal con flechas de 40px, contador "1 / 6", dots y caption;
+   a la derecha dos miniaturas, la inferior con overlay "View all N photos") + fila de detalle con
+   columna principal (h1 30px, meta, amenities en grid de 2 columnas con icono en cuadro
+   `--gold-100` de 36px, horarios con el día de hoy sobre `--gold-100`, contacto) y card lateral
+   de 344px con el estado de disponibilidad, los slots, el botón primario y las restricciones.
+8. **Sub-vista de lounge** — misma columna sin hero: topbar de 64px + header de 84px (thumbnail de
+   52px, nombre en Bodoni 22px, barrio y dirección, y a la derecha el sello "Updated … · refreshes
+   every 5 min") + cuerpo de dos columnas. Usado en disponibilidad semanal y en reviews.
 
 ### Mapa
 
@@ -124,6 +135,24 @@ Marker de lounge = "gota" de 36×36 (`border-radius: 50% 50% 50% 6px` + `rotate(
 `--gold-600` y lleva anillo `box-shadow: 0 0 0 7px rgba(201,168,118,.30)`. Ubicación actual = punto
 de 18px `--ink-900` con borde blanco y halo dorado. En modo offline los markers pasan a `--ink-400`
 y el mapa lleva `filter: grayscale(.55) opacity(.8)`.
+
+### Calendario de disponibilidad
+
+Fijado en la Fase 4. Grid de `84px repeat(7, minmax(0,1fr))` con `gap: 8px`: columna de etiquetas
+con las franjas horarias (Morning 8–12 · Afternoon 12–5 · Evening 5–9 · Late 9–11) y 7 columnas de
+día. La cabecera del día lleva el nombre en eyebrow y el número; el día de hoy va sobre `--gold-100`.
+Cada celda mide 104px de alto, `border-radius: 12px`, y muestra el número de plazas más una etiqueta:
+
+| Estado | Estilo de celda |
+|---|---|
+| Disponible | fondo `--gold-100`, sin borde |
+| Seleccionado | fondo blanco, `border: 1.5px solid var(--gold-500)` |
+| Completo | fondo blanco, `border: 1px solid var(--border)`, texto `--ink-400` |
+| Cerrado | fondo `--bg-blush-1`, `border: 1px dashed var(--border)`, texto `--ink-400` |
+| Pasado | fondo `--bg-blush-1`, sin borde, texto `--ink-400` |
+
+Debajo, leyenda con muestras de 16px. El sello de frescura (`Updated N min ago · refreshes every
+5 min`, icono de refresh de 14px en `--ink-400`) acompaña siempre a cualquier dato de disponibilidad.
 
 ### Estados
 
@@ -143,7 +172,8 @@ y el mapa lleva `filter: grayscale(.55) opacity(.8)`.
 | 1 | Epic 1 — Onboarding & Authentication (tema claro) | ✅ Completa — 10 artboards |
 | 2 | Epic 7 — Partner Dashboard (tema oscuro) | Pendiente |
 | 3 | Epic 2 — Location Discovery & Search (tema claro) | ✅ Completa — 9 artboards |
-| 4+ | Epics 3–6, 8, 9 | Pendiente |
+| 4 | Epic 3 — Lounge Profiles & Details (tema claro) | ✅ Completa — 9 artboards |
+| 5+ | Epics 4–6, 8, 9 | Pendiente |
 
 Cada fase vive en `design/epic-N-slug/` con sus `.dc.html`, su `canvas.json` y una copia de
 `logo.png`, y se publica como un canvas propio.
@@ -184,6 +214,33 @@ cambio a lista, y modo offline con lounges cacheados.
 Pendientes conocidos: el mapa es un SVG ilustrativo (al implementar se sustituye por el proveedor
 real conservando el estilo de markers y controles), y los nombres de lounges, barrios y distancias
 son datos de muestra.
+
+### Fase 4 — `design/epic-3-lounge-profiles-details/`
+
+Canvas: https://claude.ai/code/artifact/f1d95df8-0c67-43a4-9c06-b6f1266496a8
+
+9 artboards en 3 filas, entrando desde "View details" de la lista/mapa de la Fase 3:
+
+| Fila | Artboards | Historia |
+|---|---|---|
+| 1 | `Main` (perfil) → `Gallery` → `Share` | 3.1 |
+| 2 | `Availability` → `NotAvailable` → `Closure` | 3.2 |
+| 3 | `Reviews` → `NoRatings` → `Loading` | 3.1 / 3.2 |
+
+Cobertura de criterios: carousel de 6 imágenes con flechas, contador y dots más lightbox con tira
+de miniaturas; nombre, dirección y contacto (teléfono, email, web); horarios con el día de hoy
+destacado; 6 amenities con icono y descripción; rating 4.9 con recuento de reviews, distribución
+por estrellas y menciones frecuentes; quick actions Call / Directions (URL de Google Maps) / Share
+persistentes en la topbar; hoja de compartir con destinos de mensajería y social y copia de link;
+estado en tiempo real Available / Not available; calendario semanal por franjas con restricciones
+(tier de membresía, antelación mínima, admisión para uno); aviso de cierre por festivo con los días
+marcados y aviso de reapertura; sello "Updated N min ago · refreshes every 5 min" en toda vista de
+disponibilidad; estado sin ratings y skeleton de carga del perfil.
+
+Pendientes conocidos: las fotos son bloques de marca (degradado oscuro + patrón de puntos dorados)
+a sustituir por fotografía real; nombres, direcciones, teléfonos (rango 555) y textos de reviews
+son datos de muestra; la política de cancelación citada en las restricciones debe confirmarse con
+En Soleil.
 
 ## 7. Cómo regenerar y publicar un canvas
 
