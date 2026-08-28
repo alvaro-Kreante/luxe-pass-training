@@ -1,0 +1,131 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,500&family=Manrope:wght@400;500;600;700;800&display=swap">
+  <style>
+    :root {
+      --bg-blush-1: #F8EAE1; --bg-blush-2: #FCF4EE;
+      --ink-900: #221A14; --ink-700: #55483D; --ink-400: #9C8D80;
+      --gold-500: #C9A876; --gold-600: #AD8A5C; --gold-100: #F1E3D0;
+      --border: #E7D9C9; --white: #FFFFFF; --panel-black: #15110D;
+      --dark-ink-100: #F1E3D0; --dark-ink-300: #C9BDAF; --dark-ink-500: #8A7C6C;
+      --dark-border: #3A322A; --dark-card: #1E1813; --dark-hover: #241D17;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Manrope', 'Segoe UI', sans-serif; color: var(--dark-ink-100); }
+    h1, h2, h3 { font-family: 'Bodoni Moda', Georgia, 'Times New Roman', serif; margin: 0; font-weight: 500; }
+    a { color: var(--gold-600); text-decoration: none; }
+    a:hover { color: var(--gold-500); }
+    .dk-nav { transition: background .15s ease; cursor: pointer; }
+    .dk-nav:hover { background: var(--dark-hover); }
+    .dk-gold { transition: background .15s ease; }
+    .dk-gold:hover { background: var(--gold-600) !important; }
+    .dk-ghost { transition: background .15s ease, border-color .15s ease; cursor: pointer; }
+    .dk-ghost:hover { background: var(--dark-hover); border-color: var(--gold-500); }
+    .dk-tr { transition: background .15s ease; cursor: pointer; }
+    .dk-tr:hover { background: var(--dark-hover); }
+    .dk-row { transition: border-color .15s ease; }
+    .dk-row:hover { border-color: var(--gold-500); }
+    .dk-link { transition: color .15s ease; cursor: pointer; }
+    .dk-link:hover { color: var(--gold-500); }
+    .lt-btn { transition: background .15s ease; }
+    .lt-btn:hover { background: var(--gold-600) !important; }
+    .lt-ghost { transition: background .15s ease; cursor: pointer; }
+    .lt-ghost:hover { background: var(--gold-100); }
+  </style>
+</helmet>
+
+<div style="position:relative; display:flex; align-items:flex-start; justify-content:center; width:1440px; height:900px; background:linear-gradient(160deg, var(--bg-blush-2) 0%, var(--bg-blush-1) 100%); overflow:hidden; font-family:'Manrope',sans-serif;">
+
+  <div style="width:660px; margin-top:22px; background:var(--white); border:1px solid var(--border); border-radius:20px; box-shadow:0 30px 60px -20px rgba(34,26,20,0.28); overflow:hidden;">
+
+    <!-- Mail client header -->
+    <div style="padding:18px 26px; border-bottom:1px solid var(--border); background:var(--white);">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span style="width:36px; height:36px; min-width:36px; border-radius:50%; background:var(--gold-500); display:flex; align-items:center; justify-content:center; color:var(--white); font-size:13px; font-weight:700; font-family:'Bodoni Moda',serif;">ES</span>
+        <div style="flex:1;">
+          <p style="font-size:13.5px; font-weight:700; color:var(--ink-900); margin:0;">En Soleil · LuxePass Partners <span style="font-weight:500; color:var(--ink-400);">&lt;partners@luxepass.co&gt;</span></p>
+          <p style="font-size:12px; color:var(--ink-400); margin:3px 0 0;">to frontdesk@theainsworth.com · Sep 14, 3:54 PM</p>
+        </div>
+        <span style="padding:5px 11px; border-radius:20px; background:var(--gold-100); font-size:11px; font-weight:700; color:var(--ink-900);">Cancellation</span>
+      </div>
+      <p style="font-size:15px; font-weight:700; color:var(--ink-900); margin:14px 0 0;">Cancellation at 5:00 PM — and the seat is already taken</p>
+    </div>
+
+    <!-- Brand band -->
+    <div style="position:relative; background:radial-gradient(circle at 28% 10%, #2c241c, #15110d 70%); padding:20px 32px; text-align:center;">
+      <div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.16) 1px, transparent 1.5px); background-size:18px 18px;"></div>
+      <div style="position:relative;">
+        <img src="logo.png" alt="En Soleil" style="width:46px; height:auto;">
+        <p style="font-size:11.5px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:#8A7C6C; margin:14px 0 0;">Guest count updated</p>
+        <h2 style="font-size:30px; color:#F1E3D0; margin-top:10px;">15 expected today</h2>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:20px 32px;">
+
+      <p style="font-size:14px; color:var(--ink-700); line-height:1.6; margin:0;">A guest cancelled this afternoon and someone on the waitlist took the slot within two minutes. Both changes are already on your list — nothing needs doing.</p>
+
+      <div style="display:flex; flex-direction:column; gap:12px; margin-top:16px;">
+      <div style="display:flex; gap:16px; padding:16px 18px; background:var(--bg-blush-1); border:1px dashed var(--ink-400); border-radius:16px;">
+        <div style="flex:1; min-width:0;">
+          <span style="display:inline-flex; align-items:center; gap:7px; padding:5px 12px; border-radius:20px; background:transparent; border:1px dashed var(--ink-400);">
+            <span style="font-size:11px; font-weight:700; color:var(--ink-400);">Cancelled 3:52 PM</span>
+          </span>
+          <p style="font-size:15px; font-weight:700; color:var(--ink-700); margin:11px 0 0;">Harriet Osei · 5:00 PM arrival</p>
+          <p style="font-size:12px; color:var(--ink-400); margin:4px 0 0;">LP-842612 · booked on September 11</p>
+          <p style="font-size:12.5px; color:var(--ink-700); line-height:1.55; margin:9px 0 0;">Cancelled inside the 24-hour window, so the flat fee applies to the member. Your attribution for the day is unaffected.</p>
+        </div>
+        <div style="width:120px; min-width:120px; text-align:center; padding-left:16px; border-left:1px solid var(--border);">
+          <p style="font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-400); margin:0;">Count</p>
+          <h3 style="font-size:32px; color:var(--ink-700); margin-top:6px;">14</h3>
+          <p style="font-size:11px; color:var(--ink-400); line-height:1.4; margin:6px 0 0;">down from 15</p>
+        </div>
+      </div>
+      <div style="display:flex; gap:16px; padding:16px 18px; background:var(--bg-blush-2); border:1px solid var(--gold-500); border-radius:16px;">
+        <div style="flex:1; min-width:0;">
+          <span style="display:inline-flex; align-items:center; gap:7px; padding:5px 12px; border-radius:20px; background:var(--gold-100); border:1px solid var(--gold-500);">
+            <span style="font-size:11px; font-weight:700; color:var(--ink-900);">Promoted from the waitlist 3:54 PM</span>
+          </span>
+          <p style="font-size:15px; font-weight:700; color:var(--ink-900); margin:11px 0 0;">Victor Almeida · 5:00 PM arrival</p>
+          <p style="font-size:12px; color:var(--ink-400); margin:4px 0 0;">LP-842911 · waiting since 11:20 AM</p>
+          <p style="font-size:12.5px; color:var(--ink-700); line-height:1.55; margin:9px 0 0;">Confirmed automatically and told to arrive at 5:00 PM. First visit to The Ainsworth — a day pass, not a membership visit.</p>
+        </div>
+        <div style="width:120px; min-width:120px; text-align:center; padding-left:16px; border-left:1px solid var(--border);">
+          <p style="font-size:10px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-400); margin:0;">Count</p>
+          <h3 style="font-size:32px; color:var(--ink-900); margin-top:6px;">15</h3>
+          <p style="font-size:11px; color:var(--ink-400); line-height:1.4; margin:6px 0 0;">back to where you were</p>
+        </div>
+      </div>
+      </div>
+
+      <div style="display:flex; gap:12px; margin-top:16px;">
+        <button class="lt-btn" style="flex:1; height:48px; background:var(--gold-500); border:none; border-radius:12px; color:var(--white); font-family:'Manrope',sans-serif; font-size:12.5px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer;">Open today's list</button>
+        <button class="lt-ghost" style="flex:1; height:48px; background:var(--white); border:1.5px solid var(--border); border-radius:12px; color:var(--ink-700); font-family:'Manrope',sans-serif; font-size:12.5px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer;">See the waitlist</button>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:12px; margin-top:16px; background:var(--bg-blush-1); border:1px dashed var(--border); border-radius:14px; padding:13px 16px;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="m3.6 7 8.4 6 8.4-6"/></svg>
+        <p style="flex:1; font-size:12px; color:var(--ink-700); line-height:1.55; margin:0;">You are told about every cancellation for your venue, and again when a waitlisted guest takes the slot. Manage recipients under <strong style="color:var(--ink-900);">Settings → Notifications</strong>.</p>
+      </div>
+
+    </div>
+
+
+    <div style="padding:14px 32px 16px; border-top:1px solid var(--border); background:var(--bg-blush-2); text-align:center;">
+      <p style="font-size:11.5px; color:var(--ink-400); line-height:1.6; margin:0;">En Soleil LuxePass · 445 Park Avenue, New York, NY 10022<br><a href="#" style="font-weight:600;">Open dashboard</a> · <a href="#" style="font-weight:600;">Partner support</a> · <a href="#" style="font-weight:600;">Email preferences</a></p>
+    </div>
+
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,170 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,500&family=Manrope:wght@400;500;600;700;800&display=swap">
+  <style>
+    :root {
+      --bg-blush-1: #F8EAE1; --bg-blush-2: #FCF4EE;
+      --ink-900: #221A14; --ink-700: #55483D; --ink-400: #9C8D80;
+      --gold-500: #C9A876; --gold-600: #AD8A5C; --gold-100: #F1E3D0;
+      --border: #E7D9C9; --white: #FFFFFF; --panel-black: #15110D;
+      --dark-ink-100: #F1E3D0; --dark-ink-300: #C9BDAF; --dark-ink-500: #8A7C6C;
+      --dark-border: #3A322A; --dark-card: #1E1813; --dark-hover: #241D17;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Manrope', 'Segoe UI', sans-serif; color: var(--dark-ink-100); }
+    h1, h2, h3 { font-family: 'Bodoni Moda', Georgia, 'Times New Roman', serif; margin: 0; font-weight: 500; }
+    a { color: var(--gold-600); text-decoration: none; }
+    a:hover { color: var(--gold-500); }
+    .dk-nav { transition: background .15s ease; cursor: pointer; }
+    .dk-nav:hover { background: var(--dark-hover); }
+    .dk-gold { transition: background .15s ease; }
+    .dk-gold:hover { background: var(--gold-600) !important; }
+    .dk-ghost { transition: background .15s ease, border-color .15s ease; cursor: pointer; }
+    .dk-ghost:hover { background: var(--dark-hover); border-color: var(--gold-500); }
+    .dk-tr { transition: background .15s ease; cursor: pointer; }
+    .dk-tr:hover { background: var(--dark-hover); }
+    .dk-row { transition: border-color .15s ease; }
+    .dk-row:hover { border-color: var(--gold-500); }
+    .dk-link { transition: color .15s ease; cursor: pointer; }
+    .dk-link:hover { color: var(--gold-500); }
+    .lt-btn { transition: background .15s ease; }
+    .lt-btn:hover { background: var(--gold-600) !important; }
+    .lt-ghost { transition: background .15s ease; cursor: pointer; }
+    .lt-ghost:hover { background: var(--gold-100); }
+  </style>
+</helmet>
+
+<div style="position:relative; display:flex; align-items:flex-start; justify-content:center; width:1440px; height:900px; background:linear-gradient(160deg, var(--bg-blush-2) 0%, var(--bg-blush-1) 100%); overflow:hidden; font-family:'Manrope',sans-serif;">
+
+  <div style="width:660px; margin-top:22px; background:var(--white); border:1px solid var(--border); border-radius:20px; box-shadow:0 30px 60px -20px rgba(34,26,20,0.28); overflow:hidden;">
+
+    <!-- Mail client header -->
+    <div style="padding:18px 26px; border-bottom:1px solid var(--border); background:var(--white);">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <span style="width:36px; height:36px; min-width:36px; border-radius:50%; background:var(--gold-500); display:flex; align-items:center; justify-content:center; color:var(--white); font-size:13px; font-weight:700; font-family:'Bodoni Moda',serif;">ES</span>
+        <div style="flex:1;">
+          <p style="font-size:13.5px; font-weight:700; color:var(--ink-900); margin:0;">En Soleil · LuxePass Partners <span style="font-weight:500; color:var(--ink-400);">&lt;partners@luxepass.co&gt;</span></p>
+          <p style="font-size:12px; color:var(--ink-400); margin:3px 0 0;">to frontdesk@theainsworth.com · Sep 14, 6:30 AM</p>
+        </div>
+        <span style="padding:5px 11px; border-radius:20px; background:var(--gold-100); font-size:11px; font-weight:700; color:var(--ink-900);">Morning digest</span>
+      </div>
+      <p style="font-size:15px; font-weight:700; color:var(--ink-900); margin:14px 0 0;">Today at The Ainsworth · 14 guests expected</p>
+    </div>
+
+    <!-- Brand band -->
+    <div style="position:relative; background:radial-gradient(circle at 28% 10%, #2c241c, #15110d 70%); padding:20px 32px; text-align:center;">
+      <div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.16) 1px, transparent 1.5px); background-size:18px 18px;"></div>
+      <div style="position:relative;">
+        <img src="logo.png" alt="En Soleil" style="width:46px; height:auto;">
+        <p style="font-size:11.5px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:#8A7C6C; margin:14px 0 0;">Saturday, September 14</p>
+        <h2 style="font-size:30px; color:#F1E3D0; margin-top:10px;">14 guests expected</h2>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div style="padding:18px 32px 20px;">
+
+      <p style="font-size:14px; color:var(--ink-700); line-height:1.6; margin:0;">Good morning. Here is the day as it stands at 6:30 AM — anything booked after this shows up in the dashboard and in its own note.</p>
+
+      <div style="display:flex; gap:10px; margin-top:14px;">
+          <div style="flex:1; padding:12px 14px; background:var(--white); border:1px solid var(--border); border-radius:14px;">
+            <p style="font-size:19px; font-weight:800; color:var(--ink-900); margin:0;">3 – 4 PM</p>
+            <p style="font-size:11.5px; color:var(--ink-400); line-height:1.4; margin:5px 0 0;">Busiest hour · 3 arrivals expected</p>
+          </div>
+          <div style="flex:1; padding:12px 14px; background:var(--white); border:1px solid var(--border); border-radius:14px;">
+            <p style="font-size:19px; font-weight:800; color:var(--ink-900); margin:0;">4 guests</p>
+            <p style="font-size:11.5px; color:var(--ink-400); line-height:1.4; margin:5px 0 0;">Have been here before</p>
+          </div>
+          <div style="flex:1; padding:12px 14px; background:var(--white); border:1px solid var(--border); border-radius:14px;">
+            <p style="font-size:19px; font-weight:800; color:var(--ink-900); margin:0;">2 day passes</p>
+            <p style="font-size:11.5px; color:var(--ink-400); line-height:1.4; margin:5px 0 0;">The other 12 are on memberships</p>
+          </div>
+      </div>
+
+      <div style="margin-top:16px; background:var(--bg-blush-2); border:1px solid var(--border); border-radius:16px; overflow:hidden;">
+        <div style="display:grid; grid-template-columns:86px 1fr 108px 176px; gap:12px; padding:10px 16px; border-bottom:1px solid var(--border);">
+          <p style="font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-400); margin:0;">Arrival</p><p style="font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-400); margin:0;">Guest</p><p style="font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-400); margin:0;">Reference</p><p style="font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:var(--ink-400); margin:0;">Worth knowing</p>
+        </div>
+        <div style="display:grid; grid-template-columns:86px 1fr 108px 176px; gap:12px; align-items:center; padding:9px 16px; border-bottom:1px solid var(--border);">
+          <span style="font-size:12.5px; font-weight:700; color:var(--ink-900);">9:00 AM</span>
+          <span style="font-size:12.5px; color:var(--ink-900);">Marcus Ellery</span>
+          <span style="font-size:12px; font-weight:600; color:var(--ink-700);">LP-839014</span>
+          <span style="font-size:11.5px; color:var(--ink-400);">6th visit here</span>
+        </div>
+        <div style="display:grid; grid-template-columns:86px 1fr 108px 176px; gap:12px; align-items:center; padding:9px 16px; border-bottom:1px solid var(--border);">
+          <span style="font-size:12.5px; font-weight:700; color:var(--ink-900);">9:00 AM</span>
+          <span style="font-size:12.5px; color:var(--ink-900);">Priya Raghunathan</span>
+          <span style="font-size:12px; font-weight:600; color:var(--ink-700);">LP-839221</span>
+          <span style="font-size:11.5px; color:var(--ink-400);">Quiet desk requested</span>
+        </div>
+        <div style="display:grid; grid-template-columns:86px 1fr 108px 176px; gap:12px; align-items:center; padding:9px 16px; border-bottom:1px solid var(--border);">
+          <span style="font-size:12.5px; font-weight:700; color:var(--ink-900);">10:00 AM</span>
+          <span style="font-size:12.5px; color:var(--ink-900);">Theo Lindqvist</span>
+          <span style="font-size:12px; font-weight:600; color:var(--ink-700);">LP-840107</span>
+          <span style="font-size:11.5px; color:var(--ink-400);">3rd visit here</span>
+        </div>
+        <div style="display:grid; grid-template-columns:86px 1fr 108px 176px; gap:12px; align-items:center; padding:9px 16px; border-bottom:1px solid var(--border);">
+          <span style="font-size:12.5px; font-weight:700; color:var(--ink-900);">10:30 AM</span>
+          <span style="font-size:12.5px; color:var(--ink-900);">Camille Duforest</span>
+          <span style="font-size:12px; font-weight:600; color:var(--ink-700);">LP-840388</span>
+          <span style="font-size:11.5px; color:var(--ink-400);">First visit</span>
+        </div>
+        <div style="display:grid; grid-template-columns:86px 1fr 108px 176px; gap:12px; align-items:center; padding:9px 16px; border-bottom:1px solid var(--border);">
+          <span style="font-size:12.5px; font-weight:700; color:var(--ink-900);">11:00 AM</span>
+          <span style="font-size:12.5px; color:var(--ink-900);">Jonah Whitfield</span>
+          <span style="font-size:12px; font-weight:600; color:var(--ink-700);">LP-840512</span>
+          <span style="font-size:11.5px; color:var(--ink-400);">7th visit here</span>
+        </div>
+        <div style="display:grid; grid-template-columns:86px 1fr 108px 176px; gap:12px; align-items:center; padding:9px 16px; border-bottom:1px solid var(--border);">
+          <span style="font-size:12.5px; font-weight:700; color:var(--ink-900);">12:00 PM</span>
+          <span style="font-size:12.5px; color:var(--ink-900);">Elena Vasquez</span>
+          <span style="font-size:12px; font-weight:600; color:var(--ink-700);">LP-841003</span>
+          <span style="font-size:11.5px; color:var(--ink-400);">Day pass · first visit</span>
+        </div>
+        <div style="display:grid; grid-template-columns:86px 1fr 108px 176px; gap:12px; align-items:center; padding:9px 16px; border-bottom:1px solid var(--border);">
+          <span style="font-size:12.5px; font-weight:700; color:var(--ink-900);">12:30 PM</span>
+          <span style="font-size:12.5px; color:var(--ink-900);">Rowan Achebe</span>
+          <span style="font-size:12px; font-weight:600; color:var(--ink-700);">LP-841166</span>
+          <span style="font-size:11.5px; color:var(--ink-400);">5th visit here</span>
+        </div>
+        <div style="display:grid; grid-template-columns:86px 1fr 108px 176px; gap:12px; align-items:center; padding:9px 16px; border-bottom:1px solid var(--border);">
+          <span style="font-size:12.5px; font-weight:700; color:var(--ink-900);">1:30 PM</span>
+          <span style="font-size:12.5px; color:var(--ink-900);">Sofia Marchetti</span>
+          <span style="font-size:12px; font-weight:600; color:var(--ink-700);">LP-841420</span>
+          <span style="font-size:11.5px; color:var(--ink-400);">Arriving with a laptop</span>
+        </div>
+        <div style="padding:10px 16px; background:var(--white); border-top:1px solid var(--border); text-align:center;">
+          <span style="font-size:12px; font-weight:700; color:var(--gold-600);">6 more, from 2:00 PM to 6:00 PM — open the full list</span>
+        </div>
+      </div>
+
+      <div style="display:flex; gap:12px; margin-top:16px;">
+        <button class="lt-btn" style="flex:1; height:48px; background:var(--gold-500); border:none; border-radius:12px; color:var(--white); font-family:'Manrope',sans-serif; font-size:12.5px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer;">Open today's list</button>
+        <button class="lt-ghost" style="flex:1; height:48px; background:var(--white); border:1.5px solid var(--border); border-radius:12px; color:var(--ink-700); font-family:'Manrope',sans-serif; font-size:12.5px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer;">Download CSV</button>
+      </div>
+
+      <div style="display:flex; align-items:center; gap:12px; margin-top:16px; background:var(--bg-blush-1); border:1px dashed var(--border); border-radius:14px; padding:13px 16px;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="m3.6 7 8.4 6 8.4-6"/></svg>
+        <p style="flex:1; font-size:12px; color:var(--ink-700); line-height:1.55; margin:0;">The digest goes out every morning at 6:30 AM local time. Change the hour, or add a colleague to it, under <strong style="color:var(--ink-900);">Settings → Notifications</strong>.</p>
+      </div>
+
+    </div>
+
+
+    <div style="padding:14px 32px 16px; border-top:1px solid var(--border); background:var(--bg-blush-2); text-align:center;">
+      <p style="font-size:11.5px; color:var(--ink-400); line-height:1.6; margin:0;">En Soleil LuxePass · 445 Park Avenue, New York, NY 10022<br><a href="#" style="font-weight:600;">Open dashboard</a> · <a href="#" style="font-weight:600;">Partner support</a> · <a href="#" style="font-weight:600;">Email preferences</a></p>
+    </div>
+
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

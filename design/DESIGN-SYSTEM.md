@@ -50,6 +50,20 @@ Grises del tema oscuro ya usados: `#F1E3D0` (texto sobre negro), `#C9BDAF` (secu
 usa el tema oscuro, estos grises se declaran también como custom properties
 (`--dark-ink-100/300/500`, `--dark-border`) para no repetir hexadecimales sueltos.
 
+La Fase 2 (Partner Dashboard) nombra las dos superficies que faltaban y las añade al bloque de
+tokens de cualquier artboard oscuro:
+
+```css
+--dark-ink-100: #F1E3D0; --dark-ink-300: #C9BDAF; --dark-ink-500: #8A7C6C;
+--dark-border:  #3A322A; --dark-card:    #1E1813; --dark-hover:   #241D17;
+```
+
+`--dark-card` es la superficie de card sobre el negro y `--dark-hover` el hover de una fila o
+un botón fantasma. El fondo de un artboard oscuro es siempre
+`radial-gradient(circle at 30% 0%, #2c241c, #15110d 62%)` con el patrón de puntos dorados a 18px
+por encima; los campos y las cajas *dentro* de una card van sobre `--panel-black`, no sobre
+`--dark-card`, para que el hueco se lea más profundo que la superficie.
+
 ## 3. Tipografía
 
 | Rol | Familia | Uso |
@@ -96,6 +110,15 @@ label 13px/600 · hint 12–12.5px · eyebrow 12px/700 uppercase `letter-spacing
 | Fila de notificación | Fijado en la Fase 7. Card de contenido en `display: flex; gap: 14px` con icono en cuadro de 38px. **Sin leer**: fondo blanco, `border: 1px solid var(--border)`, sombra de card e icono sobre `--gold-100`; el título lleva delante un punto de 8px `--gold-500` y el cuerpo se indenta 17px para alinearse con él. **Leída**: fondo `--bg-blush-2`, sin sombra, icono sobre blanco con borde y textos en `--ink-400`. La hora va a la derecha del título en 12px `--ink-400` |
 | Código de referido | Fijado en la Fase 7. Caja de 50px con `border: 1.5px dashed var(--gold-500)`, `border-radius: 12px` y fondo `--bg-blush-2`: el código en 15px/800 `letter-spacing: .1em` y un botón "Copy" de 36px a la derecha |
 | Campo de lookup (oscuro) | Alto 64px, fondo `--panel-black`, `border-radius: 14px`, icono de 22px a la izquierda y el LP# en 18px/700 `letter-spacing: .08em`. Activo: `border: 1.5px solid var(--gold-500)` + el halo dorado de focus. Sin resultado: `border: 1.5px dashed #8A7C6C` y chip "Not recognised" |
+| Input / búsqueda (oscuro) | Fijado en la Fase 2. Alto **44px** (50px en formularios como el login), fondo `--panel-black`, `border: 1px solid var(--dark-border)`, `border-radius: 11px` (12px a 50px), icono de 17px `--dark-ink-500` a 15px del borde, texto 13.5px `--dark-ink-100` y placeholder `--dark-ink-500`. Activo: `border: 1.5px solid var(--gold-500)` + el mismo halo `0 0 0 3px rgba(201,168,118,.15)` del tema claro |
+| Botón fantasma (oscuro) | Fijado en la Fase 2. Alto 40–44px (52px en un footer de modal), fondo transparente, `border: 1.5px solid var(--dark-border)`, `border-radius: 11px` (12px a 52px), texto 12.5px/700 `letter-spacing: .06em` en `--dark-ink-300`, icono de 16px `--gold-500`. Hover: fondo `--dark-hover` y borde `--gold-500`. Su variante "activa" (el botón cuyo panel está abierto) usa fondo `rgba(201,168,118,.16)`, `border: 1.5px solid var(--gold-500)` y texto `--dark-ink-100` |
+| Casilla de asistencia | Fijada en la Fase 2. Caja de 20px, `border-radius: 5px`, en la primera columna de la lista del día. **Llegó**: fondo `--gold-500` con check blanco stroke 3. **Pendiente**: `border: 1.5px solid var(--dark-border)`, vacía. **No-show**: `border: 1.5px dashed var(--dark-ink-500)` con una × de 11px `--dark-ink-500`. Es el gesto completo del check-in: marcarla llega a la app del miembro en el momento |
+| Chip de asistencia (oscuro) | Fijado en la Fase 2. Traducción al negro del chip de estado de reserva, misma geometría (`padding: 6px 13px`, `border-radius: 20px`, texto 11.5px/700, punto de 6px). **Arrived** fondo `rgba(201,168,118,.18)` + `border: 1px solid var(--gold-500)`, punto `--gold-500`, texto `--dark-ink-100` · **New booking** transparente con `border: 1.5px solid var(--gold-500)` y halo `0 0 0 3px rgba(201,168,118,.28)` · **Pending** transparente con `border: 1px solid var(--dark-border)`, punto `--dark-ink-500`, texto `--dark-ink-300` · **No-show** `border: 1px dashed var(--dark-ink-500)`, punto y texto `--dark-ink-500` · **Cancelled** igual pero sin punto. Sirve también para los chips de resumen del día y para los tres niveles de lealtad (Regular / Returning / First visit) |
+| Fila de datos (oscura) | Fijada en la Fase 2. Alto **54px**, `padding: 0 22px`, `border-bottom: 1px solid rgba(58,50,42,.6)`, hover `--dark-hover`. Dentro: avatar de 32px, título 13.5px/700 `--dark-ink-100` con subtítulo 11.5px `--dark-ink-500`, y un chevron de 17px `--dark-ink-500` al final. La fila resaltada (una reserva recién llegada) va sobre `rgba(201,168,118,.09)` con `box-shadow: inset 3px 0 0 var(--gold-500)`. La fila plegada ("↑ 2 earlier arrivals") mide 34px y va en 12px/600 `--dark-ink-500` |
+| Tile de métrica (oscuro) | Fijado en la Fase 2. Card de `--dark-card`, `border-radius: 16px`, `padding: 16px 18px`: eyebrow de 11px, la cifra en **Bodoni 30px** `--dark-ink-100` y una nota de 11.5px `--dark-ink-500` debajo. Se usan en fila de cuatro con `gap: 14px` |
+| Segmented (oscuro) | Fijado en la Fase 2. Contenedor `--panel-black` con `border: 1px solid var(--dark-border)`, `border-radius: 12px`, `padding: 5px`, `gap: 5px`; cada opción alto 36px, `border-radius: 9px`, texto 12px/700. Activa: fondo `--gold-500` + texto blanco. Inactiva: transparente + `--dark-ink-300` |
+| Barra de volumen | Fijada en la Fase 2. Barra vertical de `border-radius: 6px 6px 3px 3px` en `--gold-500`, con la cifra encima en 11px/700 y la etiqueta del día debajo en 10.5px, ambas `--dark-ink-500`. El día en curso se dibuja **abierto** (`background: transparent` + `border: 1.5px dashed var(--gold-500)`) y sus dos etiquetas pasan a `--gold-500`. La versión horizontal (distribución por día de la semana) es un carril de 9px sobre `--panel-black` con el relleno en `--gold-500` |
+| Toast (oscuro) | Fijado en la Fase 2. Card de 396px en `--dark-card` con `border: 1px solid var(--gold-500)`, `border-left: 4px solid var(--gold-500)`, `border-radius: 14px` y `box-shadow: 0 24px 50px -18px rgba(0,0,0,.7)`, anclada a `bottom: 26px; right: 32px`. Icono en cuadro de 38px sobre `rgba(201,168,118,.16)`, título 13px/700, cuerpo 12.5px y dos acciones de 12px/700 (la principal `--gold-600`, la de descartar `--dark-ink-500`) |
 
 Links: siempre definir `a` (`--gold-600`) y `a:hover` (`--ink-900`) en el `<helmet>`.
 Transiciones: `.15s ease`.
@@ -177,7 +200,46 @@ Cuatro plantillas fijadas en la Fase 1. Reutilizarlas antes de inventar una nuev
    `box-shadow: 0 30px 60px -20px rgba(34,26,20,.32)`: cabecera de 16px con el título y
    "Mark all as read", tres filas de notificación separadas por `border-top`, y un pie centrado sobre
    `--bg-blush-2` con "See all notifications". La lista completa vive en su propia pantalla.
-15. **Email de marca** — artboard sin app shell: fondo blush a pantalla completa y una card de 660px
+15. **App shell del partner (oscuro)** — fijado en la Fase 2, es el gemelo oscuro del patrón 3 y
+   fija la navegación del Partner Dashboard. Sidebar de **248px** sobre `--panel-black` con
+   `border-right: 1px solid var(--dark-border)` y `padding: 30px 18px`: logo de 46px, eyebrow
+   "Partner dashboard", los items de nav (**Today · Guests · Analytics · Reports · Settings**,
+   `padding: 12px 14px`, `border-radius: 10px`; activo sobre `rgba(201,168,118,.16)` con icono
+   `--gold-500` y texto `--dark-ink-100`/700) y abajo, tras un `border-top`, el bloque del local:
+   cuadro de 36px `border-radius: 10px` sobre `rgba(201,168,118,.14)` con `border: 1px solid
+   var(--gold-600)` y la inicial en Bodoni dorada, el nombre del lounge y la persona de turno, más
+   un chevron que implica el cambio de local. El área de contenido lleva el radial de
+   `--panel-black` con el patrón de puntos y una topbar de **64px** (`rgba(21,17,13,.72)`,
+   `border-bottom: 1px solid var(--dark-border)`, `padding: 0 40px`) con la miga a la izquierda y,
+   a la derecha, el chip "Live · updated …" (punto dorado con halo), la campana y el botón de
+   refrescar. Cuerpo con `padding: 26px 40px 24px`.
+16. **Lista de datos oscura** — fijada en la Fase 2. Card de `--dark-card`, `border: 1px solid
+   var(--dark-border)`, `border-radius: 20px` y `overflow: hidden`, con una cabecera de 42px
+   (`padding: 0 22px`, `border-bottom: 1px solid var(--dark-border)`, etiquetas en eyebrow de 11px)
+   y las filas de datos de 54px descritas en la sección 4. El grid se declara una sola vez y lo
+   comparten cabecera y filas. Encima de la card van el h1 de 34px en Bodoni con su eyebrow y, a la
+   derecha de esa misma fila, los controles (búsqueda, fecha, acciones); debajo del h1, la fila de
+   chips con el resumen. Bajo la card, una línea de 12px `--dark-ink-500` con icono de info que
+   explica el gesto de la pantalla.
+17. **Panel de actividad (oscuro)** — fijado en la Fase 2, gemelo del patrón 14. Desplegable de
+   400px anclado a la campana (`position: absolute; right: 32px; top: 74px`) en `--dark-card` con
+   `border-radius: 18px` y `box-shadow: 0 30px 60px -20px rgba(0,0,0,.7)`: cabecera con el título y
+   "Mark all as read", filas de 15px de padding separadas por `border-top`, y pie centrado sobre
+   `--panel-black`. Fila sin leer: icono en cuadro de 36px sobre `rgba(201,168,118,.16)` con
+   `border: 1px solid var(--gold-600)` y punto dorado de 8px antes del título, con el cuerpo
+   indentado 16px. Leída: `opacity: .72`, icono sobre `--panel-black`.
+18. **Modal y drawer oscuros** — fijados en la Fase 2. Misma anatomía que los patrones 4 y 6 con la
+   pantalla de fondo en `filter: blur(3px)`, pero el scrim es `rgba(10,8,6,.55)` y la card va en
+   `--dark-card` con `border: 1px solid var(--dark-border)` y `box-shadow: 0 40px 80px -30px
+   rgba(0,0,0,.75)`. Modal centrado de 620px; drawer de **472px** pegado a la derecha con
+   `border-left` y `box-shadow: -40px 0 80px -30px rgba(0,0,0,.7)`. Header con eyebrow + h2,
+   cuerpo, y footer separado por `border-top` con el primario dorado de 52px y el fantasma al lado.
+19. **Vista de analítica** — fijada en la Fase 2 sobre el patrón 15. Bajo el h1, una fila de cuatro
+   tiles de métrica; debajo, `display: flex; gap: 16px` con la columna principal (las cards de
+   gráfico) y el rail de **344px** del patrón 9 con el desglose de importes, el total sobre
+   `--panel-black` con `border: 1px solid var(--gold-600)`, la nota que remite al acuerdo de partner
+   y el botón de descarga. Toda cifra agregada debe cuadrar con las series que la componen.
+20. **Email de marca** — artboard sin app shell: fondo blush a pantalla completa y una card de 660px
    centrada con cabecera de cliente de correo (avatar de 36px, remitente, destinatario y asunto en
    15px/700), banda oscura con el logo y el dato principal en Bodoni, cuerpo con los detalles sobre
    `--bg-blush-2`, los botones de acción y el desglose de importes, y un pie centrado de 11.5px con
@@ -234,7 +296,7 @@ Debajo, leyenda con muestras de 16px. El sello de frescura (`Updated N min ago �
 | Fase | Alcance | Estado |
 |---|---|---|
 | 1 | Epic 1 — Onboarding & Authentication (tema claro) | ✅ Completa — 10 artboards |
-| 2 | Epic 7 — Partner Dashboard (tema oscuro) | Pendiente |
+| 2 | Epic 7 — Partner Dashboard (tema oscuro) | ✅ Completa — 12 artboards |
 | 3 | Epic 2 — Location Discovery & Search (tema claro) | ✅ Completa — 9 artboards |
 | 4 | Epic 3 — Lounge Profiles & Details (tema claro) | ✅ Completa — 9 artboards |
 | 5 | Epic 4 — Booking System (tema claro) | ✅ Completa — 9 artboards |
@@ -258,6 +320,73 @@ por documento, y registro de la aceptación con fecha y versión.
 
 Pendiente conocido: el texto legal del modal es de relleno estructural, a reemplazar por el
 documento real de En Soleil.
+
+### Fase 2 — `design/epic-7-partner-dashboard/`
+
+Canvas: https://claude.ai/code/artifact/3e9a51ea-3155-4763-941f-26c11c88adf0
+
+Diseñada después de la Fase 7, aunque conserva el número 2 que tenía reservado. Es la primera fase
+**íntegramente oscura** y la que fija el App shell del partner (patrón 15) y el resto de la mitad
+oscura del sistema. 12 artboards en 4 filas:
+
+| Fila | Artboards | Historia |
+|---|---|---|
+| 1 | `Login` → `Main` (lista del día) → `GuestDetail` | 7.1 |
+| 2 | `LiveUpdate` → `NoShow` → `Export` | 7.1 |
+| 3 | `EmailDigest` → `EmailNewBooking` → `EmailCancellation` | 7.2 |
+| 4 | `Analytics` → `RepeatGuests` → `Reports` | 7.3 |
+
+Cobertura de criterios: acceso de partner con cuenta emitida por En Soleil y la separación
+explícita respecto al login de miembro; lista del día con nombre, hora de llegada, número LP,
+estado, email y teléfono de cada invitado; casilla de asistencia por invitado como gesto único del
+check-in, con el aviso de que llega a la app del miembro en el momento; actualización en vivo
+cuando entra una reserva nueva (toast, fila resaltada, contador del día y panel de actividad) sin
+recargar nada; ficha de invitado con los datos de la reserva, el contacto para comunicarse,
+las peticiones especiales y el contacto de emergencia con aviso de registro de accesos; reporte de
+no-show con motivo, nota y la declaración de lo que provoca en el lado del miembro; búsqueda por
+nombre o número y filtro por fecha con chips removibles; exportación a CSV y hoja imprimible que
+siguen los filtros de pantalla, con selección de columnas y aviso de tratamiento de datos;
+digest matinal de las 6:30 AM con la lista completa; email por cada reserva nueva con el contador
+actualizado; email de cancelación con el recuento corregido y la promoción desde la waitlist que
+rellenó el hueco; volumen de reservas por día y por día de la semana con vista semanal/mensual;
+atribución de ingresos desglosada; identificación de invitados recurrentes con niveles de lealtad;
+y un centro de reportes con seis informes descargables en CSV, entrega inmediata, por email o
+programada.
+
+Decisiones de producto de esta fase (a confirmar con En Soleil):
+
+- **La economía del partner.** La atribución de ingresos se dibuja como day passes a $75.00 (el
+  precio fijado en la Fase 5), visitas de membresía a una **tarifa de partner de $38.00** y la
+  **mitad** de cada tarifa de no-show de $35.00 (la tarifa plana de la Fase 6). Ninguna historia
+  fija esos números: la 7.3 solo pide "revenue attribution". Si el acuerdo real es otro, cambian
+  las cifras de `Analytics`, `RepeatGuests` y `NoShow`, no la estructura.
+- **Los niveles de lealtad** (Regular con 5 visitas o más, Returning con 2–4, First visit con 1) se
+  cuentan **solo en ese local**. El flow habla de "loyalty trackers" sin definirlos; contarlos por
+  local es lo único que el partner puede ver sin exponer el historial del miembro en otros lounges,
+  y así se declara en pantalla.
+- **La ventana de admisión son cuatro horas** desde la hora reservada, coherente con la Fase 6, y
+  un invitado que no aparece antes de que se cierre queda disponible para reportar como no-show.
+- **Los datos de contacto se muestran mientras la reserva está abierta**, no de forma permanente, y
+  la exportación lo advierte. Es una propuesta legal a validar junto con la del contacto de
+  emergencia que arrastran las Fases 6 y 7.
+- **La promoción desde la waitlist es automática**: el hueco de una cancelación se ofrece al
+  siguiente de la cola sin que el partner intervenga, y el email se lo cuenta ya resuelto.
+
+Costuras declaradas en pantalla, no diseñadas aquí: la sección **Settings → Notifications** del
+propio dashboard (quién del equipo recibe cada email) y la vista de waitlist existen en la
+navegación pero quedan fuera de las tres historias; el lado del miembro de un no-show — la tarifa
+plana, la entrada en el historial y la pausa por tres en doce meses — es el Epic 6; y la consola de
+recepción que escanea el pase es el Epic 5.
+
+Pendientes conocidos: nombres, emails, teléfonos (rango 555), números de reserva, importes y
+recuentos son datos de muestra, pero **cuadran entre sí** y hay que mantenerlos así si se añaden
+pantallas — las 187 reservas del tile de `Analytics` son la suma exacta de las catorce barras del
+gráfico y de la distribución por día de la semana, y los 171 asistentes son la suma de los 53 day
+passes y las 118 visitas de membresía del rail de ingresos. La línea temporal del día continúa la
+del Epic 5: sábado 14 de septiembre en The Ainsworth, con el digest a las 6:30 AM (14 esperados),
+el check-in de Alexandra Rivas a las 3:34 PM que ya ocurría en la consola de recepción de la
+Fase 6, la reserva de Naomi Feldstein a las 3:41 PM (15), la cancelación de Harriet Osei a las
+3:52 PM (14) y la promoción de Victor Almeida a las 3:54 PM (15 de nuevo).
 
 ### Fase 3 — `design/epic-2-location-discovery-search/`
 
