@@ -125,6 +125,9 @@ npm run dev          # y comprobar que las rutas responden 200
 Se pueden correr a la vez: `next build` escribe en `.next-build` y `next dev` en
 `.next`, así que un build no invalida el dev server (ver `next.config.ts`).
 
+**9. Revisar `docs/PENDIENTES.md`**: añadir lo que quede abierto (algo provisional,
+un asset que falte, un criterio que solo se pueda enunciar) y cerrar lo resuelto.
+
 ### Correspondencia specs ↔ diseño
 
 Los nombres de carpeta coinciden **salvo en el Epic 1**:
@@ -187,6 +190,7 @@ src/                      Código de la aplicación Next.js
     registration.ts       Reglas de validación de alta (Story 1.1)
 
 docs/                     Diseño y especificaciones
+  PENDIENTES.md           Lo que queda abierto: bloqueos, provisionales y decisiones
   design/
     DESIGN-SYSTEM.md      Sistema de diseño: tokens, tipografía, componentes, patrones
     COMPONENT-MAP.md      Qué componente de código implementa qué fila del design system
