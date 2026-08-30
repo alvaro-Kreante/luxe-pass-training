@@ -118,6 +118,9 @@ npm run build        # debe compilar y listar las rutas nuevas
 npm run dev          # y comprobar que las rutas responden 200
 ```
 
+Se pueden correr a la vez: `next build` escribe en `.next-build` y `next dev` en
+`.next`, así que un build no invalida el dev server (ver `next.config.ts`).
+
 ### Correspondencia specs ↔ diseño
 
 Los nombres de carpeta coinciden **salvo en el Epic 1**:
@@ -306,9 +309,15 @@ Estos tokens están replicados en el código como **CSS custom properties** en `
 
 **Comandos:**
 ```bash
-npm run dev      # Dev server en http://localhost:3000
-npm run build    # Build producción (genera SW para PWA)
-npm run start    # Sirve la build
+npm run dev      # Dev server en http://localhost:3000   → escribe en .next
+npm run build    # Build producción (genera SW para PWA) → escribe en .next-build
+npm run start    # Sirve la build desde .next-build
 npm run lint     # ESLint
 npx tsc --noEmit # Comprobación de tipos
 ```
+
+**Directorios de salida separados** (`distDir` en `next.config.ts`). Compartiendo
+`.next`, un build lanzado mientras el dev server está vivo le reescribe los chunks
+por debajo y lo deja sirviendo 500 (`__webpack_modules__[moduleId] is not a
+function`) o 404 en rutas que existen — sin avisar en su log. Si alguna vez vuelve
+a pasar: `rm -rf .next` y reiniciar el dev server.
