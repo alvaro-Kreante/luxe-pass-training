@@ -1,82 +1,55 @@
 import * as React from "react";
+import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
-const Card = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("card", className)}
-    {...props}
-  />
-));
+/**
+ * DESIGN-SYSTEM.md §4 — Card / panel y Card de contenido.
+ * panel:   radius 24px, sombra profunda, padding 44px (la card de un formulario)
+ * content: radius 18px, sombra ligera, hover más marcado (una fila, un tile)
+ */
+const cardVariants = cva("bg-surface", {
+  variants: {
+    variant: {
+      panel: "rounded-panel shadow-panel",
+      content: "rounded-content shadow-content",
+      flat: "rounded-content border border-line",
+    },
+    interactive: { true: "transition-shadow duration-150", false: "" },
+    padded: { true: "", false: "" },
+  },
+  compoundVariants: [
+    {
+      variant: "content",
+      interactive: true,
+      class: "hover:shadow-content-hover",
+    },
+    { variant: "panel", padded: true, class: "p-11" },
+    { variant: "content", padded: true, class: "p-5" },
+    { variant: "flat", padded: true, class: "p-5" },
+  ],
+  defaultVariants: { variant: "panel", interactive: false, padded: true },
+});
 
-Card.displayName = "Card";
+export interface CardProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof cardVariants> {}
 
-const CardHeader = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("flex flex-col space-y-1.5 p-6", className)}
-    {...props}
-  />
-));
+export function Card({
+  className,
+  variant,
+  interactive,
+  padded,
+  ...props
+}: CardProps) {
+  return (
+    <div
+      className={cn(
+        cardVariants({ variant, interactive, padded }),
+        className,
+      )}
+      {...props}
+    />
+  );
+}
 
-CardHeader.displayName = "CardHeader";
-
-const CardTitle = React.forwardRef<
-  HTMLParagraphElement,
-  React.HTMLAttributes<HTMLHeadingElement>
->(({ className, ...props }, ref) => (
-  <h2
-    ref={ref}
-    className={cn("text-2xl font-display font-semibold leading-none tracking-tight", className)}
-    {...props}
-  />
-));
-
-CardTitle.displayName = "CardTitle";
-
-const CardDescription = React.forwardRef<
-  HTMLParagraphElement,
-  React.HTMLAttributes<HTMLParagraphElement>
->(({ className, ...props }, ref) => (
-  <p
-    ref={ref}
-    className={cn("text-sm text-ink-400", className)}
-    {...props}
-  />
-));
-
-CardDescription.displayName = "CardDescription";
-
-const CardContent = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("p-6 pt-0", className)}
-    {...props}
-  />
-));
-
-CardContent.displayName = "CardContent";
-
-const CardFooter = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("flex items-center p-6 pt-0", className)}
-    {...props}
-  />
-));
-
-CardFooter.displayName = "CardFooter";
-
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent };
+export { cardVariants };
