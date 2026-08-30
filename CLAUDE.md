@@ -87,8 +87,12 @@ Lo construido en el Epic 1 que ya sirve al resto: 12 primitivos, 3 patrones de p
 | Rama | Para qué |
 |---|---|
 | `main` | Rama principal. No se trabaja directamente sobre ella |
-| `feat/frontend-epics` | **Implementación en Next.js de las historias.** Aquí va todo el código |
-| `docs/design` | Mockups y canvas de los epics (`docs/design/`) |
+| `design/screens` | **Las pantallas implementadas en Next.js.** Aquí va todo el código |
+| `docs/design` | Mockups `.dc.html` y canvas de los epics (`docs/design/`) |
+
+Las dos ramas `design/*` son el mismo trabajo en dos formatos: el canvas estático y
+las pantallas navegables. No se llama "frontend" a propósito — esto es el diseño
+llevado a código, no una aplicación con backend.
 
 
 Receta completa. Seguirla en orden evita duplicar componentes que ya existen.
