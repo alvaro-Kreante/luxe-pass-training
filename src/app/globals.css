@@ -1,57 +1,266 @@
-@import url("https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,500&family=Manrope:wght@400;500;600;700;800&display=swap");
+@import "tailwindcss";
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* ============================================================
+   Capa 1 — Paleta literal
+   Valores exactos de docs/design/DESIGN-SYSTEM.md §2 (Tokens).
+   No se editan sin actualizar el design system.
+   ============================================================ */
 
 :root {
-  /* Light Theme - LuxePass Design System */
-  --bg-blush-1: #F8EAE1;
-  --bg-blush-2: #FCF4EE;
-  --ink-900: #221A14;
-  --ink-700: #55483D;
-  --ink-400: #9C8D80;
-  --gold-500: #C9A876;
-  --gold-600: #AD8A5C;
-  --gold-100: #F1E3D0;
-  --border: #E7D9C9;
-  --white: #FFFFFF;
-  --panel-black: #15110D;
+  /* Tema claro */
+  --bg-blush-1: #f8eae1;
+  --bg-blush-2: #fcf4ee;
+  --ink-900: #221a14;
+  --ink-700: #55483d;
+  --ink-400: #9c8d80;
+  --gold-500: #c9a876;
+  --gold-600: #ad8a5c;
+  --gold-100: #f1e3d0;
+  --border: #e7d9c9;
+  --white: #ffffff;
+  --panel-black: #15110d;
 
-  /* Dark Theme */
-  --dark-ink-100: #F1E3D0;
-  --dark-ink-300: #C9BDAF;
-  --dark-ink-500: #8A7C6C;
-  --dark-border: #3A322A;
-  --dark-card: #1E1813;
-  --dark-hover: #241D17;
+  /* Tema oscuro */
+  --dark-ink-100: #f1e3d0;
+  --dark-ink-300: #c9bdaf;
+  --dark-ink-500: #8a7c6c;
+  --dark-border: #3a322a;
+  --dark-card: #1e1813;
+  --dark-hover: #241d17;
 
-  /* Map Colors */
-  --map-land: #EFE7DE;
-  --map-street: #FFFFFF;
-  --map-block: #E6DCD0;
-  --map-park: #E3E8D6;
-  --map-water: #DCE6E6;
+  /* Mapa (§5 "Mapa", Fase 3) */
+  --map-land: #efe7de;
+  --map-street: #ffffff;
+  --map-block: #e6dcd0;
+  --map-park: #e3e8d6;
+  --map-water: #dce6e6;
 }
 
-html {
-  scroll-behavior: smooth;
+/* ============================================================
+   Capa 2 — Tokens semánticos
+   Lo que consumen los componentes. El tema oscuro comparte el ADN
+   (mismos dorados, tipografía, radios y alturas de control): solo
+   cambian el fondo y la jerarquía de tinta. Por eso un mismo
+   componente sirve a ambos temas — ver DESIGN-SYSTEM.md §1.
+   ============================================================ */
+
+:root,
+[data-theme="light"] {
+  --surface: var(--white);
+  --surface-sunken: var(--bg-blush-1);
+  --surface-subtle: var(--bg-blush-2);
+  --surface-hover: var(--bg-blush-2);
+
+  --fg: var(--ink-900);
+  --fg-muted: var(--ink-700);
+  --fg-subtle: var(--ink-400);
+
+  --line: var(--border);
+
+  --accent-soft: var(--gold-100);
+  --on-accent: var(--white);
+
+  --shadow-panel: 0 30px 60px -20px rgb(34 26 20 / 0.18);
+  --shadow-content: 0 10px 30px -14px rgb(34 26 20 / 0.14);
+  --shadow-content-hover: 0 24px 50px -18px rgb(34 26 20 / 0.22);
+  --scrim: rgb(21 17 13 / 0.55);
 }
 
-body {
-  background-color: #FCF4EE;
-  color: #221A14;
-  font-family: "Manrope", "Segoe UI", sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+[data-theme="dark"] {
+  --surface: var(--dark-card);
+  --surface-sunken: var(--panel-black);
+  --surface-subtle: var(--panel-black);
+  --surface-hover: var(--dark-hover);
+
+  --fg: var(--dark-ink-100);
+  --fg-muted: var(--dark-ink-300);
+  --fg-subtle: var(--dark-ink-500);
+
+  --line: var(--dark-border);
+
+  --accent-soft: rgb(201 168 118 / 0.18);
+  /* Sobre dorado, el tema oscuro escribe en negro — ver Welcome.dc.html */
+  --on-accent: var(--panel-black);
+
+  --shadow-panel: 0 30px 60px -20px rgb(0 0 0 / 0.7);
+  --shadow-content: 0 24px 50px -18px rgb(0 0 0 / 0.7);
+  --shadow-content-hover: 0 40px 80px -30px rgb(0 0 0 / 0.75);
+  --scrim: rgb(10 8 6 / 0.55);
 }
 
-a {
-  color: #AD8A5C;
-  text-decoration: none;
-  transition: color 150ms ease;
+/* El acento no cambia entre temas — declarado una sola vez. */
+:root {
+  --accent: var(--gold-500);
+  --accent-strong: var(--gold-600);
+  --accent-ring: 0 0 0 3px rgb(201 168 118 / 0.15);
+  --accent-ring-strong: 0 0 0 3px rgb(201 168 118 / 0.28);
 }
 
-a:hover {
-  color: #221A14;
+/* ============================================================
+   Capa 3 — Puente a Tailwind
+   `inline` sustituye el valor en la utilidad, de modo que
+   `bg-surface` resuelve var(--surface) en el punto de uso y
+   responde al [data-theme] del contenedor más cercano.
+   ============================================================ */
+
+@theme inline {
+  /* Semánticos */
+  --color-surface: var(--surface);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-surface-hover: var(--surface-hover);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+
+  /* Literales — cuando el design system cita el valor exacto */
+  --color-blush-1: var(--bg-blush-1);
+  --color-blush-2: var(--bg-blush-2);
+  --color-ink-900: var(--ink-900);
+  --color-ink-700: var(--ink-700);
+  --color-ink-400: var(--ink-400);
+  --color-gold-500: var(--gold-500);
+  --color-gold-600: var(--gold-600);
+  --color-gold-100: var(--gold-100);
+  --color-panel-black: var(--panel-black);
+  --color-dark-ink-100: var(--dark-ink-100);
+  --color-dark-ink-300: var(--dark-ink-300);
+  --color-dark-ink-500: var(--dark-ink-500);
+  --color-dark-border: var(--dark-border);
+  --color-dark-card: var(--dark-card);
+  --color-map-land: var(--map-land);
+  --color-map-street: var(--map-street);
+  --color-map-block: var(--map-block);
+  --color-map-park: var(--map-park);
+  --color-map-water: var(--map-water);
+
+  /* Tipografía — §3 */
+  --font-display: var(--font-bodoni), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-manrope), "Segoe UI", sans-serif;
+
+  /* Radios — §4 */
+  --radius-control: 12px;
+  --radius-nav: 10px;
+  --radius-content: 18px;
+  --radius-panel: 24px;
+  --radius-pill: 20px;
+
+  /* Sombras — §4 */
+  --shadow-panel: var(--shadow-panel);
+  --shadow-content: var(--shadow-content);
+  --shadow-content-hover: var(--shadow-content-hover);
+  --shadow-ring: var(--accent-ring);
+  --shadow-ring-strong: var(--accent-ring-strong);
+}
+
+/* ============================================================
+   Base
+   ============================================================ */
+
+@layer base {
+  body {
+    background-color: var(--bg-blush-2);
+    color: var(--fg);
+    font-family: var(--font-manrope), "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-bodoni), Georgia, "Times New Roman", serif;
+    font-weight: 500;
+  }
+
+  /* §4: "Links: siempre definir a y a:hover" */
+  a {
+    color: var(--accent-strong);
+    text-decoration: none;
+    transition: color 150ms ease;
+  }
+
+  a:hover {
+    color: var(--fg);
+  }
+}
+
+/* §5 "Estados" — skeleton de carga, misma geometría que la card real */
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: var(--surface-sunken);
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 0.45),
+    transparent
+  );
+  animation: shimmer 1.4s infinite;
+}
+
+/* ============================================================
+   Superficies compuestas
+   El radial oscuro con patrón de puntos dorados es el fondo de los
+   patrones 2, 10, 12, 15 y 21 del DESIGN-SYSTEM. Se declara una vez.
+   ============================================================ */
+
+/* Radial del panel/artboard oscuro — §2 y §5 patrón 15 */
+.surface-night {
+  background: radial-gradient(
+    circle at 30% 0%,
+    #2c241c 0%,
+    var(--panel-black) 62%
+  );
+}
+
+/* Variante del panel de autenticación — §5 patrón 1 (Fase 1) */
+.surface-night-panel {
+  background: radial-gradient(
+    circle at 30% 22%,
+    #2a221a 0%,
+    var(--panel-black) 55%,
+    #0c0a08 100%
+  );
+}
+
+/* Degradado blush del área de contenido claro — §5 patrón 1 */
+.surface-blush {
+  background: linear-gradient(
+    160deg,
+    var(--bg-blush-2) 0%,
+    var(--bg-blush-1) 100%
+  );
+}
+
+/* Patrón de puntos dorados a 18px — §2 */
+.dot-pattern::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    rgb(201 168 118 / 0.16) 1px,
+    transparent 1.5px
+  );
+  background-size: 18px 18px;
+  opacity: 0.6;
+  pointer-events: none;
 }
