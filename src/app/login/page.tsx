@@ -12,16 +12,10 @@ import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Notice } from "@/components/ui/notice";
 import {
-  attemptLogin,
-  clearLockout,
-  isLockedOut,
-  minutesRemaining,
-  readLockout,
+  credentialsMatch,
   LOCKOUT_MINUTES,
   MAX_FAILED_ATTEMPTS,
-  NO_LOCKOUT,
   REMEMBER_ME_DAYS,
-  type LockoutState,
 } from "@/lib/authentication";
 import { isEmailShapeValid } from "@/lib/registration";
 
@@ -41,29 +35,9 @@ export default function LoginPage() {
     Partial<Record<"email" | "password", string>>
   >({});
   const [credentialsError, setCredentialsError] = React.useState("");
-  const [lockout, setLockout] = React.useState<LockoutState>(NO_LOCKOUT);
+  const [failedAttempts, setFailedAttempts] = React.useState(0);
 
-  /**
-   * El bloqueo se rehidrata desde localStorage tras el montaje: `window` no
-   * existe en el render del servidor. Es la lectura inicial de un sistema
-   * externo, una sola vez.
-   */
-  React.useEffect(() => {
-    const stored = readLockout();
-    if (stored !== NO_LOCKOUT) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setLockout(stored);
-    }
-  }, []);
-
-  const locked = isLockedOut(lockout);
-
-  // Mientras dura el bloqueo, el contador de minutos se refresca solo.
-  React.useEffect(() => {
-    if (!locked) return;
-    const timer = setInterval(() => setLockout(readLockout()), 30_000);
-    return () => clearInterval(timer);
-  }, [locked]);
+  const locked = failedAttempts >= MAX_FAILED_ATTEMPTS;
 
   function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -85,24 +59,23 @@ export default function LoginPage() {
       return;
     }
 
-    const outcome = attemptLogin(email, password);
-
-    if (outcome.status === "success") {
-      clearLockout();
+    if (credentialsMatch(email, password)) {
       router.push("/");
       return;
     }
 
-    setLockout(outcome.lockout);
+    const attempts = failedAttempts + 1;
+    setFailedAttempts(attempts);
 
-    if (outcome.status === "locked") {
+    if (attempts >= MAX_FAILED_ATTEMPTS) {
       setCredentialsError("");
       return;
     }
 
+    const left = MAX_FAILED_ATTEMPTS - attempts;
     setCredentialsError(
-      `We could not find an account with that email and password. ${outcome.attemptsLeft} ${
-        outcome.attemptsLeft === 1 ? "attempt" : "attempts"
+      `We could not find an account with that email and password. ${left} ${
+        left === 1 ? "attempt" : "attempts"
       } left before the account is locked.`,
     );
   }
@@ -125,9 +98,8 @@ export default function LoginPage() {
           </strong>
           <br />
           {MAX_FAILED_ATTEMPTS} failed attempts in a row. Try again in{" "}
-          {minutesRemaining(lockout)}{" "}
-          {minutesRemaining(lockout) === 1 ? "minute" : "minutes"}, or reset your
-          password to regain access now.
+          {LOCKOUT_MINUTES} minutes, or reset your password to regain access
+          now.
         </Notice>
       ) : null}
 

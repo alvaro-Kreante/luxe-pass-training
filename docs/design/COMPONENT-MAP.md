@@ -103,9 +103,9 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | Módulo | Qué resuelve |
 |---|---|
 | `onboarding/terms-modal.tsx` | Story 1.1 — aceptación de TOS + Privacy con fecha y versión |
-| `onboarding/profile-context.tsx` | Borrador de perfil compartido por los 3 pasos (sessionStorage) |
+| `onboarding/profile-context.tsx` | Borrador de perfil compartido por los 3 pasos (Context, sin persistencia) |
 | `lib/registration.ts` | Validación de email, contraseña (8+ y 1 especial) y email duplicado |
-| `lib/authentication.ts` | Story 1.2 — credenciales de muestra, bloqueo por 5 intentos (15 min) y alcance de "Remember me" |
+| `lib/authentication.ts` | Story 1.2 — credenciales de muestra y las constantes de los criterios (5 intentos, 15 min, 30 días) |
 
 ---
 
@@ -165,4 +165,4 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 | Texto legal del modal de términos | Relleno estructural, tal como ya advierte `DESIGN-SYSTEM.md` §6 (Fase 1). A reemplazar por el documento real de En Soleil |
 | El acuse de "reset link sent" no tiene artboard | Se resuelve como segundo estado de `/forgot-password`, reutilizando la anatomía de `Verification.dc.html` (medallón de 76px + destinatario + reenvío), en lugar de inventar una pantalla |
 | `/login` añade una nota de 11.5px bajo "Remember me" | El artboard no la trae, pero `flow-onboarding.md` fija el alcance del token ("Set remember token: 30-day auto-logout"). Decirlo evita que el miembro adivine qué activa la casilla |
-| El bloqueo por intentos fallidos vive en `localStorage` | Es el único modo de que el estado bloqueado sea visible y probable sin backend. No es seguridad: `attemptLogin` es el punto que cambia cuando exista la API |
+| El bloqueo por intentos fallidos no persiste | Es un contador en `useState`: basta para alcanzar y ver el estado bloqueado, que es lo que el diseño tiene que mostrar. La caducidad de 15 minutos se enuncia en el aviso, no se cuenta |

@@ -24,17 +24,18 @@ La app en producción vive en `app.luxepass.co` y es un proyecto aparte: este re
 - ❌ Server Actions que escriban en algún sitio
 - ❌ `fetch` a servicios externos, pasarelas de pago, envío de emails
 - ❌ Tests unitarios o e2e (no hay suite y no se pidió una)
+- ❌ Persistir estado (`localStorage`, `sessionStorage`, cookies). Recargar puede empezar de cero: es un mockup navegable, no una app con sesión
 
 **Sí hacer:**
 
 - ✅ Datos de muestra en módulos de `src/lib/` o constantes del propio componente
-- ✅ Estado de UI con `useState` / Context; `sessionStorage` si un flujo multipaso lo necesita
+- ✅ Estado de UI con `useState` / Context — lo justo para que la pantalla muestre sus estados
 - ✅ Validación **de cliente**, cuya finalidad es que la pantalla pueda mostrar sus estados (error, botón deshabilitado, campo inválido) — no es seguridad
 - ✅ Navegación entre pantallas con `next/link` y `useRouter`
 
 **Criterios de aceptación que exigirían backend** (enviar un email, cobrar, verificar un token, comprobar duplicados contra la base) se cubren **visualmente**: se implementa la pantalla del estado y se simula el disparador con datos de muestra. La desviación se anota en la última sección de `docs/design/COMPONENT-MAP.md`.
 
-Ejemplo ya hecho en Story 1.1: la comprobación de email duplicado consulta una lista de dos correos en `src/lib/registration.ts`. Cuando exista la API, esa función es el único punto que cambia.
+Ejemplos ya hechos: la comprobación de email duplicado consulta una lista de dos correos en `src/lib/registration.ts`; el bloqueo tras 5 intentos de `/login` es un contador en `useState` que se limpia al recargar. **La regla es que la pantalla llegue a mostrar el estado, no que el estado sea real.**
 
 ---
 

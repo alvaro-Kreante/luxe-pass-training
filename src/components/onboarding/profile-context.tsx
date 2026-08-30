@@ -9,9 +9,11 @@ import * as React from "react";
  *
  * El perfil se completa en tres pasos (artboards ProfileBasic /
  * ProfilePersonal / ProfileProfessional), así que el borrador vive por encima
- * de las tres pantallas. Sin backend todavía: se guarda en sessionStorage para
- * que recargar o volver atrás no pierda lo escrito. Cuando exista la API,
- * `useProfileDraft` es el único punto que cambia.
+ * de las tres pantallas: el layout de /onboarding no se remonta al navegar
+ * entre ellas, y eso basta para que el botón "atrás" conserve lo escrito.
+ *
+ * Sin persistencia: recargar empieza de cero, que es lo correcto para un
+ * mockup navegable.
  */
 
 export interface ProfileDraft {
@@ -42,12 +44,9 @@ export const EMPTY_PROFILE: ProfileDraft = {
   company: "",
 };
 
-const STORAGE_KEY = "luxepass:profile-draft";
-
 interface ProfileContextValue {
   draft: ProfileDraft;
   update: (patch: Partial<ProfileDraft>) => void;
-  reset: () => void;
 }
 
 const ProfileContext = React.createContext<ProfileContextValue | null>(null);
@@ -59,49 +58,11 @@ export function ProfileDraftProvider({
 }) {
   const [draft, setDraft] = React.useState<ProfileDraft>(EMPTY_PROFILE);
 
-  /**
-   * Hidratación desde sessionStorage. Tiene que ocurrir en un efecto y no en el
-   * estado inicial: `window` no existe en el render del servidor, y leerlo en el
-   * primer render de cliente desalinearía el HTML hidratado. Es la lectura
-   * inicial de un sistema externo, se ejecuta una sola vez al montar.
-   */
-  React.useEffect(() => {
-    try {
-      const stored = window.sessionStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setDraft({ ...EMPTY_PROFILE, ...JSON.parse(stored) });
-      }
-    } catch {
-      // Un almacenamiento bloqueado no debe impedir completar el alta.
-    }
-  }, []);
-
   const update = React.useCallback((patch: Partial<ProfileDraft>) => {
-    setDraft((prev) => {
-      const next = { ...prev, ...patch };
-      try {
-        window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      } catch {
-        // Idem.
-      }
-      return next;
-    });
+    setDraft((prev) => ({ ...prev, ...patch }));
   }, []);
 
-  const reset = React.useCallback(() => {
-    setDraft(EMPTY_PROFILE);
-    try {
-      window.sessionStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // Idem.
-    }
-  }, []);
-
-  const value = React.useMemo(
-    () => ({ draft, update, reset }),
-    [draft, update, reset],
-  );
+  const value = React.useMemo(() => ({ draft, update }), [draft, update]);
 
   return (
     <ProfileContext.Provider value={value}>{children}</ProfileContext.Provider>
