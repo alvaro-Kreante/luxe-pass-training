@@ -1,74 +1,46 @@
-# Archivos de entorno
-.env
-.env.local
-.env.local3
-.env.*.local
-.env.production.local
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
-# Dependencias
-node_modules/
-yarn.lock
-package-lock.json
-pnpm-lock.yaml
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
 
-# Compilación y distribución
-dist/
-build/
-coverage/
-.next/
-.nuxt/
-out/
+# testing
+/coverage
 
-# IDEs y editores
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
 .DS_Store
-Thumbs.db
-*.sublime-project
-*.sublime-workspace
+*.pem
 
-# Archivos del sistema operativo
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-desktop.ini
-
-# Logs
-logs/
-*.log
+# debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-lerna-debug.log*
 .pnpm-debug.log*
 
-# Archivos temporales
-.tmp/
-tmp/
-temp/
+# env files (can opt-in for committing if needed)
+.env
+.env.local
+.env.*.local
 
-# Caché
-.cache/
-.eslintcache
-.stylelintcache
+# package lock (optional - uncomment if not versioning)
+package-lock.json
 
-# Testing
-.nyc_output/
-.jest_cache/
+# vercel
+.vercel
 
-# Documentación original del cliente (no versionar)
-docs/
-
-# Otros
-.env.local.example
-.DS_Store
-
-# Canvas HTML generado por el skill /design (2.5MB, se regenera desde los .dc.html)
-design/**/*-onboarding.html
-design/**/luxepass-*.html
+# typescript
+*.tsbuildinfo
+next-env.d.ts

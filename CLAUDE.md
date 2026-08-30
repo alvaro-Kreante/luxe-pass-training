@@ -1,27 +1,41 @@
-# LuxePass — Repositorio de documentación y specs
+# LuxePass — Aplicación Next.js + Specs & Diseño
 
 ## Qué es este repositorio
 
-Este repo **no contiene código de aplicación** — es la documentación de referencia del proyecto **LuxePass** (plataforma de membresía de lujo para el cliente En Soleil, desarrollada por la agencia Kreante). La app ya fue entregada y está en producción en `app.luxepass.co`. Este repositorio se usa para archivar y estructurar los epics, historias de usuario y flujos del proyecto con fines de referencia/aprendizaje.
+Repositorio integral del proyecto **LuxePass** (plataforma de membresía de lujo para el cliente En Soleil, desarrollada por la agencia Kreante). Contiene:
 
-No hay `package.json`, build ni tests que ejecutar aquí.
+1. **Código de la aplicación** — Next.js 15 + TypeScript + Tailwind + Shadcn/ui + Recharts
+2. **Especificaciones** — Historias de usuario y flujos en `/specs`
+3. **Diseño** — Mockups y sistema de diseño en `/design`
+
+La app en producción está en `app.luxepass.co`. Este repo es para desarrollo y referencia.
 
 ## Estructura
 
 ```
-docs/                    Documentación original del cliente/proyecto (briefs, planning, retrospectiva, assets de diseño, CSVs de Trello/planning). NO versionado — solo consulta local.
-assets/
-  brand/logo.png          Logo oficial En Soleil en tamaño original (907 KB — NO copiarlo al canvas)
+src/                      Código de la aplicación Next.js
+  app/                    App Router de Next.js (páginas, layouts)
+  components/
+    ui/                   Componentes Shadcn/ui (Button, Input, Card)
+    charts/               Gráficos Recharts (BarChart, LineChart)
+  lib/
+    utils.ts              Utilidades (cn() para Tailwind)
+
 design/
   DESIGN-SYSTEM.md        Sistema de diseño: tokens, tipografía, componentes, patrones, fases
-  epic-N-slug/            Mockups de un epic: un .dc.html por pantalla + canvas.json + logo.png
-                          + luxepass-epicN-slug.html (canvas publicable generado, no editar a mano)
+  epic-N-slug/            Mockups de un epic: .dc.html + canvas.json + logo.png
+
 specs/
   epic-N-slug/            Un folder por epic (9 en total)
     story-N.M-slug.md     Una historia de usuario por archivo
   flows/
-    flow-slug.md          Diagramas de flujo en Mermaid (texto), uno por diagrama fuente
-    images/               JPGs originales de los flujos (referencia visual para humanos)
+    flow-slug.md          Diagramas de flujo en Mermaid (texto)
+    images/               JPGs de los flujos (referencia visual)
+
+assets/
+  brand/logo.png          Logo oficial En Soleil (907 KB)
+
+public/                   Assets públicos (manifest.json para PWA, etc)
 ```
 
 ### Epics (`specs/epic-*`)
@@ -85,41 +99,26 @@ Mapeo diagrama → epics:
 
 ## Diseño (`design/`)
 
-Mockups de las pantallas de cada epic, hechos con el skill `/design` (canvas multi-artboard
-publicado como Artifact). Cada pantalla es un `.dc.html`; `canvas.json` los distribuye.
+Mockups de las pantallas de cada epic, hechos con el skill `/design` (canvas multi-artboard).
 
-**Antes de diseñar cualquier epic, leer `design/DESIGN-SYSTEM.md`.** Ahí están los tokens de
-color exactos, la tipografía, las medidas de los componentes y los patrones de pantalla ya
-fijados — no se reinventan por epic, se extienden. Reglas que se aplican siempre:
+**Antes de implementar cualquier epic, leer `design/DESIGN-SYSTEM.md`.** Ahí están:
+- Tokens de color exactos (Bodoni Moda + Manrope)
+- Tipografía y escala
+- Componentes especificados con medidas exactas
+- Patrones de pantalla (26 en total)
 
+Estos tokens están replicados en el código como **CSS variables** y **Tailwind config**.
+
+**Convenciones de diseño:**
 - La copy de la UI va en **inglés**; la documentación en español.
-- Tema **híbrido**: claro/boutique para las pantallas de miembro, oscuro/moderno para el
-  Partner Dashboard, compartiendo tokens y tipografía.
-- Los mockups `login.jpg` / `registration.jpg` del cliente son la **pauta principal**, no una
-  inspiración.
-- Cada pantalla debe cubrir los criterios de aceptación de su historia en `specs/`.
-- Todo el trabajo de diseño va a la rama **`docs/design`** — no a `main` ni a una rama por epic.
-- El `logo.png` de cada carpeta de epic es una copia **ya reducida a 54 KB**. Copiarla desde otra
-  carpeta de epic, nunca desde `assets/brand/logo.png` (907 KB): el canvas incrusta las imágenes
-  en base64 y el original infla el HTML publicable sin ganar nada.
-- El `.html` publicable del canvas está en `.gitignore` (2–3 MB, se regenera desde los `.dc.html`);
-  lo que se versiona son los `.dc.html`, el `canvas.json` y el `logo.png` de cada epic.
-- Los **datos de muestra tienen que cuadrar**: entre pantallas de una misma fase (un total es la
-  suma de las filas que lo componen) y entre fases (el calendario narrativo compartido: jueves 12,
-  viernes 13 y sábado 14 de septiembre, con The Ainsworth y la reserva LP-842193 atravesando los
-  Epics 4, 5, 6 y 7). Cada fase declara su línea temporal en `DESIGN-SYSTEM.md`; ampliarla, no
-  reinventarla.
+- Tema **híbrido**: claro/boutique para miembro, oscuro/moderno para Partner Dashboard.
+- El `logo.png` de cada carpeta es una copia reducida a 54 KB (no copiar desde `assets/brand/`).
+- El `.html` publicable está en `.gitignore`; se versiona solo `.dc.html`, `canvas.json`, `logo.png`.
+- Los datos de muestra **cuadran**: fecha compartida (12–14 sept), importes coherentes entre fases.
 
-**Los números de fase no son cronológicos.** Se asignaron al principio y se mantienen: la Fase 2 es
-el Epic 7 (Partner Dashboard) aunque se diseñó después de la Fase 7 (Epic 6). Al leer "fijado en la
-Fase N" en `DESIGN-SYSTEM.md`, N identifica la fase, no el orden en que se hizo.
+**Los números de fase no son cronológicos** — Fase 2 es Epic 7, aunque se diseñó después de Fase 7.
 
-Al terminar una fase, actualizar la tabla de fases de `DESIGN-SYSTEM.md` con el link del canvas
-y, si la fase fijó un patrón o un componente nuevo, añadirlo a las secciones 4 y 5 del mismo
-documento antes de cerrarla.
-
-Estado: **diseñados los 9 epics**. La Fase 9 (Epic 9 — Membership & Referrals) cerró el área de
-miembro; cualquier trabajo nuevo es revisión o corrección de fases existentes, no una fase nueva.
+Estado: **diseñados los 9 epics**. La Fase 9 cerró; cualquier trabajo nuevo es revisión o corrección.
 
 ## Al editar specs
 
@@ -127,3 +126,27 @@ miembro; cualquier trabajo nuevo es revisión o corrección de fases existentes,
 - Si se agrega una historia de usuario nueva, seguir el formato de sección `## User Story` / `## Acceptance Criteria` / `## Related Flow` de las demás.
 - Si una historia no tiene flujo asociado, decirlo explícitamente en `## Related Flow` en vez de omitir la sección o inventar un enlace.
 - Si se actualiza un diagrama Mermaid, revisar la tabla "Story Segments" del flow file para que siga siendo consistente.
+
+## Stack tecnológico
+
+**Aplicación:**
+- **Next.js 15.1** — App Router, SSR, PWA support
+- **TypeScript** — Type-safe
+- **Tailwind CSS 4** — Utility-first, con tokens del DESIGN-SYSTEM.md como variables CSS
+- **Shadcn/ui** — Componentes accesibles base (Button, Input, Card)
+- **Recharts** — Gráficos interactivos (Bar, Line, etc)
+- **@ducanh2912/next-pwa** — Progressive Web App (service worker, offline caching)
+
+**Convenciones de código:**
+- Componentes en `src/components/` con estructura por tipo (ui/, charts/, etc)
+- Tipos TypeScript importados desde `@/lib/utils` o del componente
+- Sin comentarios innecesarios — el código auto-documenta con nombres claros
+- Transiciones CSS: 150ms ease (token `--transition-default`)
+
+**Comandos:**
+```bash
+npm run dev      # Dev server en http://localhost:3000
+npm run build    # Build producción (genera SW para PWA)
+npm run start    # Sirve la build
+npm run lint     # ESLint
+```
