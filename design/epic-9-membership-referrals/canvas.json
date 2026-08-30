@@ -1,0 +1,20 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "1. Membership — annual, active" },
+    { "file": "Plans.dc.html", "x": 1540, "y": 0, "w": 1440, "h": 900, "title": "2. Compare plans — monthly and annual" },
+    { "file": "AutoRenew.dc.html", "x": 3080, "y": 0, "w": 1440, "h": 900, "title": "3. Auto-renewal — turn off, or pause instead" },
+    { "file": "MonthlyPlan.dc.html", "x": 0, "y": 1050, "w": 1440, "h": 900, "title": "4. Membership — a monthly subscriber" },
+    { "file": "Upgrade.dc.html", "x": 1540, "y": 1050, "w": 1440, "h": 900, "title": "5. Upgrade — monthly to annual" },
+    { "file": "Referrals.dc.html", "x": 3080, "y": 1050, "w": 1440, "h": 900, "title": "6. Referrals — code, tracking and rewards" },
+    { "file": "Share.dc.html", "x": 0, "y": 2100, "w": 1440, "h": 900, "title": "7. Share your code" },
+    { "file": "RewardCredited.dc.html", "x": 1540, "y": 2100, "w": 1440, "h": 900, "title": "8. A friend joined — the reward is credited" },
+    { "file": "Terms.dc.html", "x": 3080, "y": 2100, "w": 1440, "h": 900, "title": "9. Referral terms and conditions" }
+  ],
+  "annotations": [
+    { "id": "phase-note", "x": 0, "y": -170, "w": 960, "text": "LuxePass — Epic 9: Membership & Referrals\nSame light design system and app shell as Phases 1, 3, 4, 5, 6 and 7. UI copy in English.\nPhase 7 left the Account sub-nav pointing here: \"Plan, invoices and referral rewards are managed in Membership.\" This phase builds that view out — the plan and what it costs, then the code and what it earns. Thursday 12 September, the same day as Epic 6." },
+    { "id": "plan-note", "x": 0, "y": 955, "w": 960, "text": "Story 9.1 · The plan card says what you are on and whether it is active; the benefits say what that buys; the renewal card says when it happens and lets auto-renewal go off — never silently, always with a month's notice by email. Turning it off spells out the three things it costs, and offers the pause that Epic 6 promised but did not design. Alexandra is annual, so the upgrade branch of the flow needs a monthly member: that is the second row." },
+    { "id": "monthly-note", "x": 0, "y": 2005, "w": 960, "text": "Story 9.2 · One code, AR-SOLEIL-24, fixed back in Phase 7 along with its reward: a complimentary day pass for each of you. The list is the tracking — invited, reward pending, credited, expired — reusing the booking status chip rather than inventing colours. The reward is pending from sign-up until the friend's first payment settles, which is what the notification and the credited state show, and the terms put the three numbers the flow asks for (amount, condition, timeline) at the top." },
+    { "id": "seam-note", "x": 3080, "y": 3050, "w": 760, "text": "Seams declared, not designed here: the join screen a referred friend lands on is Epic 1; booking a day pass is Epics 3 and 4; the support conversation behind \"contact support\" is Epic 8; and Epic 8 owns the admin side of a refund that would reverse a referral reward." }
+  ],
+  "launch": { "view": "canvas" }
+}

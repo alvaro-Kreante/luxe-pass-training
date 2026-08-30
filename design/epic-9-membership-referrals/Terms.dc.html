@@ -1,0 +1,211 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,500&family=Manrope:wght@400;500;600;700;800&display=swap">
+  <style>
+    :root {
+      --bg-blush-1: #F8EAE1; --bg-blush-2: #FCF4EE;
+      --ink-900: #221A14; --ink-700: #55483D; --ink-400: #9C8D80;
+      --gold-500: #C9A876; --gold-600: #AD8A5C; --gold-100: #F1E3D0;
+      --border: #E7D9C9; --white: #FFFFFF; --panel-black: #15110D;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Manrope', 'Segoe UI', sans-serif; color: var(--ink-900); }
+    h1, h2, h3 { font-family: 'Bodoni Moda', Georgia, 'Times New Roman', serif; margin: 0; font-weight: 500; }
+    a { color: var(--gold-600); text-decoration: none; }
+    a:hover { color: var(--ink-900); }
+    .btn-gold { transition: background .15s ease; }
+    .btn-gold:hover { background: var(--gold-600) !important; }
+    .btn-outline { transition: background .15s ease, border-color .15s ease; }
+    .btn-outline:hover { background: var(--gold-100); }
+    .card { background: var(--white); border: 1px solid var(--border); border-radius: 18px; box-shadow: 0 10px 30px -14px rgba(34,26,20,0.14); }
+    .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold-600); margin: 0; }
+    .clause h3 { font-size: 15px; color: var(--ink-900); margin: 0 0 6px; }
+    .clause p { font-size: 12.5px; color: var(--ink-700); line-height: 1.6; margin: 0; }
+    .clause { padding: 15px 0; border-top: 1px solid var(--border); }
+    .panel-scroll { overflow-y: auto; }
+    .panel-scroll::-webkit-scrollbar { width: 6px; }
+    .panel-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</helmet>
+
+<div style="position:relative; width:1440px; height:900px; background:var(--bg-blush-2); overflow:hidden; font-family:'Manrope',sans-serif;">
+
+  <!-- Blurred referrals screen behind -->
+  <div style="position:absolute; inset:0; display:flex; filter:blur(3px);">
+
+    <div style="width:248px; min-width:248px; height:900px; background:var(--white); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:32px 20px;">
+      <img src="logo.png" alt="En Soleil" style="width:52px; height:auto; margin:0 0 40px 12px;">
+      <div style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; margin-bottom:4px;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+        <span style="font-size:14px; font-weight:600; color:var(--ink-700);">Home</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; margin-bottom:4px;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="m15 9-2 6-6 2 2-6 6-2Z"/></svg>
+        <span style="font-size:14px; font-weight:600; color:var(--ink-700);">Explore</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; margin-bottom:4px;">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4V8Z"/></svg>
+        <span style="font-size:14px; font-weight:600; color:var(--ink-700);">My Pass</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:var(--gold-100);">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.5"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
+        <span style="font-size:14px; font-weight:700; color:var(--ink-900);">Profile</span>
+      </div>
+      <div style="flex:1;"></div>
+      <div style="display:flex; align-items:center; gap:10px; padding:20px 14px 12px; border-top:1px solid var(--border);">
+        <div style="width:36px; height:36px; min-width:36px; border-radius:50%; background:var(--gold-500); display:flex; align-items:center; justify-content:center; color:var(--white); font-size:13px; font-weight:700; font-family:'Bodoni Moda',serif;">AR</div>
+        <div style="flex:1;">
+          <p style="font-size:13px; font-weight:700; color:var(--ink-900); margin:0;">Alexandra Rivas</p>
+          <p style="font-size:11.5px; color:var(--ink-400); margin:2px 0 0;">Annual member</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:1; display:flex; flex-direction:column;">
+      <div style="height:64px; min-height:64px; background:var(--white); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:14px; padding:0 32px;">
+        <span style="font-size:13.5px; font-weight:700; color:var(--ink-900);">Account</span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m10 6 6 6-6 6"/></svg>
+        <span style="font-size:13.5px; color:var(--ink-700);">Membership</span>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m10 6 6 6-6 6"/></svg>
+        <span style="font-size:13.5px; color:var(--ink-400);">Referrals</span>
+      </div>
+      <div style="flex:1; display:flex;">
+        <div style="width:232px; min-width:232px; border-right:1px solid var(--border); background:var(--white); padding:26px 16px;">
+          <p class="eyebrow" style="margin:0 0 12px 14px;">Account</p>
+          <div style="height:44px; border-radius:10px; margin-bottom:3px;"></div>
+          <div style="height:44px; border-radius:10px; margin-bottom:3px;"></div>
+          <div style="height:44px; border-radius:10px; margin-bottom:3px;"></div>
+          <div style="height:44px; border-radius:10px; margin-bottom:3px;"></div>
+          <div style="height:44px; border-radius:10px; background:var(--gold-100);"></div>
+        </div>
+        <div style="flex:1; padding:30px 40px 28px; display:flex; gap:24px;">
+          <div style="flex:1;">
+            <h1 style="font-size:34px; color:var(--ink-900);">Referrals</h1>
+            <p style="font-size:13.5px; color:var(--ink-700); margin:7px 0 0;">Share your code. When a friend joins, you each get a complimentary day pass.</p>
+            <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:14px; margin-top:20px;">
+              <div class="card" style="border-radius:16px; height:100px;"></div>
+              <div class="card" style="border-radius:16px; height:100px;"></div>
+              <div class="card" style="border-radius:16px; height:100px;"></div>
+            </div>
+            <div class="card" style="margin-top:14px; height:86px;"></div>
+            <div class="card" style="margin-top:14px; height:330px;"></div>
+          </div>
+          <div style="width:344px; min-width:344px;">
+            <div class="card" style="padding:20px;">
+              <p class="eyebrow">Your code</p>
+              <div style="display:flex; align-items:center; margin-top:13px; padding:0 16px; height:50px; border:1.5px dashed var(--gold-500); border-radius:12px; background:var(--bg-blush-2);">
+                <span style="font-size:15px; font-weight:800; letter-spacing:0.1em; color:var(--ink-900);">AR-SOLEIL-24</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div style="position:absolute; inset:0; background:rgba(21,17,13,0.55);"></div>
+
+  <!-- Terms modal -->
+  <div style="position:absolute; left:400px; top:76px; width:640px; height:748px; background:var(--white); border-radius:24px; box-shadow:0 30px 60px -20px rgba(34,26,20,0.45); display:flex; flex-direction:column; overflow:hidden;">
+
+    <!-- Header -->
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; padding:26px 30px 22px; border-bottom:1px solid var(--border);">
+      <div>
+        <p class="eyebrow">Referral programme</p>
+        <h2 style="font-size:27px; color:var(--ink-900); margin-top:9px;">Terms and conditions</h2>
+        <p style="font-size:12px; color:var(--ink-400); margin:7px 0 0;">Version 1.2 &middot; in force since August 1, 2026 &middot; part of the LuxePass member agreement</p>
+      </div>
+      <div style="width:34px; height:34px; min-width:34px; border-radius:10px; background:var(--bg-blush-1); display:flex; align-items:center; justify-content:center; cursor:pointer;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-700)" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div class="panel-scroll" style="flex:1; min-height:0; padding:22px 30px;">
+
+      <!-- The three numbers -->
+      <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px;">
+
+        <div style="border:1px solid var(--border); border-radius:14px; background:var(--bg-blush-2); padding:14px 16px;">
+          <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-400); margin:0;">The reward</p>
+          <p style="font-family:'Bodoni Moda',serif; font-size:22px; font-weight:500; color:var(--ink-900); margin:7px 0 0;">1 day pass</p>
+          <p style="font-size:11.5px; color:var(--ink-400); margin:3px 0 0;">Each &middot; worth $75.00</p>
+        </div>
+
+        <div style="border:1px solid var(--border); border-radius:14px; background:var(--bg-blush-2); padding:14px 16px;">
+          <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-400); margin:0;">Qualifies when</p>
+          <p style="font-family:'Bodoni Moda',serif; font-size:22px; font-weight:500; color:var(--ink-900); margin:7px 0 0;">They pay</p>
+          <p style="font-size:11.5px; color:var(--ink-400); margin:3px 0 0;">First membership charge</p>
+        </div>
+
+        <div style="border:1px solid var(--border); border-radius:14px; background:var(--bg-blush-2); padding:14px 16px;">
+          <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--ink-400); margin:0;">Paid within</p>
+          <p style="font-family:'Bodoni Moda',serif; font-size:22px; font-weight:500; color:var(--ink-900); margin:7px 0 0;">48 hours</p>
+          <p style="font-size:11.5px; color:var(--ink-400); margin:3px 0 0;">Pending until then</p>
+        </div>
+
+      </div>
+
+      <div style="margin-top:8px;">
+
+        <div class="clause">
+          <h3>1. What you both get</h3>
+          <p>For every friend who joins LuxePass with your code, one complimentary day pass is credited to your account and one to theirs. A day pass admits one person to any lounge in the network for a single visit, and is worth $75.00 at the member rate.</p>
+        </div>
+
+        <div class="clause">
+          <h3>2. What counts as a referral</h3>
+          <p>Your friend must be new to LuxePass, must enter your code when they sign up, and must do so within 60 days of the invitation being sent. After 60 days the invitation expires and can be sent again. Only the first code entered on an account counts.</p>
+        </div>
+
+        <div class="clause">
+          <h3>3. When the reward is credited</h3>
+          <p>The pass shows as <span style="font-weight:700; color:var(--ink-900);">Pending</span> from the moment your friend signs up, and is credited within 48 hours of their first membership payment settling. If that payment fails or is refunded, the pending reward is withdrawn and you are told why.</p>
+        </div>
+
+        <div class="clause">
+          <h3>4. Using your day passes</h3>
+          <p>Referral passes are additional to the 8 visits included with your membership, and are used before those included visits. They can be booked at any of the twelve lounges, subject to the same availability and cancellation rules as any other visit. They have no cash value, cannot be transferred or sold, and remain valid for as long as your membership is active.</p>
+        </div>
+
+        <div class="clause">
+          <h3>5. Limits</h3>
+          <p>Up to 10 referral day passes can be earned per membership year. One reward is paid per person referred, however many invitations they receive. You cannot refer yourself, and accounts that share a payment method or a home address count as one person.</p>
+        </div>
+
+        <div class="clause">
+          <h3>6. Fair use</h3>
+          <p>En Soleil may withdraw a reward, retire a code or close the programme where invitations are sent in bulk, where accounts are created to collect rewards, or where the terms are otherwise worked around. We write to you before doing so, and support can review the decision.</p>
+        </div>
+
+        <div class="clause">
+          <h3>7. Changes to this programme</h3>
+          <p>These terms may change with 30 days&#39; notice by email. Passes already credited are unaffected by a change, and a pending reward is settled under the terms in force on the day the invitation was accepted.</p>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div style="display:flex; align-items:center; gap:14px; padding:18px 30px; border-top:1px solid var(--border);">
+      <p style="flex:1; font-size:12px; color:var(--ink-400); line-height:1.5; margin:0;">Something not covered here? <a style="cursor:pointer;">Contact support</a></p>
+      <button class="btn-outline" style="height:52px; padding:0 22px; background:var(--white); border:1.5px solid var(--border); border-radius:12px; color:var(--ink-700); font-family:'Manrope',sans-serif; font-size:13px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer;">Download</button>
+      <button class="btn-gold" style="height:52px; padding:0 30px; background:var(--gold-500); border:none; border-radius:12px; color:var(--white); font-family:'Manrope',sans-serif; font-size:13px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer;">Done</button>
+    </div>
+
+  </div>
+
+</div>
+
+</x-dc>
+</body>
+</html>

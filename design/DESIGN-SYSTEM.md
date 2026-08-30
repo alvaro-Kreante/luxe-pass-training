@@ -125,6 +125,11 @@ label 13px/600 · hint 12–12.5px · eyebrow 12px/700 uppercase `letter-spacing
 | Barra de acción masiva | Fijada en la Fase 8. Franja de 52px sobre la lista, `background: rgba(201,168,118,.16)`, `border: 1.5px solid var(--gold-500)`, `border-radius: 14px`, `padding: 0 20px`: casilla de 20px en estado indeterminado (barra blanca), el recuento en 13.5px/700 y, a la derecha, los botones de acción de 36px con `border: 1.5px solid var(--gold-600)` más un "Clear" en `--gold-600`. La acción destructiva va con borde discontinuo `--dark-ink-500` |
 | Entrada de log de comunicación | Fijada en la Fase 8. `display: flex; gap: 14px; padding: 16px 0` con `border-bottom: 1px solid rgba(58,50,42,.6)`: a la izquierda un cuadro de 36px (avatar circular para una persona, cuadrado `--panel-black` con `border: 1px solid var(--dark-border)` para el sistema o un email automático), y a la derecha el autor en 13px/700, la hora a la derecha en 11.5px `--dark-ink-500` y el cuerpo en 12.5px. El mensaje del miembro va dentro de una caja `--panel-black` con `border: 1px solid var(--gold-600)` y `border-radius: 14px`; una nota interna lleva el chip discontinuo "Internal note · not sent to the member" |
 | Diff de aprobación | Fijado en la Fase 8. Una línea por cambio: el valor anterior en 12px `--dark-ink-500` con `text-decoration: line-through`, una flecha de 14px `--gold-500` y el valor nuevo en 12px/700 `--dark-ink-100`, con una nota de 11px debajo cuando el cambio arrastra otra cosa |
+| Tile de métrica (claro) | Fijado en la Fase 9, gemelo claro del tile oscuro de la Fase 2. Card de contenido con `border-radius: 16px` y `padding: 16px 18px`: eyebrow de 11px/700 uppercase `--ink-400` (no dorado, para que no compita con el de sección), la cifra en **Bodoni 30px** `--ink-900` y una nota de 11.5px `--ink-400` debajo. En fila de tres con `gap: 14px`. El tile que acaba de cambiar se resalta con `border: 1.5px solid var(--gold-500)` + el halo `0 0 0 3px rgba(201,168,118,.15)` y su eyebrow pasa a `--gold-600` |
+| Barra de consumo | Fijada en la Fase 9, gemela clara de la barra horizontal de volumen de la Fase 2. Carril de 9px, `border-radius: 5px`, fondo `--bg-blush-1`, con el relleno en `--gold-500` y el mismo radio. Encima, la cifra en Bodoni 30px y la unidad en 14px `--ink-700` ("3 · of 8 included visits used"); a la derecha del eyebrow, cuándo se reinicia |
+| Fila de datos (clara) | Fijada en la Fase 9, gemela clara de la fila oscura de la Fase 2. Alto **58px**, `padding: 0 20px`, `border-top: 1px solid var(--border)`, hover `--bg-blush-2`. Dentro: avatar de 32px (círculo `--gold-100` con la inicial en Bodoni 12.5px `--gold-600`; `--bg-blush-1` con inicial `--ink-400` cuando la fila está inactiva), título 13.5px/700 con subtítulo 11.5px `--ink-400`, y el resto de columnas en 12.5px. La fila recién cambiada va sobre `rgba(201,168,118,.09)` con `box-shadow: inset 3px 0 0 var(--gold-500)`; la agotada, sobre `--bg-blush-1` con los textos en `--ink-400` |
+| Chip de estado de referido | Fijado en la Fase 9. Es el chip de estado de reserva de la Fase 7 sin cambiar geometría: **Day pass credited** = Confirmed · **Reward pending** = In progress · **Invited** = Completed (punto y texto `--ink-400`) · **Invite expired** = Cancelled (borde discontinuo, sin punto). No se inventa una paleta de estados nueva |
+| Tabla comparativa | Fijada en la Fase 9. Card de contenido con `overflow: hidden`: cabecera de 14px 18px sobre `--bg-blush-1` con las etiquetas en eyebrow, y filas de `padding: 13px 18px` separadas por `border-top`, todas en el mismo grid `minmax(0,1fr) 168px 168px`. La etiqueta en 12.5px `--ink-700` a la izquierda y los valores centrados en 12.5px/700 `--ink-900`; lo que un plan no tiene es una raya `—` en `--ink-400`, nunca una cruz. La fila del total va sobre `--bg-blush-2` con la etiqueta en 700 y la cifra ganadora en `--gold-600` |
 
 Links: siempre definir `a` (`--gold-600`) y `a:hover` (`--ink-900`) en el `<helmet>`.
 Transiciones: `.15s ease`.
@@ -276,6 +281,20 @@ Cuatro plantillas fijadas en la Fase 1. Reutilizarlas antes de inventar una nuev
    con el halo dorado y marca cada valor cambiado en `--gold-600`. Debajo, la card de impacto con
    tres datos y la fila de acciones. Es la única pantalla donde conviven las dos mitades del tema, y
    esa es exactamente su función: enseñar lo que verá el miembro.
+25. **Lista de datos clara** — fijada en la Fase 9, gemela clara del patrón 16. Card de contenido
+   con `overflow: hidden`: cabecera de **42px** sobre `--bg-blush-1` con las etiquetas en eyebrow de
+   11px `--ink-700`, y debajo las filas de datos claras de 58px descritas en la sección 4. El grid se
+   declara una sola vez y lo comparten cabecera y filas. Bajo la card, una línea de 11.5px
+   `--ink-400` que explica la regla que gobierna la lista (cuánto dura una invitación, por qué se ven
+   esos datos). Es la versión de miembro de la lista que el partner y el admin ven en negro.
+26. **Comparación de planes** — fijada en la Fase 9 dentro del patrón 13, con la columna a ancho
+   completo (sin rail). Topbar con la miga de tres niveles, h1 de 34px precedido de un botón "atrás"
+   cuadrado de 34px, y debajo dos cards de plan en `repeat(2, minmax(0,1fr))` con `gap: 18px`: cada
+   una con su eyebrow, el precio en **Bodoni 34px** con la periodicidad al lado, la equivalencia
+   anual en 12.5px `--ink-400`, un separador, una frase de una línea y el botón a ancho completo con
+   una nota de 11.5px centrada bajo él. La card del plan contratado lleva `border: 1.5px solid
+   var(--gold-500)` + halo, el chip "Your plan" y un botón inerte sobre `--bg-blush-1`. Debajo, la
+   tabla comparativa de la sección 4 y la línea que dice cuándo surte efecto cada cambio.
 
 ### Mapa
 
@@ -335,7 +354,7 @@ Debajo, leyenda con muestras de 16px. El sello de frescura (`Updated N min ago �
 | 6 | Epic 5 — QR Code & Check-in (claro + primeras pantallas oscuras) | ✅ Completa — 9 artboards |
 | 7 | Epic 6 — Member Experience & Notifications (tema claro) | ✅ Completa — 11 artboards |
 | 8 | Epic 8 — Admin & Support (tema oscuro) | ✅ Completa — 13 artboards |
-| 9 | Epic 9 — Membership & Referrals | Pendiente |
+| 9 | Epic 9 — Membership & Referrals (tema claro) | ✅ Completa — 9 artboards |
 
 Cada fase vive en `design/epic-N-slug/` con sus `.dc.html`, su `canvas.json` y una copia de
 `logo.png`, y se publica como un canvas propio.
@@ -690,6 +709,84 @@ en The Ainsworth (LP-840388, $35.00), y el período de toda la analítica es el 
 Los importes de membresía ($2,400.00/año) y day pass ($75.00 + impuesto) vienen de las Fases 5 y 7 y
 arrastran las mismas dudas; las fotos de `LoungeEdit` siguen siendo bloques de marca a sustituir por
 fotografía real.
+
+### Fase 9 — `design/epic-9-membership-referrals/`
+
+Canvas: https://claude.ai/code/artifact/921285c6-061d-4c6e-8dc6-2a5e5c5432a2
+
+Cierra el área de miembro desarrollando la vista **Membership** que la Fase 7 dejó apuntada en el
+sub-nav ("Plan, invoices and referral rewards are managed in Membership"). Por eso **no añade una
+entrada nueva al sub-nav**: Referrals es una sub-vista de Membership, con miga de tres niveles.
+9 artboards en 3 filas:
+
+| Fila | Artboards | Historia |
+|---|---|---|
+| 1 | `Main` (membership) → `Plans` (comparar) → `AutoRenew` (apagar o pausar) | 9.1 |
+| 2 | `MonthlyPlan` (miembro mensual) → `Upgrade` (mensual → anual) → `Referrals` | 9.1 / 9.2 |
+| 3 | `Share` → `RewardCredited` → `Terms` | 9.2 |
+
+Cobertura de criterios: estado de la membresía con el plan, el chip Active y la fecha de alta;
+explicación de los beneficios en seis puntos, todos anclados a algo ya fijado en fases anteriores
+(8 visitas al mes, 12 lounges en 3 ciudades, day pass de cumpleaños, day pass por referido,
+cancelación gratis con 24 h, soporte desde cualquier reserva); consumo del mes con barra y el aviso
+de que las visitas extra se cobran como day pass; comparación de los dos planes con el precio de cada
+uno y lo que suman doce meses; opciones de subida para el suscriptor mensual, con el ahorro, el
+prorrateo de los días ya pagados y la fecha del nuevo término; fecha de renovación y ajuste de
+auto-renovación, con el aviso por email un mes antes que pide el flujo; apagado de la auto-renovación
+que declara las tres cosas que cuesta y ofrece la pausa que el Epic 6 prometió sin diseñar; código de
+referido único con copiar, enlace personal y hoja de compartir por mensajería, email y social;
+seguimiento de las invitaciones con los cuatro estados; acreditación del premio con su fase
+**pending**; notificación de que un amigo se ha registrado y de que el day pass ya está disponible; y
+términos del programa con el importe, la condición y el plazo de pago en la cabecera.
+
+Decisiones de producto de esta fase (a confirmar con En Soleil):
+
+- **Existe un plan mensual de $249.00**, frente a los $2,400.00 anuales ya fijados en la Fase 5. La
+  Story 9.1 exige una vía de subida "monthly → yearly", así que el plan mensual tiene que existir; el
+  precio se elige para que el anual ahorre **$588.00** al año ($249 × 12 = $2,988). Si el importe real
+  es otro, cambian las cifras de `Plans`, `MonthlyPlan` y `Upgrade`, no la estructura.
+- **Los dos planes dan exactamente lo mismo.** Lo único que cambia es la periodicidad, el precio y
+  que el anual congela la tarifa durante el término. El flujo habla de "monthly to yearly pricing",
+  no de niveles de servicio, y una escalera de beneficios habría contradicho las 8 visitas de la
+  Fase 5.
+- **La subida es inmediata y prorratea**; la bajada espera al final del término. El ejemplo dibujado
+  acredita 22 días sin usar de un ciclo de 30 ($182.60) y cobra $2,217.40.
+- **El premio de referido es un day pass de cortesía para cada uno**, tal como lo dejó dicho la
+  Fase 7. Vale $75.00 (la tarifa de day pass de la Fase 5), se suma a las 8 visitas incluidas y se
+  gasta antes que ellas.
+- **El premio queda "pending" desde que el amigo se registra hasta que su primer cobro liquida**, y
+  se acredita dentro de 48 h. El diagrama original dejaba esta mecánica marcada como pregunta
+  abierta; esto es lo que la resuelve.
+- **Una invitación caduca a los 60 días** y se puede reenviar, y hay un **tope de 10 day passes de
+  referido por año de membresía**.
+- **La pausa es de hasta 3 meses**, detiene el cobro y conserva el historial, los favoritos y el
+  código. Es exactamente lo que `DeleteAccount` de la Fase 7 prometía sin enseñar.
+
+**El artboard de miembro mensual usa una segunda persona.** Alexandra Rivas es anual desde la Fase 7
+y no puede serlo y no serlo a la vez, así que la rama "Monthly subscriber? → Yes" del flujo se dibuja
+con **Naomi Feldstein** (mensual desde julio de 2026, código `NF-SOLEIL-26`, Mastercard 8813), la
+misma invitada que reservaba en The Ainsworth en la Fase 2. Los artboards 4 y 5 son su cuenta, no la
+de Alexandra: el bloque de usuario de la sidebar lo dice.
+
+Costuras declaradas en pantalla, no diseñadas aquí: la pantalla de alta a la que llega un amigo
+referido es el Epic 1; reservar con un day pass son los Epics 3 y 4; la conversación de soporte de
+"contact support" es el Epic 8; y el reembolso que revierte un premio de referido se gestiona desde
+la consola del Epic 8.
+
+Pendientes conocidos: nombres, emails, importes, fechas y el código de referido son datos de muestra,
+pero **cuadran entre sí y con las fases anteriores** — las 5 invitaciones de `Referrals` son 2
+registrados + 2 abiertas + 1 caducada; los 2 registrados son 1 day pass acreditado + 1 pendiente, que
+en `RewardCredited` pasan a 2 acreditados ($150.00) y a 3 day passes disponibles contando el de
+cumpleaños de septiembre, que viene del Epic 6; el prorrateo de `Upgrade` cuadra con el precio mensual
+de `MonthlyPlan`; y la línea temporal es **jueves 12 de septiembre**, el mismo día del Epic 6, con la
+visita a The Vestry apareciendo como notificación leída de las 6:00 AM. Queda por resolver una
+incoherencia **heredada de la Fase 7**: `Profile.dc.html` del Epic 6 dice a la vez "Member since
+March 2026" y "Renews November 3, 2026", que no forman un término de doce meses. La Fase 9 conserva
+ambos literales para no contradecir un canvas ya publicado y **no dibuja ninguna fecha de inicio de
+término ni historial de facturas fechado** que dejaría el hueco a la vista; al implementar hay que
+elegir una de las dos y corregir el artboard de la Fase 7, igual que con el corazón de favorito que
+la Fase 7 dejó pendiente para la Fase 4. El texto legal de `Terms` es una propuesta estructural, a
+reemplazar por el documento real de En Soleil.
 
 ## 7. Cómo regenerar y publicar un canvas
 

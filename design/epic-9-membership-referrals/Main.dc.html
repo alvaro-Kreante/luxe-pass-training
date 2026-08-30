@@ -1,0 +1,321 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,500&family=Manrope:wght@400;500;600;700;800&display=swap">
+  <style>
+    :root {
+      --bg-blush-1: #F8EAE1; --bg-blush-2: #FCF4EE;
+      --ink-900: #221A14; --ink-700: #55483D; --ink-400: #9C8D80;
+      --gold-500: #C9A876; --gold-600: #AD8A5C; --gold-100: #F1E3D0;
+      --border: #E7D9C9; --white: #FFFFFF; --panel-black: #15110D;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Manrope', 'Segoe UI', sans-serif; color: var(--ink-900); }
+    h1, h2, h3 { font-family: 'Bodoni Moda', Georgia, 'Times New Roman', serif; margin: 0; font-weight: 500; }
+    a { color: var(--gold-600); text-decoration: none; }
+    a:hover { color: var(--ink-900); }
+    .nav-item { transition: background .15s ease; }
+    .nav-item:hover { background: var(--gold-100); }
+    .btn-gold { transition: background .15s ease; }
+    .btn-gold:hover { background: var(--gold-600) !important; }
+    .btn-outline { transition: background .15s ease, border-color .15s ease; }
+    .btn-outline:hover { background: var(--gold-100); }
+    .card { background: var(--white); border: 1px solid var(--border); border-radius: 18px; box-shadow: 0 10px 30px -14px rgba(34,26,20,0.14); }
+    .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold-600); margin: 0; }
+    .sw { width: 44px; height: 26px; min-width: 44px; border-radius: 13px; display: flex; align-items: center; padding: 3px; cursor: pointer; transition: background .15s ease; }
+    .sw-on { background: var(--gold-500); justify-content: flex-end; }
+    .sw span { width: 20px; height: 20px; border-radius: 50%; background: var(--white); display: block; box-shadow: 0 1px 3px rgba(34,26,20,0.28); }
+    .row-link { transition: background .15s ease; cursor: pointer; }
+    .row-link:hover { background: var(--bg-blush-2); }
+  </style>
+</helmet>
+
+<div style="display:flex; width:1440px; height:900px; background:var(--bg-blush-2); overflow:hidden; font-family:'Manrope',sans-serif;">
+
+  <!-- Sidebar -->
+  <div style="width:248px; min-width:248px; height:900px; background:var(--white); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:32px 20px;">
+
+    <img src="logo.png" alt="En Soleil" style="width:52px; height:auto; margin:0 0 40px 12px;">
+
+    <div class="nav-item" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--ink-700);">Home</span>
+    </div>
+    <div class="nav-item" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="m15 9-2 6-6 2 2-6 6-2Z"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--ink-700);">Explore</span>
+    </div>
+    <div class="nav-item" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4V8Z"/><path d="M14 6v2M14 11v2M14 16v2" stroke-dasharray="2 3"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--ink-700);">My Pass</span>
+    </div>
+    <div class="nav-item" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:var(--gold-100);">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.5"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
+      <span style="font-size:14px; font-weight:700; color:var(--ink-900);">Profile</span>
+    </div>
+
+    <div style="flex:1;"></div>
+
+    <div style="display:flex; align-items:center; gap:10px; padding:12px 14px; border-top:1px solid var(--border); padding-top:20px;">
+      <div style="width:36px; height:36px; min-width:36px; border-radius:50%; background:var(--gold-500); display:flex; align-items:center; justify-content:center; color:var(--white); font-size:13px; font-weight:700; font-family:'Bodoni Moda',serif;">AR</div>
+      <div style="flex:1; overflow:hidden;">
+        <p style="font-size:13px; font-weight:700; color:var(--ink-900); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Alexandra Rivas</p>
+        <p style="font-size:11.5px; color:var(--ink-400); margin:2px 0 0;">Annual member</p>
+      </div>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><path d="M15 16l4-4-4-4"/><path d="M19 12H9"/></svg>
+    </div>
+
+  </div>
+
+  <div style="flex:1; height:900px; display:flex; flex-direction:column; overflow:hidden;">
+
+    <!-- Topbar -->
+    <div style="height:64px; min-height:64px; background:var(--white); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:14px; padding:0 32px;">
+      <span style="font-size:13.5px; font-weight:700; color:var(--ink-900);">Account</span>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m10 6 6 6-6 6"/></svg>
+      <span style="font-size:13.5px; color:var(--ink-400);">Membership</span>
+      <div style="flex:1;"></div>
+      <span style="display:inline-flex; align-items:center; gap:7px; padding:7px 14px; border-radius:20px; background:var(--gold-100);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>
+        <span style="font-size:12px; font-weight:700; color:var(--ink-900);">Saved as you change them</span>
+      </span>
+      <div style="position:relative; width:40px; height:40px; min-width:40px; border-radius:11px; background:var(--white); border:1.5px solid var(--border); display:flex; align-items:center; justify-content:center; cursor:pointer;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8.5a6 6 0 1 0-12 0c0 6.2-2.5 7.5-2.5 7.5h17S18 14.7 18 8.5"/><path d="M13.7 19.5a2 2 0 0 1-3.4 0"/></svg>
+        <span style="position:absolute; top:-6px; right:-6px; min-width:19px; height:19px; padding:0 5px; border-radius:10px; background:var(--gold-500); border:2px solid var(--white); display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:800; color:var(--white);">2</span>
+      </div>
+    </div>
+
+    <div style="flex:1; min-height:0; display:flex;">
+
+      <!-- Account sub-nav -->
+      <div style="width:232px; min-width:232px; height:836px; border-right:1px solid var(--border); background:var(--white); padding:26px 16px; display:flex; flex-direction:column; gap:3px;">
+        <p class="eyebrow" style="margin:0 0 12px 14px;">Account</p>
+        <div class="nav-item" style="display:flex; align-items:center; gap:11px; padding:12px 14px; border-radius:10px; background:transparent;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.5"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
+          <span style="font-size:13.5px; font-weight:600; color:var(--ink-700);">Profile details</span>
+        </div>
+        <div class="nav-item" style="display:flex; align-items:center; gap:11px; padding:12px 14px; border-radius:10px; background:transparent;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7.5h9M17.5 7.5h2.5M4 16.5h3.5M12 16.5h8"/><circle cx="15" cy="7.5" r="2.4"/><circle cx="9.5" cy="16.5" r="2.4"/></svg>
+          <span style="font-size:13.5px; font-weight:600; color:var(--ink-700);">Preferences</span>
+        </div>
+        <div class="nav-item" style="display:flex; align-items:center; gap:11px; padding:12px 14px; border-radius:10px; background:transparent;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8.5a6 6 0 1 0-12 0c0 6.2-2.5 7.5-2.5 7.5h17S18 14.7 18 8.5"/><path d="M13.7 19.5a2 2 0 0 1-3.4 0"/></svg>
+          <span style="font-size:13.5px; font-weight:600; color:var(--ink-700);">Notifications</span>
+        </div>
+        <div class="nav-item" style="display:flex; align-items:center; gap:11px; padding:12px 14px; border-radius:10px; background:transparent;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10" width="15" height="10" rx="2.5"/><path d="M8 10V7.5a4 4 0 0 1 8 0V10"/></svg>
+          <span style="font-size:13.5px; font-weight:600; color:var(--ink-700);">Privacy and data</span>
+        </div>
+        <div class="nav-item" style="display:flex; align-items:center; gap:11px; padding:12px 14px; border-radius:10px; background:var(--gold-100);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="6" width="17" height="12" rx="2.5"/><path d="M3.5 10.5h17"/></svg>
+          <span style="font-size:13.5px; font-weight:700; color:var(--ink-900);">Membership</span>
+        </div>
+        <div style="flex:1;"></div>
+        <p style="font-size:11.5px; color:var(--ink-400); line-height:1.55; margin:0 14px;">Closing your account is under Privacy and data.</p>
+      </div>
+
+      <div style="flex:1; min-width:0; padding:30px 40px 28px; display:flex; gap:24px; min-height:0;">
+
+        <!-- Main column -->
+        <div style="flex:1; min-width:0;">
+
+          <h1 style="font-size:34px; color:var(--ink-900);">Membership</h1>
+          <p style="font-size:13.5px; color:var(--ink-700); margin:7px 0 0;">Your plan, what it includes, and when it renews.</p>
+
+          <!-- Current plan -->
+          <div class="card" style="padding:20px 22px; margin-top:20px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <p class="eyebrow">Current plan</p>
+              <span style="display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:20px; background:var(--gold-100);">
+                <span style="width:6px; height:6px; border-radius:50%; background:var(--gold-500);"></span>
+                <span style="font-size:11.5px; font-weight:700; color:var(--ink-900);">Active</span>
+              </span>
+            </div>
+
+            <div style="display:flex; align-items:flex-end; gap:14px; margin-top:10px;">
+              <h2 style="font-size:30px; color:var(--ink-900);">Annual</h2>
+              <p style="font-size:13px; color:var(--ink-400); margin:0 0 6px;">Member since March 2026</p>
+            </div>
+
+            <div style="display:flex; align-items:flex-end; justify-content:space-between; margin-top:14px; padding-top:16px; border-top:1px solid var(--border);">
+              <div>
+                <p style="font-size:12.5px; color:var(--ink-700); margin:0;">Billed once a year</p>
+                <p style="font-family:'Bodoni Moda',serif; font-size:27px; font-weight:500; color:var(--ink-900); margin:4px 0 0;">$2,400.00</p>
+              </div>
+              <div style="display:flex; gap:10px;">
+                <button class="btn-outline" style="height:44px; padding:0 18px; background:var(--white); border:1.5px solid var(--border); border-radius:12px; color:var(--ink-700); font-family:'Manrope',sans-serif; font-size:12.5px; font-weight:700; letter-spacing:0.06em; cursor:pointer;">Compare plans</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Visits -->
+          <div class="card" style="padding:20px 22px; margin-top:12px;">
+            <div style="display:flex; align-items:baseline; justify-content:space-between;">
+              <p class="eyebrow">Visits this month</p>
+              <span style="font-size:12px; color:var(--ink-400);">Resets on October 1</span>
+            </div>
+
+            <div style="display:flex; align-items:flex-end; gap:8px; margin-top:10px;">
+              <span style="font-family:'Bodoni Moda',serif; font-size:30px; font-weight:500; color:var(--ink-900);">3</span>
+              <span style="font-size:14px; color:var(--ink-700); margin-bottom:5px;">of 8 included visits used</span>
+            </div>
+
+            <div style="height:9px; border-radius:5px; background:var(--bg-blush-1); margin-top:12px; overflow:hidden;">
+              <div style="width:37.5%; height:100%; border-radius:5px; background:var(--gold-500);"></div>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:10px; margin-top:14px; padding:12px 14px; border-radius:12px; background:var(--bg-blush-2); border:1px solid var(--border);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a2 2 0 0 1 0-4V6.5A1.5 1.5 0 0 0 18.5 5h-13A1.5 1.5 0 0 0 4 6.5V8a2 2 0 0 1 0 4"/><path d="M4 12a2 2 0 0 1 0 4v1.5A1.5 1.5 0 0 0 5.5 19h13a1.5 1.5 0 0 0 1.5-1.5V16a2 2 0 0 1 0-4"/><path d="M12 8v8" stroke-dasharray="2 3"/></svg>
+              <p style="flex:1; font-size:12.5px; color:var(--ink-700); margin:0;"><span style="font-weight:700; color:var(--ink-900);">2 complimentary day passes</span> available — 1 from a referral, 1 for your birthday month.</p>
+              <a style="font-size:12.5px; font-weight:700; cursor:pointer;">View</a>
+            </div>
+
+            <p style="font-size:11.5px; color:var(--ink-400); line-height:1.55; margin:11px 0 0;">Extra visits beyond the 8 are charged as a day pass &mdash; $75.00 plus tax.</p>
+          </div>
+
+          <!-- Benefits -->
+          <div class="card" style="padding:20px 22px; margin-top:12px;">
+            <p class="eyebrow">What your membership includes</p>
+
+            <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px 20px; margin-top:13px;">
+
+              <div style="display:flex; gap:11px;">
+                <span style="width:34px; height:34px; min-width:34px; border-radius:10px; background:var(--gold-100); display:flex; align-items:center; justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5.5" width="16" height="15" rx="2.5"/><path d="M4 10h16M8.5 3.5v4M15.5 3.5v4"/></svg></span>
+                <div>
+                  <p style="font-size:13px; font-weight:700; color:var(--ink-900); margin:0;">8 visits every month</p>
+                  <p style="font-size:11.5px; color:var(--ink-400); margin:3px 0 0; line-height:1.5;">Book any lounge, any day it has room</p>
+                </div>
+              </div>
+
+              <div style="display:flex; gap:11px;">
+                <span style="width:34px; height:34px; min-width:34px; border-radius:10px; background:var(--gold-100); display:flex; align-items:center; justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.6-7-11a7 7 0 0 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.6"/></svg></span>
+                <div>
+                  <p style="font-size:13px; font-weight:700; color:var(--ink-900); margin:0;">12 lounges, 3 cities</p>
+                  <p style="font-size:11.5px; color:var(--ink-400); margin:3px 0 0; line-height:1.5;">New York, Miami and Los Angeles</p>
+                </div>
+              </div>
+
+              <div style="display:flex; gap:11px;">
+                <span style="width:34px; height:34px; min-width:34px; border-radius:10px; background:var(--gold-100); display:flex; align-items:center; justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12v7.5h15V12"/><rect x="3" y="7.5" width="18" height="4.5" rx="1.5"/><path d="M12 7.5v12M12 7.5S10.5 4 8.2 4a2.2 2.2 0 0 0 0 3.5ZM12 7.5S13.5 4 15.8 4a2.2 2.2 0 0 1 0 3.5Z"/></svg></span>
+                <div>
+                  <p style="font-size:13px; font-weight:700; color:var(--ink-900); margin:0;">A day pass each birthday month</p>
+                  <p style="font-size:11.5px; color:var(--ink-400); margin:3px 0 0; line-height:1.5;">On top of your included visits</p>
+                </div>
+              </div>
+
+              <div style="display:flex; gap:11px;">
+                <span style="width:34px; height:34px; min-width:34px; border-radius:10px; background:var(--gold-100); display:flex; align-items:center; justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.5" r="3.2"/><path d="M3 19a6 6 0 0 1 12 0"/><path d="M16.5 6.2a3.2 3.2 0 0 1 0 4.6M19 4a6.4 6.4 0 0 1 0 9"/></svg></span>
+                <div>
+                  <p style="font-size:13px; font-weight:700; color:var(--ink-900); margin:0;">A day pass per friend who joins</p>
+                  <p style="font-size:11.5px; color:var(--ink-400); margin:3px 0 0; line-height:1.5;">For you and for them, with your code</p>
+                </div>
+              </div>
+
+              <div style="display:flex; gap:11px;">
+                <span style="width:34px; height:34px; min-width:34px; border-radius:10px; background:var(--gold-100); display:flex; align-items:center; justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></span>
+                <div>
+                  <p style="font-size:13px; font-weight:700; color:var(--ink-900); margin:0;">Free cancellation</p>
+                  <p style="font-size:11.5px; color:var(--ink-400); margin:3px 0 0; line-height:1.5;">Up to 24 hours before you arrive</p>
+                </div>
+              </div>
+
+              <div style="display:flex; gap:11px;">
+                <span style="width:34px; height:34px; min-width:34px; border-radius:10px; background:var(--gold-100); display:flex; align-items:center; justify-content:center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 12c0 4.1-3.8 7.4-8.5 7.4-1 0-2-.2-2.9-.4L4 20.5l1.6-3.7A7 7 0 0 1 3.5 12c0-4.1 3.8-7.4 8.5-7.4s8.5 3.3 8.5 7.4Z"/></svg></span>
+                <div>
+                  <p style="font-size:13px; font-weight:700; color:var(--ink-900); margin:0;">Support from any booking</p>
+                  <p style="font-size:11.5px; color:var(--ink-400); margin:3px 0 0; line-height:1.5;">Moves, refunds and waivers</p>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Rail -->
+        <div style="width:344px; min-width:344px; display:flex; flex-direction:column; gap:14px;">
+
+          <!-- Renewal -->
+          <div class="card" style="padding:20px;">
+            <p class="eyebrow">Renewal</p>
+            <h2 style="font-size:27px; color:var(--ink-900); margin-top:9px;">November 3, 2026</h2>
+            <p style="font-size:12.5px; color:var(--ink-700); line-height:1.55; margin:7px 0 0;">$2,400.00 will be charged to Visa &bull;&bull;&bull;&bull; 4242.</p>
+
+            <div style="height:1px; background:var(--border); margin:16px 0;"></div>
+
+            <div style="display:flex; align-items:center; gap:14px;">
+              <div style="flex:1; min-width:0;">
+                <p style="font-size:13.5px; font-weight:700; color:var(--ink-900); margin:0;">Auto-renewal</p>
+                <p style="font-size:11.5px; color:var(--ink-400); margin:3px 0 0;">On &middot; renews for another year</p>
+              </div>
+              <div class="sw sw-on"><span></span></div>
+            </div>
+
+            <div style="display:flex; align-items:flex-start; gap:9px; margin-top:14px; padding:11px 13px; border-radius:12px; background:var(--bg-blush-2); border:1px solid var(--border);">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-top:1px; min-width:15px;"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="m3.6 7 8.4 6 8.4-6"/></svg>
+              <p style="font-size:11.5px; color:var(--ink-700); line-height:1.55; margin:0;">We email you on <span style="font-weight:700; color:var(--ink-900);">October 3</span> — a month before — so nothing renews unannounced.</p>
+            </div>
+
+            <button class="btn-outline" style="width:100%; height:44px; margin-top:14px; background:var(--white); border:1.5px solid var(--border); border-radius:12px; color:var(--ink-700); font-family:'Manrope',sans-serif; font-size:12.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer;">Manage renewal</button>
+          </div>
+
+          <!-- Billing -->
+          <div class="card" style="padding:20px;">
+            <p class="eyebrow">Billing</p>
+
+            <div style="display:flex; align-items:center; gap:12px; margin-top:13px;">
+              <span style="width:44px; height:30px; min-width:44px; border-radius:7px; background:var(--gold-100); display:flex; align-items:center; justify-content:center; font-size:10.5px; font-weight:800; letter-spacing:0.06em; color:var(--ink-900);">VISA</span>
+              <div style="flex:1; min-width:0;">
+                <p style="font-size:13px; font-weight:700; color:var(--ink-900); margin:0;">&bull;&bull;&bull;&bull; 4242</p>
+                <p style="font-size:11.5px; color:var(--ink-400); margin:3px 0 0;">Expires 04/29</p>
+              </div>
+              <a style="font-size:12.5px; font-weight:700; cursor:pointer;">Update</a>
+            </div>
+
+            <div style="height:1px; background:var(--border); margin:15px 0;"></div>
+
+            <div class="row-link" style="display:flex; align-items:center; gap:11px; padding:9px 10px; margin:0 -10px; border-radius:10px;">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3.5H7a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8.5Z"/><path d="M14 3.5v5h5M8.5 13h7M8.5 16.5h4"/></svg>
+              <span style="flex:1; font-size:13px; font-weight:600; color:var(--ink-700);">Invoices and receipts</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m10 6 6 6-6 6"/></svg>
+            </div>
+          </div>
+
+          <!-- Referrals -->
+          <div class="card" style="padding:20px;">
+            <div style="display:flex; align-items:center; justify-content:space-between;">
+              <p class="eyebrow">Referrals</p>
+              <span style="font-size:11.5px; color:var(--ink-400);">5 sent</span>
+            </div>
+            <p style="font-size:12.5px; color:var(--ink-700); line-height:1.55; margin:9px 0 0;">2 friends joined with your code. 1 day pass is credited, 1 is still pending.</p>
+
+            <div style="display:flex; align-items:center; gap:10px; margin-top:13px; padding:0 8px 0 16px; height:50px; border:1.5px dashed var(--gold-500); border-radius:12px; background:var(--bg-blush-2);">
+              <span style="flex:1; font-size:15px; font-weight:800; letter-spacing:0.1em; color:var(--ink-900);">AR-SOLEIL-24</span>
+              <button class="btn-outline" style="display:flex; align-items:center; gap:7px; height:36px; padding:0 12px; background:var(--white); border:1.5px solid var(--border); border-radius:10px; color:var(--ink-700); font-family:'Manrope',sans-serif; font-size:12px; font-weight:700; cursor:pointer;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2.5"/><path d="M15 6.5V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h.5"/></svg>
+                Copy
+              </button>
+            </div>
+
+            <button class="btn-gold" style="width:100%; height:44px; margin-top:12px; background:var(--gold-500); border:none; border-radius:12px; color:var(--white); font-family:'Manrope',sans-serif; font-size:12.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer;">Open referrals</button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+</x-dc>
+</body>
+</html>
