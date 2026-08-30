@@ -77,6 +77,15 @@ Lo construido en el Epic 1 que ya sirve al resto: 11 primitivos, 3 patrones de p
 
 ## Cómo implementar la siguiente historia
 
+### Ramas
+
+| Rama | Para qué |
+|---|---|
+| `main` | Rama principal. No se trabaja directamente sobre ella |
+| `feat/frontend-epics` | **Implementación en Next.js de las historias.** Aquí va todo el código |
+| `docs/design` | Mockups y canvas de los epics (`docs/design/`) |
+
+
 Receta completa. Seguirla en orden evita duplicar componentes que ya existen.
 
 **1. Leer la historia** — `docs/specs/epic-N-slug/story-N.M-slug.md`. Sus `## Acceptance Criteria` son el contrato.
