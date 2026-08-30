@@ -28,7 +28,7 @@ function VerifyEmailCard() {
   }, [cooldown]);
 
   return (
-    <AuthSplit tagline="Join a community of discerning travelers." centered>
+    <AuthSplit tagline="Almost there. Confirm your email to begin." centered>
       <div className="relative mx-auto mb-7 flex h-[76px] w-[76px] items-center justify-center rounded-full bg-accent-soft">
         <Mail size={34} strokeWidth={1.6} className="text-accent-strong" />
         <span className="absolute -bottom-1 -right-1 flex h-[26px] w-[26px] items-center justify-center rounded-full border-[3px] border-surface bg-accent text-on-accent">

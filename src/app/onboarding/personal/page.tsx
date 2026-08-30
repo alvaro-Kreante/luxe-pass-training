@@ -70,7 +70,7 @@ export default function ProfilePersonalPage() {
 
   return (
     <AuthSplit
-      tagline="Join a community of discerning travelers."
+      tagline="What moves you?"
       cardWidth={460}
     >
       <StepProgress current={2} total={3} label="Personal" />

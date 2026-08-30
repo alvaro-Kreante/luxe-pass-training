@@ -36,7 +36,7 @@ export default function ProfileProfessionalPage() {
 
   return (
     <AuthSplit
-      tagline="Join a community of discerning travelers."
+      tagline="One last step."
       cardWidth={460}
     >
       <StepProgress current={3} total={3} label="Professional" />

@@ -53,7 +53,7 @@ export default function ProfileBasicsPage() {
 
   return (
     <AuthSplit
-      tagline="Join a community of discerning travelers."
+      tagline="Tell us who you are."
       cardWidth={460}
     >
       <StepProgress current={1} total={3} label="Basics" />
