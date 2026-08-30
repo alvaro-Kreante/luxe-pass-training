@@ -21,24 +21,24 @@ src/                      Código de la aplicación Next.js
   lib/
     utils.ts              Utilidades (cn() para Tailwind)
 
-design/
-  DESIGN-SYSTEM.md        Sistema de diseño: tokens, tipografía, componentes, patrones, fases
-  epic-N-slug/            Mockups de un epic: .dc.html + canvas.json + logo.png
-
-specs/
-  epic-N-slug/            Un folder por epic (9 en total)
-    story-N.M-slug.md     Una historia de usuario por archivo
-  flows/
-    flow-slug.md          Diagramas de flujo en Mermaid (texto)
-    images/               JPGs de los flujos (referencia visual)
+reference/                Diseño y especificaciones
+  design/
+    DESIGN-SYSTEM.md      Sistema de diseño: tokens, tipografía, componentes, patrones
+    epic-N-slug/          Mockups de un epic: .dc.html + luxepass-epicN.html + canvas.json + logo.png
+  specs/
+    epic-N-slug/          Un folder por epic (9 en total)
+      story-N.M-slug.md   Una historia de usuario por archivo
+    flows/
+      flow-slug.md        Diagramas de flujo en Mermaid (texto)
+      images/             JPGs de los flujos (referencia visual)
 
 assets/
   brand/logo.png          Logo oficial En Soleil (907 KB)
 
-public/                   Assets públicos (manifest.json para PWA, etc)
+public/                   Assets públicos (manifest.json para PWA, service worker, etc)
 ```
 
-### Epics (`specs/epic-*`)
+### Epics (`reference/specs/epic-*`)
 
 9 epics, numerados 1–9, cada uno con sus historias de usuario:
 
@@ -76,7 +76,7 @@ As a ... I want ... so that ...
 (ver sección siguiente)
 ```
 
-### Flujos (`specs/flows/`)
+### Flujos (`reference/specs/flows/`)
 
 Los diagramas de flujo originales (6 JPGs de FigJam) fueron transcritos a **Mermaid** en archivos `.md` para que sean legibles como texto (no requieren visión). Cada flow file cubre uno o más epics, e incluye:
 
@@ -97,11 +97,11 @@ Mapeo diagrama → epics:
 | `flow-admin-support-experience.md` | Epic 8 |
 | `flow-membership-referrals.md` | Epic 9 |
 
-## Diseño (`design/`)
+## Diseño (`reference/design/`)
 
 Mockups de las pantallas de cada epic, hechos con el skill `/design` (canvas multi-artboard).
 
-**Antes de implementar cualquier epic, leer `design/DESIGN-SYSTEM.md`.** Ahí están:
+**Antes de implementar cualquier epic, leer `reference/design/DESIGN-SYSTEM.md`.** Ahí están:
 - Tokens de color exactos (Bodoni Moda + Manrope)
 - Tipografía y escala
 - Componentes especificados con medidas exactas
@@ -113,19 +113,19 @@ Estos tokens están replicados en el código como **CSS variables** y **Tailwind
 - La copy de la UI va en **inglés**; la documentación en español.
 - Tema **híbrido**: claro/boutique para miembro, oscuro/moderno para Partner Dashboard.
 - El `logo.png` de cada carpeta es una copia reducida a 54 KB (no copiar desde `assets/brand/`).
-- El `.html` publicable está en `.gitignore`; se versiona solo `.dc.html`, `canvas.json`, `logo.png`.
+- Versionamos `.dc.html` (fuente), `.html` publicable, `canvas.json`, y `logo.png`.
 - Los datos de muestra **cuadran**: fecha compartida (12–14 sept), importes coherentes entre fases.
 
 **Los números de fase no son cronológicos** — Fase 2 es Epic 7, aunque se diseñó después de Fase 7.
 
 Estado: **diseñados los 9 epics**. La Fase 9 cerró; cualquier trabajo nuevo es revisión o corrección.
 
-## Al editar specs
+## Al editar specs (`reference/specs/`)
 
 - Mantener la convención de nombres en minúsculas y con guiones.
 - Si se agrega una historia de usuario nueva, seguir el formato de sección `## User Story` / `## Acceptance Criteria` / `## Related Flow` de las demás.
 - Si una historia no tiene flujo asociado, decirlo explícitamente en `## Related Flow` en vez de omitir la sección o inventar un enlace.
-- Si se actualiza un diagrama Mermaid, revisar la tabla "Story Segments" del flow file para que siga siendo consistente.
+- Si se actualiza un diagrama Mermaid en `reference/specs/flows/`, revisar la tabla "Story Segments" para que siga siendo consistente.
 
 ## Stack tecnológico
 

@@ -47,6 +47,3 @@ next-env.d.ts
 
 # stackdump & temp files
 *.stackdump
-
-# generated canvas HTML (design artifacts)
-design/**/luxepass-epic*.html
