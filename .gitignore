@@ -18,6 +18,12 @@
 /.next-build/
 /out/
 
+# generados por @ducanh2912/next-pwa en cada build
+/public/sw.js
+/public/sw.js.map
+/public/workbox-*.js
+/public/workbox-*.js.map
+
 # production
 /build
 
