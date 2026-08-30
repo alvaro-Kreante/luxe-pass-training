@@ -1,0 +1,57 @@
+@import url("https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,500&family=Manrope:wght@400;500;600;700;800&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Light Theme - LuxePass Design System */
+  --bg-blush-1: #F8EAE1;
+  --bg-blush-2: #FCF4EE;
+  --ink-900: #221A14;
+  --ink-700: #55483D;
+  --ink-400: #9C8D80;
+  --gold-500: #C9A876;
+  --gold-600: #AD8A5C;
+  --gold-100: #F1E3D0;
+  --border: #E7D9C9;
+  --white: #FFFFFF;
+  --panel-black: #15110D;
+
+  /* Dark Theme */
+  --dark-ink-100: #F1E3D0;
+  --dark-ink-300: #C9BDAF;
+  --dark-ink-500: #8A7C6C;
+  --dark-border: #3A322A;
+  --dark-card: #1E1813;
+  --dark-hover: #241D17;
+
+  /* Map Colors */
+  --map-land: #EFE7DE;
+  --map-street: #FFFFFF;
+  --map-block: #E6DCD0;
+  --map-park: #E3E8D6;
+  --map-water: #DCE6E6;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: #FCF4EE;
+  color: #221A14;
+  font-family: "Manrope", "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: #AD8A5C;
+  text-decoration: none;
+  transition: color 150ms ease;
+}
+
+a:hover {
+  color: #221A14;
+}
