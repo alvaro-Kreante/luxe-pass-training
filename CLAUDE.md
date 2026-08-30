@@ -21,7 +21,7 @@ src/                      Código de la aplicación Next.js
   lib/
     utils.ts              Utilidades (cn() para Tailwind)
 
-reference/                Diseño y especificaciones
+docs/                Diseño y especificaciones
   design/
     DESIGN-SYSTEM.md      Sistema de diseño: tokens, tipografía, componentes, patrones
     epic-N-slug/          Mockups de un epic: .dc.html + luxepass-epicN.html + canvas.json + logo.png
@@ -38,7 +38,7 @@ assets/
 public/                   Assets públicos (manifest.json para PWA, service worker, etc)
 ```
 
-### Epics (`reference/specs/epic-*`)
+### Epics (`docs/specs/epic-*`)
 
 9 epics, numerados 1–9, cada uno con sus historias de usuario:
 
@@ -76,7 +76,7 @@ As a ... I want ... so that ...
 (ver sección siguiente)
 ```
 
-### Flujos (`reference/specs/flows/`)
+### Flujos (`docs/specs/flows/`)
 
 Los diagramas de flujo originales (6 JPGs de FigJam) fueron transcritos a **Mermaid** en archivos `.md` para que sean legibles como texto (no requieren visión). Cada flow file cubre uno o más epics, e incluye:
 
@@ -97,11 +97,11 @@ Mapeo diagrama → epics:
 | `flow-admin-support-experience.md` | Epic 8 |
 | `flow-membership-referrals.md` | Epic 9 |
 
-## Diseño (`reference/design/`)
+## Diseño (`docs/design/`)
 
 Mockups de las pantallas de cada epic, hechos con el skill `/design` (canvas multi-artboard).
 
-**Antes de implementar cualquier epic, leer `reference/design/DESIGN-SYSTEM.md`.** Ahí están:
+**Antes de implementar cualquier epic, leer `docs/design/DESIGN-SYSTEM.md`.** Ahí están:
 - Tokens de color exactos (Bodoni Moda + Manrope)
 - Tipografía y escala
 - Componentes especificados con medidas exactas
@@ -120,12 +120,12 @@ Estos tokens están replicados en el código como **CSS variables** y **Tailwind
 
 Estado: **diseñados los 9 epics**. La Fase 9 cerró; cualquier trabajo nuevo es revisión o corrección.
 
-## Al editar specs (`reference/specs/`)
+## Al editar specs (`docs/specs/`)
 
 - Mantener la convención de nombres en minúsculas y con guiones.
 - Si se agrega una historia de usuario nueva, seguir el formato de sección `## User Story` / `## Acceptance Criteria` / `## Related Flow` de las demás.
 - Si una historia no tiene flujo asociado, decirlo explícitamente en `## Related Flow` en vez de omitir la sección o inventar un enlace.
-- Si se actualiza un diagrama Mermaid en `reference/specs/flows/`, revisar la tabla "Story Segments" para que siga siendo consistente.
+- Si se actualiza un diagrama Mermaid en `docs/specs/flows/`, revisar la tabla "Story Segments" para que siga siendo consistente.
 
 ## Stack tecnológico
 
