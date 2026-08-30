@@ -57,13 +57,14 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `Input` | `input.tsx` | §4 Input · §4 Input/búsqueda (oscuro) | `inputSize`: default(50px)·compact(44px) · `icon` · `trailing` | E1 |
 | `Select` | `select.tsx` | §4 Input / select | hereda `controlVariants` de `Input` · `icon` | E1 |
 | `Field` | `field.tsx` | §3 label 13px/600 · hint 12px | `required` · `optional` · `hint` | E1 |
-| `Checkbox` | `checkbox.tsx` | §4 Checkbox 18×18 | — | E1 |
+| `Checkbox` | `checkbox.tsx` | §4 Checkbox 18×18 | `align`: start(texto multilínea)·center(etiqueta de una línea) | E1 |
 | `Card` | `card.tsx` | §4 Card/panel · Card de contenido | `variant`: panel(24px)·content(18px)·flat · `interactive` · `padded` | E1 |
 | `Eyebrow` | `eyebrow.tsx` | §3 eyebrow 12px/700 uppercase | `muted` (cabeceras de tabla, tile de métrica claro) | E1 |
 | `StepProgress` | `step-progress.tsx` | §4 Progress de pasos | `current` / `total` / `label` | E1 |
 | `SelectableChip` | `chip.tsx` | §4 Chip seleccionable | `selected` | E1 |
 | `AddChip` | `chip.tsx` | §4 (variante "Other", borde discontinuo) | — | E1 |
 | `RemovableChip` | `chip.tsx` | §4 Chip removible | — | E1 |
+| `Notice` | `notice.tsx` | **Derivado** — §4 geometría de "Fila de opción" + borde discontinuo de §5 Estados | `tone`: muted·attention | E1 |
 
 ## Capa 2 — Patrones (`src/components/patterns/`)
 
@@ -93,6 +94,8 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `/onboarding/personal` | `ProfilePersonal.dc.html` | 1.1 |
 | `/onboarding/professional` | `ProfileProfessional.dc.html` | 1.1 |
 | `/welcome` | `Welcome.dc.html` | 1.1 |
+| `/login` | `Login.dc.html` | 1.2 |
+| `/forgot-password` | `ForgotPassword.dc.html` | 1.2 |
 | `/` | — | Índice provisional; lo sustituye el Home del patrón 3 |
 
 ### Lógica de epic (`src/components/onboarding/`, `src/lib/`)
@@ -102,6 +105,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `onboarding/terms-modal.tsx` | Story 1.1 — aceptación de TOS + Privacy con fecha y versión |
 | `onboarding/profile-context.tsx` | Borrador de perfil compartido por los 3 pasos (sessionStorage) |
 | `lib/registration.ts` | Validación de email, contraseña (8+ y 1 especial) y email duplicado |
+| `lib/authentication.ts` | Story 1.2 — credenciales de muestra, bloqueo por 5 intentos (15 min) y alcance de "Remember me" |
 
 ---
 
@@ -159,3 +163,6 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 | El `filter: blur(3px)` del patrón 4 lo aplica la pantalla, no el modal | Un modal en portal no puede alcanzar a su hermano en el árbol. `/signup` pasa `blur-[3px]` al `AuthSplit` mientras el modal está abierto |
 | `/verify-email` incluye "I have verified my email" | Sin backend, el enlace del correo no puede volver a la app. Desaparece cuando exista `/verify-email/[token]` |
 | Texto legal del modal de términos | Relleno estructural, tal como ya advierte `DESIGN-SYSTEM.md` §6 (Fase 1). A reemplazar por el documento real de En Soleil |
+| El acuse de "reset link sent" no tiene artboard | Se resuelve como segundo estado de `/forgot-password`, reutilizando la anatomía de `Verification.dc.html` (medallón de 76px + destinatario + reenvío), en lugar de inventar una pantalla |
+| `/login` añade una nota de 11.5px bajo "Remember me" | El artboard no la trae, pero `flow-onboarding.md` fija el alcance del token ("Set remember token: 30-day auto-logout"). Decirlo evita que el miembro adivine qué activa la casilla |
+| El bloqueo por intentos fallidos vive en `localStorage` | Es el único modo de que el estado bloqueado sea visible y probable sin backend. No es seguridad: `attemptLogin` es el punto que cambia cuando exista la API |

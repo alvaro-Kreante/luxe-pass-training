@@ -46,6 +46,18 @@ const SCREENS = [
     artboard: "Welcome.dc.html",
     detail: "Confirmación con enlaces de descarga de la app",
   },
+  {
+    href: "/login",
+    title: "Welcome back",
+    artboard: "Login.dc.html",
+    detail: "Acceso con remember me y bloqueo tras 5 intentos fallidos",
+  },
+  {
+    href: "/forgot-password",
+    title: "Reset your password",
+    artboard: "ForgotPassword.dc.html",
+    detail: "Envío del enlace de restablecimiento y su acuse",
+  },
 ];
 
 export default function Home() {
@@ -60,12 +72,13 @@ export default function Home() {
           priority
           className="mb-7 w-[72px]"
         />
-        <Eyebrow className="mb-2">Epic 1 · Story 1.1</Eyebrow>
-        <h1 className="mb-2 text-[34px] text-fg">User Registration</h1>
+        <Eyebrow className="mb-2">Epic 1 · Stories 1.1 y 1.2</Eyebrow>
+        <h1 className="mb-2 text-[34px] text-fg">Onboarding &amp; Authentication</h1>
         <p className="m-0 mb-8 text-sm leading-normal text-fg-muted">
-          Seis pantallas implementadas desde los artboards de la Fase 1.
+          Ocho pantallas implementadas desde los artboards de la Fase 1.
           Empieza en <strong className="font-bold text-fg">Create account</strong> para
-          recorrer el alta completa.
+          recorrer el alta, o en <strong className="font-bold text-fg">Welcome back</strong> para
+          el acceso.
         </p>
 
         <div className="flex flex-col gap-3">

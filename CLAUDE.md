@@ -42,12 +42,12 @@ Ejemplo ya hecho en Story 1.1: la comprobación de email duplicado consulta una 
 
 **Diseño: los 9 epics están diseñados** (Fase 9 cerrada). Cualquier trabajo de diseño nuevo es revisión o corrección.
 
-**Código: 1 de 24 historias implementada.**
+**Código: 2 de 24 historias implementadas** — el Epic 1 está completo.
 
 | Epic | Historias | Estado |
 |---|---|---|
 | 1 · User Onboarding & Authentication | 1.1 User registration | ✅ **Implementada** |
-| | 1.2 User login & authentication | ⬜ Pendiente |
+| | 1.2 User login & authentication | ✅ **Implementada** |
 | 2 · Location Discovery & Search | 2.1 · 2.2 · 2.3 | ⬜ Pendiente |
 | 3 · Lounge Profiles & Details | 3.1 · 3.2 | ⬜ Pendiente |
 | 4 · Booking System | 4.1 · 4.2 · 4.3 | ⬜ Pendiente |
@@ -68,10 +68,14 @@ Ejemplo ya hecho en Story 1.1: la comprobación de email duplicado consulta una 
 | `/onboarding/personal` | `ProfilePersonal.dc.html` | 1.1 |
 | `/onboarding/professional` | `ProfileProfessional.dc.html` | 1.1 |
 | `/welcome` | `Welcome.dc.html` | 1.1 |
+| `/login` | `Login.dc.html` | 1.2 |
+| `/forgot-password` | `ForgotPassword.dc.html` | 1.2 |
 
-`/login` **todavía no existe** (es Story 1.2), así que los enlaces "Back to log in" y "Log in" de `/signup` y `/verify-email` dan 404 hasta que se implemente.
+Los 10 artboards de la Fase 1 están cubiertos salvo `Home.dc.html`, que es el App shell (patrón 3) y entra con el Epic 2.
 
-Lo construido en el Epic 1 que ya sirve al resto: 11 primitivos, 3 patrones de pantalla y la capa de tokens completa. Ver `docs/design/COMPONENT-MAP.md`.
+Lo construido en el Epic 1 que ya sirve al resto: 12 primitivos, 3 patrones de pantalla y la capa de tokens completa. Ver `docs/design/COMPONENT-MAP.md`.
+
+**Cada artboard tiene su propia frase de marca** en el panel izquierdo del patrón 1 (`Join a community of discerning travelers.`, `Your next moment of calm is waiting.`, `Tell us who you are.`…). No reutilizar la de otra pantalla: extraerla del `.dc.html` correspondiente.
 
 ---
 

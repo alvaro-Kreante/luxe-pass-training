@@ -13,6 +13,11 @@ export interface CheckboxProps {
   onCheckedChange: (checked: boolean) => void;
   /** Contenido del label; admite enlaces inline. */
   children?: React.ReactNode;
+  /**
+   * `start` para textos de varias líneas (aceptación de términos);
+   * `center` para etiquetas de una línea (Remember me).
+   */
+  align?: "start" | "center";
   id?: string;
   className?: string;
 }
@@ -21,13 +26,15 @@ export function Checkbox({
   checked,
   onCheckedChange,
   children,
+  align = "start",
   id,
   className,
 }: CheckboxProps) {
   return (
     <label
       className={cn(
-        "group flex cursor-pointer items-start gap-2.5",
+        "group flex cursor-pointer gap-2.5",
+        align === "center" ? "items-center" : "items-start",
         className,
       )}
     >
@@ -41,7 +48,8 @@ export function Checkbox({
       <span
         aria-hidden
         className={cn(
-          "mt-px flex h-[18px] w-[18px] min-w-[18px] items-center justify-center rounded-[5px]",
+          "flex h-[18px] w-[18px] min-w-[18px] items-center justify-center rounded-[5px]",
+          align === "start" && "mt-px",
           "transition-colors duration-150 peer-focus-visible:shadow-ring",
           checked
             ? "bg-accent text-on-accent"
@@ -51,7 +59,12 @@ export function Checkbox({
         {checked ? <Check size={12} strokeWidth={2.4} /> : null}
       </span>
       {children ? (
-        <span className="text-[13px] leading-normal text-fg-muted">
+        <span
+          className={cn(
+            "text-[13px] text-fg-muted",
+            align === "start" && "leading-normal",
+          )}
+        >
           {children}
         </span>
       ) : null}
