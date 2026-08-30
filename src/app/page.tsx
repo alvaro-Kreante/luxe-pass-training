@@ -1,69 +1,102 @@
+import Link from "next/link";
 import Image from "next/image";
+import { ChevronRight } from "lucide-react";
+
+import { Card } from "@/components/ui/card";
+import { Eyebrow } from "@/components/ui/eyebrow";
+
+/**
+ * Índice de las pantallas implementadas. Provisional: lo sustituye el Home del
+ * área de miembro (App shell, patrón 3) cuando se implemente el Epic 2.
+ */
+const SCREENS = [
+  {
+    href: "/signup",
+    title: "Create account",
+    artboard: "Main.dc.html · Terms.dc.html",
+    detail: "Email, contraseña y aceptación de términos con fecha y versión",
+  },
+  {
+    href: "/verify-email",
+    title: "Check your inbox",
+    artboard: "Verification.dc.html",
+    detail: "Verificación de email con reenvío en cuenta atrás",
+  },
+  {
+    href: "/onboarding/basics",
+    title: "A bit about you",
+    artboard: "ProfileBasic.dc.html",
+    detail: "Paso 1 de 3 — foto, nombre, teléfono y fecha de nacimiento",
+  },
+  {
+    href: "/onboarding/personal",
+    title: "Your interests",
+    artboard: "ProfilePersonal.dc.html",
+    detail: "Paso 2 de 3 — intereses, residencia y ciudades de viaje",
+  },
+  {
+    href: "/onboarding/professional",
+    title: "Professional details",
+    artboard: "ProfileProfessional.dc.html",
+    detail: "Paso 3 de 3 — cargo, industria y empresa",
+  },
+  {
+    href: "/welcome",
+    title: "Welcome to En Soleil",
+    artboard: "Welcome.dc.html",
+    detail: "Confirmación con enlaces de descarga de la app",
+  },
+];
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
+    <main className="surface-blush flex min-h-screen flex-col items-center px-6 py-16">
+      <div className="w-full max-w-[640px]">
         <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
+          src="/logo.png"
+          alt="En Soleil"
+          width={170}
+          height={179}
           priority
+          className="mb-7 w-[72px]"
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+        <Eyebrow className="mb-2">Epic 1 · Story 1.1</Eyebrow>
+        <h1 className="mb-2 text-[34px] text-fg">User Registration</h1>
+        <p className="m-0 mb-8 text-sm leading-normal text-fg-muted">
+          Seis pantallas implementadas desde los artboards de la Fase 1.
+          Empieza en <strong className="font-bold text-fg">Create account</strong> para
+          recorrer el alta completa.
+        </p>
+
+        <div className="flex flex-col gap-3">
+          {SCREENS.map((screen) => (
+            <Link key={screen.href} href={screen.href} className="hover:text-fg">
+              <Card
+                variant="content"
+                interactive
+                className="flex items-center gap-4 px-5 py-4"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="m-0 font-display text-[19px] text-fg">
+                    {screen.title}
+                  </p>
+                  <p className="m-0 mt-0.5 text-[12.5px] text-fg-subtle">
+                    {screen.detail}
+                  </p>
+                  <p className="m-0 mt-1.5 text-[11.5px] text-fg-subtle">
+                    {screen.artboard}
+                  </p>
+                </div>
+                <ChevronRight
+                  size={18}
+                  strokeWidth={1.8}
+                  className="shrink-0 text-fg-subtle"
+                />
+              </Card>
+            </Link>
+          ))}
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }
