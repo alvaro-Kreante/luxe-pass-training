@@ -294,3 +294,38 @@
   background-size: 14px 14px;
   pointer-events: none;
 }
+
+/* ============================================================
+   Mapa dibujado — DESIGN-SYSTEM §5 "Mapa"
+   El plano tiene proporción fija (820×760) y el área que lo aloja no. El
+   canvas crece hasta cubrir el contenedor manteniendo esa proporción, como un
+   `object-fit: cover`, para que los markers en % coincidan siempre con el
+   dibujo. El zoom y el desplazamiento van en `transform`, y el centrado en
+   `translate`, para que no se pisen.
+   ============================================================ */
+
+.map-canvas {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  aspect-ratio: 820 / 760;
+  min-width: 100%;
+  min-height: 100%;
+  transform-origin: center;
+  transition: transform 150ms ease;
+}
+
+/* Marker de lounge: gota de 36px — la esquina viva apunta al punto exacto. */
+.map-marker {
+  border-radius: 50% 50% 50% 6px;
+}
+
+.map-marker[data-selected="true"] {
+  border-radius: 50% 50% 50% 8px;
+}
+
+/* Modo offline: el plano cacheado se apaga (§5 "Mapa"). */
+.map-offline {
+  filter: grayscale(0.55) opacity(0.8);
+}

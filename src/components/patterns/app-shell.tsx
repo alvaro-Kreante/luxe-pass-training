@@ -36,18 +36,29 @@ export interface AppShellProps {
    * sangre. El resto de vistas usan el padding del patrón 3.
    */
   padded?: boolean;
+  /**
+   * Patrón 4: la pantalla entera — sidebar incluida — se difumina detrás de un
+   * diálogo. El modal vive en un portal, así que no puede aplicárselo él mismo.
+   */
+  blurred?: boolean;
   className?: string;
 }
 
 export function AppShell({
   children,
   padded = true,
+  blurred = false,
   className,
 }: AppShellProps) {
   const pathname = usePathname();
 
   return (
-    <div className="flex min-h-screen w-full bg-blush-2 lg:h-screen lg:overflow-hidden">
+    <div
+      className={cn(
+        "flex min-h-screen w-full bg-blush-2 lg:h-screen lg:overflow-hidden",
+        blurred && "blur-[3px]",
+      )}
+    >
       <nav
         aria-label="Member area"
         className={cn(

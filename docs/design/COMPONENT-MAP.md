@@ -64,6 +64,9 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `SelectableChip` | `chip.tsx` | §4 Chip seleccionable | `selected` | E1 |
 | `AddChip` | `chip.tsx` | §4 (variante "Other", borde discontinuo) | — | E1 |
 | `RemovableChip` | `chip.tsx` | §4 Chip removible | — | E1 |
+| `Segmented` | `segmented.tsx` | §5 patrón 5 — los dos segmented de la topbar de Explore | `size`: md(50px)·sm(38px) · `icon` por opción | E2 |
+| `StatusChip` | `status-chip.tsx` | §5 "Estados" — disponibilidad | `available` · `size`: md(11.5px)·sm(11px) | E2 |
+| `EmptyState` | `empty-state.tsx` | §5 "Estados" — vacío / error | `width` 440–660 · `icon` · `footnote` | E2 |
 | `Rating` | `rating.tsx` | **Derivado** — §4 no le da fila; la geometría (estrella dorada de 13px + cifra en 12.5px/600) se repite en `Home`, `ListView` y el callout del mapa | — | E2 |
 | `Notice` | `notice.tsx` | **Derivado** — §4 geometría de "Fila de opción" + borde discontinuo de §5 Estados | `tone`: muted·attention | E1 |
 
@@ -74,7 +77,8 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | Split-screen de autenticación | `auth-split.tsx` | §5 patrón **1** | `cardWidth` 440/460 · `centered`. Sirve a sign up, log in, reset password, verificación y pasos de perfil |
 | Full-bleed de confirmación | `full-bleed-success.tsx` | §5 patrón **2** | Lleva `data-theme="dark"` incorporado |
 | App shell (miembro) | `app-shell.tsx` | §5 patrón **3** | Sidebar de 248px + área de contenido. `padded={false}` para el patrón 5 (Explore), que va a sangre. Fija la nav de los Epics 2–6 |
-| Modal sobre pantalla | `modal.tsx` | §5 patrón **4** | Radix Dialog. `width` 640 por defecto. El patrón **18** (modal oscuro) es este mismo dentro de `data-theme="dark"` |
+| Modal sobre pantalla | `modal.tsx` | §5 patrón **4** | Radix Dialog. `width` 640 por defecto (520–540 en los diálogos de ubicación). `align="center"` + `media` para el diálogo de permiso. El patrón **18** (modal oscuro) es este mismo dentro de `data-theme="dark"` |
+| Explore (mapa + resultados) | `explore-layout.tsx` | §5 patrón **5** | Topbar de 88px, fila de filtros de 52px, panel de 372px + mapa. El panel es la `region` "Results" que comparten mapa y lista |
 
 ### Utilidades de superficie (`globals.css`)
 
@@ -84,7 +88,10 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `.surface-night-panel` | §5 patrón 1 (panel de marca) | 1, 2 |
 | `.surface-blush` | §5 patrón 1 (área de contenido) | 1 |
 | `.dot-pattern` | §2 puntos dorados a 18px | 1, 2, 10, 12, 15, 21 |
-| `.lounge-hero` | Placeholder de imagen de lounge (3 tonos) | Card del Home |
+| `.lounge-hero` | Placeholder de imagen de lounge (3 tonos) | Card del Home, `LoungeThumb` |
+| `.map-canvas` | §5 "Mapa" — el plano cubre su contenedor sin deformarse | `CityMap` |
+| `.map-marker` | §5 "Mapa" — gota de 36 / 46px | `CityMap` |
+| `.map-offline` | §5 "Mapa" — plano cacheado en gris | `CityMap` |
 | `.skeleton` | §5 Estados (carga) | — |
 
 ## Capa 3 — Pantallas
@@ -100,6 +107,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `/login` | `Login.dc.html` | 1.2 |
 | `/forgot-password` | `ForgotPassword.dc.html` | 1.2 |
 | `/` | `Home.dc.html` (epic-1-onboarding) | Home del área de miembro |
+| `/explore` | `Main.dc.html` + `LocationPermission` + `ManualLocation` + `MapError` + `Offline` | 2.1 |
 
 ### Lógica de epic (`src/components/onboarding/`, `src/lib/`)
 
@@ -112,6 +120,14 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `lib/lounges.ts` | Catálogo de muestra de lounges y los destacados del Home |
 | `lib/member.ts` | El miembro de muestra que pinta el App shell |
 | `lounges/featured-lounge-card.tsx` | Card de lounge destacado del Home |
+| `lounges/lounge-thumb.tsx` | Miniatura de lounge; el tono sale del id, igual en todas las vistas |
+| `explore/city-map.tsx` · `city-map-base.tsx` · `sun-mark.tsx` | Story 2.1 — el plano dibujado, sus markers y el zoom/pan |
+| `explore/location-dialogs.tsx` | Story 2.1 — permiso de ubicación y entrada manual |
+| `explore/result-card.tsx` · `lounge-callout.tsx` · `amenity-icon.tsx` | Story 2.1 — la lista del panel y el detalle sobre el mapa |
+| `lib/distance.ts` | Story 2.1 — conversión mi/km y tiempo a pie |
+| `lib/location.ts` | Story 2.1 — ciudades de muestra y su búsqueda |
+| `lib/availability.ts` | Etiqueta de disponibilidad a partir de las plazas del día |
+| `lib/amenities.ts` | Las seis amenities de la Story 2.2 y sus etiquetas |
 
 ---
 
@@ -134,7 +150,7 @@ Diff de aprobación · Barra de consumo · Tabla comparativa
 
 ### Patrones de §5 sin implementar
 
-5 Explore · 6 Drawer lateral · 7 Perfil de lounge · 8 Sub-vista ·
+6 Drawer lateral · 7 Perfil de lounge · 8 Sub-vista ·
 9 Flujo por pasos con rail · 10 Tarjeta de confirmación oscura · 11 Pase digital ·
 12 Consola de recepción · 13 Sección de cuenta · 14 Panel de notificaciones ·
 15 App shell del partner · 16 Lista de datos oscura · 17 Panel de actividad ·
@@ -171,6 +187,10 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 | Texto legal del modal de términos | Relleno estructural, tal como ya advierte `DESIGN-SYSTEM.md` §6 (Fase 1). A reemplazar por el documento real de En Soleil |
 | El acuse de "reset link sent" no tiene artboard | Se resuelve como segundo estado de `/forgot-password`, reutilizando la anatomía de `Verification.dc.html` (medallón de 76px + destinatario + reenvío), en lugar de inventar una pantalla |
 | `/login` añade una nota de 11.5px bajo "Remember me" | El artboard no la trae, pero `flow-onboarding.md` fija el alcance del token ("Set remember token: 30-day auto-logout"). Decirlo evita que el miembro adivine qué activa la casilla |
+| El mapa es el SVG del artboard, no un proveedor de tiles | §6 (Fase 3) previó sustituirlo "por el proveedor real", pero este repo no llama a servicios externos ni gestiona claves. El zoom y el pan son reales sobre ese dibujo |
+| Los markers se posicionan en % del plano, no en los píxeles del artboard | El artboard es 1440×900 fijo. En % el marker sigue al dibujo a cualquier tamaño; el `.map-canvas` mantiene la proporción 820×760 |
+| El callout salta al otro lado del marker pasado el 55% del ancho | El artboard solo dibuja el caso de un marker centrado. Anclado siempre a la derecha, se salía del mapa |
+| La card de resultado calcula su "+N" de amenities | El artboard escribe "+2" con cuatro amenities listadas en `ListView`. Se muestran tres iconos y el resto se cuenta |
 | En el App shell, la sidebar de 248px pasa a barra de navegación inferior por debajo de `lg` | Es una PWA: en móvil la nav vive abajo. Los artboards son desktop 1440×900 |
 | "View details" lleva `aria-label="View details for ‹lounge›"` | Tres enlaces con el mismo texto visible son indistinguibles para un lector de pantalla. El texto en pantalla no cambia |
 | Los items **My Pass** y **Profile** del shell apuntan a rutas que aún no existen | Sus artboards son de los Epics 6 y 7. El shell fija la nav completa desde ya, tal como el design system la declara |

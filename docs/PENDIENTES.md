@@ -75,6 +75,44 @@ el flujo quedaría cortado.
 **Se sustituye:** por la ruta `/verify-email/[token]` cuando exista la API de
 verificación.
 
+### 2.2 El permiso de ubicación y los estados de borde de `/explore` están simulados
+
+La Story 2.1 tiene tres criterios que dependen del sistema o de la red. Como el
+repo es solo diseño, la pantalla **llega a mostrar cada estado** sin que nada lo
+provoque de verdad:
+
+| Qué | Cómo está ahora | Qué lo sustituye |
+|---|---|---|
+| Permiso de ubicación | Diálogo propio y un `useState` con tres pasos (`asking` · `manual` · `located`). No se llama a `navigator.geolocation` | La API de geolocalización del navegador, conservando la rama manual para cuando la deniegan |
+| Error de carga del mapa | `\/explore?map=error`. "Retry" limpia el estado y el mapa aparece: no hay un segundo intento que pueda fallar | Un tiempo de espera real contra el proveedor de mapas, con el umbral de 3 s del criterio |
+| Modo offline | `\/explore?offline=1`, con los seis lounges más cercanos como "cacheados" | `navigator.onLine` + lo que el service worker tenga guardado de verdad |
+
+Los dos query params **no salen de ningún artboard**: son la única manera de
+alcanzar esos estados sin añadir a la interfaz un botón de simulación que el
+diseño no contempla.
+
+**Al conectar la lógica real hay que quitar las tres simulaciones**, no dejarlas
+conviviendo con ella: los query params desaparecen, y con ellos la rama
+`startsWithMapError` de `src/app/explore/page.tsx`.
+
+**Desbloquea:** que el proyecto deje de ser solo diseño — es decir, la app de
+`app.luxepass.co`, no este repo.
+
+### 2.3 El plano de `\/explore` es el SVG del artboard
+
+`src/components/explore/city-map-base.tsx` es el dibujo de `Main.dc.html`
+portado a JSX: calles, manzanas, parque y río de una ciudad inventada. El zoom,
+el desplazamiento y los markers sí son reales, pero se mueven sobre un plano que
+no es Nueva York.
+
+`DESIGN-SYSTEM.md` §6 (Fase 3) ya lo anticipaba: "al implementar se sustituye por
+el proveedor real conservando el estilo de markers y controles". Lo que se
+conserva entonces es `CityMap` — markers, controles, callout, escala —; lo que
+se tira es `city-map-base.tsx`.
+
+**Desbloquea:** decidir proveedor (Mapbox, MapLibre, Google) y dónde vive su
+clave. Nada de eso cabe en este repositorio.
+
 ---
 
 ## 3. Criterios de aceptación cubiertos solo de forma declarativa
@@ -92,6 +130,10 @@ nada los hace cumplir.
 | 1.2 | Password reset via email with secure token | Acuse en `/forgot-password`; no se genera token ni se envía correo |
 | 1.2 | Account lockout after 5 failed attempts (15min) | Contador en `useState`; se alcanza el estado bloqueado, la espera de 15 min se enuncia, no se cuenta |
 | 1.2 | Automatic logout after 30 days of inactivity | Solo declarado en la nota bajo "Remember me". No hay sesión |
+| 2.1 | Current location detection with permission request | Diálogo propio; no se consulta `navigator.geolocation` — ver 2.2 |
+| 2.1 | Map loads within 3 seconds on good connection | No hay carga que medir: el plano es un SVG del propio bundle. El estado de fallo se alcanza por query param |
+| 2.1 | Offline mode shows cached nearby locations | Los "cacheados" son los seis primeros del catálogo; el service worker no interviene |
+| 2.1 | Distance display in miles/km based on user preference | El toggle de la topbar hace la conversión de verdad, pero el ajuste no se lee del teléfono ni se recuerda |
 
 Los enlaces de las tiendas de `/welcome` apuntan a `#`: no existen todavía las
 fichas de App Store ni Google Play.

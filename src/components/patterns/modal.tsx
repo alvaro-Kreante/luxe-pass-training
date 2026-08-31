@@ -20,13 +20,20 @@ export interface ModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
-  eyebrow?: string;
+  eyebrow?: React.ReactNode;
   description?: React.ReactNode;
   /** Cabecera extra bajo la descripción — p. ej. las pestañas de documento. */
   headerExtra?: React.ReactNode;
   footer?: React.ReactNode;
   /** 640px para el modal estándar; 520–540px en los diálogos de ubicación. */
   width?: number;
+  /**
+   * El diálogo de permiso de ubicación (LocationPermission.dc.html) centra su
+   * cabecera bajo un medallón; el resto de modales alinean a la izquierda.
+   */
+  align?: "start" | "center";
+  /** Medallón u otra pieza sobre el eyebrow. */
+  media?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -39,8 +46,11 @@ export function Modal({
   headerExtra,
   footer,
   width = 640,
+  align = "start",
+  media,
   children,
 }: ModalProps) {
+  const centered = align === "center";
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -56,7 +66,13 @@ export function Modal({
             "shadow-[0_40px_90px_-25px_rgb(10_8_6_/_0.55)] focus:outline-none",
           )}
         >
-          <div className="px-6 pt-8 sm:px-10 sm:pt-9">
+          <div
+            className={cn(
+              "px-6 pt-8 sm:px-10 sm:pt-9",
+              centered && "text-center",
+            )}
+          >
+            {media}
             {eyebrow ? <Eyebrow className="mb-2">{eyebrow}</Eyebrow> : null}
             <Dialog.Title className="mb-2 text-[27px] text-fg">
               {title}
