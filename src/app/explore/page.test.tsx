@@ -240,3 +240,170 @@ describe("modo offline", () => {
     expect(screen.getByLabelText("Search lounges")).toBeDisabled();
   });
 });
+
+/**
+ * Story 2.2 — Lounge Filtering & Search.
+ * Criterios en
+ * docs/specs/epic-2-location-discovery-search/story-2.2-lounge-filtering-search.md
+ */
+
+/** Deja la pantalla con el permiso concedido y el drawer de filtros abierto. */
+async function openFilters(user: ReturnType<typeof userEvent.setup>) {
+  await allowLocation(user);
+  await user.click(screen.getByRole("button", { name: "Filters" }));
+}
+
+describe("drawer de filtros", () => {
+  it("se abre desde la topbar", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+
+    await openFilters(user);
+
+    expect(
+      screen.getByRole("heading", { name: "Filters" }),
+    ).toBeInTheDocument();
+  });
+
+  it("actualiza los resultados sin cerrarse", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+    await openFilters(user);
+
+    await user.click(screen.getByRole("button", { name: "Spa" }));
+
+    expect(within(resultsPanel()).queryByText("Belmont Terrace")).toBeNull();
+    expect(
+      screen.getByRole("heading", { name: "Filters" }),
+    ).toBeInTheDocument();
+  });
+
+  it("dice cuántos lounges quedan en el botón de confirmar", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+    await openFilters(user);
+
+    await user.click(screen.getByRole("button", { name: "< 1 mi" }));
+
+    expect(
+      screen.getByRole("button", { name: "Show 3 lounges" }),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("chips de filtros activos", () => {
+  it("aparece un chip por cada filtro elegido", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+    await openFilters(user);
+
+    await user.click(screen.getByRole("button", { name: "Spa" }));
+    await user.click(screen.getByRole("button", { name: "< 2 mi" }));
+    await user.click(screen.getByRole("button", { name: /^Show/ }));
+
+    expect(screen.getByText("Spa")).toBeInTheDocument();
+    expect(screen.getByText("Within 2 mi")).toBeInTheDocument();
+  });
+
+  it("quitar un chip devuelve los lounges que ese filtro descartaba", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+    await openFilters(user);
+    await user.click(screen.getByRole("button", { name: "Spa" }));
+    await user.click(screen.getByRole("button", { name: /^Show/ }));
+
+    expect(within(resultsPanel()).queryByText("Belmont Terrace")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Remove Spa" }));
+
+    expect(
+      within(resultsPanel()).getByText("Belmont Terrace"),
+    ).toBeInTheDocument();
+  });
+
+  it("'Clear all' deja la búsqueda como estaba al empezar", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+    await openFilters(user);
+    await user.click(screen.getByRole("button", { name: "Spa" }));
+    await user.click(screen.getByRole("button", { name: "< 2 mi" }));
+    await user.click(screen.getByRole("button", { name: /^Show/ }));
+
+    await user.click(screen.getByRole("button", { name: "Clear all" }));
+
+    expect(screen.queryByText("Within 2 mi")).toBeNull();
+    expect(
+      within(resultsPanel()).getByText("Belmont Terrace"),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("búsqueda por texto", () => {
+  it("filtra mientras se escribe", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+    await allowLocation(user);
+
+    await user.type(screen.getByLabelText("Search lounges"), "ainsworth");
+
+    expect(within(resultsPanel()).getByText("The Ainsworth")).toBeInTheDocument();
+    expect(within(resultsPanel()).queryByText("Belmont Terrace")).toBeNull();
+  });
+});
+
+describe("sin resultados", () => {
+  /** Los cuatro filtros del artboard `NoResults.dc.html`. */
+  async function filterUntilEmpty(user: ReturnType<typeof userEvent.setup>) {
+    await openFilters(user);
+    await user.click(screen.getByRole("button", { name: "WiFi" }));
+    await user.click(screen.getByRole("button", { name: "Co-working" }));
+    await user.click(screen.getByRole("button", { name: "< 2 mi" }));
+    await user.click(screen.getByRole("button", { name: "14" }));
+    await user.click(screen.getByRole("button", { name: "2–6 PM" }));
+    await user.click(screen.getByRole("button", { name: /^Show/ }));
+  }
+
+  it("deja de listar lounges", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+
+    await filterUntilEmpty(user);
+
+    expect(screen.queryByText("The Ainsworth")).toBeNull();
+  });
+
+  it("propone cambios y dice cuántos lounges devolvería cada uno", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+
+    await filterUntilEmpty(user);
+
+    const proposals = screen.getAllByRole("button", { name: /would match/ });
+    expect(proposals.length).toBeGreaterThan(0);
+  });
+
+  it("aplicar una sugerencia devuelve resultados", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+    await filterUntilEmpty(user);
+
+    await user.click(screen.getAllByRole("button", { name: /would match/ })[0]);
+
+    expect(screen.queryAllByRole("button", { name: /would match/ })).toEqual([]);
+    expect(within(resultsPanel()).getAllByRole("button").length).toBeGreaterThan(
+      0,
+    );
+  });
+
+  it("ofrece limpiar todos los filtros desde el propio estado vacío", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+    await filterUntilEmpty(user);
+
+    await user.click(screen.getByRole("button", { name: "Clear all filters" }));
+
+    expect(
+      within(resultsPanel()).getByText("The Ainsworth"),
+    ).toBeInTheDocument();
+  });
+});

@@ -17,6 +17,16 @@ export function formatDistance(miles: number, unit: DistanceUnit): string {
   return `${value.toFixed(1)} ${unit}`;
 }
 
+/**
+ * La banda de un filtro se escribe sin decimal vacío ("Within 2 mi"), a
+ * diferencia de la distancia de un lounge, que siempre lleva uno ("0.3 mi").
+ */
+export function formatDistanceBand(miles: number, unit: DistanceUnit): string {
+  const value = unit === "km" ? miles * KM_PER_MILE : miles;
+
+  return `${Math.round(value * 10) / 10} ${unit}`;
+}
+
 export function walkingMinutes(miles: number): number {
   return Math.max(1, Math.round(miles * MINUTES_PER_MILE));
 }

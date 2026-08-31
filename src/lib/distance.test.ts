@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { formatDistance, walkingMinutes } from "./distance";
+import { formatDistance, formatDistanceBand, walkingMinutes } from "./distance";
 
 /**
  * Story 2.1 — "Distance display in miles/km based on user preference".
@@ -22,6 +22,17 @@ describe("distancia en las unidades del miembro", () => {
   it("no pierde la unidad en distancias largas", () => {
     expect(formatDistance(2.8, "mi")).toBe("2.8 mi");
     expect(formatDistance(2.8, "km")).toBe("4.5 km");
+  });
+});
+
+describe("bandas de distancia de los filtros", () => {
+  it("no arrastra un decimal vacío: la banda es \"2 mi\", no \"2.0 mi\"", () => {
+    expect(formatDistanceBand(2, "mi")).toBe("2 mi");
+  });
+
+  it("conserva el decimal cuando lo hay", () => {
+    expect(formatDistanceBand(0.5, "mi")).toBe("0.5 mi");
+    expect(formatDistanceBand(1, "km")).toBe("1.6 km");
   });
 });
 

@@ -18,14 +18,24 @@ import {
   LocationPermissionDialog,
   ManualLocationDialog,
 } from "@/components/explore/location-dialogs";
+import { FilterDrawer } from "@/components/explore/filter-drawer";
 import { LoungeCallout } from "@/components/explore/lounge-callout";
+import { NoResults } from "@/components/explore/no-results";
 import { ResultCard } from "@/components/explore/result-card";
 import { Button } from "@/components/ui/button";
+import { RemovableChip } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Input } from "@/components/ui/input";
 import { Segmented } from "@/components/ui/segmented";
 import type { DistanceUnit } from "@/lib/distance";
+import {
+  EMPTY_FILTERS,
+  activeFilterChips,
+  applyFilters,
+  suggestionsToRecoverResults,
+  type Filters,
+} from "@/lib/filters";
 import { DEFAULT_CITY_ID, cityById, cityLabel } from "@/lib/location";
 import { loungesIn } from "@/lib/lounges";
 
@@ -70,11 +80,20 @@ function ExploreScreen() {
   const [view, setView] = React.useState<"map" | "list">("map");
   const [mapFailed, setMapFailed] = React.useState(startsWithMapError);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = React.useState(false);
+  const [filters, setFilters] = React.useState<Filters>(EMPTY_FILTERS);
 
   const city = cityById(cityId);
   const nearby = loungesIn(cityId);
-  const lounges = offline ? nearby.slice(0, CACHED_LOUNGE_COUNT) : nearby;
+  /** Sin conexión solo existe lo que quedó guardado de la última visita. */
+  const available = offline ? nearby.slice(0, CACHED_LOUNGE_COUNT) : nearby;
+  const lounges = applyFilters(available, filters);
   const selected = lounges.find((lounge) => lounge.id === selectedId) ?? null;
+
+  const chips = activeFilterChips(filters, unit);
+  const activeFilterCount = chips.length + (filters.query.trim() ? 1 : 0);
+  const suggestions = suggestionsToRecoverResults(available, filters);
+  const empty = lounges.length === 0 && activeFilterCount > 0;
 
   /** Patrón 4: la pantalla de fondo se difumina mientras hay un diálogo abierto. */
   const behindDialog = step !== "located";
@@ -88,12 +107,39 @@ function ExploreScreen() {
   return (
     <AppShell padded={false} blurred={behindDialog}>
       <ExploreLayout
-        banner={offline ? <OfflineBanner count={lounges.length} /> : null}
+        banner={offline ? <OfflineBanner count={available.length} /> : null}
+        filters={
+          chips.length > 0 ? (
+            <>
+              {chips.map((chip) => (
+                <RemovableChip
+                  key={chip.id}
+                  label={chip.label}
+                  onRemove={() => setFilters(chip.without)}
+                />
+              ))}
+              <button
+                type="button"
+                onClick={() => setFilters(EMPTY_FILTERS)}
+                className="ml-1.5 cursor-pointer text-[12.5px] font-bold text-accent-strong transition-colors duration-150 hover:text-fg"
+              >
+                Clear all
+              </button>
+              <span className="ml-auto text-[12.5px] text-fg-subtle">
+                Results update as you filter
+              </span>
+            </>
+          ) : null
+        }
         topbar={
           <>
             <Input
               aria-label="Search lounges"
               disabled={offline}
+              value={filters.query}
+              onChange={(event) =>
+                setFilters({ ...filters, query: event.target.value })
+              }
               placeholder={
                 offline ? "Search needs a connection" : "Search by name, city or amenity"
               }
@@ -104,10 +150,16 @@ function ExploreScreen() {
             <Button
               variant="outline"
               size="lg"
+              onClick={() => setFiltersOpen(true)}
               className="gap-2.5 px-4.5 text-[13px] tracking-normal normal-case"
             >
               <SlidersHorizontal size={17} strokeWidth={1.8} />
               Filters
+              {activeFilterCount > 0 ? (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-[10px] bg-accent px-1.5 text-[11.5px] font-bold text-on-accent">
+                  {activeFilterCount}
+                </span>
+              ) : null}
             </Button>
 
             <div className="flex flex-1 items-center justify-end gap-3.5">
@@ -135,6 +187,7 @@ function ExploreScreen() {
           </>
         }
         panel={
+          empty ? null : (
           <>
             <div className="px-5.5 pb-3 pt-5">
               <Eyebrow className="mb-1.5">
@@ -162,9 +215,19 @@ function ExploreScreen() {
               ))}
             </div>
           </>
+          )
         }
       >
-        {view === "map" ? (
+        {empty ? (
+          <NoResults
+            activeFilterCount={activeFilterCount}
+            totalNearby={available.length}
+            suggestions={suggestions}
+            onApply={(suggestion) => setFilters(suggestion.filters)}
+            onBackToMap={() => setFilters(EMPTY_FILTERS)}
+            onClearAll={() => setFilters(EMPTY_FILTERS)}
+          />
+        ) : view === "map" ? (
           mapFailed ? (
             <MapErrorState
               count={lounges.length}
@@ -192,6 +255,14 @@ function ExploreScreen() {
         open={step === "asking"}
         onAllow={() => setStep("located")}
         onEnterManually={() => setStep("manual")}
+      />
+
+      <FilterDrawer
+        open={filtersOpen}
+        onOpenChange={setFiltersOpen}
+        lounges={available}
+        filters={filters}
+        onChange={setFilters}
       />
 
       <ManualLocationDialog

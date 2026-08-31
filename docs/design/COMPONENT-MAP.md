@@ -78,6 +78,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | Full-bleed de confirmación | `full-bleed-success.tsx` | §5 patrón **2** | Lleva `data-theme="dark"` incorporado |
 | App shell (miembro) | `app-shell.tsx` | §5 patrón **3** | Sidebar de 248px + área de contenido. `padded={false}` para el patrón 5 (Explore), que va a sangre. Fija la nav de los Epics 2–6 |
 | Modal sobre pantalla | `modal.tsx` | §5 patrón **4** | Radix Dialog. `width` 640 por defecto (520–540 en los diálogos de ubicación). `align="center"` + `media` para el diálogo de permiso. El patrón **18** (modal oscuro) es este mismo dentro de `data-theme="dark"` |
+| Drawer lateral | `drawer.tsx` | §5 patrón **6** | Radix Dialog con `modal={false}` — el fondo debe seguir siendo perceptible mientras se filtra. `width` 436 (472 en el patrón **18** oscuro) |
 | Explore (mapa + resultados) | `explore-layout.tsx` | §5 patrón **5** | Topbar de 88px, fila de filtros de 52px, panel de 372px + mapa. El panel es la `region` "Results" que comparten mapa y lista |
 
 ### Utilidades de superficie (`globals.css`)
@@ -124,6 +125,9 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `explore/city-map.tsx` · `city-map-base.tsx` · `sun-mark.tsx` | Story 2.1 — el plano dibujado, sus markers y el zoom/pan |
 | `explore/location-dialogs.tsx` | Story 2.1 — permiso de ubicación y entrada manual |
 | `explore/result-card.tsx` · `lounge-callout.tsx` · `amenity-icon.tsx` | Story 2.1 — la lista del panel y el detalle sobre el mapa |
+| `explore/filter-drawer.tsx` · `availability-calendar.tsx` | Story 2.2 — amenities, distancia, calendario y franja |
+| `explore/no-results.tsx` | Story 2.2 — estado vacío con las sugerencias que devuelven resultados |
+| `lib/filters.ts` | Story 2.2 — el pipeline que comparten mapa y lista: filtros, chips activos y sugerencias |
 | `lib/distance.ts` | Story 2.1 — conversión mi/km y tiempo a pie |
 | `lib/location.ts` | Story 2.1 — ciudades de muestra y su búsqueda |
 | `lib/availability.ts` | Etiqueta de disponibilidad a partir de las plazas del día |
@@ -150,7 +154,7 @@ Diff de aprobación · Barra de consumo · Tabla comparativa
 
 ### Patrones de §5 sin implementar
 
-6 Drawer lateral · 7 Perfil de lounge · 8 Sub-vista ·
+7 Perfil de lounge · 8 Sub-vista ·
 9 Flujo por pasos con rail · 10 Tarjeta de confirmación oscura · 11 Pase digital ·
 12 Consola de recepción · 13 Sección de cuenta · 14 Panel de notificaciones ·
 15 App shell del partner · 16 Lista de datos oscura · 17 Panel de actividad ·
@@ -187,6 +191,9 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 | Texto legal del modal de términos | Relleno estructural, tal como ya advierte `DESIGN-SYSTEM.md` §6 (Fase 1). A reemplazar por el documento real de En Soleil |
 | El acuse de "reset link sent" no tiene artboard | Se resuelve como segundo estado de `/forgot-password`, reutilizando la anatomía de `Verification.dc.html` (medallón de 76px + destinatario + reenvío), en lugar de inventar una pantalla |
 | `/login` añade una nota de 11.5px bajo "Remember me" | El artboard no la trae, pero `flow-onboarding.md` fija el alcance del token ("Set remember token: 30-day auto-logout"). Decirlo evita que el miembro adivine qué activa la casilla |
+| El día 14 de septiembre de 2025 es domingo, y el artboard lo llama "Sat" | La rejilla del propio artboard pone el 1 en lunes y el 14 en la columna del domingo, así que el calendario y el chip son coherentes entre sí aunque no con esa palabra |
+| Los conteos de las sugerencias de `NoResults` se calculan, no se copian | El artboard promete "9 / 6 / 4 lounges would match". Con el catálogo de muestra salen otras cifras, pero cada una es cierta: la sugerencia que se ofrece devuelve exactamente los que anuncia |
+| El calendario del drawer marca los días sin mirar el resto de filtros | Si dependiera de ellos, el día que deja la búsqueda a cero quedaría deshabilitado y el estado "sin resultados" sería inalcanzable — justo el que el artboard dibuja |
 | El mapa es el SVG del artboard, no un proveedor de tiles | §6 (Fase 3) previó sustituirlo "por el proveedor real", pero este repo no llama a servicios externos ni gestiona claves. El zoom y el pan son reales sobre ese dibujo |
 | Los markers se posicionan en % del plano, no en los píxeles del artboard | El artboard es 1440×900 fijo. En % el marker sigue al dibujo a cualquier tamaño; el `.map-canvas` mantiene la proporción 820×760 |
 | El callout salta al otro lado del marker pasado el 55% del ancho | El artboard solo dibuja el caso de un marker centrado. Anclado siempre a la derecha, se salía del mapa |

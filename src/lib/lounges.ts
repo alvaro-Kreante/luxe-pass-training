@@ -1,4 +1,5 @@
 import type { AmenityId } from "./amenities";
+import type { TimeBand } from "./availability";
 
 /**
  * Catálogo de muestra de lounges. Los siete de Nueva York que se ven en los
@@ -22,6 +23,10 @@ export interface Lounge {
   slotsToday: number;
   /** Horario de hoy, tal como lo escribe `ListView.dc.html`. */
   hours: string;
+  /** Franjas que el lounge admite (Filters.dc.html). */
+  bands: TimeBand[];
+  /** Días de la semana que no admite reservas (0 = domingo). */
+  closedWeekdays?: number[];
   /** Posición en el mapa dibujado, en coordenadas del viewBox 820×760. */
   map?: { x: number; y: number };
   /** Destacado en el Home del área de miembro. */
@@ -41,6 +46,8 @@ export const LOUNGES: Lounge[] = [
     openNow: true,
     slotsToday: 8,
     hours: "Open until 11 PM",
+    bands: ["morning", "afternoon", "evening"],
+    closedWeekdays: [0],
     map: { x: 375, y: 375 },
     featured: true,
   },
@@ -56,6 +63,8 @@ export const LOUNGES: Lounge[] = [
     openNow: true,
     slotsToday: 6,
     hours: "Open until 10 PM",
+    bands: ["morning", "afternoon", "evening"],
+    closedWeekdays: [0],
     map: { x: 158, y: 208 },
     featured: true,
   },
@@ -71,6 +80,8 @@ export const LOUNGES: Lounge[] = [
     openNow: false,
     slotsToday: 3,
     hours: "Opens 8 AM",
+    bands: ["morning", "afternoon"],
+    closedWeekdays: [0],
     map: { x: 574, y: 168 },
   },
   {
@@ -85,6 +96,8 @@ export const LOUNGES: Lounge[] = [
     openNow: true,
     slotsToday: 5,
     hours: "Open until 9 PM",
+    bands: ["morning", "afternoon", "evening"],
+    closedWeekdays: [0],
     map: { x: 724, y: 232 },
   },
   {
@@ -99,6 +112,7 @@ export const LOUNGES: Lounge[] = [
     openNow: true,
     slotsToday: 0,
     hours: "Open until 1 AM",
+    bands: ["afternoon", "evening"],
     map: { x: 242, y: 498 },
   },
   {
@@ -113,6 +127,8 @@ export const LOUNGES: Lounge[] = [
     openNow: true,
     slotsToday: 7,
     hours: "Open until 8 PM",
+    bands: ["morning", "afternoon"],
+    closedWeekdays: [1],
     map: { x: 610, y: 546 },
   },
   {
@@ -127,6 +143,7 @@ export const LOUNGES: Lounge[] = [
     openNow: true,
     slotsToday: 4,
     hours: "Open until 10 PM",
+    bands: ["afternoon", "evening"],
     map: { x: 770, y: 608 },
   },
   {
@@ -141,6 +158,7 @@ export const LOUNGES: Lounge[] = [
     openNow: true,
     slotsToday: 9,
     hours: "Open until 11 PM",
+    bands: ["morning", "afternoon", "evening"],
     map: { x: 450, y: 662 },
   },
   {
@@ -155,6 +173,8 @@ export const LOUNGES: Lounge[] = [
     openNow: true,
     slotsToday: 2,
     hours: "Open until 9 PM",
+    bands: ["morning", "evening"],
+    closedWeekdays: [2],
     map: { x: 300, y: 120 },
   },
   {
@@ -169,6 +189,7 @@ export const LOUNGES: Lounge[] = [
     openNow: false,
     slotsToday: 6,
     hours: "Opens 9 AM",
+    bands: ["morning", "afternoon"],
     map: { x: 100, y: 560 },
   },
   {
@@ -183,6 +204,8 @@ export const LOUNGES: Lounge[] = [
     openNow: true,
     slotsToday: 0,
     hours: "Open until 10 PM",
+    bands: ["afternoon", "evening"],
+    closedWeekdays: [1],
     map: { x: 660, y: 430 },
   },
   {
@@ -197,6 +220,7 @@ export const LOUNGES: Lounge[] = [
     openNow: true,
     slotsToday: 5,
     hours: "Open until 11 PM",
+    bands: ["morning", "afternoon", "evening"],
     map: { x: 330, y: 250 },
   },
   {
@@ -211,6 +235,7 @@ export const LOUNGES: Lounge[] = [
     openNow: true,
     slotsToday: 6,
     hours: "Open until 9 PM",
+    bands: ["morning", "afternoon", "evening"],
   },
   {
     id: "passaic-house",
@@ -224,6 +249,8 @@ export const LOUNGES: Lounge[] = [
     openNow: true,
     slotsToday: 4,
     hours: "Open until 8 PM",
+    bands: ["morning", "afternoon"],
+    closedWeekdays: [0],
   },
   {
     id: "aurora-gate-lounge",
@@ -237,6 +264,7 @@ export const LOUNGES: Lounge[] = [
     openNow: true,
     slotsToday: 11,
     hours: "Open until 1 AM",
+    bands: ["morning", "afternoon", "evening"],
   },
   {
     id: "the-pelham-room",
@@ -250,6 +278,8 @@ export const LOUNGES: Lounge[] = [
     openNow: false,
     slotsToday: 5,
     hours: "Opens 10 AM",
+    bands: ["morning", "afternoon"],
+    closedWeekdays: [0, 1],
   },
   {
     id: "marbella-sky-lounge",
@@ -263,6 +293,7 @@ export const LOUNGES: Lounge[] = [
     openNow: true,
     slotsToday: 7,
     hours: "Open until 12 AM",
+    bands: ["afternoon", "evening"],
     featured: true,
   },
 ];
