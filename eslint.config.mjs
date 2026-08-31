@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // El build de producción escribe aquí (distDir en next.config.ts). Sin este
+    // ignore, un `lint` después de un `build` recorre los artefactos generados.
+    ".next-build/**",
     // Generados por @ducanh2912/next-pwa en cada build — no son código fuente.
     "public/sw.js",
     "public/sw.js.map",
