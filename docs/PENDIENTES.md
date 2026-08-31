@@ -52,13 +52,19 @@ aceptación con fecha y versión.
 
 ## 2. Provisional — cae solo al avanzar los epics
 
-### 2.1 La ruta `/` es un índice de pantallas
+### 2.1 La nav del App shell apunta a pantallas que aún no existen
 
-`src/app/page.tsx` es una lista navegable de las pantallas implementadas, hecha
-para poder recorrerlas sin escribir URLs. **No sale de ningún artboard.**
+El App shell (patrón 3) fija la navegación completa del área de miembro
+— Home · Explore · My Pass · Profile — porque así la declara el design system y
+así la dibujan todos los artboards de las Fases 1 y 3. Pero solo `/` existe:
+**`/explore`, `/my-pass` y `/profile` dan 404**, y lo mismo la ficha
+`/lounges/[id]` a la que apunta cada "View details".
 
-**Se sustituye:** con el Epic 2, por el Home del área de miembro dentro del App
-shell (patrón 3), cuyo artboard es `docs/design/epic-1-onboarding/Home.dc.html`.
+Ninguna es deuda: son las pantallas de los epics siguientes. Se listan aquí para
+que nadie las tome por un enlace roto al recorrer el mockup.
+
+**Se resuelve:** `/explore` con el resto del Epic 2 · `/lounges/[id]` con el
+Epic 3 · `/my-pass` con el Epic 5 · `/profile` con el Epic 6.
 
 ### 2.2 Enlace "I have verified my email"
 
@@ -160,3 +166,4 @@ tiene una respuesta y lo que falta es seguirla.
 | Las 5 pantallas de la Story 1.1 repetían la frase de marca de `Main` | 30 ago 2026 | Cada pantalla usa la de su propio artboard |
 | `npm run lint` recorría `.next-build` y devolvía 4677 problemas tras cualquier build | 31 ago 2026 | `.next-build/**` añadido a los ignores de `eslint.config.mjs`; el ignore se quedó sin actualizar al separar los `distDir` |
 | No había suite de tests, con TDD ya declarado obligatorio | 31 ago 2026 | Vitest + Testing Library sobre jsdom; 60 tests cubren la lógica, los estados y la navegación del Epic 1 |
+| La ruta `/` era un índice provisional de pantallas, sin artboard | 31 ago 2026 | Sustituida por el Home del área de miembro (`Home.dc.html`) dentro del App shell del patrón 3 |

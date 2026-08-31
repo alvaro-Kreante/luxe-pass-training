@@ -64,6 +64,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `SelectableChip` | `chip.tsx` | §4 Chip seleccionable | `selected` | E1 |
 | `AddChip` | `chip.tsx` | §4 (variante "Other", borde discontinuo) | — | E1 |
 | `RemovableChip` | `chip.tsx` | §4 Chip removible | — | E1 |
+| `Rating` | `rating.tsx` | **Derivado** — §4 no le da fila; la geometría (estrella dorada de 13px + cifra en 12.5px/600) se repite en `Home`, `ListView` y el callout del mapa | — | E2 |
 | `Notice` | `notice.tsx` | **Derivado** — §4 geometría de "Fila de opción" + borde discontinuo de §5 Estados | `tone`: muted·attention | E1 |
 
 ## Capa 2 — Patrones (`src/components/patterns/`)
@@ -72,6 +73,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 |---|---|---|---|
 | Split-screen de autenticación | `auth-split.tsx` | §5 patrón **1** | `cardWidth` 440/460 · `centered`. Sirve a sign up, log in, reset password, verificación y pasos de perfil |
 | Full-bleed de confirmación | `full-bleed-success.tsx` | §5 patrón **2** | Lleva `data-theme="dark"` incorporado |
+| App shell (miembro) | `app-shell.tsx` | §5 patrón **3** | Sidebar de 248px + área de contenido. `padded={false}` para el patrón 5 (Explore), que va a sangre. Fija la nav de los Epics 2–6 |
 | Modal sobre pantalla | `modal.tsx` | §5 patrón **4** | Radix Dialog. `width` 640 por defecto. El patrón **18** (modal oscuro) es este mismo dentro de `data-theme="dark"` |
 
 ### Utilidades de superficie (`globals.css`)
@@ -82,6 +84,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `.surface-night-panel` | §5 patrón 1 (panel de marca) | 1, 2 |
 | `.surface-blush` | §5 patrón 1 (área de contenido) | 1 |
 | `.dot-pattern` | §2 puntos dorados a 18px | 1, 2, 10, 12, 15, 21 |
+| `.lounge-hero` | Placeholder de imagen de lounge (3 tonos) | Card del Home |
 | `.skeleton` | §5 Estados (carga) | — |
 
 ## Capa 3 — Pantallas
@@ -96,7 +99,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `/welcome` | `Welcome.dc.html` | 1.1 |
 | `/login` | `Login.dc.html` | 1.2 |
 | `/forgot-password` | `ForgotPassword.dc.html` | 1.2 |
-| `/` | — | Índice provisional; lo sustituye el Home del patrón 3 |
+| `/` | `Home.dc.html` (epic-1-onboarding) | Home del área de miembro |
 
 ### Lógica de epic (`src/components/onboarding/`, `src/lib/`)
 
@@ -106,6 +109,9 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `onboarding/profile-context.tsx` | Borrador de perfil compartido por los 3 pasos (Context, sin persistencia) |
 | `lib/registration.ts` | Validación de email, contraseña (8+ y 1 especial) y email duplicado |
 | `lib/authentication.ts` | Story 1.2 — credenciales de muestra y las constantes de los criterios (5 intentos, 15 min, 30 días) |
+| `lib/lounges.ts` | Catálogo de muestra de lounges y los destacados del Home |
+| `lib/member.ts` | El miembro de muestra que pinta el App shell |
+| `lounges/featured-lounge-card.tsx` | Card de lounge destacado del Home |
 
 ---
 
@@ -128,7 +134,7 @@ Diff de aprobación · Barra de consumo · Tabla comparativa
 
 ### Patrones de §5 sin implementar
 
-3 App shell (miembro) · 5 Explore · 6 Drawer lateral · 7 Perfil de lounge · 8 Sub-vista ·
+5 Explore · 6 Drawer lateral · 7 Perfil de lounge · 8 Sub-vista ·
 9 Flujo por pasos con rail · 10 Tarjeta de confirmación oscura · 11 Pase digital ·
 12 Consola de recepción · 13 Sección de cuenta · 14 Panel de notificaciones ·
 15 App shell del partner · 16 Lista de datos oscura · 17 Panel de actividad ·
@@ -165,4 +171,7 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 | Texto legal del modal de términos | Relleno estructural, tal como ya advierte `DESIGN-SYSTEM.md` §6 (Fase 1). A reemplazar por el documento real de En Soleil |
 | El acuse de "reset link sent" no tiene artboard | Se resuelve como segundo estado de `/forgot-password`, reutilizando la anatomía de `Verification.dc.html` (medallón de 76px + destinatario + reenvío), en lugar de inventar una pantalla |
 | `/login` añade una nota de 11.5px bajo "Remember me" | El artboard no la trae, pero `flow-onboarding.md` fija el alcance del token ("Set remember token: 30-day auto-logout"). Decirlo evita que el miembro adivine qué activa la casilla |
+| En el App shell, la sidebar de 248px pasa a barra de navegación inferior por debajo de `lg` | Es una PWA: en móvil la nav vive abajo. Los artboards son desktop 1440×900 |
+| "View details" lleva `aria-label="View details for ‹lounge›"` | Tres enlaces con el mismo texto visible son indistinguibles para un lector de pantalla. El texto en pantalla no cambia |
+| Los items **My Pass** y **Profile** del shell apuntan a rutas que aún no existen | Sus artboards son de los Epics 6 y 7. El shell fija la nav completa desde ya, tal como el design system la declara |
 | El bloqueo por intentos fallidos no persiste | Es un contador en `useState`: basta para alcanzar y ver el estado bloqueado, que es lo que el diseño tiene que mostrar. La caducidad de 15 minutos se enuncia en el aviso, no se cuenta |

@@ -264,3 +264,33 @@
   opacity: 0.6;
   pointer-events: none;
 }
+
+/* ============================================================
+   Placeholder de imagen de lounge
+   No hay fotografía del cliente: los artboards resuelven el hero de la card
+   con el radial de marca y los puntos dorados a 14px. Tres tonos para que
+   una rejilla de cards no se vea repetida.
+   ============================================================ */
+
+.lounge-hero {
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(circle at 30% 20%, #3a3128, var(--panel-black) 70%);
+}
+
+.lounge-hero[data-tone="2"] {
+  background: radial-gradient(circle at 70% 30%, #4a3626, var(--panel-black) 70%);
+}
+
+.lounge-hero[data-tone="3"] {
+  background: radial-gradient(circle at 40% 60%, #362d24, var(--panel-black) 70%);
+}
+
+.lounge-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgb(201 168 118 / 0.22) 1px, transparent 1.5px);
+  background-size: 14px 14px;
+  pointer-events: none;
+}
