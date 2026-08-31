@@ -44,13 +44,15 @@ Ejemplos ya hechos: la comprobación de email duplicado consulta una lista de do
 
 **Diseño: los 9 epics están diseñados** (Fase 9 cerrada). Cualquier trabajo de diseño nuevo es revisión o corrección.
 
-**Código: 2 de 24 historias implementadas** — el Epic 1 está completo.
+**Código: 5 de 24 historias implementadas** — los Epics 1 y 2 están completos.
 
 | Epic | Historias | Estado |
 |---|---|---|
 | 1 · User Onboarding & Authentication | 1.1 User registration | ✅ **Implementada** |
 | | 1.2 User login & authentication | ✅ **Implementada** |
-| 2 · Location Discovery & Search | 2.1 · 2.2 · 2.3 | ⬜ Pendiente |
+| 2 · Location Discovery & Search | 2.1 Map-based lounge discovery | ✅ **Implementada** |
+| | 2.2 Lounge filtering & search | ✅ **Implementada** |
+| | 2.3 List view alternative | ✅ **Implementada** |
 | 3 · Lounge Profiles & Details | 3.1 · 3.2 | ⬜ Pendiente |
 | 4 · Booking System | 4.1 · 4.2 · 4.3 | ⬜ Pendiente |
 | 5 · QR Code & Check-in | 5.1 · 5.2 · 5.3 | ⬜ Pendiente |
@@ -63,7 +65,7 @@ Ejemplos ya hechos: la comprobación de email duplicado consulta una lista de do
 
 | Ruta | Artboard | Story |
 |---|---|---|
-| `/` | — | Índice **provisional** de pantallas. Lo sustituye el Home del App shell (patrón 3) en el Epic 2 |
+| `/` | `Home.dc.html` | Home del área de miembro, dentro del App shell |
 | `/signup` | `Main.dc.html` + `Terms.dc.html` | 1.1 |
 | `/verify-email` | `Verification.dc.html` | 1.1 |
 | `/onboarding/basics` | `ProfileBasic.dc.html` | 1.1 |
@@ -72,10 +74,16 @@ Ejemplos ya hechos: la comprobación de email duplicado consulta una lista de do
 | `/welcome` | `Welcome.dc.html` | 1.1 |
 | `/login` | `Login.dc.html` | 1.2 |
 | `/forgot-password` | `ForgotPassword.dc.html` | 1.2 |
+| `/explore` | Los 9 artboards de la Fase 3 | 2.1 · 2.2 · 2.3 |
 
-Los 10 artboards de la Fase 1 están cubiertos salvo `Home.dc.html`, que es el App shell (patrón 3) y entra con el Epic 2.
+Los 10 artboards de la Fase 1 y los 9 de la Fase 3 están cubiertos. `/explore` reúne
+siete de esos nueve como estados de una misma pantalla: solo el permiso de ubicación
+y la entrada manual son diálogos aparte.
 
-Lo construido en el Epic 1 que ya sirve al resto: 12 primitivos, 3 patrones de pantalla y la capa de tokens completa. Ver `docs/design/COMPONENT-MAP.md`.
+Lo construido que ya sirve al resto: 17 primitivos, 6 patrones de pantalla y la capa
+de tokens completa. El **App shell (patrón 3)** fija la navegación de los Epics 2–6,
+y el **drawer lateral (patrón 6)** es el que reutiliza el Partner Dashboard en
+oscuro. Ver `docs/design/COMPONENT-MAP.md`.
 
 **Cada artboard tiene su propia frase de marca** en el panel izquierdo del patrón 1 (`Join a community of discerning travelers.`, `Your next moment of calm is waiting.`, `Tell us who you are.`…). No reutilizar la de otra pantalla: extraerla del `.dc.html` correspondiente.
 
