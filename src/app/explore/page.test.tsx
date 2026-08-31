@@ -2,6 +2,8 @@ import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { renderToString } from "react-dom/server";
+
 import ExplorePage from "./page";
 
 /**
@@ -543,5 +545,69 @@ describe("la lista mientras carga", () => {
 
     expect(screen.getByText("Finding lounges near you")).toBeInTheDocument();
     expect(screen.queryByRole("heading", { level: 3 })).toBeNull();
+  });
+});
+
+/**
+ * Regresión: `/explore` se quedaba difuminada.
+ *
+ * El desenfoque del patrón 4 acompaña a un diálogo abierto; si sobrevive al
+ * diálogo, la pantalla queda borrosa sin nada que lo explique ni forma de
+ * quitarlo. Se comprueba la clase porque aquí el desenfoque no es decoración:
+ * es lo que impide leer la pantalla.
+ */
+describe("desenfoque de la pantalla de fondo", () => {
+  function shell() {
+    return document.querySelector("[data-app-shell]")!;
+  }
+
+  it("difumina la pantalla mientras se pide el permiso", () => {
+    render(<ExplorePage />);
+
+    expect(shell().className).toContain("blur");
+  });
+
+  it("deja de difuminar en cuanto se concede el permiso", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+
+    await allowLocation(user);
+
+    expect(shell().className).not.toContain("blur");
+  });
+
+  it("deja de difuminar al elegir una ubicación a mano", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+
+    await user.click(
+      screen.getByRole("button", { name: "Enter a location instead" }),
+    );
+    await user.type(screen.getByLabelText("City or address"), "Newark");
+    await user.click(screen.getByRole("option", { name: /Newark/ }));
+    await user.click(screen.getByRole("button", { name: "Use this location" }));
+
+    expect(shell().className).not.toContain("blur");
+  });
+
+  it("no difumina nada en los estados que entran con la ubicación resuelta", () => {
+    searchParams.mockReturnValue(new URLSearchParams("offline=1"));
+
+    render(<ExplorePage />);
+
+    expect(shell().className).not.toContain("blur");
+  });
+});
+
+/**
+ * El diálogo vive en un portal, que el servidor no puede renderizar. Si el
+ * desenfoque sí viaja en el HTML, la pantalla llega borrosa y sin nada que lo
+ * explique — y así se queda si el JavaScript tarda o no llega.
+ */
+describe("lo que manda el servidor", () => {
+  it("no difumina la pantalla en el HTML inicial", () => {
+    const html = renderToString(<ExplorePage />);
+
+    expect(html).not.toContain("blur");
   });
 });

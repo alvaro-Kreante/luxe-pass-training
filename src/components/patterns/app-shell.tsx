@@ -41,6 +41,7 @@ export interface AppShellProps {
    * diálogo. El modal vive en un portal, así que no puede aplicárselo él mismo.
    */
   blurred?: boolean;
+  /** Marcador del contenedor raíz, para poder comprobar el desenfoque. */
   className?: string;
 }
 
@@ -52,11 +53,24 @@ export function AppShell({
 }: AppShellProps) {
   const pathname = usePathname();
 
+  /**
+   * Un diálogo de Radix vive en un portal, que el servidor no renderiza: si el
+   * desenfoque viajara en el HTML, la pantalla llegaría borrosa y sin nada que
+   * lo explique, y así se quedaría si el JavaScript tarda o falla. Así que el
+   * desenfoque espera al cliente, donde el diálogo sí existe.
+   */
+  const onClient = React.useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+
   return (
     <div
+      data-app-shell
       className={cn(
         "flex min-h-screen w-full bg-blush-2 lg:h-screen lg:overflow-hidden",
-        blurred && "blur-[3px]",
+        blurred && onClient && "blur-[3px]",
       )}
     >
       <nav
