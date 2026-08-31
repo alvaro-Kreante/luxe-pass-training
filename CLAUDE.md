@@ -76,6 +76,27 @@ Ejemplos ya hechos: la comprobación de email duplicado consulta una lista de do
 | `/forgot-password` | `ForgotPassword.dc.html` | 1.2 |
 | `/explore` | Los 9 artboards de la Fase 3 | 2.1 · 2.2 · 2.3 |
 
+#### Estados de `/explore`
+
+Siete de los nueve artboards de la Fase 3 son estados de la misma pantalla. Tres
+dependen del sistema o de la red, que aquí no existen, así que **se alcanzan por
+query param** — no salen de ningún artboard y desaparecen cuando haya lógica real
+(`docs/PENDIENTES.md` §2.2):
+
+| URL | Artboard | Qué enseña |
+|---|---|---|
+| `/explore` | `LocationPermission` → `Main` | Permiso, y tras concederlo el mapa |
+| `/explore` → "Enter a location instead" | `ManualLocation` | Entrada manual de ciudad |
+| `/explore` → botón **Filters** | `Filters` | Drawer de filtros (patrón 6) |
+| `/explore` → filtrar hasta cero | `NoResults` | Vacío con sugerencias |
+| `/explore` → segmented **List** | `ListView` | Lista con scroll infinito |
+| **`/explore?map=error`** | `MapError` | El mapa no carga: reintentar o pasar a lista |
+| **`/explore?offline=1`** | `Offline` | Lounges cacheados, búsqueda deshabilitada |
+| **`/explore?list=loading`** | `ListLoading` | Skeletons de la lista |
+
+Para llegar a `NoResults` como lo dibuja el artboard: Filters → WiFi → Co-working
+→ `< 2 mi` → día **14** → **2–6 PM**.
+
 Los 10 artboards de la Fase 1 y los 9 de la Fase 3 están cubiertos. `/explore` reúne
 siete de esos nueve como estados de una misma pantalla: solo el permiso de ubicación
 y la entrada manual son diálogos aparte.
@@ -292,6 +313,12 @@ prueba contra la implementación real: componentes de verdad, validaciones de ve
 datos de muestra de verdad. Mockear un componente propio para que el test pase es
 señal de que el test está mirando al sitio equivocado.
 
+Distinto es **rellenar una API del navegador que jsdom no trae**: eso no sustituye
+código del proyecto, lo hace ejecutable. `vitest.setup.ts` define un
+`IntersectionObserver` inerte porque sin él el scroll infinito de la lista no puede
+ni montarse; el test que necesita simular el centinela lo cambia por un doble con
+`vi.stubGlobal` y lo deshace en `afterEach`.
+
 Cuando llegue la capa de datos, se suma una fila de integración a la tabla de
 niveles; el ciclo y la regla de dónde sale el test no cambian.
 
@@ -361,11 +388,20 @@ src/                      Código de la aplicación Next.js
     ui/                   Primitivos = DESIGN-SYSTEM §4 (Button, Input, Chip, Card...)
     patterns/             Layouts   = DESIGN-SYSTEM §5 (AuthSplit, Modal...)
     onboarding/           Lógica del Epic 1 (TermsModal, ProfileDraft)
+    explore/              Lógica del Epic 2 (CityMap, FilterDrawer, LoungeList...)
+    lounges/              Piezas de lounge compartidas por varios epics (Thumb, Card)
     charts/               Gráficos Recharts (BarChart, LineChart)
   lib/
     utils.ts              Utilidades (cn() para Tailwind)
     registration.ts       Reglas de validación de alta (Story 1.1)
     authentication.ts     Credenciales, bloqueo y "remember me" (Story 1.2)
+    lounges.ts            Catálogo de muestra (12 en NY, 3 Newark, 1 New Rochelle, 1 Miami)
+    filters.ts            Pipeline de la Story 2.2, compartido por mapa y lista
+    amenities.ts          Las seis amenities y sus etiquetas
+    availability.ts       Franjas, calendario y el "hoy" del mockup (2025-09-09)
+    distance.ts           Conversión mi/km y tiempo a pie
+    location.ts           Ciudades de muestra y su búsqueda
+    member.ts             El miembro de muestra del App shell
 
   **/*.test.ts(x)         Los tests van junto al archivo que prueban
 
@@ -513,3 +549,18 @@ npx tsc --noEmit # Comprobación de tipos
 por debajo y lo deja sirviendo 500 (`__webpack_modules__[moduleId] is not a
 function`) o 404 en rutas que existen — sin avisar en su log. Si alguna vez vuelve
 a pasar: `rm -rf .next` y reiniciar el dev server.
+
+**Antes de dar por roto algo de una pantalla, comprobar que el dev server sirve
+React.** Ha pasado ya con los `distDir` separados: `.next` se queda sin
+`main-app.js` y la página **se ve entera pero no responde a nada** — la pinta el
+servidor. Ningún botón funciona y ningún modal ni drawer aparece, porque viven en
+portales que necesitan JavaScript; la nav lateral sí va, porque son `<a href>` de
+verdad. Se parece mucho a "falta implementar esa pantalla" y no lo es.
+
+```bash
+curl -s -o /dev/null -w '%{http_code}
+'   http://localhost:3000/_next/static/chunks/main-app.js   # 200 = sano
+```
+
+Si da 404: parar el dev server, `rm -rf .next`, arrancarlo otra vez y **recargar
+duro en el navegador** (Ctrl+Shift+R). Detalle en `docs/PENDIENTES.md` §4.2.
