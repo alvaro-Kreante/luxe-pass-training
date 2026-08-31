@@ -190,6 +190,7 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 |---|---|
 | Los artboards son desktop 1440×900 fijo; los componentes son responsive | La app es una PWA. En `AuthSplit`, el panel de marca de 600px se repliega a banda superior por debajo de `lg` |
 | Iconos con `lucide-react` en lugar de SVG copiados | §1 especifica *regla* (stroke 1.6–1.8, grid 24, round), no un set concreto. `lucide-react` ya estaba en `package.json` |
+| El desenfoque del patrón 4 no viaja en el HTML del servidor | El diálogo vive en un portal, que el servidor no renderiza. Si el desenfoque llegara en el HTML, la pantalla se vería borrosa y sin nada que lo explique hasta que hidratara — y así se quedaría si el JavaScript falla. `AppShell` lo aplica solo en cliente |
 | El `filter: blur(3px)` del patrón 4 lo aplica la pantalla, no el modal | Un modal en portal no puede alcanzar a su hermano en el árbol. `/signup` pasa `blur-[3px]` al `AuthSplit` mientras el modal está abierto |
 | `/verify-email` incluye "I have verified my email" | Sin backend, el enlace del correo no puede volver a la app. Desaparece cuando exista `/verify-email/[token]` |
 | Texto legal del modal de términos | Relleno estructural, tal como ya advierte `DESIGN-SYSTEM.md` §6 (Fase 1). A reemplazar por el documento real de En Soleil |
