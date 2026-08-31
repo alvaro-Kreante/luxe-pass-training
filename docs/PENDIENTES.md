@@ -158,7 +158,38 @@ y que la regla "una historia sin tests no entra" pase de convención a puerta re
 por commits directos sobre `design/screens`. Con lo segundo, el workflow en push
 sigue teniendo sentido; sin lo primero, no hay dónde bloquear un merge.
 
-### 4.2 Sin tests e2e
+### 4.2 El `.next` de dev se vuelve a quedar sin `main-app.js`
+
+Pasó el 31 de agosto de 2026, **con los `distDir` ya separados**: el dev server
+servía `/explore` con un 200 impecable, pero
+`\/_next\/static\/chunks\/main-app.js` y `app-pages-internals.js` daban **404 y no
+existían en disco**. Sin `main-app.js` no hay React en el cliente.
+
+El síntoma no se parece en nada a la causa, y por eso conviene tenerlo escrito:
+la pantalla **se ve entera y correcta** — la pinta el servidor — pero no responde
+a nada. Ningún botón funciona, ningún diálogo ni drawer aparece (viven en
+portales, que necesitan JavaScript), y la navegación lateral sí va, porque son
+`<a href>` de verdad. Es fácil leerlo como "faltan pantallas por implementar".
+
+**Cómo reconocerlo en diez segundos:**
+
+```bash
+curl -s -o /dev/null -w '%{http_code}
+'   http://localhost:3000/_next/static/chunks/main-app.js   # 200 = sano
+```
+
+**Arreglo:** parar el dev server, `rm -rf .next`, y volver a arrancarlo. Después,
+**recarga dura en el navegador** (Ctrl+Shift+R): el HTML y los chunks rotos se
+quedan cacheados.
+
+Los `distDir` separados no bastaron, así que la causa exacta sigue sin
+identificarse — la sospecha es lanzar `npm run build` con el dev server vivo,
+aunque escriban en carpetas distintas.
+
+**Desbloquea:** dar con el disparador. Mientras tanto, la comprobación de arriba
+va antes que cualquier diagnóstico de "esto no funciona en la pantalla".
+
+### 4.3 Sin tests e2e
 
 La suite es Vitest + Testing Library sobre jsdom: la navegación se comprueba con
 `next/navigation` mockeado, verificando que `router.push` recibe la ruta correcta.
