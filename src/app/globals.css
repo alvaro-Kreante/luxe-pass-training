@@ -332,3 +332,14 @@
 .map-offline {
   filter: grayscale(0.55) opacity(0.8);
 }
+
+/* §5 "Estados" — spinner de 18px para el infinite scroll y la carga de lista */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}

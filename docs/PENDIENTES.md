@@ -86,14 +86,15 @@ provoque de verdad:
 | Permiso de ubicación | Diálogo propio y un `useState` con tres pasos (`asking` · `manual` · `located`). No se llama a `navigator.geolocation` | La API de geolocalización del navegador, conservando la rama manual para cuando la deniegan |
 | Error de carga del mapa | `\/explore?map=error`. "Retry" limpia el estado y el mapa aparece: no hay un segundo intento que pueda fallar | Un tiempo de espera real contra el proveedor de mapas, con el umbral de 3 s del criterio |
 | Modo offline | `\/explore?offline=1`, con los seis lounges más cercanos como "cacheados" | `navigator.onLine` + lo que el service worker tenga guardado de verdad |
+| Carga de la lista | `\/explore?list=loading` deja la lista en skeletons para siempre: no hay nada que esperar | El estado de carga real mientras se piden los lounges |
 
-Los dos query params **no salen de ningún artboard**: son la única manera de
+Los tres query params **no salen de ningún artboard**: son la única manera de
 alcanzar esos estados sin añadir a la interfaz un botón de simulación que el
 diseño no contempla.
 
 **Al conectar la lógica real hay que quitar las tres simulaciones**, no dejarlas
 conviviendo con ella: los query params desaparecen, y con ellos la rama
-`startsWithMapError` de `src/app/explore/page.tsx`.
+`startsWithMapError` y `listLoading` de `src/app/explore/page.tsx`.
 
 **Desbloquea:** que el proyecto deje de ser solo diseño — es decir, la app de
 `app.luxepass.co`, no este repo.
@@ -134,6 +135,7 @@ nada los hace cumplir.
 | 2.1 | Map loads within 3 seconds on good connection | No hay carga que medir: el plano es un SVG del propio bundle. El estado de fallo se alcanza por query param |
 | 2.1 | Offline mode shows cached nearby locations | Los "cacheados" son los seis primeros del catálogo; el service worker no interviene |
 | 2.1 | Distance display in miles/km based on user preference | El toggle de la topbar hace la conversión de verdad, pero el ajuste no se lee del teléfono ni se recuerda |
+| 2.3 | Loading states while fetching data | No hay petición que esperar: el estado se alcanza por query param — ver 2.2 |
 
 Los enlaces de las tiendas de `/welcome` apuntan a `#`: no existen todavía las
 fichas de App Store ni Google Play.

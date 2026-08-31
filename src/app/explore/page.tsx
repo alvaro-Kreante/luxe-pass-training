@@ -20,6 +20,7 @@ import {
 } from "@/components/explore/location-dialogs";
 import { FilterDrawer } from "@/components/explore/filter-drawer";
 import { LoungeCallout } from "@/components/explore/lounge-callout";
+import { LoungeList } from "@/components/explore/lounge-list";
 import { NoResults } from "@/components/explore/no-results";
 import { ResultCard } from "@/components/explore/result-card";
 import { Button } from "@/components/ui/button";
@@ -28,7 +29,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Input } from "@/components/ui/input";
 import { Segmented } from "@/components/ui/segmented";
-import type { DistanceUnit } from "@/lib/distance";
+import { formatDistanceBand, type DistanceUnit } from "@/lib/distance";
 import {
   EMPTY_FILTERS,
   activeFilterChips,
@@ -70,14 +71,17 @@ function ExploreScreen() {
   const params = useSearchParams();
   const offline = params.get("offline") === "1";
   const startsWithMapError = params.get("map") === "error";
+  const listLoading = params.get("list") === "loading";
 
   /** Los estados de borde entran con la ubicación ya resuelta, como el artboard. */
   const [step, setStep] = React.useState<LocationStep>(
-    offline || startsWithMapError ? "located" : "asking",
+    offline || startsWithMapError || listLoading ? "located" : "asking",
   );
   const [cityId, setCityId] = React.useState(DEFAULT_CITY_ID);
   const [unit, setUnit] = React.useState<DistanceUnit>("mi");
-  const [view, setView] = React.useState<"map" | "list">("map");
+  const [view, setView] = React.useState<"map" | "list">(
+    listLoading ? "list" : "map",
+  );
   const [mapFailed, setMapFailed] = React.useState(startsWithMapError);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = React.useState(false);
@@ -187,7 +191,7 @@ function ExploreScreen() {
           </>
         }
         panel={
-          empty ? null : (
+          empty || view === "list" ? null : (
           <>
             <div className="px-5.5 pb-3 pt-5">
               <Eyebrow className="mb-1.5">
@@ -227,7 +231,18 @@ function ExploreScreen() {
             onBackToMap={() => setFilters(EMPTY_FILTERS)}
             onClearAll={() => setFilters(EMPTY_FILTERS)}
           />
-        ) : view === "map" ? (
+        ) : view === "list" ? (
+          <LoungeList
+            lounges={lounges}
+            unit={unit}
+            loading={listLoading}
+            distanceNote={
+              filters.maxDistanceMiles === null
+                ? `Searching near ${cityLabel(city)}`
+                : `Searching within ${formatDistanceBand(filters.maxDistanceMiles, unit)} of your location`
+            }
+          />
+        ) : (
           mapFailed ? (
             <MapErrorState
               count={lounges.length}
@@ -248,7 +263,7 @@ function ExploreScreen() {
               {selected ? <LoungeCallout lounge={selected} unit={unit} /> : null}
             </CityMap>
           )
-        ) : null}
+        )}
       </ExploreLayout>
 
       <LocationPermissionDialog

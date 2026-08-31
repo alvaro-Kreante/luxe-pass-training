@@ -26,7 +26,8 @@ export function ExploreLayout({
   filters?: React.ReactNode;
   /** Aviso a ancho completo sobre la topbar — el de offline. */
   banner?: React.ReactNode;
-  panel: React.ReactNode;
+  /** El panel de 372px. La vista de lista va a ancho completo y no lo trae. */
+  panel?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
@@ -44,15 +45,17 @@ export function ExploreLayout({
       ) : null}
 
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <section
-          aria-label="Results"
-          className={cn(
-            "flex shrink-0 flex-col border-line bg-surface",
-            "lg:w-[372px] lg:border-r",
-          )}
-        >
-          {panel}
-        </section>
+        {panel ? (
+          <section
+            aria-label="Results"
+            className={cn(
+              "flex shrink-0 flex-col border-line bg-surface",
+              "lg:w-[372px] lg:border-r",
+            )}
+          >
+            {panel}
+          </section>
+        ) : null}
 
         {children}
       </div>

@@ -67,6 +67,8 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `Segmented` | `segmented.tsx` | §5 patrón 5 — los dos segmented de la topbar de Explore | `size`: md(50px)·sm(38px) · `icon` por opción | E2 |
 | `StatusChip` | `status-chip.tsx` | §5 "Estados" — disponibilidad | `available` · `size`: md(11.5px)·sm(11px) | E2 |
 | `EmptyState` | `empty-state.tsx` | §5 "Estados" — vacío / error | `width` 440–660 · `icon` · `footnote` | E2 |
+| `Spinner` | `spinner.tsx` | §5 "Estados" — spinner de 18px | `size` | E2 |
+| `Skeleton` | `skeleton.tsx` | §5 "Estados" — carga, misma geometría que la pieza real | — | E2 |
 | `Rating` | `rating.tsx` | **Derivado** — §4 no le da fila; la geometría (estrella dorada de 13px + cifra en 12.5px/600) se repite en `Home`, `ListView` y el callout del mapa | — | E2 |
 | `Notice` | `notice.tsx` | **Derivado** — §4 geometría de "Fila de opción" + borde discontinuo de §5 Estados | `tone`: muted·attention | E1 |
 
@@ -90,6 +92,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `.surface-blush` | §5 patrón 1 (área de contenido) | 1 |
 | `.dot-pattern` | §2 puntos dorados a 18px | 1, 2, 10, 12, 15, 21 |
 | `.lounge-hero` | Placeholder de imagen de lounge (3 tonos) | Card del Home, `LoungeThumb` |
+| `.spinner` | §5 "Estados" — giro de 1s | `Spinner` |
 | `.map-canvas` | §5 "Mapa" — el plano cubre su contenedor sin deformarse | `CityMap` |
 | `.map-marker` | §5 "Mapa" — gota de 36 / 46px | `CityMap` |
 | `.map-offline` | §5 "Mapa" — plano cacheado en gris | `CityMap` |
@@ -108,7 +111,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `/login` | `Login.dc.html` | 1.2 |
 | `/forgot-password` | `ForgotPassword.dc.html` | 1.2 |
 | `/` | `Home.dc.html` (epic-1-onboarding) | Home del área de miembro |
-| `/explore` | `Main.dc.html` + `LocationPermission` + `ManualLocation` + `MapError` + `Offline` | 2.1 |
+| `/explore` | `Main` + `LocationPermission` + `ManualLocation` + `MapError` + `Offline` + `Filters` + `NoResults` + `ListView` + `ListLoading` | 2.1 · 2.2 · 2.3 |
 
 ### Lógica de epic (`src/components/onboarding/`, `src/lib/`)
 
@@ -128,6 +131,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `explore/filter-drawer.tsx` · `availability-calendar.tsx` | Story 2.2 — amenities, distancia, calendario y franja |
 | `explore/no-results.tsx` | Story 2.2 — estado vacío con las sugerencias que devuelven resultados |
 | `lib/filters.ts` | Story 2.2 — el pipeline que comparten mapa y lista: filtros, chips activos y sugerencias |
+| `explore/lounge-list.tsx` · `lounge-list-item.tsx` | Story 2.3 — la lista, su scroll infinito y su estado de carga |
 | `lib/distance.ts` | Story 2.1 — conversión mi/km y tiempo a pie |
 | `lib/location.ts` | Story 2.1 — ciudades de muestra y su búsqueda |
 | `lib/availability.ts` | Etiqueta de disponibilidad a partir de las plazas del día |
@@ -191,6 +195,8 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 | Texto legal del modal de términos | Relleno estructural, tal como ya advierte `DESIGN-SYSTEM.md` §6 (Fase 1). A reemplazar por el documento real de En Soleil |
 | El acuse de "reset link sent" no tiene artboard | Se resuelve como segundo estado de `/forgot-password`, reutilizando la anatomía de `Verification.dc.html` (medallón de 76px + destinatario + reenvío), en lugar de inventar una pantalla |
 | `/login` añade una nota de 11.5px bajo "Remember me" | El artboard no la trae, pero `flow-onboarding.md` fija el alcance del token ("Set remember token: 30-day auto-logout"). Decirlo evita que el miembro adivine qué activa la casilla |
+| El scroll infinito de la lista carga de cuatro en cuatro | El artboard muestra "Showing 4 of 12" y el pie "Loading more lounges…". Un `IntersectionObserver` sobre ese pie pide la siguiente tanda |
+| `vitest.setup.ts` rellena `IntersectionObserver` | jsdom no lo implementa, y sin él el scroll infinito no puede ni existir. Es una API del navegador que falta, no un mock de código del proyecto — la única excepción además de `next/navigation` |
 | El día 14 de septiembre de 2025 es domingo, y el artboard lo llama "Sat" | La rejilla del propio artboard pone el 1 en lunes y el 14 en la columna del domingo, así que el calendario y el chip son coherentes entre sí aunque no con esa palabra |
 | Los conteos de las sugerencias de `NoResults` se calculan, no se copian | El artboard promete "9 / 6 / 4 lounges would match". Con el catálogo de muestra salen otras cifras, pero cada una es cierta: la sugerencia que se ofrece devuelve exactamente los que anuncia |
 | El calendario del drawer marca los días sin mirar el resto de filtros | Si dependiera de ellos, el día que deja la búsqueda a cero quedaría deshabilitado y el estado "sin resultados" sería inalcanzable — justo el que el artboard dibuja |

@@ -1,6 +1,6 @@
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import ExplorePage from "./page";
 
@@ -20,6 +20,10 @@ vi.mock("next/navigation", () => ({
 
 beforeEach(() => {
   searchParams.mockReturnValue(new URLSearchParams());
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 function resultsPanel() {
@@ -405,5 +409,139 @@ describe("sin resultados", () => {
     expect(
       within(resultsPanel()).getByText("The Ainsworth"),
     ).toBeInTheDocument();
+  });
+});
+
+/**
+ * Story 2.3 — List View Alternative.
+ * Criterios en
+ * docs/specs/epic-2-location-discovery-search/story-2.3-list-view-alternative.md
+ */
+
+/**
+ * jsdom no implementa IntersectionObserver. Se sustituye por un doble que
+ * guarda el callback para poder simular que el centinela entra en pantalla:
+ * es una API del navegador que falta, no una pieza del proyecto.
+ */
+function observeIntersections() {
+  const callbacks: IntersectionObserverCallback[] = [];
+
+  vi.stubGlobal(
+    "IntersectionObserver",
+    class {
+      constructor(callback: IntersectionObserverCallback) {
+        callbacks.push(callback);
+      }
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  );
+
+  return {
+    scrollToEnd() {
+      for (const callback of callbacks) {
+        callback(
+          [{ isIntersecting: true } as IntersectionObserverEntry],
+          {} as IntersectionObserver,
+        );
+      }
+    },
+  };
+}
+
+async function showList(user: ReturnType<typeof userEvent.setup>) {
+  await allowLocation(user);
+  await user.click(screen.getByRole("button", { name: "List" }));
+}
+
+describe("vista de lista", () => {
+  it("lista los lounges de más cerca a más lejos", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+
+    await showList(user);
+
+    const names = screen
+      .getAllByRole("heading", { level: 3 })
+      .map((heading) => heading.textContent);
+    expect(names[0]).toBe("The Ainsworth");
+    expect(names[1]).toBe("Belmont Terrace");
+  });
+
+  it("cada lounge lleva a su ficha", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+
+    await showList(user);
+
+    expect(
+      screen.getByRole("link", { name: "View details for The Ainsworth" }),
+    ).toHaveAttribute("href", "/lounges/the-ainsworth");
+  });
+
+  it("dice cuántos lounges se están viendo de cuántos", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+
+    await showList(user);
+
+    expect(screen.getByText("Showing 4 of 12")).toBeInTheDocument();
+  });
+
+  it("conserva los filtros al venir del mapa", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+    await openFilters(user);
+    await user.click(screen.getByRole("button", { name: "Spa" }));
+    await user.click(screen.getByRole("button", { name: /^Show/ }));
+
+    await user.click(screen.getByRole("button", { name: "List" }));
+
+    expect(
+      screen.getByRole("button", { name: "Remove Spa" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "View details for Belmont Terrace" }),
+    ).toBeNull();
+  });
+});
+
+describe("scroll infinito", () => {
+  it("carga más lounges al llegar al final de la lista", async () => {
+    const observer = observeIntersections();
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+    await showList(user);
+
+    expect(screen.getByText("Showing 4 of 12")).toBeInTheDocument();
+
+    await act(async () => observer.scrollToEnd());
+
+    expect(screen.getByText("Showing 8 of 12")).toBeInTheDocument();
+  });
+
+  it("deja de anunciar que quedan más cuando ya están todos", async () => {
+    const observer = observeIntersections();
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+    await showList(user);
+
+    await act(async () => observer.scrollToEnd());
+    await act(async () => observer.scrollToEnd());
+
+    expect(screen.getByText("Showing 12 of 12")).toBeInTheDocument();
+    expect(screen.queryByText("Loading more lounges…")).toBeNull();
+  });
+});
+
+describe("la lista mientras carga", () => {
+  it("no lista ningún lounge todavía", () => {
+    searchParams.mockReturnValue(new URLSearchParams("list=loading"));
+
+    render(<ExplorePage />);
+
+    expect(screen.getByText("Finding lounges near you")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 3 })).toBeNull();
   });
 });
