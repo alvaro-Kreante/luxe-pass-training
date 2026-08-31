@@ -92,9 +92,60 @@ fichas de App Store ni Google Play.
 
 ---
 
-## 4. Decisiones abiertas
+## 4. Infraestructura pendiente
 
-*(ninguna por ahora)*
+### 4.1 No hay CI
+
+Nada ejecuta `npm test`, `tsc --noEmit`, `lint` ni `build` de forma automática: las
+cuatro comprobaciones del paso 8 de la receta dependen de que quien implementa se
+acuerde de correrlas. Con TDD ya declarado obligatorio en `CLAUDE.md`, esa
+disciplina no tiene red.
+
+Falta un workflow de GitHub Actions que corra las cuatro en cada push y en cada PR,
+y que la regla "una historia sin tests no entra" pase de convención a puerta real.
+
+**Desbloquea:** decidir si el repo va a tener PRs de verdad o se sigue trabajando
+por commits directos sobre `design/screens`. Con lo segundo, el workflow en push
+sigue teniendo sentido; sin lo primero, no hay dónde bloquear un merge.
+
+### 4.2 Sin tests e2e
+
+La suite es Vitest + Testing Library sobre jsdom: la navegación se comprueba con
+`next/navigation` mockeado, verificando que `router.push` recibe la ruta correcta.
+Eso cubre el destino, no el recorrido: nadie verifica que un miembro pueda ir de
+`/signup` a `/welcome` pasando por las seis pantallas reales.
+
+Playwright se pospuso a propósito. Mientras el diseño se mueve, un e2e se rompe por
+cambios de maquetación que no son fallos, y el coste de mantenerlo supera lo que
+aporta.
+
+**Desbloquea:** que el Epic 2 cierre el App shell (patrón 3) y los flujos
+multi-pantalla dejen de cambiar de forma. Ahí un e2e por historia empieza a pagar.
+
+---
+
+## 5. Decisiones abiertas
+
+### 5.1 El error de términos de `/signup` no se puede llegar a ver
+
+`validateSignUp` devuelve `errors.terms`, y `src/app/signup/page.tsx` lo pinta bajo
+el botón: `{errors.terms ?? "Disabled until the terms are accepted."}`. Pero ese
+mismo botón está `disabled` mientras no haya aceptación, así que el submit nunca
+ocurre sin ella y esa rama del mensaje es inalcanzable desde la interfaz.
+
+La validación en sí es correcta y está cubierta por `src/lib/registration.test.ts`.
+Lo inalcanzable es solo el aviso en pantalla, así que no hay nada roto: hay una
+salida de código que no lleva a ningún sitio.
+
+Dos maneras de cerrarlo, y ninguna es obviamente mejor:
+
+- **Dejarlo.** El botón deshabilitado ya comunica el bloqueo y el texto fijo lo
+  explica; `errors.terms` se queda como red por si el botón deja de deshabilitarse.
+- **Habilitar el botón siempre** y que sea el submit el que muestre el error, como
+  ocurre con los demás campos. Es más consistente, pero se aparta del artboard.
+
+**Desbloquea:** decidir entre las dos, o comprobar en `Main.dc.html` si el diseño ya
+tiene una respuesta y lo que falta es seguirla.
 
 ---
 
@@ -107,3 +158,5 @@ fichas de App Store ni Google Play.
 | `public/sw.js` y `workbox-*.js` reaparecían modificados tras cada build | 30 ago 2026 | Fuera del índice e ignorados; se regeneran solos |
 | 10 archivos de scaffolding sin usar en `public/`, incluido un `public/public/` duplicado | 30 ago 2026 | Eliminados |
 | Las 5 pantallas de la Story 1.1 repetían la frase de marca de `Main` | 30 ago 2026 | Cada pantalla usa la de su propio artboard |
+| `npm run lint` recorría `.next-build` y devolvía 4677 problemas tras cualquier build | 31 ago 2026 | `.next-build/**` añadido a los ignores de `eslint.config.mjs`; el ignore se quedó sin actualizar al separar los `distDir` |
+| No había suite de tests, con TDD ya declarado obligatorio | 31 ago 2026 | Vitest + Testing Library sobre jsdom; 60 tests cubren la lógica, los estados y la navegación del Epic 1 |

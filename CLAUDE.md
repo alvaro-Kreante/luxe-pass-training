@@ -23,7 +23,7 @@ La app en producción vive en `app.luxepass.co` y es un proyecto aparte: este re
 - ❌ Añadir autenticación real (NextAuth, sesiones, JWT, middleware de auth)
 - ❌ Server Actions que escriban en algún sitio
 - ❌ `fetch` a servicios externos, pasarelas de pago, envío de emails
-- ❌ Tests unitarios o e2e (no hay suite y no se pidió una)
+- ❌ Tests e2e con navegador (Playwright entra cuando el App shell se estabilice — ver `docs/PENDIENTES.md`)
 - ❌ Persistir estado (`localStorage`, `sessionStorage`, cookies). Recargar puede empezar de cero: es un mockup navegable, no una app con sesión
 
 **Sí hacer:**
@@ -32,6 +32,7 @@ La app en producción vive en `app.luxepass.co` y es un proyecto aparte: este re
 - ✅ Estado de UI con `useState` / Context — lo justo para que la pantalla muestre sus estados
 - ✅ Validación **de cliente**, cuya finalidad es que la pantalla pueda mostrar sus estados (error, botón deshabilitado, campo inválido) — no es seguridad
 - ✅ Navegación entre pantallas con `next/link` y `useRouter`
+- ✅ Tests con Vitest + Testing Library, escritos **antes** del código — ver "Metodología de test"
 
 **Criterios de aceptación que exigirían backend** (enviar un email, cobrar, verificar un token, comprobar duplicados contra la base) se cubren **visualmente**: se implementa la pantalla del estado y se simula el disparador con datos de muestra. La desviación se anota en la última sección de `docs/design/COMPONENT-MAP.md`.
 
@@ -94,6 +95,25 @@ Las dos ramas `design/*` son el mismo trabajo en dos formatos: el canvas estáti
 las pantallas navegables. No se llama "frontend" a propósito — esto es el diseño
 llevado a código, no una aplicación con backend.
 
+Para trabajo puntual que no es una historia entera, se sale de `design/screens` con
+un prefijo y se vuelve a ella:
+
+| Prefijo | Cuándo |
+|---|---|
+| `feat/` | Pantalla o funcionalidad nueva |
+| `fix/` | Corrección de un fallo |
+| `refactor/` | Reestructurar sin cambiar comportamiento |
+| `test/` | Solo añadir o actualizar tests |
+| `chore/` | Tooling, dependencias, configuración |
+| `docs/` | Solo documentación |
+
+Formato: `<prefijo>/<descripción-en-kebab>` — minúsculas, guiones, sin más barras
+que la del prefijo (`feat/lounge-search`, `fix/login-lockout-plural`).
+
+**Una rama = un propósito.** Si aparece trabajo no relacionado a mitad de tarea, va
+en otra rama. Los mensajes de commit siguen Conventional Commits (`feat:`, `fix:`,
+`docs:`, `chore:`…), como los que ya hay en el historial.
+
 
 Receta completa. Seguirla en orden evita duplicar componentes que ya existen.
 
@@ -107,7 +127,11 @@ Receta completa. Seguirla en orden evita duplicar componentes que ya existen.
 
 **5. Leer `docs/design/COMPONENT-MAP.md`** — qué componentes existen, qué falta, y la tabla de "gemelos" que el design system ya declaró equivalentes entre tema claro y oscuro.
 
-**6. Implementar** en este orden de preferencia:
+**6. Implementar con TDD** — red, green, refactor. Ver "Metodología de test". El
+test se escribe **antes** y sale de los criterios del paso 1 y de los nodos del
+paso 2, nunca del artboard del paso 4.
+
+   Para los componentes, en este orden de preferencia:
    1. Reutilizar un componente existente tal cual
    2. Añadirle una variante (`cva`)
    3. Solo si nada encaja, crear uno nuevo — y anotarlo en el mapa
@@ -116,6 +140,7 @@ Receta completa. Seguirla en orden evita duplicar componentes que ya existen.
 
 **8. Verificar antes de dar nada por hecho:**
 ```bash
+npm test             # toda la suite en verde, sin tests omitidos
 npx tsc --noEmit     # debe salir vacío
 npm run lint         # debe salir sin problemas
 npm run build        # debe compilar y listar las rutas nuevas
@@ -150,6 +175,21 @@ Los nombres de carpeta coinciden **salvo en el Epic 1**:
 - **Los artboards `.dc.html`.** Son la fuente de diseño; si algo no cuadra, se anota como desviación en el mapa, no se edita el mockup.
 - **La paleta literal de `globals.css`** (§2 del design system) sin actualizar antes el design system.
 
+### Nunca inventar un diseño
+
+**Cada pantalla de este proyecto tiene su artboard.** Construir algo "provisional",
+un "scaffold" o una maqueta propia está prohibido, también para pantallas internas.
+La fase actual es convertir mockups en código, no diseñar en el editor.
+
+Si no aparece el `.dc.html` de la pantalla que toca construir:
+
+1. **Parar. No inventar un diseño.**
+2. Preguntar dónde está el artboard, o si se acepta avanzar sin él.
+3. Continuar solo con confirmación explícita.
+
+La única excepción viva es `src/app/page.tsx` (índice provisional de pantallas), ya
+anotada en `docs/PENDIENTES.md` y que desaparece con el Epic 2.
+
 ---
 
 ## Al implementar una pantalla
@@ -173,6 +213,135 @@ Capa 3  pantallas     src/app/**/page.tsx        solo componen
 
 ---
 
+## Metodología de test — TDD
+
+Toda historia nueva y todo bugfix siguen **Test-Driven Development**. La skill
+`test-driven-development` es obligatoria y se invoca **antes** de tocar código: no
+se salta porque el cambio sea pequeño.
+
+1. **Red** — escribir un test que falle y capture el comportamiento buscado.
+2. **Green** — el código mínimo para que pase. Sin funcionalidad de más, sin abstracciones especulativas.
+3. **Refactor** — limpiar solo con el test en verde, y mantenerlo verde.
+
+**El orden no es una recomendación: es lo que distingue TDD de tener tests.** No se
+escribe una línea de código de producción antes de que exista un test que la
+reclame. Escribir el test después también da una suite verde, pero describe lo que
+el código hace en vez de lo que debería hacer, y ya no puede contradecirlo.
+
+Un test que pasa a la primera no demuestra nada: si no lo has visto fallar, no sabes
+qué está comprobando. Ante la duda, rompe a propósito lo que acabas de escribir y
+confirma que el test lo detecta.
+
+### Qué no lleva test
+
+Documentación, configuración sin efecto en el comportamiento, y ajustes puramente
+visuales (un margen, un color, una clase de Tailwind). Eso lo cubren el artboard,
+`tsc` y mirar la pantalla. Todo lo demás lleva test.
+
+### Bugs: reproducir antes de arreglar
+
+Ante un fallo, **no se empieza por arreglarlo**. Se escribe primero el test que lo
+reproduce, se comprueba que falla —eso confirma el diagnóstico— y solo entonces se
+corrige. El test que pasa es la prueba de que el arreglo funciona, y se queda como
+guardia contra la regresión.
+
+### De dónde sale el test
+
+**De los `## Acceptance Criteria` de la historia y de los nodos del flow. Nunca del `.dc.html`.**
+
+Copy, medidas, colores y clases de Tailwind **no se testean**: eso lo cubren el
+artboard, `tsc` y la revisión visual. Un test que transcribe el mockup no previene
+ningún fallo y se rompe cada vez que se ajusta el diseño.
+
+Se consulta siempre por rol y etiqueta (`getByRole`, `getByLabelText`), nunca por
+clase ni por estructura del DOM. Así un test solo falla cuando cambia el
+comportamiento — que es justo cuando queremos que falle.
+
+| Nivel | Qué cubre | Ejemplo |
+|---|---|---|
+| Lógica | `src/lib/*.ts` — validaciones, filtros, cálculos | `validateSignUp` devuelve el error de email ya registrado |
+| Estados | Error de validación, botón deshabilitado, vacío, bloqueado | Tras 5 fallos, `/login` muestra el aviso y deshabilita el formulario |
+| Navegación | Va a la ruta correcta · **no** navega con entrada inválida | Submit válido en `/signup` → `/verify-email?email=…` |
+
+Que **no** navegue con entrada inválida es tan parte del criterio como que navegue
+con entrada válida: es la mitad que más se rompe al refactorizar.
+
+### Runner
+
+`vitest` + Testing Library + `user-event` sobre jsdom. Los tests viven junto al
+archivo que prueban: `registration.test.ts` al lado de `registration.ts`,
+`page.test.tsx` al lado de `page.tsx`.
+
+`userEvent.setup({ delay: null })` siempre. Sin esa opción, user-event espera un
+tick del bucle de eventos entre cada pulsación y un formulario de tres campos se va
+a más de un segundo: la suite entera pasó de 19,8 s a 3,8 s solo con esto. El
+`delay` existe para simular a alguien tecleando, y en estas pantallas no hay nada
+—debounce, autocompletado— que dependa de ese ritmo.
+
+**`next/navigation` es el único mock permitido.** El router de Next no existe fuera
+del runtime del App Router, así que es una frontera legítima. Todo lo demás se
+prueba contra la implementación real: componentes de verdad, validaciones de verdad,
+datos de muestra de verdad. Mockear un componente propio para que el test pase es
+señal de que el test está mirando al sitio equivocado.
+
+Cuando llegue la capa de datos, se suma una fila de integración a la tabla de
+niveles; el ciclo y la regla de dónde sale el test no cambian.
+
+### Punto de partida para una pantalla nueva
+
+No hay que reinventar el andamiaje. `src/app/login/page.test.tsx` y
+`src/app/signup/page.test.tsx` son la referencia: el segundo incluye además el
+patrón para un modal de Radix (abrirlo, marcar sus casillas, aceptar).
+
+```tsx
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import MiPantalla from "./page";
+
+const push = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
+
+beforeEach(() => {
+  push.mockClear();
+});
+
+describe("navegación", () => {
+  it("avanza cuando los datos son válidos", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<MiPantalla />);
+
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    expect(push).toHaveBeenCalledWith("/siguiente");
+  });
+});
+```
+
+Los `describe` agrupan por comportamiento, no por componente: `navegación`,
+`validación del formulario`, `bloqueo tras cinco intentos fallidos`. El nombre de
+cada `it` describe lo que el miembro observa, no la función que se ejecuta — leídos
+en fila, los tests de un archivo son la especificación de esa pantalla.
+
+Cada test se lee entero sin saltar a un helper: se repite lo que haga falta para
+que se entienda solo. Los helpers son para recorridos largos que se repiten de
+verdad (rellenar el formulario, aceptar los términos), no para ahorrar tres líneas.
+
+---
+
+## Skills
+
+| Skill | Cuándo se usa |
+|---|---|
+| `test-driven-development` | **Antes de cualquier historia o bugfix.** Red → green → refactor |
+| `frontend-design` | Componer pantallas y componentes de UI |
+| `design` | Crear o re-sembrar un canvas de mockups `.dc.html` |
+| `systematic-debugging` | Algo falla y la causa no es evidente |
+| `verification-before-completion` | Antes de dar una historia por terminada |
+
+---
+
 ## Estructura
 
 ```
@@ -188,6 +357,9 @@ src/                      Código de la aplicación Next.js
   lib/
     utils.ts              Utilidades (cn() para Tailwind)
     registration.ts       Reglas de validación de alta (Story 1.1)
+    authentication.ts     Credenciales, bloqueo y "remember me" (Story 1.2)
+
+  **/*.test.ts(x)         Los tests van junto al archivo que prueban
 
 docs/                     Diseño y especificaciones
   PENDIENTES.md           Lo que queda abierto: bloqueos, provisionales y decisiones
@@ -308,6 +480,7 @@ Estos tokens están replicados en el código como **CSS custom properties** en `
 - **class-variance-authority** — variantes de componente
 - **Recharts** — gráficos (Epic 7 y 8, aún sin usar)
 - **@ducanh2912/next-pwa** — service worker
+- **Vitest + Testing Library** — tests sobre jsdom, con `next/navigation` mockeado
 
 **Convenciones de código:**
 - Componentes en `src/components/` con estructura por capa (ui/, patterns/, charts/) más una carpeta por epic para su lógica
@@ -320,6 +493,9 @@ Estos tokens están replicados en el código como **CSS custom properties** en `
 npm run dev      # Dev server en http://localhost:3000   → escribe en .next
 npm run build    # Build producción (genera SW para PWA) → escribe en .next-build
 npm run start    # Sirve la build desde .next-build
+npm test         # Vitest, una pasada
+npm run test:watch # Vitest en watch — el ciclo rojo-verde del TDD
+npm run test:ui  # El mismo watch, con panel en el navegador
 npm run lint     # ESLint
 npx tsc --noEmit # Comprobación de tipos
 ```
