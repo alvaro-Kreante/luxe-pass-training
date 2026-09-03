@@ -44,7 +44,7 @@ Ejemplos ya hechos: la comprobación de email duplicado consulta una lista de do
 
 **Diseño: los 9 epics están diseñados** (Fase 9 cerrada). Cualquier trabajo de diseño nuevo es revisión o corrección.
 
-**Código: 5 de 24 historias implementadas** — los Epics 1 y 2 están completos.
+**Código: 7 de 24 historias implementadas** — los Epics 1, 2 y 3 están completos.
 
 | Epic | Historias | Estado |
 |---|---|---|
@@ -53,7 +53,8 @@ Ejemplos ya hechos: la comprobación de email duplicado consulta una lista de do
 | 2 · Location Discovery & Search | 2.1 Map-based lounge discovery | ✅ **Implementada** |
 | | 2.2 Lounge filtering & search | ✅ **Implementada** |
 | | 2.3 List view alternative | ✅ **Implementada** |
-| 3 · Lounge Profiles & Details | 3.1 · 3.2 | ⬜ Pendiente |
+| 3 · Lounge Profiles & Details | 3.1 Detailed lounge information | ✅ **Implementada** |
+| | 3.2 Availability | ✅ **Implementada** |
 | 4 · Booking System | 4.1 · 4.2 · 4.3 | ⬜ Pendiente |
 | 5 · QR Code & Check-in | 5.1 · 5.2 · 5.3 | ⬜ Pendiente |
 | 6 · Member Experience & Notifications | 6.1 · 6.2 · 6.3 | ⬜ Pendiente |
@@ -75,6 +76,9 @@ Ejemplos ya hechos: la comprobación de email duplicado consulta una lista de do
 | `/login` | `Login.dc.html` | 1.2 |
 | `/forgot-password` | `ForgotPassword.dc.html` | 1.2 |
 | `/explore` | Los 9 artboards de la Fase 3 | 2.1 · 2.2 · 2.3 |
+| `/lounges/[id]` | `Main.dc.html` + `Gallery.dc.html` + `Share.dc.html` + `NotAvailable.dc.html` + `Loading.dc.html` | 3.1 · 3.2 |
+| `/lounges/[id]/availability` | `Availability.dc.html` + `Closure.dc.html` | 3.2 |
+| `/lounges/[id]/reviews` | `Reviews.dc.html` + `NoRatings.dc.html` | 3.1 |
 
 #### Estados de `/explore`
 
@@ -97,14 +101,19 @@ query param** — no salen de ningún artboard y desaparecen cuando haya lógica
 Para llegar a `NoResults` como lo dibuja el artboard: Filters → WiFi → Co-working
 → `< 2 mi` → día **14** → **2–6 PM**.
 
-Los 10 artboards de la Fase 1 y los 9 de la Fase 3 están cubiertos. `/explore` reúne
-siete de esos nueve como estados de una misma pantalla: solo el permiso de ubicación
-y la entrada manual son diálogos aparte.
+Los 10 artboards de la Fase 1, los 9 de la Fase 3 y los 9 de la Fase 4 están
+cubiertos. `/explore` reúne siete de los nueve de la Fase 3 como estados de una
+misma pantalla: solo el permiso de ubicación y la entrada manual son diálogos
+aparte. `/lounges/[id]` hace lo mismo con cinco de los nueve de la Fase 4
+(`Main` · `Gallery` · `Share` · `NotAvailable` · `Loading`); los otros cuatro
+(`Availability` · `Closure` · `Reviews` · `NoRatings`) son estados de las dos
+sub-vistas.
 
-Lo construido que ya sirve al resto: 17 primitivos, 6 patrones de pantalla y la capa
+Lo construido que ya sirve al resto: 17 primitivos, 8 patrones de pantalla y la capa
 de tokens completa. El **App shell (patrón 3)** fija la navegación de los Epics 2–6,
-y el **drawer lateral (patrón 6)** es el que reutiliza el Partner Dashboard en
-oscuro. Ver `docs/design/COMPONENT-MAP.md`.
+el **drawer lateral (patrón 6)** es el que reutiliza el Partner Dashboard en
+oscuro, y la **sub-vista de lounge (patrón 8)** es la base de las pantallas de
+disponibilidad y reseñas. Ver `docs/design/COMPONENT-MAP.md`.
 
 **Cada artboard tiene su propia frase de marca** en el panel izquierdo del patrón 1 (`Join a community of discerning travelers.`, `Your next moment of calm is waiting.`, `Tell us who you are.`…). No reutilizar la de otra pantalla: extraerla del `.dc.html` correspondiente.
 

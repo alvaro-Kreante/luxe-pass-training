@@ -26,7 +26,11 @@ const NAV_ITEMS = [
 
 /** El Home solo está activo en su propia ruta; el resto, también en sus sub-rutas. */
 function isCurrent(pathname: string, href: string) {
-  return href === "/" ? pathname === "/" : pathname.startsWith(href);
+  if (href === "/") return pathname === "/";
+  /** El perfil de un lounge (Epic 3) se llega desde Explore: cuenta como su sub-ruta. */
+  if (href === "/explore") return pathname.startsWith("/explore") || pathname.startsWith("/lounges");
+
+  return pathname.startsWith(href);
 }
 
 export interface AppShellProps {

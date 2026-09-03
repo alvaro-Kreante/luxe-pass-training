@@ -65,8 +65,8 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `AddChip` | `chip.tsx` | §4 (variante "Other", borde discontinuo) | — | E1 |
 | `RemovableChip` | `chip.tsx` | §4 Chip removible | — | E1 |
 | `Segmented` | `segmented.tsx` | §5 patrón 5 — los dos segmented de la topbar de Explore | `size`: md(50px)·sm(38px) · `icon` por opción | E2 |
-| `StatusChip` | `status-chip.tsx` | §5 "Estados" — disponibilidad | `available` · `size`: md(11.5px)·sm(11px) | E2 |
-| `EmptyState` | `empty-state.tsx` | §5 "Estados" — vacío / error | `width` 440–660 · `icon` · `footnote` | E2 |
+| `StatusChip` | `status-chip.tsx` | §5 "Estados" — disponibilidad | `available` · `size`: md(11.5px)·sm(11px) | E2 · E3 |
+| `EmptyState` | `empty-state.tsx` | §5 "Estados" — vacío / error | `width` 440–660 · `icon` · `footnote` | E2 · E3 (`NoRatings.dc.html`) |
 | `Spinner` | `spinner.tsx` | §5 "Estados" — spinner de 18px | `size` | E2 |
 | `Skeleton` | `skeleton.tsx` | §5 "Estados" — carga, misma geometría que la pieza real | — | E2 |
 | `Rating` | `rating.tsx` | **Derivado** — §4 no le da fila; la geometría (estrella dorada de 13px + cifra en 12.5px/600) se repite en `Home`, `ListView` y el callout del mapa | — | E2 |
@@ -82,6 +82,8 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | Modal sobre pantalla | `modal.tsx` | §5 patrón **4** | Radix Dialog. `width` 640 por defecto (520–540 en los diálogos de ubicación). `align="center"` + `media` para el diálogo de permiso. El patrón **18** (modal oscuro) es este mismo dentro de `data-theme="dark"` |
 | Drawer lateral | `drawer.tsx` | §5 patrón **6** | Radix Dialog con `modal={false}` — el fondo debe seguir siendo perceptible mientras se filtra. `width` 436 (472 en el patrón **18** oscuro) |
 | Explore (mapa + resultados) | `explore-layout.tsx` | §5 patrón **5** | Topbar de 88px, fila de filtros de 52px, panel de 372px + mapa. El panel es la `region` "Results" que comparten mapa y lista |
+| Perfil de lounge (detalle) | `app/lounges/[id]/page.tsx` compone `lounges/hero-carousel.tsx` + `lounges/availability-card.tsx` | §5 patrón **7** | Sin archivo de patrón único: la topbar de 64px y el hero de 268px solo los usa esta pantalla, igual que Explore no extrae su topbar aparte de `explore-layout.tsx` |
+| Sub-vista de lounge | `lounges/lounge-subview-header.tsx` | §5 patrón **8** | Topbar 64px + header 84px (miniatura, nombre, sello de frescura). Reutilizado por `/lounges/[id]/availability` y `/lounges/[id]/reviews` |
 
 ### Utilidades de superficie (`globals.css`)
 
@@ -112,6 +114,9 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `/forgot-password` | `ForgotPassword.dc.html` | 1.2 |
 | `/` | `Home.dc.html` (epic-1-onboarding) | Home del área de miembro |
 | `/explore` | `Main` + `LocationPermission` + `ManualLocation` + `MapError` + `Offline` + `Filters` + `NoResults` + `ListView` + `ListLoading` | 2.1 · 2.2 · 2.3 |
+| `/lounges/[id]` | `Main` + `Gallery` + `Share` + `NotAvailable` + `Loading` | 3.1 · 3.2 |
+| `/lounges/[id]/availability` | `Availability` + `Closure` | 3.2 |
+| `/lounges/[id]/reviews` | `Reviews` + `NoRatings` | 3.1 |
 
 ### Lógica de epic (`src/components/onboarding/`, `src/lib/`)
 
@@ -135,7 +140,17 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `lib/distance.ts` | Story 2.1 — conversión mi/km y tiempo a pie |
 | `lib/location.ts` | Story 2.1 — ciudades de muestra y su búsqueda |
 | `lib/availability.ts` | Etiqueta de disponibilidad a partir de las plazas del día |
-| `lib/amenities.ts` | Las seis amenities de la Story 2.2 y sus etiquetas |
+| `lib/amenities.ts` | Las seis amenities de la Story 2.2, sus etiquetas y (Story 3.1) su descripción |
+| `lib/lounge-profile.ts` | Story 3.1 / 3.2 — contacto, horario, reseñas, cierres y calendario semanal derivados del lounge base (ver desviaciones) |
+| `lounges/hero-carousel.tsx` · `hero-photos.ts` | Story 3.1 — el carousel de la ficha y las 6 fotos de muestra que comparte con la galería |
+| `lounges/photo-gallery-dialog.tsx` | Story 3.1 — la galería a pantalla completa (`Gallery.dc.html`) |
+| `lounges/share-dialog.tsx` | Story 3.1 — la hoja de compartir (`Share.dc.html`); "Copy" sí usa `navigator.clipboard` |
+| `lounges/amenities-grid.tsx` · `operating-hours.tsx` · `contact-info.tsx` | Story 3.1 — las tres secciones de la columna principal del perfil |
+| `lounges/availability-card.tsx` · `booking-restrictions.tsx` · `freshness-note.tsx` | Story 3.2 — la card de disponibilidad del perfil (Available / Not available) y sus piezas compartidas |
+| `lounges/profile-skeleton.tsx` | Estado de carga del perfil (`Loading.dc.html`), solo alcanzable por `?loading=1` |
+| `lounges/lounge-subview-header.tsx` | Story 3.1 / 3.2 — cabecera de la sub-vista de lounge (patrón 8) |
+| `lounges/weekly-calendar.tsx` · `closure-banner.tsx` | Story 3.2 — el calendario semanal de franjas y el aviso de cierre por festivo |
+| `lounges/rating-summary.tsx` · `review-card.tsx` | Story 3.1 — el resumen de valoración (con y sin reseñas) y cada reseña |
 
 ---
 
@@ -158,7 +173,6 @@ Diff de aprobación · Barra de consumo · Tabla comparativa
 
 ### Patrones de §5 sin implementar
 
-7 Perfil de lounge · 8 Sub-vista ·
 9 Flujo por pasos con rail · 10 Tarjeta de confirmación oscura · 11 Pase digital ·
 12 Consola de recepción · 13 Sección de cuenta · 14 Panel de notificaciones ·
 15 App shell del partner · 16 Lista de datos oscura · 17 Panel de actividad ·
@@ -209,3 +223,10 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 | "View details" lleva `aria-label="View details for ‹lounge›"` | Tres enlaces con el mismo texto visible son indistinguibles para un lector de pantalla. El texto en pantalla no cambia |
 | Los items **My Pass** y **Profile** del shell apuntan a rutas que aún no existen | Sus artboards son de los Epics 6 y 7. El shell fija la nav completa desde ya, tal como el design system la declara |
 | El bloqueo por intentos fallidos no persiste | Es un contador en `useState`: basta para alcanzar y ver el estado bloqueado, que es lo que el diseño tiene que mostrar. La caducidad de 15 minutos se enuncia en el aviso, no se cuenta |
+| El "hoy" del perfil de lounge es `TODAY` (2025-09-09, martes), no el jueves 12 de sept que dibujan los artboards de la Fase 4 | Explore ya fijó `TODAY` como el "hoy" del mockup para toda la app. Cambiarlo solo para el Epic 3 rompería la coherencia entre "hoy" al navegar de `/explore` a un lounge |
+| Las amenities del perfil son las 6 de la Story 2.2 (`lib/amenities.ts`), no la lista propia de `Main.dc.html` (que incluye "Showers" y no incluye "Spa") | Una sola fuente de datos entre el filtro de Explore y el perfil evita que un lounge se anuncie con una amenity que el filtro dice que no tiene |
+| "Next available times" de la card de disponibilidad ofrece franjas (Morning/Afternoon/Evening), no horas exactas como "2:00 PM" | El catálogo solo modela franjas (Story 2.2); no hay una agenda con horas sueltas de la que sacar "2:00 PM" |
+| La capacidad "de 40" es una constante única para todo el catálogo | Ningún lounge trae su propio aforo; es la misma cifra que cita `Main.dc.html` para The Ainsworth |
+| El contacto (dirección, teléfono, email, web) y las reseñas son literales solo para The Ainsworth y Belmont Terrace; el resto del catálogo los deriva de su id | Son los dos únicos lounges que un artboard de la Fase 4 cita por nombre (`Main.dc.html`/`Reviews.dc.html` y `NoRatings.dc.html`). Ver `docs/PENDIENTES.md` §2.4 |
+| El aviso de cierre por festivo se calcula mirando los 7 días de la semana mostrada, no solo el lunes y el domingo | Thanksgiving cae a mitad de semana (jueves-viernes): mirar solo los extremos lo dejaría sin detectar |
+| "Write a review" no lleva a ninguna pantalla | Ninguna historia de los 9 epics cubre redactar una reseña. Ver `docs/PENDIENTES.md` §2.5 |

@@ -56,15 +56,17 @@ aceptación con fecha y versión.
 
 El App shell (patrón 3) fija la navegación completa del área de miembro
 — Home · Explore · My Pass · Profile — porque así la declara el design system y
-así la dibujan todos los artboards de las Fases 1 y 3. Pero solo `/` existe:
-**`/explore`, `/my-pass` y `/profile` dan 404**, y lo mismo la ficha
-`/lounges/[id]` a la que apunta cada "View details".
+así la dibujan todos los artboards de las Fases 1 y 3. `/` y `/explore` ya
+existen; **`/my-pass` y `/profile` siguen dando 404**.
+
+Dentro del perfil de lounge (Epic 3) pasa lo mismo con "Book now": apunta a
+`/lounges/[id]/book`, que es la Fase 5 (Epic 4) y todavía no existe.
 
 Ninguna es deuda: son las pantallas de los epics siguientes. Se listan aquí para
 que nadie las tome por un enlace roto al recorrer el mockup.
 
-**Se resuelve:** `/explore` con el resto del Epic 2 · `/lounges/[id]` con el
-Epic 3 · `/my-pass` con el Epic 5 · `/profile` con el Epic 6.
+**Se resuelve:** `/my-pass` con el Epic 5 · `/profile` con el Epic 6 ·
+`/lounges/[id]/book` con el Epic 4.
 
 ### 2.2 Enlace "I have verified my email"
 
@@ -114,6 +116,25 @@ se tira es `city-map-base.tsx`.
 **Desbloquea:** decidir proveedor (Mapbox, MapLibre, Google) y dónde vive su
 clave. Nada de eso cabe en este repositorio.
 
+### 2.4 El perfil de lounge no tiene datos de detalle propios para 16 de los 17 lounges
+
+`src/lib/lounge-profile.ts` deriva contacto (dirección, teléfono, email, web),
+reseñas y menciones frecuentes a partir del id del lounge cuando no hay un
+valor literal. Solo **The Ainsworth** (todos los artboards de la Fase 4) y
+**Belmont Terrace** (`NoRatings.dc.html`) tienen los datos exactos del mockup;
+el resto del catálogo recibe contacto plausible pero inventado y las mismas
+dos reseñas de muestra genéricas.
+
+**Se resuelve:** cuando exista un catálogo de lounges real, con estos campos
+por lounge en vez de derivados.
+
+### 2.5 "Write a review" no hace nada
+
+El botón de `RatingSummary` no tiene una pantalla de destino: ninguna historia
+de los 9 epics cubre redactar una reseña, solo leerlas (Story 3.1).
+
+**Se resuelve:** cuando una historia futura defina esa pantalla.
+
 ---
 
 ## 3. Criterios de aceptación cubiertos solo de forma declarativa
@@ -136,6 +157,11 @@ nada los hace cumplir.
 | 2.1 | Offline mode shows cached nearby locations | Los "cacheados" son los seis primeros del catálogo; el service worker no interviene |
 | 2.1 | Distance display in miles/km based on user preference | El toggle de la topbar hace la conversión de verdad, pero el ajuste no se lee del teléfono ni se recuerda |
 | 2.3 | Loading states while fetching data | No hay petición que esperar: el estado se alcanza por query param — ver 2.2 |
+| 3.1 | Call and Directions quick action buttons (google maps url) | Enlaces reales (`tel:` y Google Maps con la dirección de muestra); no hay verificación de que el teléfono o la dirección existan |
+| 3.1 | Share lounge option via social/messaging apps | Los destinos (Messages, WhatsApp, Instagram…) son botones sin integración; solo "Copy" usa una API real del navegador (`navigator.clipboard`) |
+| 3.2 | Real-time availability status | `lounge.slotsToday` del catálogo de la Story 2.2, no un estado que cambie solo |
+| 3.2 | Automatic refresh every 5 minutes | Contador local en `useState` (`FreshnessNote`) que vuelve a "just now" cada 5 minutos; no hay red que consultar, así que no refresca ningún dato, solo el sello |
+| 3.2 | Weekly availability calendar view | Las plazas son un hash determinista por lounge + fecha + franja, no una agenda real. Se explica en `src/lib/lounge-profile.ts` |
 
 Los enlaces de las tiendas de `/welcome` apuntan a `#`: no existen todavía las
 fichas de App Store ni Google Play.
@@ -242,3 +268,4 @@ tiene una respuesta y lo que falta es seguirla.
 | `npm run lint` recorría `.next-build` y devolvía 4677 problemas tras cualquier build | 31 ago 2026 | `.next-build/**` añadido a los ignores de `eslint.config.mjs`; el ignore se quedó sin actualizar al separar los `distDir` |
 | No había suite de tests, con TDD ya declarado obligatorio | 31 ago 2026 | Vitest + Testing Library sobre jsdom; 60 tests cubren la lógica, los estados y la navegación del Epic 1 |
 | La ruta `/` era un índice provisional de pantallas, sin artboard | 31 ago 2026 | Sustituida por el Home del área de miembro (`Home.dc.html`) dentro del App shell del patrón 3 |
+| `/lounges/[id]` daba 404 desde cada "View details" del Epic 2 | 3 sept 2026 | Implementado el Epic 3: perfil de lounge, disponibilidad semanal y reseñas |

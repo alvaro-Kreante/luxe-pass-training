@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
  * resuelven la miniatura con el radial de marca y los puntos dorados.
  * El tono sale del id para que un mismo lounge se vea igual en todas las vistas.
  */
-function toneOf(id: string): 1 | 2 | 3 {
+export function toneOf(id: string): 1 | 2 | 3 {
   const sum = [...id].reduce((total, char) => total + char.charCodeAt(0), 0);
 
   return ((sum % 3) + 1) as 1 | 2 | 3;

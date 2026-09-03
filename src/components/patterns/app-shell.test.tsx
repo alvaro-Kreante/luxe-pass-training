@@ -62,6 +62,17 @@ describe("navegación del área de miembro", () => {
     );
   });
 
+  it("marca Explore como actual dentro del perfil de un lounge", () => {
+    pathname.mockReturnValue("/lounges/the-ainsworth");
+
+    render(<AppShell>contenido</AppShell>);
+
+    expect(screen.getByRole("link", { name: "Explore" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+  });
+
   it("no marca Home como actual desde otra sección, pese a ser el prefijo de todas", () => {
     pathname.mockReturnValue("/explore");
 
