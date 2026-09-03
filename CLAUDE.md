@@ -398,7 +398,7 @@ src/                      Código de la aplicación Next.js
     patterns/             Layouts   = DESIGN-SYSTEM §5 (AuthSplit, Modal...)
     onboarding/           Lógica del Epic 1 (TermsModal, ProfileDraft)
     explore/              Lógica del Epic 2 (CityMap, FilterDrawer, LoungeList...)
-    lounges/              Piezas de lounge compartidas por varios epics (Thumb, Card)
+    lounges/              Thumb/Card compartidos (E1-E3) + el perfil, disponibilidad y reseñas del Epic 3
     charts/               Gráficos Recharts (BarChart, LineChart)
   lib/
     utils.ts              Utilidades (cn() para Tailwind)
@@ -406,8 +406,9 @@ src/                      Código de la aplicación Next.js
     authentication.ts     Credenciales, bloqueo y "remember me" (Story 1.2)
     lounges.ts            Catálogo de muestra (12 en NY, 3 Newark, 1 New Rochelle, 1 Miami)
     filters.ts            Pipeline de la Story 2.2, compartido por mapa y lista
-    amenities.ts          Las seis amenities y sus etiquetas
+    amenities.ts          Las seis amenities, sus etiquetas y (Story 3.1) su descripción
     availability.ts       Franjas, calendario y el "hoy" del mockup (2025-09-09)
+    lounge-profile.ts     Story 3.1 / 3.2 — contacto, horario, reseñas, cierres y disponibilidad semanal
     distance.ts           Conversión mi/km y tiempo a pie
     location.ts           Ciudades de muestra y su búsqueda
     member.ts             El miembro de muestra del App shell
