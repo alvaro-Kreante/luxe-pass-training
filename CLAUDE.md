@@ -23,7 +23,7 @@ La app en producción vive en `app.luxepass.co` y es un proyecto aparte: este re
 - ❌ Añadir autenticación real (NextAuth, sesiones, JWT, middleware de auth)
 - ❌ Server Actions que escriban en algún sitio
 - ❌ `fetch` a servicios externos, pasarelas de pago, envío de emails
-- ❌ Tests e2e con navegador (Playwright entra cuando el App shell se estabilice — ver `docs/PENDIENTES.md`)
+- ❌ Tests e2e con navegador masivos — Playwright existe para verificación visual (uso puntual, ver §Verificación)
 - ❌ Persistir estado (`localStorage`, `sessionStorage`, cookies). Recargar puede empezar de cero: es un mockup navegable, no una app con sesión
 
 **Sí hacer:**
@@ -429,6 +429,13 @@ src/                      Código de la aplicación Next.js
 
   **/*.test.ts(x)         Los tests van junto al archivo que prueban
 
+e2e/                      Verificación visual con Playwright (puntual, no e2e masivo)
+  playwright/
+    scripts/              Scripts de verificación visual por feature
+    screenshots/          Capturas generadas (gitignored)
+    utils/                Funciones compartidas (browser.js, template.js)
+    README.md             Guía de uso
+
 docs/                     Diseño y especificaciones
   PENDIENTES.md           Lo que queda abierto: bloqueos, provisionales y decisiones
   design/
@@ -549,6 +556,7 @@ Estos tokens están replicados en el código como **CSS custom properties** en `
 - **Recharts** — gráficos (Epic 7 y 8, aún sin usar)
 - **@ducanh2912/next-pwa** — service worker
 - **Vitest + Testing Library** — tests sobre jsdom, con `next/navigation` mockeado
+- **Playwright** — navegador automatizado para verificación visual (uso puntual, no suite e2e masiva)
 
 **Convenciones de código:**
 - Componentes en `src/components/` con estructura por capa (ui/, patterns/, charts/) más una carpeta por epic para su lógica
@@ -567,6 +575,11 @@ npm run test:ui  # El mismo watch, con panel en el navegador
 npm run lint     # ESLint
 npx tsc --noEmit # Comprobación de tipos
 ```
+
+**Verificación visual con Playwright:**
+Playwright está instalado y disponible para verificación visual puntual: cuando hagas cambios en pantallas, yo puedo navegar a las rutas con Playwright, tomar screenshots y compararlos visualmente contra el diseño para detectar errores. Se usa **solo cuando es necesario** (algo se ve raro, antes de decir "listo"), no para cada cambio. Los tests siguen siendo Vitest + Testing Library (jsdom). Playwright no sustituye la suite de tests, la complementa para verificaciones visuales que jsdom no captura.
+
+Scripts y screenshots se guardan organizados en `scripts/playwright/`: lee `scripts/playwright/README.md` para estructura y cómo crear un script de verificación.
 
 **Directorios de salida separados** (`distDir` en `next.config.ts`). Compartiendo
 `.next`, un build lanzado mientras el dev server está vivo le reescribe los chunks
