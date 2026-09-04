@@ -22,7 +22,7 @@ const buttonVariants = cva(
         outline:
           "bg-transparent text-accent-strong border-[1.5px] border-accent hover:bg-accent-soft disabled:hover:bg-transparent",
         ghost:
-          "bg-transparent text-fg-muted hover:bg-surface-hover disabled:hover:bg-transparent",
+          "bg-transparent text-fg-muted border-[1.5px] border-line hover:bg-surface-hover hover:border-accent disabled:hover:bg-transparent",
       },
       size: {
         lg: "h-[52px] px-6 text-[13px] tracking-[0.12em] rounded-control",

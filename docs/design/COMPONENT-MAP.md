@@ -75,6 +75,9 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `TimeSlotGrid` | `time-slot.tsx` | §4 Slot de hora | `slots: BookingSlot[]` · `selectedTime` · `onSelect` | E4 |
 | `PaymentOptionRow` | `payment-option-row.tsx` | §4 Fila de opción / método de pago | `selected` · `onSelect` · `title`/`subtitle` · `leading`/`trailing` · `disabled`. Reutilizada literalmente por las alternativas de `Waitlist.dc.html` y `PaymentError.dc.html` — la nota de §4 ya preveía este doble uso | E4 |
 | `CardBrandBadge` | `card-brand-badge.tsx` | §4 Marca de tarjeta | `brand`: visa·mastercard | E4 |
+| `QrCode` | `qr-code.tsx` | §4 Código QR del pase (Fase 6) | `size`. Decorativo: dibuja los mismos módulos de los artboards, no codifica de verdad el LP# — pendiente conocido de la Fase 6 | E5 |
+| `StatusChip` (ampliado) | `status-chip.tsx` | §4 "Estados" — disponibilidad, ahora también No-show/Waitlisted del pase | nueva variante `dashed` (borde discontinuo) junto a `available`/`size` | E2 · E3 · E5 |
+| `Button` (ampliado) | `button.tsx` | §4 Botón fantasma (oscuro) | la variante `ghost` (ya existía sin usar) gana el borde `border-line`/hover `border-accent` que pide la Fase 2, y la estrena la consola de recepción | E5 |
 
 ## Capa 2 — Patrones (`src/components/patterns/`)
 
@@ -90,6 +93,8 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | Sub-vista de lounge | `lounges/lounge-subview-header.tsx` | §5 patrón **8** | Topbar 64px + header 84px (miniatura, nombre, sello de frescura). Reutilizado por `/lounges/[id]/availability` y `/lounges/[id]/reviews`. Dos posiciones de chip, no una: `badge` va junto al título (`Main.dc.html` "Accepting bookings", `NoRatings.dc.html` "New on LuxePass"); `trailingBadge` (nuevo, Epic 4) va en el extremo derecho, donde por defecto vive el sello de frescura — ahí es donde `Payment.dc.html`/`Summary.dc.html` dibujan el chip "Slot held for M:SS", no junto al título. `topbarRight` (nuevo, Epic 4) sustituye "Booking help" por "Secure checkout"; `hideFreshness` (nuevo, Epic 4) oculta el sello cuando `trailingBadge` ocupa su sitio |
 | Flujo por pasos con rail de resumen | `step-flow-rail.tsx` | §5 patrón **9** | Compone `LoungeSubviewHeader` + `StepProgress` + el rail de 344px. Usado en los tres pasos de `/lounges/[id]/book` |
 | Tarjeta de confirmación oscura | `confirmation-card.tsx` | §5 patrón **10** | Card de 344px, `data-theme="dark"` propio + `.surface-night.dot-pattern`. `rows: {label,value}[]` genérico para que el patrón 11 (pase digital, Fase 6) lo extienda sin reescribirlo |
+| Pase digital | `passes/digital-pass-card.tsx` | §5 patrón **11** | Card de 380px, `data-theme="dark"` propio. Cuatro estados por `state: PassLifecycleState` (`upcoming`·`today`·`checked-in`·`expired`) en vez de cuatro componentes — el pase es el mismo, solo cambia lo que muestra. El sello de expirado va inline (un solo uso, no se sube a primitivo) |
+| Consola de recepción | `app/reception/page.tsx` | §5 patrón **12** | Sin archivo de patrón aparte — como el perfil de lounge (patrón 7), la topbar de 72px y la columna de 900px solo las usa esta pantalla. El campo de lookup (oscuro) también va inline aquí, no como primitivo, por el mismo motivo |
 
 ### Utilidades de superficie (`globals.css`)
 
@@ -128,6 +133,10 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `/lounges/[id]/book/summary` | `Summary` + `Waitlist` + `PaymentError` | 4.1 |
 | `/lounges/[id]/book/confirmed` | `Confirmed` + `Calendar` | 4.1 · 4.3 |
 | `/lounges/[id]/book/receipt` | `Receipt` | 4.2 |
+| `/my-pass` | `MyBookings` (Upcoming) + `NoShow` (Past) | 5.1 · 5.2 |
+| `/my-pass/[reference]` | `Main` + `ArrivalDay` + `CheckedIn` + `Expired` (sobre `?state=`) | 5.1 |
+| `/my-pass/[reference]/reminder` | `Reminder` | 5.3 |
+| `/reception` | `Reception` + `CheckInError` | 5.2 |
 
 ### Lógica de epic (`src/components/onboarding/`, `src/lib/`)
 
@@ -173,6 +182,12 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `booking/confirmed-visit-card.tsx` | Story 4.1 — detalle de la visita en la confirmación inmediata (`Confirmed.dc.html`) |
 | `booking/add-to-calendar-modal.tsx` | Story 4.3 — "Add to Calendar" (`Calendar.dc.html`), conecta con `lib/calendar-export.ts` |
 | `booking/slot-hold-badge.tsx` | Chip "Slot held for M:SS" de los pasos 2 y 3 |
+| `lib/passes.ts` | Story 5.1 / 5.2 / 5.3 — el pase de muestra LP-842193 (independiente del borrador de `booking-context.tsx`, igual que `lounge-profile.ts` fija literalmente a The Ainsworth), la lista de "My Pass" y la consola de recepción |
+| `passes/digital-pass-card.tsx` | Story 5.1 — la tarjeta del pase (patrón 11) en sus cuatro estados |
+| `app/my-pass/page.tsx` | Story 5.1 / 5.2 — pestañas Upcoming/Past (`MyBookings.dc.html` / `NoShow.dc.html`) |
+| `app/my-pass/[reference]/page.tsx` | Story 5.1 — el pase digital y su expiración automática, alcanzada por `?state=` |
+| `app/my-pass/[reference]/reminder/page.tsx` | Story 5.3 — el email de recordatorio (`Reminder.dc.html`), igual de visual que `Receipt.dc.html` |
+| `app/reception/page.tsx` | Story 5.2 — la consola de recepción (patrón 12): búsqueda por LP#, contacto de emergencia y check-in |
 
 ---
 
@@ -183,22 +198,31 @@ comprobar si un componente de arriba ya lo cubre con una variante.
 
 ### Primitivos de §4 sin implementar
 
-Item de nav · Código QR del pase (Fase 6) · Sello de expirado ·
-Fila de historial · **Chip de estado de reserva** (Fase 7) · Switch de ajuste ·
-Fila de ajuste por canal · Campana de notificaciones · Fila de notificación ·
-Código de referido · Campo de lookup (oscuro) · Botón fantasma (oscuro) ·
+Item de nav · Fila de historial · **Chip de estado de reserva** (Fase 7) ·
+Switch de ajuste · Fila de ajuste por canal · Campana de notificaciones ·
+Fila de notificación · Código de referido ·
 Casilla de asistencia · Chip de asistencia (oscuro) · **Fila de datos** (Fase 2 + 9) ·
 **Tile de métrica** (Fase 2 + 9) · Segmented (oscuro) · Barra de volumen · Toast (oscuro) ·
 Chip de estado de caso · Badge de nav · Barra de acción masiva · Entrada de log ·
 Diff de aprobación · Barra de consumo · Tabla comparativa
 
+Código QR del pase, Sello de expirado, Campo de lookup (oscuro) y Botón
+fantasma (oscuro) ya están construidos (Fase 6, ver arriba) pero como piezas de
+un único uso (`QrCode` es el único que se subió a primitivo reutilizable; el
+sello y el campo de lookup viven inline en `DigitalPassCard` y en
+`app/reception/page.tsx`) — se suben a primitivo aparte solo si un epic
+siguiente los vuelve a necesitar.
+
 ### Patrones de §5 sin implementar
 
-11 Pase digital · 12 Consola de recepción · 13 Sección de cuenta ·
+13 Sección de cuenta ·
 14 Panel de notificaciones · 15 App shell del partner · 16 Lista de datos oscura ·
 17 Panel de actividad · 18 Modal/drawer oscuros · 19 Vista de analítica ·
 21 App shell admin · 22 Ficha de miembro · 23 Caso con log ·
 24 Comparación live/propuesto · 25 Lista de datos clara · 26 Comparación de planes
+
+(11 Pase digital y 12 Consola de recepción se implementaron con el Epic 5 — ver
+la tabla de patrones arriba.)
 
 ### Gemelos que deben compartir componente
 
@@ -241,7 +265,7 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 | La card de resultado calcula su "+N" de amenities | El artboard escribe "+2" con cuatro amenities listadas en `ListView`. Se muestran tres iconos y el resto se cuenta |
 | En el App shell, la sidebar de 248px pasa a barra de navegación inferior por debajo de `lg` | Es una PWA: en móvil la nav vive abajo. Los artboards son desktop 1440×900 |
 | "View details" lleva `aria-label="View details for ‹lounge›"` | Tres enlaces con el mismo texto visible son indistinguibles para un lector de pantalla. El texto en pantalla no cambia |
-| Los items **My Pass** y **Profile** del shell apuntan a rutas que aún no existen | Sus artboards son de los Epics 6 y 7. El shell fija la nav completa desde ya, tal como el design system la declara |
+| El item **Profile** del shell apunta a una ruta que aún no existe | Su artboard es del Epic 6. El shell fija la nav completa desde ya, tal como el design system la declara. **My Pass** ya existe desde el Epic 5 |
 | El bloqueo por intentos fallidos no persiste | Es un contador en `useState`: basta para alcanzar y ver el estado bloqueado, que es lo que el diseño tiene que mostrar. La caducidad de 15 minutos se enuncia en el aviso, no se cuenta |
 | El "hoy" del perfil de lounge es `TODAY` (2025-09-09, martes), no el jueves 12 de sept que dibujan los artboards de la Fase 4 | Explore ya fijó `TODAY` como el "hoy" del mockup para toda la app. Cambiarlo solo para el Epic 3 rompería la coherencia entre "hoy" al navegar de `/explore` a un lounge |
 | Las amenities del perfil son las 6 de la Story 2.2 (`lib/amenities.ts`), no la lista propia de `Main.dc.html` (que incluye "Showers" y no incluye "Spa") | Una sola fuente de datos entre el filtro de Explore y el perfil evita que un lounge se anuncie con una amenity que el filtro dice que no tiene |
@@ -263,3 +287,9 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 | `/lounges/[id]/book/confirmed` añade el enlace "view the email receipt" | Ningún artboard de la Fase 5 enlaza `Confirmed.dc.html` con `Receipt.dc.html`, pero sin él la pantalla del recibo (criterio de la Story 4.2) quedaría implementada y sin ruta para llegar a ella navegando |
 | El recibo por email (`/lounges/[id]/book/receipt`) es la pantalla del estado, no un envío real | "Payment confirmation email receipt" (Story 4.2) exige backend real (SMTP). Se implementa visualmente la pantalla del email tal como llegaría, con los mismos datos de la reserva — la desviación que ya fija la cabecera de este documento |
 | El `.ics` y la URL de Google Calendar de `AddToCalendarModal` son reales, no simulados | A diferencia del resto del Epic 4, generar un archivo de calendario y abrir Google Calendar son capacidades del navegador, no llamadas a un servicio de LuxePass — no hay ninguna regla que lo prohíba |
+| `/my-pass/[reference]` alcanza los cuatro estados del pase (`Main`/`ArrivalDay`/`CheckedIn`/`Expired`) por `?state=`, no por el paso del tiempo | Igual que `?covered=1`: no hay reloj real que dispare "hoy llegó" o "la ventana cerró", así que el estado se elige por query param en vez de inventar un timer que nadie pidió |
+| Los datos de "My Pass" (`lib/passes.ts`) son literales, independientes del `booking-context.tsx` de la reserva en vivo | La reserva LP-842193 que citan los artboards de la Fase 6 no es la que produce `bookingReference()` para una fecha/hora elegida en `/lounges/[id]/book` — igual que `lounge-profile.ts` fija literalmente el contacto y las reseñas de The Ainsworth en vez de derivarlos del motor de disponibilidad |
+| Solo la card de "Next visit" en `/my-pass` enlaza a un pase completo | Es la única reserva de muestra con las cuatro pantallas del patrón 11 dibujadas (`LP-842193`). Los botones "View pass"/"Manage"/"Receipt" de las demás filas no tienen artboard de destino propio y quedan inertes, como "Write a review" en el Epic 3 |
+| `/reception` es una ruta suelta, sin App shell ni pantalla de login | El patrón 12 es "solo el momento del check-in de un invitado" (`DESIGN-SYSTEM.md` §6 Fase 6); la lista diaria de invitados y el acceso del partner son la Story 7.1, todavía sin diseñar. Se llega tecleando la URL, no desde la navegación del miembro |
+| El código QR es el mismo SVG decorativo de 25×25 módulos del artboard, no una librería real | `DESIGN-SYSTEM.md` §6 (Fase 6) ya lo deja como pendiente ("al implementar se genera con una librería real sobre el LP#"); añadir una dependencia de generación de QR no cambia ningún criterio de aceptación, así que se queda para cuando haga falta que el código sea escaneable de verdad |
+| El botón "Check in Alexandra" de `/reception` deshabilita y cambia de texto en vez de navegar a algún sitio | Ningún artboard dibuja el estado posterior de la consola de recepción; el efecto en el lado del miembro ya es la pantalla `CheckedIn` de `/my-pass/[reference]?state=checked-in`, alcanzable por separado |

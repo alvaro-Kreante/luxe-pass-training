@@ -44,7 +44,7 @@ Ejemplos ya hechos: la comprobación de email duplicado consulta una lista de do
 
 **Diseño: los 9 epics están diseñados** (Fase 9 cerrada). Cualquier trabajo de diseño nuevo es revisión o corrección.
 
-**Código: 10 de 24 historias implementadas** — los Epics 1, 2, 3 y 4 están completos.
+**Código: 13 de 24 historias implementadas** — los Epics 1, 2, 3, 4 y 5 están completos.
 
 | Epic | Historias | Estado |
 |---|---|---|
@@ -58,7 +58,9 @@ Ejemplos ya hechos: la comprobación de email duplicado consulta una lista de do
 | 4 · Booking System | 4.1 Seamless booking flow | ✅ **Implementada** |
 | | 4.2 Payment processing | ✅ **Implementada** |
 | | 4.3 Calendar integration | ✅ **Implementada** |
-| 5 · QR Code & Check-in | 5.1 · 5.2 · 5.3 | ⬜ Pendiente |
+| 5 · QR Code & Check-in | 5.1 Digital pass generation | ✅ **Implementada** |
+| | 5.2 Lounge check-in process | ✅ **Implementada** |
+| | 5.3 Booking reminder notification | ✅ **Implementada** |
 | 6 · Member Experience & Notifications | 6.1 · 6.2 · 6.3 | ⬜ Pendiente |
 | 7 · Partner Dashboard | 7.1 · 7.2 · 7.3 | ⬜ Pendiente |
 | 8 · Admin & Support | 8.1 · 8.2 · 8.3 | ⬜ Pendiente |
@@ -86,6 +88,10 @@ Ejemplos ya hechos: la comprobación de email duplicado consulta una lista de do
 | `/lounges/[id]/book/summary` | `Summary.dc.html` + `Waitlist.dc.html` + `PaymentError.dc.html` | 4.1 |
 | `/lounges/[id]/book/confirmed` | `Confirmed.dc.html` + `Calendar.dc.html` | 4.1 · 4.3 |
 | `/lounges/[id]/book/receipt` | `Receipt.dc.html` | 4.2 |
+| `/my-pass` | `MyBookings.dc.html` (Upcoming) + `NoShow.dc.html` (Past) | 5.1 · 5.2 |
+| `/my-pass/[reference]` | `Main.dc.html` + `ArrivalDay.dc.html` + `CheckedIn.dc.html` + `Expired.dc.html` (sobre `?state=`) | 5.1 |
+| `/my-pass/[reference]/reminder` | `Reminder.dc.html` | 5.3 |
+| `/reception` | `Reception.dc.html` + `CheckInError.dc.html` | 5.2 |
 
 #### Estados de `/explore`
 
@@ -108,8 +114,22 @@ query param** — no salen de ningún artboard y desaparecen cuando haya lógica
 Para llegar a `NoResults` como lo dibuja el artboard: Filters → WiFi → Co-working
 → `< 2 mi` → día **14** → **2–6 PM**.
 
-Los 10 artboards de la Fase 1, los 9 de la Fase 3, los 9 de la Fase 4 y los 9 de
-la Fase 5 están cubiertos. `/explore` reúne siete de los nueve de la Fase 3 como
+#### Estados de `/my-pass/[reference]`
+
+`Main`, `ArrivalDay`, `CheckedIn` y `Expired.dc.html` son cuatro estados de la
+**misma tarjeta de pase** (design system §5 patrón 11) para la misma reserva de
+muestra, LP-842193. Sin un reloj real que los dispare, se alcanzan por query
+param — igual que `?covered=1` o `?map=error`:
+
+| URL | Artboard | Qué enseña |
+|---|---|---|
+| `/my-pass/LP-842193` | `Main` | Pase próximo, neutro |
+| `/my-pass/LP-842193?state=today` | `ArrivalDay` | El día de la reserva, cuenta atrás de check-in |
+| `/my-pass/LP-842193?state=checked-in` | `CheckedIn` | Con el check-in ya hecho |
+| `/my-pass/LP-842193?state=expired` | `Expired` | Tras cerrarse la ventana de la reserva |
+
+Los 10 artboards de la Fase 1, los 9 de la Fase 3, los 9 de la Fase 4, los 9 de
+la Fase 5 y los 9 de la Fase 6 están cubiertos. `/explore` reúne siete de los nueve de la Fase 3 como
 estados de una misma pantalla: solo el permiso de ubicación y la entrada manual
 son diálogos aparte. `/lounges/[id]` hace lo mismo con cinco de los nueve de la
 Fase 4 (`Main` · `Gallery` · `Share` · `NotAvailable` · `Loading`); los otros
@@ -117,14 +137,23 @@ cuatro (`Availability` · `Closure` · `Reviews` · `NoRatings`) son estados de 
 dos sub-vistas. Los tres pasos de `/lounges/[id]/book` reúnen a su vez seis de
 los nueve artboards de la Fase 5 (`Main` · `Payment` · `Summary` ·
 `MembershipCovered` · `Waitlist` · `PaymentError`); los otros tres
-(`Confirmed` · `Calendar` · `Receipt`) tienen su propia ruta.
+(`Confirmed` · `Calendar` · `Receipt`) tienen su propia ruta. De la Fase 6,
+`/my-pass` reúne `MyBookings` y `NoShow` como sus pestañas Upcoming/Past, y
+`/my-pass/[reference]` reúne `Main`/`ArrivalDay`/`CheckedIn`/`Expired` como se
+explica arriba; `Reminder` tiene su propia ruta y `Reception`/`CheckInError`
+son la misma consola de recepción (`/reception`), alcanzados tecleando el
+número en vez de por query param porque sí son una interacción real de la
+pantalla.
 
 Lo construido que ya sirve al resto: 21 primitivos, 10 patrones de pantalla y la
 capa de tokens completa. El **App shell (patrón 3)** fija la navegación de los
 Epics 2–6, el **drawer lateral (patrón 6)** es el que reutiliza el Partner
 Dashboard en oscuro, la **sub-vista de lounge (patrón 8)** es la base de las
 pantallas de disponibilidad y reseñas, y el **flujo por pasos con rail (patrón 9)**
-es la base de los tres pasos de reserva. Ver `docs/design/COMPONENT-MAP.md`.
+es la base de los tres pasos de reserva. El **pase digital (patrón 11)** extiende
+la tarjeta de confirmación oscura del patrón 10 sin reescribirla, y la
+**consola de recepción (patrón 12)** es la primera pantalla íntegramente oscura
+fuera del Partner Dashboard. Ver `docs/design/COMPONENT-MAP.md`.
 
 **Cada artboard tiene su propia frase de marca** en el panel izquierdo del patrón 1 (`Join a community of discerning travelers.`, `Your next moment of calm is waiting.`, `Tell us who you are.`…). No reutilizar la de otra pantalla: extraerla del `.dc.html` correspondiente.
 
@@ -411,6 +440,7 @@ src/                      Código de la aplicación Next.js
     explore/              Lógica del Epic 2 (CityMap, FilterDrawer, LoungeList...)
     lounges/              Thumb/Card compartidos (E1-E3) + el perfil, disponibilidad y reseñas del Epic 3
     booking/              Lógica del Epic 4 (BookingContext, formularios de los 3 pasos, modales)
+    passes/               Lógica del Epic 5 (DigitalPassCard, patrón 11)
     charts/               Gráficos Recharts (BarChart, LineChart)
   lib/
     utils.ts              Utilidades (cn() para Tailwind)
@@ -426,6 +456,7 @@ src/                      Código de la aplicación Next.js
     member.ts             El miembro de muestra del App shell
     booking.ts            Story 4.1 / 4.2 — date picker, slots, precio, pago y referencias de reserva
     calendar-export.ts    Story 4.3 — .ics real y URL real de Google Calendar
+    passes.ts             Story 5.1 / 5.2 / 5.3 — el pase de muestra, "My Pass" y la consola de recepción
 
   **/*.test.ts(x)         Los tests van junto al archivo que prueban
 

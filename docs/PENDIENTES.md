@@ -56,17 +56,15 @@ aceptación con fecha y versión.
 
 El App shell (patrón 3) fija la navegación completa del área de miembro
 — Home · Explore · My Pass · Profile — porque así la declara el design system y
-así la dibujan todos los artboards de las Fases 1 y 3. `/` y `/explore` ya
-existen; **`/my-pass` y `/profile` siguen dando 404**.
+así la dibujan todos los artboards de las Fases 1 y 3. `/`, `/explore` y ahora
+`/my-pass` ya existen; **`/profile` sigue dando 404**.
 
-`/lounges/[id]/book` (Epic 4) ya existe. Dentro de su flujo, "View in My Pass"
-(`Confirmed.dc.html`) y el link "Log out" del App shell apuntan igual a rutas de
-epics siguientes.
+El link "Log out" del App shell apunta igual a una ruta de un epic siguiente.
 
 Ninguna es deuda: son las pantallas de los epics siguientes. Se listan aquí para
 que nadie las tome por un enlace roto al recorrer el mockup.
 
-**Se resuelve:** `/my-pass` con el Epic 5 · `/profile` con el Epic 6.
+**Se resuelve:** `/profile` con el Epic 6.
 
 ### 2.2 Enlace "I have verified my email"
 
@@ -135,6 +133,29 @@ de los 9 epics cubre redactar una reseña, solo leerlas (Story 3.1).
 
 **Se resuelve:** cuando una historia futura defina esa pantalla.
 
+### 2.6 El QR del pase es decorativo
+
+`QrCode` (`src/components/ui/qr-code.tsx`) dibuja el mismo SVG de 25×25 módulos
+que ya fijaban los artboards de la Fase 6: no codifica de verdad el LP# que
+recibe por prop, así que un lector real no obtendría nada útil de él.
+`DESIGN-SYSTEM.md` §6 (Fase 6) ya avisaba de esto al diseñar la pantalla.
+
+**Se resuelve:** añadiendo una librería de generación de QR cuando el pase
+tenga que ser escaneable de verdad, no solo mostrarse.
+
+### 2.7 `/reception` no tiene pantalla de acceso propia, y su URL no está bajo un namespace de partner
+
+La consola de recepción es la vista del **partner** (personal de The Ainsworth,
+no del miembro), pero hoy vive en `/reception`, una URL suelta al mismo nivel
+que las rutas de miembro. No hay login ni verificación de que quien la abre sea
+personal del lounge. El acceso de partner con cuenta propia es la Story 7.1,
+todavía sin implementar.
+
+**Se resuelve:** cuando el Epic 7 (Partner Dashboard) traiga su `Login.dc.html`
+y su propio shell, la consola debería moverse a una URL bajo ese namespace
+(p. ej. `/partner/reception` o similar) y vivir detrás de ese login, en vez de
+quedar suelta en la raíz.
+
 ---
 
 ## 3. Criterios de aceptación cubiertos solo de forma declarativa
@@ -170,6 +191,12 @@ nada los hace cumplir.
 | 4.2 | Payment confirmation email receipt | Pantalla `/lounges/[id]/book/receipt` con el email tal como llegaría; no se envía ningún correo |
 | 4.2 | PCI DSS compliance for data security | Solo el texto que lo declara en pantalla; no hay formulario de tarjeta real que cumplir |
 | 4.3 | Booking reference number in event description | El número de reserva es determinista por lounge+fecha+hora (`bookingReference`), no lo emite un sistema de reservas |
+| 5.1 | Booking expires automatically after booking window | No hay reloj real: los cuatro estados del pase (próximo/del día/check-in/expirado) se eligen por `?state=` en `/my-pass/[reference]`, no los dispara el paso del tiempo |
+| 5.1 | Email with booking info (confirmation) | El pase vive en `/my-pass`; no se envía ningún correo — el criterio de la Story 5.1 es en realidad sobre la app, no sobre un email |
+| 5.2 | Instant verification of booking validity | `findReceptionBooking` en `src/lib/passes.ts` compara contra una única reserva de muestra, no contra un sistema de reservas real |
+| 5.2 | Check-in confirmation to member's app | No hay canal entre `/reception` y `/my-pass`: cada uno muestra su propio estado de check-in por separado, no uno que actualice al otro en vivo |
+| 5.2 | Emergency contact information accessible to staff | Contacto de muestra fijo en `RECEPTION_VALID_BOOKING`; el aviso de "cada acceso queda registrado" es solo texto, no hay registro real |
+| 5.3 | Reminder email 24 hrs before booking | Pantalla `/my-pass/[reference]/reminder` con el email tal como llegaría, igual que `Receipt.dc.html`; no se envía ningún correo ni se programa nada a las 24 h |
 
 Los enlaces de las tiendas de `/welcome` apuntan a `#`: no existen todavía las
 fichas de App Store ni Google Play.
