@@ -71,6 +71,10 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `Skeleton` | `skeleton.tsx` | §5 "Estados" — carga, misma geometría que la pieza real | — | E2 |
 | `Rating` | `rating.tsx` | **Derivado** — §4 no le da fila; la geometría (estrella dorada de 13px + cifra en 12.5px/600) se repite en `Home`, `ListView` y el callout del mapa | — | E2 |
 | `Notice` | `notice.tsx` | **Derivado** — §4 geometría de "Fila de opción" + borde discontinuo de §5 Estados | `tone`: muted·attention | E1 |
+| `MonthCalendar` | `date-picker.tsx` | §4 Date picker mensual | `days: MonthDay[]` (de `lib/booking.ts`) · `selectedDate` · `onSelectDate` · `onPrevMonth`/`onNextMonth` · `canGoPrev` | E4 |
+| `TimeSlotGrid` | `time-slot.tsx` | §4 Slot de hora | `slots: BookingSlot[]` · `selectedTime` · `onSelect` | E4 |
+| `PaymentOptionRow` | `payment-option-row.tsx` | §4 Fila de opción / método de pago | `selected` · `onSelect` · `title`/`subtitle` · `leading`/`trailing` · `disabled`. Reutilizada literalmente por las alternativas de `Waitlist.dc.html` y `PaymentError.dc.html` — la nota de §4 ya preveía este doble uso | E4 |
+| `CardBrandBadge` | `card-brand-badge.tsx` | §4 Marca de tarjeta | `brand`: visa·mastercard | E4 |
 
 ## Capa 2 — Patrones (`src/components/patterns/`)
 
@@ -83,7 +87,9 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | Drawer lateral | `drawer.tsx` | §5 patrón **6** | Radix Dialog con `modal={false}` — el fondo debe seguir siendo perceptible mientras se filtra. `width` 436 (472 en el patrón **18** oscuro) |
 | Explore (mapa + resultados) | `explore-layout.tsx` | §5 patrón **5** | Topbar de 88px, fila de filtros de 52px, panel de 372px + mapa. El panel es la `region` "Results" que comparten mapa y lista |
 | Perfil de lounge (detalle) | `app/lounges/[id]/page.tsx` compone `lounges/hero-carousel.tsx` + `lounges/availability-card.tsx` | §5 patrón **7** | Sin archivo de patrón único: la topbar de 64px y el hero de 268px solo los usa esta pantalla, igual que Explore no extrae su topbar aparte de `explore-layout.tsx` |
-| Sub-vista de lounge | `lounges/lounge-subview-header.tsx` | §5 patrón **8** | Topbar 64px + header 84px (miniatura, nombre, sello de frescura). Reutilizado por `/lounges/[id]/availability` y `/lounges/[id]/reviews` |
+| Sub-vista de lounge | `lounges/lounge-subview-header.tsx` | §5 patrón **8** | Topbar 64px + header 84px (miniatura, nombre, sello de frescura). Reutilizado por `/lounges/[id]/availability` y `/lounges/[id]/reviews`. `topbarRight` y `hideFreshness` (nuevos, Epic 4) dejan que el patrón 9 sustituya "Booking help"/sello de frescura por "Secure checkout"/chip "Slot held" |
+| Flujo por pasos con rail de resumen | `step-flow-rail.tsx` | §5 patrón **9** | Compone `LoungeSubviewHeader` + `StepProgress` + el rail de 344px. Usado en los tres pasos de `/lounges/[id]/book` |
+| Tarjeta de confirmación oscura | `confirmation-card.tsx` | §5 patrón **10** | Card de 344px, `data-theme="dark"` propio + `.surface-night.dot-pattern`. `rows: {label,value}[]` genérico para que el patrón 11 (pase digital, Fase 6) lo extienda sin reescribirlo |
 
 ### Utilidades de superficie (`globals.css`)
 
@@ -117,6 +123,11 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `/lounges/[id]` | `Main` + `Gallery` + `Share` + `NotAvailable` + `Loading` | 3.1 · 3.2 |
 | `/lounges/[id]/availability` | `Availability` + `Closure` | 3.2 |
 | `/lounges/[id]/reviews` | `Reviews` + `NoRatings` | 3.1 |
+| `/lounges/[id]/book` | `Main` (+ `MembershipCovered` sobre `?covered=1`, ver desviaciones) | 4.1 |
+| `/lounges/[id]/book/payment` | `Payment` + `MembershipCovered` | 4.2 |
+| `/lounges/[id]/book/summary` | `Summary` + `Waitlist` + `PaymentError` | 4.1 |
+| `/lounges/[id]/book/confirmed` | `Confirmed` + `Calendar` | 4.1 · 4.3 |
+| `/lounges/[id]/book/receipt` | `Receipt` | 4.2 |
 
 ### Lógica de epic (`src/components/onboarding/`, `src/lib/`)
 
@@ -151,6 +162,17 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `lounges/lounge-subview-header.tsx` | Story 3.1 / 3.2 — cabecera de la sub-vista de lounge (patrón 8) |
 | `lounges/weekly-calendar.tsx` · `closure-banner.tsx` | Story 3.2 — el calendario semanal de franjas y el aviso de cierre por festivo |
 | `lounges/rating-summary.tsx` · `review-card.tsx` | Story 3.1 — el resumen de valoración (con y sin reseñas) y cada reseña |
+| `lib/booking.ts` | Story 4.1 / 4.2 — date picker mensual, slots de llegada, precio (day pass vs. cubierto por membresía), métodos de pago de muestra, referencias de reserva y la cuenta atrás del slot |
+| `lib/calendar-export.ts` | Story 4.3 — `.ics` real y URL real de Google Calendar; la única lógica del epic que no se simula |
+| `booking/booking-context.tsx` | Borrador de reserva compartido por los 3 pasos y por `/book/confirmed`+`/book/receipt` (Context, sin persistencia); también la cuenta atrás compartida "Slot held for M:SS" |
+| `booking/visit-details-form.tsx` · `visit-summary-rail.tsx` | Story 4.1 — paso 1 "Visit details" (`Main.dc.html`): date picker, slots, admisión fija y peticiones especiales |
+| `booking/payment-method-form.tsx` · `payment-summary-rail.tsx` | Story 4.2 — paso 2 "Payment method" (`Payment.dc.html` / `MembershipCovered.dc.html`) |
+| `booking/booking-summary-card.tsx` · `terms-policy-card.tsx` · `confirm-payment-rail.tsx` | Story 4.1 — paso 3 "Review and confirm" (`Summary.dc.html`): resumen editable, política de cancelación y la confirmación de un toque |
+| `booking/waitlist-modal.tsx` | Story 4.1 — "if full, option to be on the waitlist" (`Waitlist.dc.html`) |
+| `booking/payment-error-modal.tsx` | Story 4.1 — error handling + retry del chequeo final (`PaymentError.dc.html`) |
+| `booking/confirmed-visit-card.tsx` | Story 4.1 — detalle de la visita en la confirmación inmediata (`Confirmed.dc.html`) |
+| `booking/add-to-calendar-modal.tsx` | Story 4.3 — "Add to Calendar" (`Calendar.dc.html`), conecta con `lib/calendar-export.ts` |
+| `booking/slot-hold-badge.tsx` | Chip "Slot held for M:SS" de los pasos 2 y 3 |
 
 ---
 
@@ -161,8 +183,7 @@ comprobar si un componente de arriba ya lo cubre con una variante.
 
 ### Primitivos de §4 sin implementar
 
-Date picker mensual (Fase 5) · Slot de hora (Fase 5) · Fila de opción / método de pago ·
-Marca de tarjeta · Item de nav · Código QR del pase (Fase 6) · Sello de expirado ·
+Item de nav · Código QR del pase (Fase 6) · Sello de expirado ·
 Fila de historial · **Chip de estado de reserva** (Fase 7) · Switch de ajuste ·
 Fila de ajuste por canal · Campana de notificaciones · Fila de notificación ·
 Código de referido · Campo de lookup (oscuro) · Botón fantasma (oscuro) ·
@@ -173,12 +194,11 @@ Diff de aprobación · Barra de consumo · Tabla comparativa
 
 ### Patrones de §5 sin implementar
 
-9 Flujo por pasos con rail · 10 Tarjeta de confirmación oscura · 11 Pase digital ·
-12 Consola de recepción · 13 Sección de cuenta · 14 Panel de notificaciones ·
-15 App shell del partner · 16 Lista de datos oscura · 17 Panel de actividad ·
-18 Modal/drawer oscuros · 19 Vista de analítica · 20 Email de marca · 21 App shell admin ·
-22 Ficha de miembro · 23 Caso con log · 24 Comparación live/propuesto ·
-25 Lista de datos clara · 26 Comparación de planes
+11 Pase digital · 12 Consola de recepción · 13 Sección de cuenta ·
+14 Panel de notificaciones · 15 App shell del partner · 16 Lista de datos oscura ·
+17 Panel de actividad · 18 Modal/drawer oscuros · 19 Vista de analítica ·
+21 App shell admin · 22 Ficha de miembro · 23 Caso con log ·
+24 Comparación live/propuesto · 25 Lista de datos clara · 26 Comparación de planes
 
 ### Gemelos que deben compartir componente
 
@@ -230,3 +250,15 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 | El contacto (dirección, teléfono, email, web) y las reseñas son literales solo para The Ainsworth y Belmont Terrace; el resto del catálogo los deriva de su id | Son los dos únicos lounges que un artboard de la Fase 4 cita por nombre (`Main.dc.html`/`Reviews.dc.html` y `NoRatings.dc.html`). Ver `docs/PENDIENTES.md` §2.4 |
 | El aviso de cierre por festivo se calcula mirando los 7 días de la semana mostrada, no solo el lunes y el domingo | Thanksgiving cae a mitad de semana (jueves-viernes): mirar solo los extremos lo dejaría sin detectar |
 | "Write a review" no lleva a ninguna pantalla | Ninguna historia de los 9 epics cubre redactar una reseña. Ver `docs/PENDIENTES.md` §2.5 |
+| El date picker de `/lounges/[id]/book` es mensual (día a día) y distinto del calendario semanal (franjas) de la Story 3.2 | Son dos widgets del design system con geometría propia (§4 "Date picker mensual" vs. "Calendario de disponibilidad"). Ambos leen la misma fuente, `weeklyAvailability` de `lib/lounge-profile.ts` — no hay dos modelos de disponibilidad, solo dos vistas |
+| Los cinco slots de llegada (`Main.dc.html`) reparten las plazas de su franja del catálogo, en vez de traer su propio número | El catálogo solo modela franjas (morning/afternoon/evening), no horas sueltas. `slotsFor` en `lib/booking.ts` divide `seatsLeft` de la franja entre sus slots, así que la suma nunca supera lo que ya declara `weeklyAvailability` |
+| El modelo de negocio de precio (8 visitas/mes incluidas, day pass de $75 a partir de la 9.ª) es una decisión de producto asumida, no confirmada | Así lo advierte ya `DESIGN-SYSTEM.md` §6 (Fase 5): es la lectura que cubre a la vez "subscription pricing" e "individual day-pass pricing" de la Story 4.2. Ver `docs/PENDIENTES.md` |
+| La cuenta atrás "Slot held for M:SS" arranca en 10 minutos al entrar en `/lounges/[id]/book` y es continua entre los pasos 2 y 3 | El artboard no fija la duración exacta ("decisión de producto a confirmar", §6 Fase 5); 10 minutos es un valor de muestra razonable. Vive en `BookingContext`, no por pantalla, para que no se reinicie al pasar de Payment a Summary |
+| El chequeo final de disponibilidad y el rechazo de pago son disparadores de muestra, no aleatorios | `isAtRiskOfWaitlist` ofrece la waitlist cuando el slot elegido tiene ≤2 plazas; `paymentWillDecline` falla solo con la tarjeta de muestra Mastercard·8801. Ambos son deterministas para que el estado se pueda alcanzar y probar, igual que el email duplicado de la Story 1.1 |
+| Las tres alternativas de `Waitlist.dc.html` no navegan a nada al elegirlas | El criterio de la Story 4.1 es "ofrecer" la waitlist, no definir qué pasa al escoger cada alternativa (el flow tampoco lo especifica). Se muestran como opciones seleccionables; los botones fijos del pie ("Change date" / "Join waitlist") son los que actúan |
+| La tercera alternativa de la waitlist ("The Vestry · 1.8 mi") es texto literal del artboard, no un lounge real ni un cálculo de cercanía | No existe en el catálogo ni hay lógica de "lounge más cercano a otro lounge" en ningún epic (Story 2.1 calcula distancia a la ubicación buscada, no lounge-a-lounge). Inventar ese modelo de datos está fuera del alcance de esta historia |
+| `?covered=1` en `/lounges/[id]/book` alcanza la variante "la visita está cubierta por la membresía" (`MembershipCovered.dc.html`) | Igual que `/explore?map=error`: no hay backend de membresía que decida cuándo aplica, así que el estado se alcanza por query param y se documenta aquí en vez de inventar un botón que no está en ningún artboard |
+| `SAMPLE_MEMBER` gana un campo `email` (`lib/member.ts`) | Los artboards de la Fase 5 citan el correo de Alexandra Rivas en tres pantallas distintas (Confirmed, Payment, Receipt); antes solo vivía como texto literal repetido |
+| `/lounges/[id]/book/confirmed` añade el enlace "view the email receipt" | Ningún artboard de la Fase 5 enlaza `Confirmed.dc.html` con `Receipt.dc.html`, pero sin él la pantalla del recibo (criterio de la Story 4.2) quedaría implementada y sin ruta para llegar a ella navegando |
+| El recibo por email (`/lounges/[id]/book/receipt`) es la pantalla del estado, no un envío real | "Payment confirmation email receipt" (Story 4.2) exige backend real (SMTP). Se implementa visualmente la pantalla del email tal como llegaría, con los mismos datos de la reserva — la desviación que ya fija la cabecera de este documento |
+| El `.ics` y la URL de Google Calendar de `AddToCalendarModal` son reales, no simulados | A diferencia del resto del Epic 4, generar un archivo de calendario y abrir Google Calendar son capacidades del navegador, no llamadas a un servicio de LuxePass — no hay ninguna regla que lo prohíba |

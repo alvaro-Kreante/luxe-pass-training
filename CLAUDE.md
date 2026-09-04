@@ -44,7 +44,7 @@ Ejemplos ya hechos: la comprobación de email duplicado consulta una lista de do
 
 **Diseño: los 9 epics están diseñados** (Fase 9 cerrada). Cualquier trabajo de diseño nuevo es revisión o corrección.
 
-**Código: 7 de 24 historias implementadas** — los Epics 1, 2 y 3 están completos.
+**Código: 10 de 24 historias implementadas** — los Epics 1, 2, 3 y 4 están completos.
 
 | Epic | Historias | Estado |
 |---|---|---|
@@ -55,7 +55,9 @@ Ejemplos ya hechos: la comprobación de email duplicado consulta una lista de do
 | | 2.3 List view alternative | ✅ **Implementada** |
 | 3 · Lounge Profiles & Details | 3.1 Detailed lounge information | ✅ **Implementada** |
 | | 3.2 Availability | ✅ **Implementada** |
-| 4 · Booking System | 4.1 · 4.2 · 4.3 | ⬜ Pendiente |
+| 4 · Booking System | 4.1 Seamless booking flow | ✅ **Implementada** |
+| | 4.2 Payment processing | ✅ **Implementada** |
+| | 4.3 Calendar integration | ✅ **Implementada** |
 | 5 · QR Code & Check-in | 5.1 · 5.2 · 5.3 | ⬜ Pendiente |
 | 6 · Member Experience & Notifications | 6.1 · 6.2 · 6.3 | ⬜ Pendiente |
 | 7 · Partner Dashboard | 7.1 · 7.2 · 7.3 | ⬜ Pendiente |
@@ -79,6 +81,11 @@ Ejemplos ya hechos: la comprobación de email duplicado consulta una lista de do
 | `/lounges/[id]` | `Main.dc.html` + `Gallery.dc.html` + `Share.dc.html` + `NotAvailable.dc.html` + `Loading.dc.html` | 3.1 · 3.2 |
 | `/lounges/[id]/availability` | `Availability.dc.html` + `Closure.dc.html` | 3.2 |
 | `/lounges/[id]/reviews` | `Reviews.dc.html` + `NoRatings.dc.html` | 3.1 |
+| `/lounges/[id]/book` | `Main.dc.html` (+ `MembershipCovered.dc.html` sobre `?covered=1`) | 4.1 |
+| `/lounges/[id]/book/payment` | `Payment.dc.html` + `MembershipCovered.dc.html` | 4.2 |
+| `/lounges/[id]/book/summary` | `Summary.dc.html` + `Waitlist.dc.html` + `PaymentError.dc.html` | 4.1 |
+| `/lounges/[id]/book/confirmed` | `Confirmed.dc.html` + `Calendar.dc.html` | 4.1 · 4.3 |
+| `/lounges/[id]/book/receipt` | `Receipt.dc.html` | 4.2 |
 
 #### Estados de `/explore`
 
@@ -101,19 +108,23 @@ query param** — no salen de ningún artboard y desaparecen cuando haya lógica
 Para llegar a `NoResults` como lo dibuja el artboard: Filters → WiFi → Co-working
 → `< 2 mi` → día **14** → **2–6 PM**.
 
-Los 10 artboards de la Fase 1, los 9 de la Fase 3 y los 9 de la Fase 4 están
-cubiertos. `/explore` reúne siete de los nueve de la Fase 3 como estados de una
-misma pantalla: solo el permiso de ubicación y la entrada manual son diálogos
-aparte. `/lounges/[id]` hace lo mismo con cinco de los nueve de la Fase 4
-(`Main` · `Gallery` · `Share` · `NotAvailable` · `Loading`); los otros cuatro
-(`Availability` · `Closure` · `Reviews` · `NoRatings`) son estados de las dos
-sub-vistas.
+Los 10 artboards de la Fase 1, los 9 de la Fase 3, los 9 de la Fase 4 y los 9 de
+la Fase 5 están cubiertos. `/explore` reúne siete de los nueve de la Fase 3 como
+estados de una misma pantalla: solo el permiso de ubicación y la entrada manual
+son diálogos aparte. `/lounges/[id]` hace lo mismo con cinco de los nueve de la
+Fase 4 (`Main` · `Gallery` · `Share` · `NotAvailable` · `Loading`); los otros
+cuatro (`Availability` · `Closure` · `Reviews` · `NoRatings`) son estados de las
+dos sub-vistas. Los tres pasos de `/lounges/[id]/book` reúnen a su vez seis de
+los nueve artboards de la Fase 5 (`Main` · `Payment` · `Summary` ·
+`MembershipCovered` · `Waitlist` · `PaymentError`); los otros tres
+(`Confirmed` · `Calendar` · `Receipt`) tienen su propia ruta.
 
-Lo construido que ya sirve al resto: 17 primitivos, 8 patrones de pantalla y la capa
-de tokens completa. El **App shell (patrón 3)** fija la navegación de los Epics 2–6,
-el **drawer lateral (patrón 6)** es el que reutiliza el Partner Dashboard en
-oscuro, y la **sub-vista de lounge (patrón 8)** es la base de las pantallas de
-disponibilidad y reseñas. Ver `docs/design/COMPONENT-MAP.md`.
+Lo construido que ya sirve al resto: 21 primitivos, 10 patrones de pantalla y la
+capa de tokens completa. El **App shell (patrón 3)** fija la navegación de los
+Epics 2–6, el **drawer lateral (patrón 6)** es el que reutiliza el Partner
+Dashboard en oscuro, la **sub-vista de lounge (patrón 8)** es la base de las
+pantallas de disponibilidad y reseñas, y el **flujo por pasos con rail (patrón 9)**
+es la base de los tres pasos de reserva. Ver `docs/design/COMPONENT-MAP.md`.
 
 **Cada artboard tiene su propia frase de marca** en el panel izquierdo del patrón 1 (`Join a community of discerning travelers.`, `Your next moment of calm is waiting.`, `Tell us who you are.`…). No reutilizar la de otra pantalla: extraerla del `.dc.html` correspondiente.
 
@@ -399,6 +410,7 @@ src/                      Código de la aplicación Next.js
     onboarding/           Lógica del Epic 1 (TermsModal, ProfileDraft)
     explore/              Lógica del Epic 2 (CityMap, FilterDrawer, LoungeList...)
     lounges/              Thumb/Card compartidos (E1-E3) + el perfil, disponibilidad y reseñas del Epic 3
+    booking/              Lógica del Epic 4 (BookingContext, formularios de los 3 pasos, modales)
     charts/               Gráficos Recharts (BarChart, LineChart)
   lib/
     utils.ts              Utilidades (cn() para Tailwind)
@@ -412,6 +424,8 @@ src/                      Código de la aplicación Next.js
     distance.ts           Conversión mi/km y tiempo a pie
     location.ts           Ciudades de muestra y su búsqueda
     member.ts             El miembro de muestra del App shell
+    booking.ts            Story 4.1 / 4.2 — date picker, slots, precio, pago y referencias de reserva
+    calendar-export.ts    Story 4.3 — .ics real y URL real de Google Calendar
 
   **/*.test.ts(x)         Los tests van junto al archivo que prueban
 

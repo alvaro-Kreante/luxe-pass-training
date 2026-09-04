@@ -59,14 +59,14 @@ El App shell (patrón 3) fija la navegación completa del área de miembro
 así la dibujan todos los artboards de las Fases 1 y 3. `/` y `/explore` ya
 existen; **`/my-pass` y `/profile` siguen dando 404**.
 
-Dentro del perfil de lounge (Epic 3) pasa lo mismo con "Book now": apunta a
-`/lounges/[id]/book`, que es la Fase 5 (Epic 4) y todavía no existe.
+`/lounges/[id]/book` (Epic 4) ya existe. Dentro de su flujo, "View in My Pass"
+(`Confirmed.dc.html`) y el link "Log out" del App shell apuntan igual a rutas de
+epics siguientes.
 
 Ninguna es deuda: son las pantallas de los epics siguientes. Se listan aquí para
 que nadie las tome por un enlace roto al recorrer el mockup.
 
-**Se resuelve:** `/my-pass` con el Epic 5 · `/profile` con el Epic 6 ·
-`/lounges/[id]/book` con el Epic 4.
+**Se resuelve:** `/my-pass` con el Epic 5 · `/profile` con el Epic 6.
 
 ### 2.2 Enlace "I have verified my email"
 
@@ -162,6 +162,14 @@ nada los hace cumplir.
 | 3.2 | Real-time availability status | `lounge.slotsToday` del catálogo de la Story 2.2, no un estado que cambie solo |
 | 3.2 | Automatic refresh every 5 minutes | Contador local en `useState` (`FreshnessNote`) que vuelve a "just now" cada 5 minutos; no hay red que consultar, así que no refresca ningún dato, solo el sello |
 | 3.2 | Weekly availability calendar view | Las plazas son un hash determinista por lounge + fecha + franja, no una agenda real. Se explica en `src/lib/lounge-profile.ts` |
+| 4.1 | Final availability check before one-tap confirmation | `isAtRiskOfWaitlist` en `src/lib/booking.ts`: un slot con ≤2 plazas siempre ofrece la waitlist al confirmar, no una comprobación contra un sistema de reservas real |
+| 4.1 | Error handling: network issues, booking conflicts, system unavailability | `PaymentError.dc.html` se alcanza solo eligiendo la tarjeta de muestra Mastercard·8801 (`paymentWillDecline`), no un fallo real de red o de Stripe |
+| 4.2 | Stripe integration for secure payment processing | No hay SDK de Stripe ni llamada de red; los métodos de pago son datos de muestra en `SAMPLE_PAYMENT_METHODS` y el "cargo" es una comprobación local |
+| 4.2 | Apple Pay and Google Pay integration | Botones decorativos en `payment-method-form.tsx`, sin el SDK de Apple/Google Pay |
+| 4.2 | Payment method storage for future use | "Save this card" y "Remove" cambian solo el estado local del componente; no hay biblioteca de tarjetas del socio |
+| 4.2 | Payment confirmation email receipt | Pantalla `/lounges/[id]/book/receipt` con el email tal como llegaría; no se envía ningún correo |
+| 4.2 | PCI DSS compliance for data security | Solo el texto que lo declara en pantalla; no hay formulario de tarjeta real que cumplir |
+| 4.3 | Booking reference number in event description | El número de reserva es determinista por lounge+fecha+hora (`bookingReference`), no lo emite un sistema de reservas |
 
 Los enlaces de las tiendas de `/welcome` apuntan a `#`: no existen todavía las
 fichas de App Store ni Google Play.
@@ -253,6 +261,23 @@ Dos maneras de cerrarlo, y ninguna es obviamente mejor:
 
 **Desbloquea:** decidir entre las dos, o comprobar en `Main.dc.html` si el diseño ya
 tiene una respuesta y lo que falta es seguirla.
+
+### 5.2 Modelo de precio y ventana de retención del Epic 4 sin confirmar
+
+`DESIGN-SYSTEM.md` §6 (Fase 5) ya advertía dos decisiones de producto asumidas,
+no validadas con En Soleil, que el código ahora implementa tal cual:
+
+- **8 visitas incluidas al mes, day pass de $75 + impuesto desde la 9.ª.** Es la
+  lectura que cubre a la vez "subscription pricing display" e "individual
+  booking pricing" de la Story 4.2 (`MEMBERSHIP_VISITS_INCLUDED`,
+  `DAY_PASS_PRICE` en `src/lib/booking.ts`). Si el modelo real es otro, cambian
+  esas constantes y los importes de las pantallas, no la estructura del flujo.
+- **La cuenta atrás "Slot held for M:SS" dura 10 minutos** (`SLOT_HOLD_SECONDS`).
+  El artboard no fija la duración real de la retención del slot durante el
+  checkout.
+
+**Desbloquea:** que En Soleil confirme el modelo de membresía/day-pass y la
+ventana de retención real.
 
 ---
 

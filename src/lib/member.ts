@@ -8,4 +8,6 @@ export const SAMPLE_MEMBER = {
   tier: "Annual member",
   /** Ciudad de referencia mientras no hay geolocalización real. */
   city: "New York, NY",
+  /** Citado igual en los artboards de la Fase 5 (Confirmed, Payment, Receipt). */
+  email: "alexandra.rivas@example.com",
 };
