@@ -44,7 +44,7 @@ Ejemplos ya hechos: la comprobación de email duplicado consulta una lista de do
 
 **Diseño: los 9 epics están diseñados** (Fase 9 cerrada). Cualquier trabajo de diseño nuevo es revisión o corrección.
 
-**Código: 13 de 24 historias implementadas** — los Epics 1, 2, 3, 4 y 5 están completos.
+**Código: 16 de 24 historias implementadas** — los Epics 1, 2, 3, 4, 5 y 6 están completos.
 
 | Epic | Historias | Estado |
 |---|---|---|
@@ -61,7 +61,9 @@ Ejemplos ya hechos: la comprobación de email duplicado consulta una lista de do
 | 5 · QR Code & Check-in | 5.1 Digital pass generation | ✅ **Implementada** |
 | | 5.2 Lounge check-in process | ✅ **Implementada** |
 | | 5.3 Booking reminder notification | ✅ **Implementada** |
-| 6 · Member Experience & Notifications | 6.1 · 6.2 · 6.3 | ⬜ Pendiente |
+| 6 · Member Experience & Notifications | 6.1 Booking management | ✅ **Implementada** |
+| | 6.2 In-app notifications | ✅ **Implementada** |
+| | 6.3 Member profile & preferences | ✅ **Implementada** |
 | 7 · Partner Dashboard | 7.1 · 7.2 · 7.3 | ⬜ Pendiente |
 | 8 · Admin & Support | 8.1 · 8.2 · 8.3 | ⬜ Pendiente |
 | 9 · Membership & Referrals | 9.1 · 9.2 | ⬜ Pendiente |
@@ -88,10 +90,15 @@ Ejemplos ya hechos: la comprobación de email duplicado consulta una lista de do
 | `/lounges/[id]/book/summary` | `Summary.dc.html` + `Waitlist.dc.html` + `PaymentError.dc.html` | 4.1 |
 | `/lounges/[id]/book/confirmed` | `Confirmed.dc.html` + `Calendar.dc.html` | 4.1 · 4.3 |
 | `/lounges/[id]/book/receipt` | `Receipt.dc.html` | 4.2 |
-| `/my-pass` | `MyBookings.dc.html` (Upcoming) + `NoShow.dc.html` (Past) | 5.1 · 5.2 |
+| `/my-pass` | `Main.dc.html` (Upcoming) + `History.dc.html` (Past), Fase 7 — sustituyen a `MyBookings.dc.html`/`NoShow.dc.html` de la Fase 6 | 6.1 |
 | `/my-pass/[reference]` | `Main.dc.html` + `ArrivalDay.dc.html` + `CheckedIn.dc.html` + `Expired.dc.html` (sobre `?state=`) | 5.1 |
 | `/my-pass/[reference]/reminder` | `Reminder.dc.html` | 5.3 |
 | `/reception` | `Reception.dc.html` + `CheckInError.dc.html` | 5.2 |
+| `/notifications` | `Notifications.dc.html` | 6.2 |
+| `/profile` | `Profile.dc.html` | 6.3 |
+| `/profile/preferences` | `Preferences.dc.html` | 6.3 |
+| `/profile/notifications` | `NotificationSettings.dc.html` | 6.2 |
+| `/profile/privacy` | `Privacy.dc.html` + `DeleteAccount.dc.html` | 6.3 |
 
 #### Estados de `/explore`
 
@@ -129,7 +136,7 @@ param — igual que `?covered=1` o `?map=error`:
 | `/my-pass/LP-842193?state=expired` | `Expired` | Tras cerrarse la ventana de la reserva |
 
 Los 10 artboards de la Fase 1, los 9 de la Fase 3, los 9 de la Fase 4, los 9 de
-la Fase 5 y los 9 de la Fase 6 están cubiertos. `/explore` reúne siete de los nueve de la Fase 3 como
+la Fase 5, los 9 de la Fase 6 y los 11 de la Fase 7 están cubiertos. `/explore` reúne siete de los nueve de la Fase 3 como
 estados de una misma pantalla: solo el permiso de ubicación y la entrada manual
 son diálogos aparte. `/lounges/[id]` hace lo mismo con cinco de los nueve de la
 Fase 4 (`Main` · `Gallery` · `Share` · `NotAvailable` · `Loading`); los otros
@@ -138,14 +145,19 @@ dos sub-vistas. Los tres pasos de `/lounges/[id]/book` reúnen a su vez seis de
 los nueve artboards de la Fase 5 (`Main` · `Payment` · `Summary` ·
 `MembershipCovered` · `Waitlist` · `PaymentError`); los otros tres
 (`Confirmed` · `Calendar` · `Receipt`) tienen su propia ruta. De la Fase 6,
-`/my-pass` reúne `MyBookings` y `NoShow` como sus pestañas Upcoming/Past, y
 `/my-pass/[reference]` reúne `Main`/`ArrivalDay`/`CheckedIn`/`Expired` como se
 explica arriba; `Reminder` tiene su propia ruta y `Reception`/`CheckInError`
 son la misma consola de recepción (`/reception`), alcanzados tecleando el
 número en vez de por query param porque sí son una interacción real de la
-pantalla.
+pantalla. De la Fase 7, `/my-pass` reúne `Main` y `History` como sus pestañas
+Upcoming/Past — sustituyendo ahí a `MyBookings`/`NoShow` de la Fase 6, ver
+`docs/design/COMPONENT-MAP.md` — con `Cancel`/`CancelFee` como el diálogo de
+cancelar; `/profile` reúne `Profile`/`Preferences`/`NotificationSettings`/`Privacy`
+como las cuatro sub-vistas de la sección de cuenta, con `DeleteAccount` como su
+diálogo; y `MorningAlert` es el panel de la campana (patrón 14), reutilizado
+desde My Pass y desde toda la sección de cuenta en vez de tener ruta propia.
 
-Lo construido que ya sirve al resto: 21 primitivos, 10 patrones de pantalla y la
+Lo construido que ya sirve al resto: 31 primitivos, 14 patrones de pantalla y la
 capa de tokens completa. El **App shell (patrón 3)** fija la navegación de los
 Epics 2–6, el **drawer lateral (patrón 6)** es el que reutiliza el Partner
 Dashboard en oscuro, la **sub-vista de lounge (patrón 8)** es la base de las
@@ -153,7 +165,10 @@ pantallas de disponibilidad y reseñas, y el **flujo por pasos con rail (patrón
 es la base de los tres pasos de reserva. El **pase digital (patrón 11)** extiende
 la tarjeta de confirmación oscura del patrón 10 sin reescribirla, y la
 **consola de recepción (patrón 12)** es la primera pantalla íntegramente oscura
-fuera del Partner Dashboard. Ver `docs/design/COMPONENT-MAP.md`.
+fuera del Partner Dashboard. La **sección de cuenta (patrón 13)** fija el sub-nav
+que reutilizará Membership en el Epic 9, y el **panel de notificaciones (patrón 14)**
+es el mismo que extenderá el panel de actividad del Partner Dashboard (Epic 7).
+Ver `docs/design/COMPONENT-MAP.md`.
 
 **Cada artboard tiene su propia frase de marca** en el panel izquierdo del patrón 1 (`Join a community of discerning travelers.`, `Your next moment of calm is waiting.`, `Tell us who you are.`…). No reutilizar la de otra pantalla: extraerla del `.dc.html` correspondiente.
 
@@ -440,7 +455,8 @@ src/                      Código de la aplicación Next.js
     explore/              Lógica del Epic 2 (CityMap, FilterDrawer, LoungeList...)
     lounges/              Thumb/Card compartidos (E1-E3) + el perfil, disponibilidad y reseñas del Epic 3
     booking/              Lógica del Epic 4 (BookingContext, formularios de los 3 pasos, modales)
-    passes/               Lógica del Epic 5 (DigitalPassCard, patrón 11)
+    passes/               Lógica del Epic 5 (DigitalPassCard, patrón 11) + el diálogo de cancelar del Epic 6
+    account/              Lógica del Epic 6 (campana + panel de notificaciones, diálogo de borrar cuenta)
     charts/               Gráficos Recharts (BarChart, LineChart)
   lib/
     utils.ts              Utilidades (cn() para Tailwind)
@@ -456,11 +472,13 @@ src/                      Código de la aplicación Next.js
     member.ts             El miembro de muestra del App shell
     booking.ts            Story 4.1 / 4.2 — date picker, slots, precio, pago y referencias de reserva
     calendar-export.ts    Story 4.3 — .ics real y URL real de Google Calendar
-    passes.ts             Story 5.1 / 5.2 / 5.3 — el pase de muestra, "My Pass" y la consola de recepción
+    passes.ts             Story 5.1 / 5.2 — el pase de muestra y la consola de recepción; Story 6.1 — estados de reserva y política de cancelación
+    notifications.ts      Story 6.2 — los seis tipos de aviso, ajustes por canal y horas de silencio
+    profile.ts            Story 6.3 — perfil, preferencias, membresía, referido y privacidad
 
   **/*.test.ts(x)         Los tests van junto al archivo que prueban
 
-e2e/                      Verificación visual con Playwright (puntual, no e2e masivo)
+scripts/                  Verificación visual con Playwright (puntual, no e2e masivo)
   playwright/
     scripts/              Scripts de verificación visual por feature
     screenshots/          Capturas generadas (gitignored)

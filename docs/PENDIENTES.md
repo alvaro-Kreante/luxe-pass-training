@@ -56,15 +56,26 @@ aceptación con fecha y versión.
 
 El App shell (patrón 3) fija la navegación completa del área de miembro
 — Home · Explore · My Pass · Profile — porque así la declara el design system y
-así la dibujan todos los artboards de las Fases 1 y 3. `/`, `/explore` y ahora
-`/my-pass` ya existen; **`/profile` sigue dando 404**.
+así la dibujan todos los artboards de las Fases 1 y 3. Las cuatro ya existen
+desde el Epic 6.
 
-El link "Log out" del App shell apunta igual a una ruta de un epic siguiente.
+El link "Log out" del App shell sigue apuntando a `/login` en vez de cerrar una
+sesión real — no hay sesión que cerrar, es solo el diseño del enlace.
 
-Ninguna es deuda: son las pantallas de los epics siguientes. Se listan aquí para
-que nadie las tome por un enlace roto al recorrer el mockup.
+**Se resuelve:** el resto queda como está — cerrar sesión de verdad exige
+backend, fuera de alcance de este repo.
 
-**Se resuelve:** `/profile` con el Epic 6.
+### 2.1b El sub-nav de Account tiene un ítem "Membership" sin pantalla propia
+
+`AccountShell` (patrón 13) fija el sub-nav completo — Profile details ·
+Preferences · Notifications · Privacy and data · Membership — porque así lo
+declaran los artboards de la Fase 7 (`Profile.dc.html` y el resto repiten las
+cinco filas). Las cuatro primeras ya tienen ruta; **"Membership" queda inerte**
+(sin `href`, no navega), igual que "Write a review" en el Epic 3.
+
+**Se resuelve:** con el Epic 9 (`Main.dc.html` de Membership), que ya deja dicho
+en `DESIGN-SYSTEM.md` §6 (Fase 9) que esa vista "no añade una entrada nueva al
+sub-nav": el hueco ya está aquí, solo falta la pantalla.
 
 ### 2.2 Enlace "I have verified my email"
 
@@ -197,6 +208,15 @@ nada los hace cumplir.
 | 5.2 | Check-in confirmation to member's app | No hay canal entre `/reception` y `/my-pass`: cada uno muestra su propio estado de check-in por separado, no uno que actualice al otro en vivo |
 | 5.2 | Emergency contact information accessible to staff | Contacto de muestra fijo en `RECEPTION_VALID_BOOKING`; el aviso de "cada acceso queda registrado" es solo texto, no hay registro real |
 | 5.3 | Reminder email 24 hrs before booking | Pantalla `/my-pass/[reference]/reminder` con el email tal como llegaría, igual que `Receipt.dc.html`; no se envía ningún correo ni se programa nada a las 24 h |
+| 6.1 | 24-hour advance notice requirement for cancellation | `isFreeCancellation` compara contra `hoursUntilArrival`, un número de muestra fijo por reserva en `UPCOMING_BOOKINGS` — no hay reloj real que lo recalcule |
+| 6.1 | No show policy enforcement - flat fee | El cargo de $35.00 en `CancelBookingModal` es visual: no hay tarjeta ni pasarela que cobre nada |
+| 6.1 | Email for each booking with a confirmation number | El número de confirmación ya vive en cada reserva de muestra; "Email receipt" en el historial no envía ningún correo |
+| 6.1 | Support contact for booking issues - Admin | Las filas "Something wrong with a booking?" / "Disagree with a fee or a no-show?" no abren ninguna conversación — la consola de soporte es el Epic 8 |
+| 6.2 | Booking confirmation notification / 6am notification / New lounge partner announcements / Membership renewal reminders / Special offers and promotions / Birthday month promotion | Los seis tipos son entradas de muestra en `NOTIFICATIONS` (`src/lib/notifications.ts`); no hay un disparador real (push, cron de las 6 AM, evento de socio nuevo) que los genere |
+| 6.2 | Ajustes de canal (push/email/sms) | Los switches de `NotificationSettingsPage` cambian solo el estado local del componente; no hay servicio de push ni de SMS que suscribir o dar de baja |
+| 6.3 | Referral code sharing functionality | "Share your code" no abre ninguna hoja de compartir (a diferencia de `ShareDialog` del Epic 3); solo "Copy" usa `navigator.clipboard`, de verdad |
+| 6.3 | Export personal data option (GDPR compliance) | "Request export" en `/profile/privacy` no dispara ningún email ni genera ningún archivo; el plazo de 48 h y los 7 días de validez son solo el texto que los declara |
+| 6.3 | Account deletion option with confirmation | `DeleteAccountModal` exige la casilla y escribir DELETE, pero "Delete my account" no borra nada ni cierra sesión — solo navega a `/login`, igual que el resto de la app sin backend |
 
 Los enlaces de las tiendas de `/welcome` apuntan a `#`: no existen todavía las
 fichas de App Store ni Google Play.
@@ -321,3 +341,4 @@ ventana de retención real.
 | No había suite de tests, con TDD ya declarado obligatorio | 31 ago 2026 | Vitest + Testing Library sobre jsdom; 60 tests cubren la lógica, los estados y la navegación del Epic 1 |
 | La ruta `/` era un índice provisional de pantallas, sin artboard | 31 ago 2026 | Sustituida por el Home del área de miembro (`Home.dc.html`) dentro del App shell del patrón 3 |
 | `/lounges/[id]` daba 404 desde cada "View details" del Epic 2 | 3 sept 2026 | Implementado el Epic 3: perfil de lounge, disponibilidad semanal y reseñas |
+| `/profile` daba 404 desde el ítem "Profile" del App shell | 4 sept 2026 | Implementado el Epic 6: sección de cuenta (patrón 13) con sus cuatro sub-vistas |

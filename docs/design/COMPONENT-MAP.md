@@ -78,6 +78,14 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `QrCode` | `qr-code.tsx` | §4 Código QR del pase (Fase 6) | `size`. Decorativo: dibuja los mismos módulos de los artboards, no codifica de verdad el LP# — pendiente conocido de la Fase 6 | E5 |
 | `StatusChip` (ampliado) | `status-chip.tsx` | §4 "Estados" — disponibilidad, ahora también No-show/Waitlisted del pase | nueva variante `dashed` (borde discontinuo) junto a `available`/`size` | E2 · E3 · E5 |
 | `Button` (ampliado) | `button.tsx` | §4 Botón fantasma (oscuro) | la variante `ghost` (ya existía sin usar) gana el borde `border-line`/hover `border-accent` que pide la Fase 2, y la estrena la consola de recepción | E5 |
+| `StatusChip` (ampliado, 2) | `status-chip.tsx` | §4 "el chip de estado de reserva" — Confirmed/In progress/Completed/Cancelled | dos props nuevas: `emphasis` (borde dorado + punto con halo, "In progress") y `dot` (oculta el punto de "Cancelled"). Es "un StatusChip con mapa de estados por dominio" tal como ya lo preveía este mapa | E6 |
+| `Switch` | `switch.tsx` | §4 Switch de ajuste | píldora 44×26, `checked`/`onCheckedChange`. `AlwaysOnChip` cubre el canal que no se puede apagar | E6 |
+| `ChannelSettingRow` | `channel-setting-row.tsx` | §4 Fila de ajuste por canal | título/subtítulo + tres `Switch`/`AlwaysOnChip` (Push·Email·SMS); `titleExtra` para el selector de hora del aviso matinal | E6 |
+| `NotificationBellButton` | `notification-bell-button.tsx` | §4 Campana de notificaciones | botón 40×40 + badge de no leídas; `active` cuando el panel está abierto | E6 |
+| `NotificationRow` | `notification-row.tsx` | §4 Fila de notificación | estado `read` decide fondo/sombra/punto, como fija §4; `onMarkRead` (opcional) marca la propia fila como leída al hacer clic — no vuelve atrás una vez leída; `actions` para "View pass"/"Directions" o un enlace secundario ("View lounge", "Manage membership") | E6 |
+| `ReferralCode` | `referral-code.tsx` | §4 Código de referido | caja de 50px con borde discontinuo dorado + botón "Copy" (`navigator.clipboard`, real) | E6 |
+| `DetailRow` | `detail-row.tsx` | Derivado de §4 "Fila de opción" | icono de 32px sobre `--gold-100` + una línea de texto — la lista "What happens next"/"What happens" que comparten `CancelBookingModal` y `DeleteAccountModal` | E6 |
+| `Field` (ampliado) | `field.tsx` | §3 label + control + hint | nueva prop `labelExtra` — contenido junto a la etiqueta, no debajo del control (el badge "Verified" de `Profile.dc.html`) | E6 |
 
 ## Capa 2 — Patrones (`src/components/patterns/`)
 
@@ -95,6 +103,8 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | Tarjeta de confirmación oscura | `confirmation-card.tsx` | §5 patrón **10** | Card de 344px, `data-theme="dark"` propio + `.surface-night.dot-pattern`. `rows: {label,value}[]` genérico para que el patrón 11 (pase digital, Fase 6) lo extienda sin reescribirlo |
 | Pase digital | `passes/digital-pass-card.tsx` | §5 patrón **11** | Card de 380px, `data-theme="dark"` propio. Cuatro estados por `state: PassLifecycleState` (`upcoming`·`today`·`checked-in`·`expired`) en vez de cuatro componentes — el pase es el mismo, solo cambia lo que muestra. El sello de expirado va inline (un solo uso, no se sube a primitivo) |
 | Consola de recepción | `app/reception/page.tsx` | §5 patrón **12** | Sin archivo de patrón aparte — como el perfil de lounge (patrón 7), la topbar de 72px y la columna de 900px solo las usa esta pantalla. El campo de lookup (oscuro) también va inline aquí, no como primitivo, por el mismo motivo |
+| Sección de cuenta con sub-nav | `patterns/account-shell.tsx` | §5 patrón **13** | Topbar 64px (miga "Account › X" + `topbarRight` + campana) + sub-nav de 232px. `topbarRight` es el botón "Save changes" en Profile details o el chip `SavedIndicatorChip` ("Saved as you change them") en el resto — misma pantalla, dos variantes de autoguardado que ya distinguen los propios artboards. `actionAfterBell` invierte el orden campana/acción: `Profile.dc.html` pone la campana antes de "Save changes"; el resto pone el chip antes de la campana |
+| Panel de notificaciones | `components/account/notification-bell-menu.tsx` | §5 patrón **14** | Radix Popover de 380px anclado a `NotificationBellButton`. No vive en `patterns/` porque trae su propio estado de datos (`lib/notifications.ts`), a diferencia de Modal/Drawer que son solo anatomía — mismo criterio que ya separa `passes/digital-pass-card.tsx` de los patrones puros |
 
 ### Utilidades de superficie (`globals.css`)
 
@@ -137,6 +147,12 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `/my-pass/[reference]` | `Main` + `ArrivalDay` + `CheckedIn` + `Expired` (sobre `?state=`) | 5.1 |
 | `/my-pass/[reference]/reminder` | `Reminder` | 5.3 |
 | `/reception` | `Reception` + `CheckInError` | 5.2 |
+| `/my-pass` | `Main` + `Cancel` + `CancelFee` + `History` (sustituyen a `MyBookings`/`NoShow` de la Fase 6, ver desviaciones) | 6.1 |
+| `/notifications` | `Notifications` | 6.2 |
+| `/profile` | `Profile` | 6.3 |
+| `/profile/preferences` | `Preferences` | 6.3 |
+| `/profile/notifications` | `NotificationSettings` | 6.2 |
+| `/profile/privacy` | `Privacy` + `DeleteAccount` | 6.3 |
 
 ### Lógica de epic (`src/components/onboarding/`, `src/lib/`)
 
@@ -184,10 +200,21 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `booking/slot-hold-badge.tsx` | Chip "Slot held for M:SS" de los pasos 2 y 3 |
 | `lib/passes.ts` | Story 5.1 / 5.2 / 5.3 — el pase de muestra LP-842193 (independiente del borrador de `booking-context.tsx`, igual que `lounge-profile.ts` fija literalmente a The Ainsworth), la lista de "My Pass" y la consola de recepción |
 | `passes/digital-pass-card.tsx` | Story 5.1 — la tarjeta del pase (patrón 11) en sus cuatro estados |
-| `app/my-pass/page.tsx` | Story 5.1 / 5.2 — pestañas Upcoming/Past (`MyBookings.dc.html` / `NoShow.dc.html`) |
+| `app/my-pass/page.tsx` | Story 6.1 — pestañas Upcoming/Past (`Main.dc.html` / `History.dc.html`), cancelar con la política de 24 h |
 | `app/my-pass/[reference]/page.tsx` | Story 5.1 — el pase digital y su expiración automática, alcanzada por `?state=` |
 | `app/my-pass/[reference]/reminder/page.tsx` | Story 5.3 — el email de recordatorio (`Reminder.dc.html`), igual de visual que `Receipt.dc.html` |
 | `app/reception/page.tsx` | Story 5.2 — la consola de recepción (patrón 12): búsqueda por LP#, contacto de emergencia y check-in |
+| `passes/cancel-booking-modal.tsx` | Story 6.1 — el diálogo de cancelar (`Cancel.dc.html` / `CancelFee.dc.html` son sus dos estados, según `isFreeCancellation`) |
+| `lib/notifications.ts` | Story 6.2 — los seis tipos de notificación, el contador de no leídas y los ajustes por canal (`NotificationSettings.dc.html`); `QUIET_HOURS_START_OPTIONS`/`QUIET_HOURS_END_OPTIONS` acotan los dos desplegables de horas de silencio a tarde/noche y madrugada/mañana respectivamente, para que ninguna combinación sea absurda ("10 PM to 3 PM") |
+| `account/notification-bell-menu.tsx` | Story 6.2 — la campana + el panel desplegable (patrón 14), reutilizada en My Pass y en toda la sección de cuenta |
+| `app/notifications/page.tsx` | Story 6.2 — el centro de notificaciones completo, con filtro por categoría (`Notifications.dc.html`) |
+| `patterns/account-shell.tsx` | Story 6.3 — el shell de la sección de cuenta (patrón 13): sub-nav + topbar con miga |
+| `lib/profile.ts` | Story 6.3 — perfil, lounges favoritos, amenities/intereses preferidos, membresía, código de referido y ajustes de privacidad |
+| `app/profile/page.tsx` | Story 6.3 — "Profile details" (`Profile.dc.html`): todos los campos editables + membresía + código de referido |
+| `app/profile/preferences/page.tsx` | Story 6.3 — lounges favoritos, amenities e intereses preferidos, unidad de distancia (`Preferences.dc.html`) |
+| `app/profile/notifications/page.tsx` | Story 6.2 — ajustes de notificación por canal y horas de silencio (`NotificationSettings.dc.html`) |
+| `app/profile/privacy/page.tsx` | Story 6.3 — uso de datos, contacto de emergencia, exportar/descargar datos (`Privacy.dc.html`) |
+| `account/delete-account-modal.tsx` | Story 6.3 — borrar la cuenta con confirmación por casilla + escribir DELETE (`DeleteAccount.dc.html`) |
 
 ---
 
@@ -198,9 +225,7 @@ comprobar si un componente de arriba ya lo cubre con una variante.
 
 ### Primitivos de §4 sin implementar
 
-Item de nav · Fila de historial · **Chip de estado de reserva** (Fase 7) ·
-Switch de ajuste · Fila de ajuste por canal · Campana de notificaciones ·
-Fila de notificación · Código de referido ·
+Item de nav · Fila de historial ·
 Casilla de asistencia · Chip de asistencia (oscuro) · **Fila de datos** (Fase 2 + 9) ·
 **Tile de métrica** (Fase 2 + 9) · Segmented (oscuro) · Barra de volumen · Toast (oscuro) ·
 Chip de estado de caso · Badge de nav · Barra de acción masiva · Entrada de log ·
@@ -215,14 +240,14 @@ siguiente los vuelve a necesitar.
 
 ### Patrones de §5 sin implementar
 
-13 Sección de cuenta ·
-14 Panel de notificaciones · 15 App shell del partner · 16 Lista de datos oscura ·
+15 App shell del partner · 16 Lista de datos oscura ·
 17 Panel de actividad · 18 Modal/drawer oscuros · 19 Vista de analítica ·
 21 App shell admin · 22 Ficha de miembro · 23 Caso con log ·
 24 Comparación live/propuesto · 25 Lista de datos clara · 26 Comparación de planes
 
-(11 Pase digital y 12 Consola de recepción se implementaron con el Epic 5 — ver
-la tabla de patrones arriba.)
+(11 Pase digital y 12 Consola de recepción se implementaron con el Epic 5; 13
+Sección de cuenta y 14 Panel de notificaciones con el Epic 6 — ver la tabla de
+patrones arriba.)
 
 ### Gemelos que deben compartir componente
 
@@ -289,7 +314,17 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 | El `.ics` y la URL de Google Calendar de `AddToCalendarModal` son reales, no simulados | A diferencia del resto del Epic 4, generar un archivo de calendario y abrir Google Calendar son capacidades del navegador, no llamadas a un servicio de LuxePass — no hay ninguna regla que lo prohíba |
 | `/my-pass/[reference]` alcanza los cuatro estados del pase (`Main`/`ArrivalDay`/`CheckedIn`/`Expired`) por `?state=`, no por el paso del tiempo | Igual que `?covered=1`: no hay reloj real que dispare "hoy llegó" o "la ventana cerró", así que el estado se elige por query param en vez de inventar un timer que nadie pidió |
 | Los datos de "My Pass" (`lib/passes.ts`) son literales, independientes del `booking-context.tsx` de la reserva en vivo | La reserva LP-842193 que citan los artboards de la Fase 6 no es la que produce `bookingReference()` para una fecha/hora elegida en `/lounges/[id]/book` — igual que `lounge-profile.ts` fija literalmente el contacto y las reseñas de The Ainsworth en vez de derivarlos del motor de disponibilidad |
-| Solo la card de "Next visit" en `/my-pass` enlaza a un pase completo | Es la única reserva de muestra con las cuatro pantallas del patrón 11 dibujadas (`LP-842193`). Los botones "View pass"/"Manage"/"Receipt" de las demás filas no tienen artboard de destino propio y quedan inertes, como "Write a review" en el Epic 3 |
+| Solo la reserva de The Ainsworth (`LP-842193`) enlaza a un pase completo en `/my-pass` | Es la única con las cuatro pantallas del patrón 11 dibujadas. "View pass" de las demás filas (The Vestry, Bergdorf Lounge) no tiene artboard de destino propio y queda inerte, como "Write a review" en el Epic 3 |
 | `/reception` es una ruta suelta, sin App shell ni pantalla de login | El patrón 12 es "solo el momento del check-in de un invitado" (`DESIGN-SYSTEM.md` §6 Fase 6); la lista diaria de invitados y el acceso del partner son la Story 7.1, todavía sin diseñar. Se llega tecleando la URL, no desde la navegación del miembro |
 | El código QR es el mismo SVG decorativo de 25×25 módulos del artboard, no una librería real | `DESIGN-SYSTEM.md` §6 (Fase 6) ya lo deja como pendiente ("al implementar se genera con una librería real sobre el LP#"); añadir una dependencia de generación de QR no cambia ningún criterio de aceptación, así que se queda para cuando haga falta que el código sea escaneable de verdad |
 | El botón "Check in Alexandra" de `/reception` deshabilita y cambia de texto en vez de navegar a algún sitio | Ningún artboard dibuja el estado posterior de la consola de recepción; el efecto en el lado del miembro ya es la pantalla `CheckedIn` de `/my-pass/[reference]?state=checked-in`, alcanzable por separado |
+| `Main.dc.html`/`History.dc.html` de la Fase 7 sustituyen a `MyBookings.dc.html`/`NoShow.dc.html` de la Fase 6 en `/my-pass` | Son el mismo ítem de nav y la misma ruta rediseñados un epic después, con los cuatro estados de reserva y el flujo de cancelación que pide la Story 6.1. Se implementa el artboard vigente (el más nuevo), no los dos a la vez; la tarjeta con QR de la próxima visita que traía la Fase 6 se retira de la lista — sigue viva en `/my-pass/[reference]`, que no cambia |
+| Las amenities preferidas de `/profile/preferences` son las 6 de `lib/amenities.ts`, no las 8 propias de `Preferences.dc.html` | Misma regla que ya fija este mapa para el perfil de lounge (Fase 4): una sola fuente de datos entre el filtro de Explore y aquí, para que una amenity preferida nunca sea una que el filtro no reconoce |
+| Los lounges favoritos de `Preferences.dc.html` (The Ainsworth, The Vestry, Bergdorf Lounge) son datos literales en `lib/profile.ts`, no derivados del catálogo | Solo The Ainsworth está en las 12 lounges de `lib/lounges.ts`; The Vestry y Bergdorf Lounge son los mismos nombres de muestra que ya usa `lib/passes.ts` sin estar en el catálogo real — mismo criterio que ya fija ese archivo |
+| La campana de notificaciones (patrón 14) no aparece en `/` ni en `/explore` | Ninguna historia de los Epics 1–6 exige rediseñar esas pantallas; se implementa donde los artboards de la Fase 7 la dibujan (My Pass, Notifications y toda la sección de cuenta). `MorningAlert.dc.html` la dibuja abierta sobre un Home más rico ("Good morning" + "Near you today"), pero ese rediseño de Home no lo pide ninguna de las tres historias del Epic 6, así que no se construye |
+| "Membership" en el sub-nav de Account no tiene `href` | El Epic 9 diseña esa vista; `DESIGN-SYSTEM.md` §6 (Fase 9) ya declara que no añade una entrada nueva al sub-nav, así que el hueco ya está aquí. Ver `docs/PENDIENTES.md` §2.1b |
+| Los botones de fila de 38–40px (`View pass`, `Cancel`, `Directions`, `Leave`, `Email receipt`, `Dispute`, `Book again`, `Book`, `Book a visit`, `Edit`, `Request export`, `Download`, `Delete account`, `Mark all as read`, `Settings`) llevan `normal-case` | `buttonVariants` pone mayúsculas a los tres tamaños por defecto (§4 solo lo fija para el botón de 52px), pero los artboards de la Fase 7 no llevan `text-transform: uppercase` en sus botones `.btn-outline` pequeños — sí lo llevan los `.btn-gold` grandes ("Save changes", "Share your code", "Cancel booking"…), que no cambian. Se corrige por pantalla con la clase, no en el primitivo, para no alterar botones ya aprobados de los Epics 1–5 |
+| `/notifications` añade una flecha "Back" en el topbar (`router.back()`) | Ningún artboard de la Fase 7 la dibuja — `Notifications.dc.html` da por hecho que se navega por la sidebar del App shell — pero sin ella la pantalla no tenía ninguna forma evidente de abandonarse. Es la única desviación de este documento motivada por una prueba manual, no por un hueco de diseño |
+| Cada notificación se puede marcar como leída por separado, con clic en la fila (no solo "Mark all as read") | `Notifications.dc.html` solo dibuja el botón global; marcar una por una es una mejora de uso directamente pedida en QA, y es coherente con el punto de la fila sin leer que ya declara §4 |
+| Las horas de silencio son dos `<select>` con listas separadas (`QUIET_HOURS_START_OPTIONS` solo PM, `QUIET_HOURS_END_OPTIONS` solo AM), no un rango libre | `NotificationSettings.dc.html` dibuja el control pero no dice cómo se valida; en vez de una función que rechace combinaciones raras ("10 PM to 3 PM"), esa combinación deja de ser una opción posible en el desplegable |
+| "Upload photo" en `/profile` es funcional de verdad (`FileReader.readAsDataURL`) | A diferencia del resto de botones sin backend detrás, leer un archivo local y pintarlo en el círculo del avatar es una capacidad del navegador, no una llamada a un servicio de LuxePass — mismo criterio que ya vale para el `.ics` del Epic 4 y el "Copy" del Epic 3 |

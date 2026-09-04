@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   AINSWORTH_PASS,
+  CANCELLATION_WINDOW_HOURS,
   PASS_LIFECYCLE_STATES,
   RECEPTION_CLOSE_MATCHES,
   findReceptionBooking,
+  isFreeCancellation,
   isPassLifecycleState,
 } from "./passes";
 
@@ -49,6 +51,18 @@ describe("findReceptionBooking", () => {
 
   it("devuelve undefined para un número que no existe hoy en este lounge", () => {
     expect(findReceptionBooking("LP-842917")).toBeUndefined();
+  });
+});
+
+describe("isFreeCancellation", () => {
+  it(`es gratis a partir de las ${CANCELLATION_WINDOW_HOURS} horas de antelación`, () => {
+    expect(isFreeCancellation(48)).toBe(true);
+    expect(isFreeCancellation(CANCELLATION_WINDOW_HOURS)).toBe(true);
+  });
+
+  it("cobra la tarifa por debajo de la ventana de 24 horas", () => {
+    expect(isFreeCancellation(19)).toBe(false);
+    expect(isFreeCancellation(0)).toBe(false);
   });
 });
 

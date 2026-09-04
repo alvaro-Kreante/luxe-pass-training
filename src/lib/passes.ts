@@ -68,60 +68,110 @@ export const AINSWORTH_PASS: DigitalPass = {
 };
 
 /* ------------------------------------------------------------------ */
-/* My Pass — lista de reservas (`MyBookings.dc.html` / `NoShow.dc.html`) */
+/* My Pass — lista de reservas y su gestión (Story 5.1/5.2, extendida  */
+/* por la Story 6.1 — Booking Management). `Main.dc.html`/`Cancel.dc.html`/ */
+/* `CancelFee.dc.html`/`History.dc.html` de la Fase 7 rediseñan la misma */
+/* pantalla que `MyBookings.dc.html`/`NoShow.dc.html` de la Fase 6: los  */
+/* artboards más nuevos son los vigentes (ver COMPONENT-MAP.md).        */
 /* ------------------------------------------------------------------ */
 
-export type UpcomingBookingStatus = "confirmed" | "waitlisted";
+/** "flat fee" de la Story 6.1 — tanto para cancelar tarde como para el no-show. */
+export const LATE_CANCELLATION_FEE_LABEL = "$35.00";
+export const CANCELLATION_WINDOW_HOURS = 24;
+
+export function isFreeCancellation(hoursUntilArrival: number): boolean {
+  return hoursUntilArrival >= CANCELLATION_WINDOW_HOURS;
+}
+
+export type UpcomingBookingStatus = "in-progress" | "confirmed" | "waitlisted";
 
 export interface UpcomingBooking {
+  /** Clave estable para listas y para el cancel/cancel-fee modal. */
+  id: string;
   reference: string | null;
   loungeName: string;
   statusLabel: string;
   status: UpcomingBookingStatus;
   dateTimeLabel: string;
   addressLine: string | null;
-  /** Solo la próxima visita tiene un pase completo (`Main.dc.html`). */
+  /** Solo el pase de muestra (The Ainsworth) tiene una pantalla de pase completa. */
   passHref: string | null;
+  /**
+   * Horas hasta la llegada. `null` cuando cancelar no aplica: "in-progress"
+   * ya hizo el check-in y "waitlisted" no tiene reserva que cancelar (usa
+   * "Leave" en su lugar). Decide qué modal abre "Cancel" — `Cancel.dc.html`
+   * (gratis) o `CancelFee.dc.html` (con la tarifa).
+   */
+  hoursUntilArrival: number | null;
+  /** "Friday, September 13 at 3:30 PM" — cuándo cierra la cancelación gratuita. */
+  freeCancellationDeadlineLabel: string | null;
+  /** "12:00 PM" — solo con tarifa: hasta cuándo se puede llegar tarde en vez de cancelar. */
+  lateArrivalWindowLabel: string | null;
 }
 
 export const UPCOMING_BOOKINGS: UpcomingBooking[] = [
   {
+    id: "LP-851402",
+    reference: "LP-851402",
+    loungeName: "The Vestry",
+    statusLabel: "In progress",
+    status: "in-progress",
+    dateTimeLabel: "Today · checked in at 11:04 AM · your window closes at 3:04 PM",
+    addressLine: "SoHo, 41 Grand St, New York, NY 10013",
+    passHref: null,
+    hoursUntilArrival: null,
+    freeCancellationDeadlineLabel: null,
+    lateArrivalWindowLabel: null,
+  },
+  {
+    id: "LP-850118",
+    reference: "LP-850118",
+    loungeName: "Bergdorf Lounge",
+    statusLabel: "Confirmed",
+    status: "confirmed",
+    dateTimeLabel: "Tomorrow, September 13 · arrive 10:00 AM",
+    addressLine: null,
+    passHref: null,
+    hoursUntilArrival: 19,
+    freeCancellationDeadlineLabel: "today at 10:00 AM",
+    lateArrivalWindowLabel: "12:00 PM",
+  },
+  {
+    id: AINSWORTH_PASS.reference,
     reference: AINSWORTH_PASS.reference,
     loungeName: AINSWORTH_PASS.loungeName,
     statusLabel: "Confirmed",
     status: "confirmed",
-    dateTimeLabel: "Saturday, September 14 · arrive 3:30 PM · stay up to 4 hours",
-    addressLine: `${AINSWORTH_PASS.address} · ${AINSWORTH_PASS.receptionNote}`,
-    passHref: `/my-pass/${AINSWORTH_PASS.reference}`,
-  },
-  {
-    reference: "LP-849017",
-    loungeName: "Bergdorf Lounge",
-    statusLabel: "Confirmed",
-    status: "confirmed",
-    dateTimeLabel: "Wednesday, October 2 · arrive 11:00 AM",
+    dateTimeLabel: "Saturday, September 14 · arrive 3:30 PM · free until Friday 3:30 PM",
     addressLine: null,
-    passHref: null,
+    passHref: `/my-pass/${AINSWORTH_PASS.reference}`,
+    hoursUntilArrival: 48,
+    freeCancellationDeadlineLabel: "Friday, September 13 at 3:30 PM",
+    lateArrivalWindowLabel: null,
   },
   {
+    id: "waitlist-ainsworth-oct9",
     reference: null,
     loungeName: "The Ainsworth",
-    statusLabel: "Waitlisted · no pass yet",
+    statusLabel: "Waitlisted",
     status: "waitlisted",
-    dateTimeLabel: "Wednesday, October 9 · 6:00 PM · position 2 on the waitlist",
+    dateTimeLabel: "Wednesday, October 9 · 6:00 PM · position 2 on the waitlist · no pass yet",
     addressLine: null,
     passHref: null,
+    hoursUntilArrival: null,
+    freeCancellationDeadlineLabel: null,
+    lateArrivalWindowLabel: null,
   },
 ];
 
-export type PastBookingOutcome = "attended" | "no-show";
+export type PastBookingOutcome = "completed" | "no-show" | "cancelled";
 
 export interface PastBooking {
   reference: string;
   loungeName: string;
   dateTimeLabel: string;
   outcome: PastBookingOutcome;
-  /** Solo el no-show explica qué pasó y qué cobró — `NoShow.dc.html`. */
+  /** El no-show explica qué pasó y qué cobró — `NoShow.dc.html` / `History.dc.html`. */
   explanation?: string;
 }
 
@@ -130,32 +180,41 @@ export const PAST_BOOKINGS: PastBooking[] = [
     reference: AINSWORTH_PASS.reference,
     loungeName: AINSWORTH_PASS.loungeName,
     dateTimeLabel: "Saturday, September 14 · checked in 3:34 PM",
-    outcome: "attended",
+    outcome: "completed",
   },
   {
-    reference: "LP-828416",
+    reference: "LP-838204",
+    loungeName: "The Vestry",
+    dateTimeLabel: "Saturday, August 30 · 11:00 AM · stayed 3h 12m",
+    outcome: "completed",
+  },
+  {
+    reference: "LP-822640",
     loungeName: "Bergdorf Lounge",
-    dateTimeLabel: "Friday, August 30 · arrival 7:00 PM",
+    dateTimeLabel: "Sunday, July 28 · 10:00 AM · never checked in",
     outcome: "no-show",
     explanation:
-      "The booking window closed at 11:00 PM without a check-in. The visit still counted toward August, and the day pass was not refunded — that is the cancellation policy you accepted at booking. Cancelling more than 24 hours ahead always avoids this.",
+      "The booking window closed at 11:00 PM without a check-in. The visit still counted toward July, and the day pass was not refunded — that is the cancellation policy you accepted at booking. Cancelling more than 24 hours ahead always avoids this.",
   },
   {
-    reference: "LP-821740",
-    loungeName: AINSWORTH_PASS.loungeName,
-    dateTimeLabel: "Thursday, August 22 · checked in 12:06 PM",
-    outcome: "attended",
+    reference: "LP-810112",
+    loungeName: "The Ainsworth",
+    dateTimeLabel: "Monday, July 15 · 3:30 PM · cancelled 3 days ahead",
+    outcome: "cancelled",
+    explanation: "Cancelled more than 24 hours ahead — no fee, and the visit returned to that month's allowance.",
   },
 ];
 
-/** "3 of 8" — rail de la pestaña Upcoming (`MyBookings.dc.html`). */
+/** "3 of 8" — rail de la pestaña Upcoming (`Main.dc.html`). */
 export const VISITS_THIS_MONTH = { used: 3, included: 8 };
 
-/** Rail "Last 90 days" de la pestaña Past (`NoShow.dc.html`). */
-export const LAST_90_DAYS_SUMMARY = {
-  attended: 12,
-  noShows: 2,
-  cancelledInTime: 1,
+/** Rail "Your record" de la pestaña Past (`History.dc.html`). */
+export const BOOKING_RECORD_SUMMARY = {
+  totalVisits: 14,
+  completed: 11,
+  cancelledInTime: 2,
+  noShows: 1,
+  feesCharged: LATE_CANCELLATION_FEE_LABEL,
 };
 
 /* ------------------------------------------------------------------ */

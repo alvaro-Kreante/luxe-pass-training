@@ -16,6 +16,16 @@ export function StatusChip({
    * geometría, variante nueva en vez de un componente aparte.
    */
   dashed = false,
+  /**
+   * Story 6.1 (Fase 7) — "In progress" en `Main.dc.html`: fondo blanco, borde
+   * dorado de 1.5px y el punto con el halo `box-shadow` en vez del fondo
+   * `--gold-100` plano de "Confirmed". El chip de estado de reserva declarado
+   * en COMPONENT-MAP ("un StatusChip con mapa de estados por dominio") es
+   * este mismo componente con esta tercera variante.
+   */
+  emphasis = false,
+  /** "Cancelled" en `History.dc.html` no lleva el punto delante del texto. */
+  dot = true,
   className,
 }: {
   children: React.ReactNode;
@@ -23,6 +33,8 @@ export function StatusChip({
   /** 11px en el callout del mapa, 11.5px en la card de resultado. */
   size?: "sm" | "md";
   dashed?: boolean;
+  emphasis?: boolean;
+  dot?: boolean;
   className?: string;
 }) {
   return (
@@ -30,21 +42,29 @@ export function StatusChip({
       className={cn(
         "inline-flex shrink-0 items-center gap-1.5 rounded-pill font-bold",
         size === "sm" ? "px-2.5 py-[3px] text-[11px]" : "px-2.5 py-1 text-[11.5px]",
-        available
-          ? "bg-accent-soft text-fg"
-          : dashed
-            ? "border border-dashed border-fg-subtle text-fg-subtle"
-            : "border border-line text-fg-subtle",
+        emphasis
+          ? "border-[1.5px] border-accent bg-surface text-fg"
+          : available
+            ? "bg-accent-soft text-fg"
+            : dashed
+              ? "border border-dashed border-fg-subtle text-fg-subtle"
+              : "border border-line text-fg-subtle",
         className,
       )}
     >
-      <span
-        aria-hidden
-        className={cn(
-          "size-1.5 rounded-full",
-          available ? "bg-accent" : "bg-fg-subtle",
-        )}
-      />
+      {dot && (
+        <span
+          aria-hidden
+          className={cn(
+            "size-1.5 rounded-full",
+            emphasis
+              ? "bg-accent shadow-[0_0_0_3px_rgba(201,168,118,0.28)]"
+              : available
+                ? "bg-accent"
+                : "bg-fg-subtle",
+          )}
+        />
+      )}
       {children}
     </span>
   );

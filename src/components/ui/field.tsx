@@ -12,6 +12,8 @@ export interface FieldProps {
   required?: boolean;
   /** Sufijo "(optional)" en peso normal — ver ProfileProfessional.dc.html. */
   optional?: boolean;
+  /** Junto a la etiqueta, no debajo del control — p. ej. el badge "Verified" de `Profile.dc.html`. */
+  labelExtra?: React.ReactNode;
   hint?: React.ReactNode;
   htmlFor?: string;
   className?: string;
@@ -22,6 +24,7 @@ export function Field({
   label,
   required,
   optional,
+  labelExtra,
   hint,
   htmlFor,
   className,
@@ -29,16 +32,16 @@ export function Field({
 }: FieldProps) {
   return (
     <div className={cn("mb-[18px]", className)}>
-      <label
-        htmlFor={htmlFor}
-        className="mb-2 block text-[13px] font-semibold text-fg-muted"
-      >
-        {label}
-        {required ? " *" : null}
-        {optional ? (
-          <span className="font-normal text-fg-subtle"> (optional)</span>
-        ) : null}
-      </label>
+      <div className="mb-2 flex items-center gap-2">
+        <label htmlFor={htmlFor} className="block text-[13px] font-semibold text-fg-muted">
+          {label}
+          {required ? " *" : null}
+          {optional ? (
+            <span className="font-normal text-fg-subtle"> (optional)</span>
+          ) : null}
+        </label>
+        {labelExtra}
+      </div>
       {children}
       {hint ? (
         <p className="mt-1.5 text-xs text-fg-subtle">{hint}</p>
