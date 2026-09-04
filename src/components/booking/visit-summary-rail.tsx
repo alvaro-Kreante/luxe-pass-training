@@ -46,7 +46,10 @@ export function VisitSummaryRail() {
 
       <div className="flex flex-col gap-2.5 py-4">
         {pricing.covered ? (
-          <Row label="This visit" value="Included" />
+          <>
+            <Row label="Day pass" value="Included" valueClassName="text-accent-strong" />
+            <Row label="Estimated tax" value={formatCurrency(0)} />
+          </>
         ) : (
           <>
             <Row label="Day pass" value={formatCurrency(pricing.subtotal)} />
@@ -89,11 +92,19 @@ export function VisitSummaryRail() {
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function Row({
+  label,
+  value,
+  valueClassName,
+}: {
+  label: string;
+  value: string;
+  valueClassName?: string;
+}) {
   return (
     <div className="flex items-center justify-between">
       <dt className="text-[13px] text-fg-muted">{label}</dt>
-      <dd className="m-0 text-[13px] font-bold text-fg">{value}</dd>
+      <dd className={cn("m-0 text-[13px] font-bold text-fg", valueClassName)}>{value}</dd>
     </div>
   );
 }

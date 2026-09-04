@@ -39,14 +39,16 @@ describe("precio — day pass (camino por defecto)", () => {
 });
 
 describe("precio — visita cubierta por la membresía", () => {
-  it("no cobra nada cuando la visita está incluida", () => {
+  it("desglosa el day pass y el impuesto en $0.00, no una sola fila", () => {
     render(
       <BookingProvider lounge={ainsworth} covered>
         <VisitSummaryRail />
       </BookingProvider>,
     );
 
+    expect(screen.getByText("Day pass")).toBeInTheDocument();
     expect(screen.getByText("Included")).toBeInTheDocument();
-    expect(screen.getByText("$0.00")).toBeInTheDocument();
+    expect(screen.getByText("Estimated tax")).toBeInTheDocument();
+    expect(screen.getAllByText("$0.00")).toHaveLength(2);
   });
 });
