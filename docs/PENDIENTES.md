@@ -154,18 +154,30 @@ recibe por prop, así que un lector real no obtendría nada útil de él.
 **Se resuelve:** añadiendo una librería de generación de QR cuando el pase
 tenga que ser escaneable de verdad, no solo mostrarse.
 
-### 2.7 `/reception` no tiene pantalla de acceso propia, y su URL no está bajo un namespace de partner
+### 2.7 `/reception` sigue sin login propio ni vivir bajo `/partner`
 
-La consola de recepción es la vista del **partner** (personal de The Ainsworth,
-no del miembro), pero hoy vive en `/reception`, una URL suelta al mismo nivel
-que las rutas de miembro. No hay login ni verificación de que quien la abre sea
-personal del lounge. El acceso de partner con cuenta propia es la Story 7.1,
-todavía sin implementar.
+El Epic 7 ya trae su `Login.dc.html` y su shell (`/partner/login`, `/partner`),
+pero `/reception` (patrón 12, Epic 5) sigue siendo una URL suelta sin
+verificación de que quien la abre sea personal del lounge. Ninguna de las tres
+historias del Epic 7 pide mover la consola de recepción ni fusionarla con el
+dashboard — son artboards distintos (un kiosco de check-in vs. un back-office)
+— así que se deja como estaba, documentado como desviación consciente en
+`docs/design/COMPONENT-MAP.md`.
 
-**Se resuelve:** cuando el Epic 7 (Partner Dashboard) traiga su `Login.dc.html`
-y su propio shell, la consola debería moverse a una URL bajo ese namespace
-(p. ej. `/partner/reception` o similar) y vivir detrás de ese login, en vez de
-quedar suelta en la raíz.
+**Se resuelve:** si una historia futura pide explícitamente que la recepción
+viva detrás del login de partner (p. ej. `/partner/reception`), no antes.
+
+### 2.8 "Settings" del Partner Dashboard no tiene pantalla propia
+
+El sidebar de `/partner` (patrón 15) fija la nav completa — Today · Guests ·
+Analytics · Reports · Settings — porque así la declara `Main.dc.html`. Las
+cuatro primeras ya tienen ruta; **"Settings" queda inerte** (sin `href`), igual
+que "Membership" en el sub-nav de cuenta (ver 2.1b). Los tres emails del
+Epic 7 mencionan "Settings → Notifications" para elegir quién del equipo
+recibe cada aviso, pero esa vista no está diseñada — `DESIGN-SYSTEM.md` §6
+(Fase 2) ya la deja fuera de las tres historias.
+
+**Se resuelve:** cuando una historia futura diseñe esa pantalla.
 
 ---
 
@@ -217,6 +229,13 @@ nada los hace cumplir.
 | 6.3 | Referral code sharing functionality | "Share your code" no abre ninguna hoja de compartir (a diferencia de `ShareDialog` del Epic 3); solo "Copy" usa `navigator.clipboard`, de verdad |
 | 6.3 | Export personal data option (GDPR compliance) | "Request export" en `/profile/privacy` no dispara ningún email ni genera ningún archivo; el plazo de 48 h y los 7 días de validez son solo el texto que los declara |
 | 6.3 | Account deletion option with confirmation | `DeleteAccountModal` exige la casilla y escribir DELETE, pero "Delete my account" no borra nada ni cierra sesión — solo navega a `/login`, igual que el resto de la app sin backend |
+
+| 7.1 | Real-time updates when new bookings are made | La reserva de Naomi Feldstein llega por un `setTimeout` determinista al entrar en `/partner` (`applyLiveBooking`), no por un canal en vivo contra un backend |
+| 7.1 | Check-in status tracking / no-show reporting | El estado de cada invitado vive en `useState` de `TodayDashboard`; no hay "app del miembro" real que reciba el check-in al marcar la casilla, solo el aviso de que lo haría |
+| 7.2 | Email notification for each new booking / morning digest / cancellation notifications | Las tres son pantallas del email tal como llegaría (`/partner/emails/*`), igual que `Receipt.dc.html`/`Reminder.dc.html`; no se envía ningún correo ni se programa el digest de las 6:30 AM |
+| 7.2 | Waitlist promotion alerts | La promoción de Victor Almeida es el mismo `setTimeout` determinista que la cancelación de Harriet Osei (`applyCancellationAndPromotion`), no una cola de espera real |
+| 7.3 | Weekly/monthly booking volume reports / revenue attribution / repeat guest identification | `lib/partner.ts` fija cifras de muestra que cuadran entre sí (187 reservas, $8,616.50, 412 miembros); no hay un almacén de reservas real del que agregarlas |
+| 7.3 | Downloadable reports in CSV | Las descargas de `/partner/guests`, `/partner/analytics` y `/partner/reports` son CSV reales generados en el cliente (`downloadTextFile`); los "informes descargados recientemente" de `Reports.dc.html` son metadatos de muestra, no un historial real |
 
 Los enlaces de las tiendas de `/welcome` apuntan a `#`: no existen todavía las
 fichas de App Store ni Google Play.
@@ -326,6 +345,28 @@ no validadas con En Soleil, que el código ahora implementa tal cual:
 **Desbloquea:** que En Soleil confirme el modelo de membresía/day-pass y la
 ventana de retención real.
 
+### 5.3 Economía del partner del Epic 7 sin confirmar
+
+`DESIGN-SYSTEM.md` §6 (Fase 2) ya advertía estas cifras como una lectura
+asumida, no validada con En Soleil, que `lib/partner.ts` implementa tal cual:
+
+- **Day pass a $75.00** (la tarifa de la Fase 5), **visita de membresía a
+  $38.00 de tarifa de partner** y **la mitad de la tarifa de no-show de $35.00**
+  ($17.50) para el partner (`DAY_PASS_PARTNER_RATE`,
+  `MEMBERSHIP_VISIT_PARTNER_RATE`, `NO_SHOW_PARTNER_SHARE`). Ninguna historia
+  fija esos números: la 7.3 solo pide "revenue attribution". Si el acuerdo real
+  es otro, cambian esas constantes y los importes de `Analytics.dc.html` /
+  `RepeatGuests.dc.html` / `NoShow.dc.html`, no la estructura.
+- **Los niveles de lealtad** (Regular ≥5 visitas, Returning 2–4, First visit 1)
+  se cuentan solo en el local de The Ainsworth — el flow habla de "loyalty
+  trackers" sin definirlos, y contarlos por local es lo único que el partner
+  puede ver sin exponer el historial del miembro en otros lounges.
+- **La ventana de admisión son 4 horas** desde la hora reservada, coherente con
+  la Fase 6.
+
+**Desbloquea:** que En Soleil confirme la tarifa de partner real y el reparto
+de la tarifa de no-show.
+
 ---
 
 ## Resueltos
@@ -342,3 +383,4 @@ ventana de retención real.
 | La ruta `/` era un índice provisional de pantallas, sin artboard | 31 ago 2026 | Sustituida por el Home del área de miembro (`Home.dc.html`) dentro del App shell del patrón 3 |
 | `/lounges/[id]` daba 404 desde cada "View details" del Epic 2 | 3 sept 2026 | Implementado el Epic 3: perfil de lounge, disponibilidad semanal y reseñas |
 | `/profile` daba 404 desde el ítem "Profile" del App shell | 4 sept 2026 | Implementado el Epic 6: sección de cuenta (patrón 13) con sus cuatro sub-vistas |
+| No existía el Partner Dashboard (Epic 7) | 5 sept 2026 | Implementadas las Stories 7.1/7.2/7.3: `/partner` (lista del día, en vivo), tres emails, Analytics, invitados recurrentes y Reports |

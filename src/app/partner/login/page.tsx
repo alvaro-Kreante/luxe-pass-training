@@ -1,0 +1,141 @@
+"use client";
+
+import * as React from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { Lock, Mail } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Field } from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { partnerCredentialsMatch } from "@/lib/partner";
+
+/**
+ * Flow: flow-partner-experience.md — "Partner Login". Sin historia ni
+ * criterios propios: DESIGN-SYSTEM.md §6 Fase 2 lo cubre como "acceso de
+ * partner con cuenta emitida por En Soleil y la separación explícita
+ * respecto al login de miembro". Artboard: Login.dc.html.
+ *
+ * A diferencia del patrón 1 (split-screen de autenticación), aquí las dos
+ * mitades son oscuras — `AuthSplit` da por hecho un panel derecho claro, así
+ * que esta pantalla no lo reutiliza y queda anotada como propia en
+ * COMPONENT-MAP.md, igual que la consola de recepción (patrón 12).
+ */
+export default function PartnerLoginPage() {
+  const router = useRouter();
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [rememberDevice, setRememberDevice] = React.useState(false);
+  const [error, setError] = React.useState("");
+
+  function handleSubmit(event: React.FormEvent) {
+    event.preventDefault();
+
+    if (partnerCredentialsMatch(email, password)) {
+      router.push("/partner");
+      return;
+    }
+
+    setError("We could not find a partner account with that email and password.");
+  }
+
+  return (
+    <div data-theme="dark" className="flex min-h-screen flex-col lg:flex-row">
+      <aside className="relative flex shrink-0 flex-col justify-between overflow-hidden bg-panel-black px-8 py-10 text-center lg:h-screen lg:w-[600px] lg:items-start lg:px-[60px] lg:py-16 lg:text-left">
+        <div
+          aria-hidden
+          className="absolute inset-0"
+          style={{ background: "radial-gradient(circle at 26% 12%, #2c241c, #15110d 64%)" }}
+        />
+        <div aria-hidden className="dot-pattern absolute inset-0" />
+
+        <Image src="/logo.png" alt="En Soleil" width={170} height={179} priority className="relative z-10 mx-auto w-[104px] lg:mx-0 lg:w-[170px]" />
+
+        <div className="relative z-10 mx-auto max-w-[420px] lg:mx-0">
+          <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-accent">
+            En Soleil · LuxePass
+          </p>
+          <h1 className="mt-4 text-[30px] leading-[1.2] text-fg lg:text-[38px]">
+            Every arrival, prepared for.
+          </h1>
+          <p className="mt-4.5 text-[14.5px] leading-[1.65] text-fg-muted">
+            The day&apos;s guest list, who has walked in, and what the month looked like — the
+            house side of the pass your members carry.
+          </p>
+        </div>
+
+        <p className="relative z-10 mx-auto text-xs text-fg-subtle lg:mx-0">
+          The Ainsworth · a LuxePass partner lounge since 2024
+        </p>
+      </aside>
+
+      <div className="flex flex-1 items-center justify-center bg-panel-black p-6 lg:h-screen lg:p-10">
+        <div className="w-full max-w-[460px] rounded-panel border border-line bg-dark-card p-11 shadow-panel">
+          <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">
+            Partner access
+          </p>
+          <h2 className="mb-2 mt-3 text-[30px] text-fg">Sign in</h2>
+          <p className="m-0 mb-7 text-[13.5px] leading-[1.6] text-fg-subtle">
+            Use the work address En Soleil issued for your venue.
+          </p>
+
+          <form onSubmit={handleSubmit} noValidate>
+            <Field label="Work email" htmlFor="partner-email" className="mb-4.5">
+              <Input
+                id="partner-email"
+                type="email"
+                autoComplete="email"
+                inputSize="compact"
+                placeholder="you@yourvenue.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                icon={<Mail size={18} strokeWidth={1.8} />}
+              />
+            </Field>
+
+            <Field
+              label="Password"
+              htmlFor="partner-password"
+              className="mb-1"
+              hint={error ? <span className="text-accent-strong">{error}</span> : null}
+            >
+              <Input
+                id="partner-password"
+                type="password"
+                autoComplete="current-password"
+                inputSize="compact"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                aria-invalid={Boolean(error)}
+                icon={<Lock size={18} strokeWidth={1.7} />}
+              />
+            </Field>
+
+            <div className="mb-6.5 mt-4 flex items-center justify-between">
+              <Checkbox align="center" checked={rememberDevice} onCheckedChange={setRememberDevice}>
+                Remember this device
+              </Checkbox>
+              <span className="cursor-pointer text-[13px] font-bold text-accent-strong">
+                Forgot password
+              </span>
+            </div>
+
+            <Button type="submit" block>
+              Sign in
+            </Button>
+          </form>
+
+          <div className="my-7 h-px bg-line" />
+
+          <p className="m-0 text-xs leading-[1.65] text-fg-subtle">
+            Members sign in at <span className="text-accent-strong">app.luxepass.co</span>.
+            Partner accounts are issued by En Soleil — ask your account manager to add a
+            colleague to this venue.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -29,6 +29,7 @@ export function Drawer({
   eyebrow,
   footer,
   width = 436,
+  dark = false,
   children,
 }: {
   open: boolean;
@@ -38,21 +39,28 @@ export function Drawer({
   footer?: React.ReactNode;
   /** 436px en el tema claro; 472px en el drawer oscuro del patrón 18. */
   width?: number;
+  /** §5 patrón 18 — drawer oscuro. Ver la nota de `dark` en `Modal`. */
+  dark?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange} modal={false}>
       <Dialog.Portal>
         <Dialog.Overlay
+          data-theme={dark ? "dark" : undefined}
           onClick={() => onOpenChange(false)}
           className="fixed inset-0 z-50"
           style={{ background: "var(--scrim-drawer)" }}
         />
         <Dialog.Content
+          data-theme={dark ? "dark" : undefined}
           style={{ maxWidth: width }}
           className={cn(
             "fixed inset-y-0 right-0 z-50 flex w-full flex-col bg-surface",
-            "border-l border-line shadow-[-40px_0_80px_-30px_rgb(34_26_20_/_0.35)]",
+            "border-l border-line",
+            dark
+              ? "shadow-[-40px_0_80px_-30px_rgba(0,0,0,0.7)]"
+              : "shadow-[-40px_0_80px_-30px_rgb(34_26_20_/_0.35)]",
             "focus:outline-none",
           )}
         >
@@ -64,7 +72,7 @@ export function Drawer({
               </Dialog.Title>
             </div>
             <Dialog.Close
-              aria-label="Close filters"
+              aria-label={`Close ${title}`}
               className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-nav border border-line text-fg-muted transition-colors duration-150 hover:bg-accent-soft focus-visible:outline-none focus-visible:shadow-ring"
             >
               <X size={16} strokeWidth={1.9} />

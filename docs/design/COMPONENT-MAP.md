@@ -86,6 +86,12 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `ReferralCode` | `referral-code.tsx` | §4 Código de referido | caja de 50px con borde discontinuo dorado + botón "Copy" (`navigator.clipboard`, real) | E6 |
 | `DetailRow` | `detail-row.tsx` | Derivado de §4 "Fila de opción" | icono de 32px sobre `--gold-100` + una línea de texto — la lista "What happens next"/"What happens" que comparten `CancelBookingModal` y `DeleteAccountModal` | E6 |
 | `Field` (ampliado) | `field.tsx` | §3 label + control + hint | nueva prop `labelExtra` — contenido junto a la etiqueta, no debajo del control (el badge "Verified" de `Profile.dc.html`) | E6 |
+| `StatusChip` (ampliado, 3) | `status-chip.tsx` | §4 "Chip de asistencia (oscuro)" — Arrived | nueva prop `outlined` añade el borde `--gold-500` de 1px que "Arrived" lleva y "Confirmed" (claro) no — resto de estados (New booking/Pending/No-show/Cancelled) ya cubiertos por `emphasis`/`dashed`/`dot` | E7 |
+| `AttendanceCheckbox` | `attendance-checkbox.tsx` | §4 Casilla de asistencia | `status`: arrived·pending·no-show·cancelled · `onMarkArrived`. Marcarla es el gesto completo del check-in, sin confirmación aparte | E7 |
+| `MetricTile` | `metric-tile.tsx` | §4 Tile de métrica (oscuro) | `label`/`value`/`note` · `highlighted`. Solo cubre la mitad oscura — el gemelo claro (Fase 9) se añade como variante cuando llegue ese epic | E7 |
+| `Toast` | `toast.tsx` | §4 Toast (oscuro) | `icon`/`title`/`body`/`primaryLabel` · `onPrimary`/`onDismiss`. Fijo en `bottom:26px; right:32px` | E7 |
+| `Modal` (ampliado) | `modal.tsx` | §5 patrón 18 — modal oscuro | nueva prop `dark` pone `data-theme="dark"` en `Dialog.Overlay`/`Dialog.Content`, no en un wrapper externo — el diálogo vive en un portal, así que un wrapper en el árbol de React no es su ancestro real en el DOM | E7 |
+| `Drawer` (ampliado) | `drawer.tsx` | §5 patrón 18 — drawer oscuro (472px) | misma `dark` que `Modal`, mismo motivo | E7 |
 
 ## Capa 2 — Patrones (`src/components/patterns/`)
 
@@ -105,6 +111,19 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | Consola de recepción | `app/reception/page.tsx` | §5 patrón **12** | Sin archivo de patrón aparte — como el perfil de lounge (patrón 7), la topbar de 72px y la columna de 900px solo las usa esta pantalla. El campo de lookup (oscuro) también va inline aquí, no como primitivo, por el mismo motivo |
 | Sección de cuenta con sub-nav | `patterns/account-shell.tsx` | §5 patrón **13** | Topbar 64px (miga "Account › X" + `topbarRight` + campana) + sub-nav de 232px. `topbarRight` es el botón "Save changes" en Profile details o el chip `SavedIndicatorChip` ("Saved as you change them") en el resto — misma pantalla, dos variantes de autoguardado que ya distinguen los propios artboards. `actionAfterBell` invierte el orden campana/acción: `Profile.dc.html` pone la campana antes de "Save changes"; el resto pone el chip antes de la campana |
 | Panel de notificaciones | `components/account/notification-bell-menu.tsx` | §5 patrón **14** | Radix Popover de 380px anclado a `NotificationBellButton`. No vive en `patterns/` porque trae su propio estado de datos (`lib/notifications.ts`), a diferencia de Modal/Drawer que son solo anatomía — mismo criterio que ya separa `passes/digital-pass-card.tsx` de los patrones puros |
+| App shell del partner | `patterns/partner-shell.tsx` | §5 patrón **15** | Gemelo oscuro del patrón 3, con su propia nav (Today · Guests · Analytics · Reports · Settings) y el bloque del local en vez del bloque de usuario. `topbarLabel`/`topbarMeta`/`topbarRight` para que cada pantalla componga su propia topbar; `blurred` como en `AppShell` |
+| Panel de actividad | `components/partner/activity-panel.tsx` | §5 patrón **17**, gemelo del 14 | Reutiliza `NotificationBellButton` + `NotificationRow` tal cual — solo cambia a oscuro por `data-theme`. No vive en `patterns/` por el mismo motivo que el panel de notificaciones (trae su propio estado) |
+| Vista de analítica | `app/partner/analytics/page.tsx` | §5 patrón **19**, sobre el 15 | Sin archivo de patrón aparte — como el perfil de lounge (patrón 7), la composición de 4 tiles + gráficos + rail de 344px solo la usa esta pantalla |
+
+### Componentes de epic (`src/components/partner/`)
+
+| Componente | DESIGN-SYSTEM | Notas |
+|---|---|---|
+| `GuestDetailDrawer` | Drawer oscuro (patrón 18, 472px) | Story 7.1 — ficha del invitado (`GuestDetail.dc.html`): datos de la reserva, contacto, peticiones especiales, contacto de emergencia y las acciones "Mark as arrived"/"No-show" cuando aún está pendiente |
+| `NoShowModal` | Modal oscuro (patrón 18, 620px) | Story 7.1 — motivo del no-show (`NoShow.dc.html`), reutiliza `PaymentOptionRow` para las tres alternativas |
+| `ExportGuestListPopover` | — | Story 7.1 — exportación a CSV que sigue los filtros de pantalla (`Export.dc.html`), Radix Popover con selección de columnas real |
+| `GuestListTable` | §4 Fila de datos (oscura) + §5 patrón 16 | Story 7.1 — la lista del día (`Main.dc.html`). Inline, no primitivo — igual que `RepeatGuests` (Story 7.3) dibuja su propia fila de datos: **la fila de datos oscura sigue sin ser un primitivo compartido**, ver "Pendiente de implementar" |
+| `TodayDashboard` | — | Story 7.1/7.2 — toda la lógica de `/partner`. Vive fuera de `app/partner/page.tsx` porque un archivo de ruta del App Router solo puede exportar `default`; los tests importan `TodayDashboard` directamente con `liveBookingDelayMs`/`cancellationDelayMs` cortos en vez de fake timers (ver la nota en el propio archivo) |
 
 ### Utilidades de superficie (`globals.css`)
 
@@ -153,6 +172,14 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `/profile/preferences` | `Preferences` | 6.3 |
 | `/profile/notifications` | `NotificationSettings` | 6.2 |
 | `/profile/privacy` | `Privacy` + `DeleteAccount` | 6.3 |
+| `/partner/login` | `Login.dc.html` | Acceso de partner (sin historia propia, ver flow) |
+| `/partner` | `Main` + `GuestDetail` + `NoShow` + `Export` + `LiveUpdate` | 7.1 · 7.2 |
+| `/partner/emails/digest` | `EmailDigest.dc.html` | 7.2 |
+| `/partner/emails/new-booking` | `EmailNewBooking.dc.html` | 7.2 |
+| `/partner/emails/cancellation` | `EmailCancellation.dc.html` | 7.2 |
+| `/partner/analytics` | `Analytics.dc.html` | 7.3 |
+| `/partner/guests` | `RepeatGuests.dc.html` | 7.3 |
+| `/partner/reports` | `Reports.dc.html` | 7.3 |
 
 ### Lógica de epic (`src/components/onboarding/`, `src/lib/`)
 
@@ -215,6 +242,21 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `app/profile/notifications/page.tsx` | Story 6.2 — ajustes de notificación por canal y horas de silencio (`NotificationSettings.dc.html`) |
 | `app/profile/privacy/page.tsx` | Story 6.3 — uso de datos, contacto de emergencia, exportar/descargar datos (`Privacy.dc.html`) |
 | `account/delete-account-modal.tsx` | Story 6.3 — borrar la cuenta con confirmación por casilla + escribir DELETE (`DeleteAccount.dc.html`) |
+| `lib/partner.ts` | Story 7.1 / 7.2 / 7.3 — el turno de muestra de The Ainsworth (14→15 invitados, la reserva en vivo, la cancelación+promoción de waitlist), Analytics, invitados recurrentes y los seis informes de `Reports.dc.html` |
+| `lib/download.ts` | Descarga real de CSV (`downloadTextFile`), compartida por los cuatro CSV del Epic 7 — mismo criterio que `downloadIcsFile` (Story 4.3) |
+| `partner/guest-detail-drawer.tsx` | Story 7.1 — ficha del invitado (`GuestDetail.dc.html`) |
+| `partner/no-show-modal.tsx` | Story 7.1 — reportar un no-show con motivo (`NoShow.dc.html`) |
+| `partner/export-guest-list-popover.tsx` | Story 7.1 — exportar CSV siguiendo los filtros de pantalla (`Export.dc.html`) |
+| `partner/guest-list-table.tsx` | Story 7.1 — la lista del día (`Main.dc.html` / `LiveUpdate.dc.html`) |
+| `partner/activity-panel.tsx` | Story 7.1 / 7.2 — panel de actividad (patrón 17) con enlace "View email" a los emails de la Story 7.2 |
+| `partner/today-dashboard.tsx` | Story 7.1 / 7.2 — orquesta `/partner`: búsqueda, check-in, no-show, exportación y la reserva/cancelación en vivo por temporizador |
+| `app/partner/login/page.tsx` | Acceso de partner (`Login.dc.html`), sin historia propia |
+| `app/partner/emails/digest/page.tsx` | Story 7.2 — digest matinal de las 6:30 AM (`EmailDigest.dc.html`) |
+| `app/partner/emails/new-booking/page.tsx` | Story 7.2 — email por cada reserva nueva (`EmailNewBooking.dc.html`) |
+| `app/partner/emails/cancellation/page.tsx` | Story 7.2 — cancelación + promoción automática desde waitlist (`EmailCancellation.dc.html`) |
+| `app/partner/analytics/page.tsx` | Story 7.3 — volumen de reservas, atribución de ingresos (`Analytics.dc.html`) |
+| `app/partner/guests/page.tsx` | Story 7.3 — invitados recurrentes y niveles de lealtad (`RepeatGuests.dc.html`) |
+| `app/partner/reports/page.tsx` | Story 7.3 — centro de seis informes descargables (`Reports.dc.html`) |
 
 ---
 
@@ -225,11 +267,20 @@ comprobar si un componente de arriba ya lo cubre con una variante.
 
 ### Primitivos de §4 sin implementar
 
-Item de nav · Fila de historial ·
-Casilla de asistencia · Chip de asistencia (oscuro) · **Fila de datos** (Fase 2 + 9) ·
-**Tile de métrica** (Fase 2 + 9) · Segmented (oscuro) · Barra de volumen · Toast (oscuro) ·
+Item de nav · Fila de historial · Segmented (oscuro, geometría propia de 36px —
+se usa hoy con la variante `sm` existente, 38px, como aproximación) ·
+Barra de volumen (vertical y horizontal — el Epic 7 las dibuja inline en
+`app/partner/analytics/page.tsx`, no como primitivo, por ahora un único uso) ·
 Chip de estado de caso · Badge de nav · Barra de acción masiva · Entrada de log ·
 Diff de aprobación · Barra de consumo · Tabla comparativa
+
+Casilla de asistencia, Chip de asistencia (oscuro) y Tile de métrica (oscuro)
+se implementaron con el Epic 7 (`AttendanceCheckbox`, `StatusChip` ampliado y
+`MetricTile` — ver Capa 1). **Fila de datos (oscura)** sigue sin subirse a
+primitivo compartido: `GuestListTable` (Story 7.1) y `RepeatGuests` (Story 7.3)
+dibujan cada una su propia fila inline porque sus grids de columnas no
+coinciden — se sube a primitivo cuando un tercer epic (E8/E9) la necesite y
+obligue a generalizar el grid.
 
 Código QR del pase, Sello de expirado, Campo de lookup (oscuro) y Botón
 fantasma (oscuro) ya están construidos (Fase 6, ver arriba) pero como piezas de
@@ -240,14 +291,14 @@ siguiente los vuelve a necesitar.
 
 ### Patrones de §5 sin implementar
 
-15 App shell del partner · 16 Lista de datos oscura ·
-17 Panel de actividad · 18 Modal/drawer oscuros · 19 Vista de analítica ·
 21 App shell admin · 22 Ficha de miembro · 23 Caso con log ·
 24 Comparación live/propuesto · 25 Lista de datos clara · 26 Comparación de planes
 
 (11 Pase digital y 12 Consola de recepción se implementaron con el Epic 5; 13
-Sección de cuenta y 14 Panel de notificaciones con el Epic 6 — ver la tabla de
-patrones arriba.)
+Sección de cuenta y 14 Panel de notificaciones con el Epic 6; 15 App shell del
+partner, 16 Lista de datos oscura (inline, ver nota de arriba), 17 Panel de
+actividad, 18 Modal/drawer oscuros y 19 Vista de analítica con el Epic 7 — ver
+la tabla de patrones arriba.)
 
 ### Gemelos que deben compartir componente
 
@@ -256,13 +307,13 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 
 | Par | Epics | Cómo |
 |---|---|---|
-| Tile de métrica claro ↔ oscuro | E9 ↔ E7 | mismo componente, `data-theme` |
-| Fila de datos clara ↔ oscura | E9 ↔ E2/E8 | mismo componente, `data-theme` + alto 54/58px |
-| Lista de datos clara (25) ↔ oscura (16) | E9 ↔ E2 | mismo componente, `data-theme` |
-| Chip de estado: reserva ↔ asistencia ↔ caso ↔ referido | E7 ↔ E2 ↔ E8 ↔ E9 | un `StatusChip` con mapa de estados por dominio |
-| Modal/drawer claro (4/6) ↔ oscuro (18) | E1 ↔ E2 | mismo componente, `data-theme` |
-| App shell miembro (3) ↔ partner (15) ↔ admin (21) | E2–6 ↔ E7 ↔ E8 | mismo shell, distinta nav y `data-theme` |
-| Panel notificaciones (14) ↔ actividad (17) | E6 ↔ E2 | mismo componente, `data-theme` |
+| Tile de métrica claro ↔ oscuro | E9 ↔ E7 (implementado) | mismo componente, `data-theme` — `MetricTile` solo tiene la mitad oscura hoy |
+| Fila de datos clara ↔ oscura | E9 ↔ E7/E8 | pendiente de generalizar — `GuestListTable`/`RepeatGuests` (E7) siguen inline, ver "Pendiente de implementar" |
+| Lista de datos clara (25) ↔ oscura (16, implementado) | E9 ↔ E7 | mismo componente, `data-theme` |
+| Chip de estado: reserva ↔ asistencia ↔ caso ↔ referido | E6 ↔ E7 (implementado) ↔ E8 ↔ E9 | un `StatusChip` con mapa de estados por dominio |
+| Modal/drawer claro (4/6) ↔ oscuro (18, implementado) | E1 ↔ E7 | mismo componente, `data-theme` — prop `dark` en `Modal`/`Drawer` |
+| App shell miembro (3) ↔ partner (15, implementado) ↔ admin (21) | E2–6 ↔ E7 ↔ E8 | mismo shell, distinta nav y `data-theme` |
+| Panel notificaciones (14) ↔ actividad (17, implementado) | E6 ↔ E7 | mismo componente, `data-theme` |
 | Barra de volumen horizontal ↔ barra de consumo | E7 ↔ E9 | mismo componente, `data-theme` |
 
 ---
@@ -315,7 +366,7 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 | `/my-pass/[reference]` alcanza los cuatro estados del pase (`Main`/`ArrivalDay`/`CheckedIn`/`Expired`) por `?state=`, no por el paso del tiempo | Igual que `?covered=1`: no hay reloj real que dispare "hoy llegó" o "la ventana cerró", así que el estado se elige por query param en vez de inventar un timer que nadie pidió |
 | Los datos de "My Pass" (`lib/passes.ts`) son literales, independientes del `booking-context.tsx` de la reserva en vivo | La reserva LP-842193 que citan los artboards de la Fase 6 no es la que produce `bookingReference()` para una fecha/hora elegida en `/lounges/[id]/book` — igual que `lounge-profile.ts` fija literalmente el contacto y las reseñas de The Ainsworth en vez de derivarlos del motor de disponibilidad |
 | Solo la reserva de The Ainsworth (`LP-842193`) enlaza a un pase completo en `/my-pass` | Es la única con las cuatro pantallas del patrón 11 dibujadas. "View pass" de las demás filas (The Vestry, Bergdorf Lounge) no tiene artboard de destino propio y queda inerte, como "Write a review" en el Epic 3 |
-| `/reception` es una ruta suelta, sin App shell ni pantalla de login | El patrón 12 es "solo el momento del check-in de un invitado" (`DESIGN-SYSTEM.md` §6 Fase 6); la lista diaria de invitados y el acceso del partner son la Story 7.1, todavía sin diseñar. Se llega tecleando la URL, no desde la navegación del miembro |
+| `/reception` es una ruta suelta, sin App shell ni pantalla de login | El patrón 12 es "solo el momento del check-in de un invitado" (`DESIGN-SYSTEM.md` §6 Fase 6); la lista diaria de invitados y el acceso del partner son el Epic 7 (`/partner`), una consola aparte. Se llega tecleando la URL, no desde la navegación del miembro ni desde `/partner` |
 | El código QR es el mismo SVG decorativo de 25×25 módulos del artboard, no una librería real | `DESIGN-SYSTEM.md` §6 (Fase 6) ya lo deja como pendiente ("al implementar se genera con una librería real sobre el LP#"); añadir una dependencia de generación de QR no cambia ningún criterio de aceptación, así que se queda para cuando haga falta que el código sea escaneable de verdad |
 | El botón "Check in Alexandra" de `/reception` deshabilita y cambia de texto en vez de navegar a algún sitio | Ningún artboard dibuja el estado posterior de la consola de recepción; el efecto en el lado del miembro ya es la pantalla `CheckedIn` de `/my-pass/[reference]?state=checked-in`, alcanzable por separado |
 | `Main.dc.html`/`History.dc.html` de la Fase 7 sustituyen a `MyBookings.dc.html`/`NoShow.dc.html` de la Fase 6 en `/my-pass` | Son el mismo ítem de nav y la misma ruta rediseñados un epic después, con los cuatro estados de reserva y el flujo de cancelación que pide la Story 6.1. Se implementa el artboard vigente (el más nuevo), no los dos a la vez; la tarjeta con QR de la próxima visita que traía la Fase 6 se retira de la lista — sigue viva en `/my-pass/[reference]`, que no cambia |
@@ -328,3 +379,14 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 | Cada notificación se puede marcar como leída por separado, con clic en la fila (no solo "Mark all as read") | `Notifications.dc.html` solo dibuja el botón global; marcar una por una es una mejora de uso directamente pedida en QA, y es coherente con el punto de la fila sin leer que ya declara §4 |
 | Las horas de silencio son dos `<select>` con listas separadas (`QUIET_HOURS_START_OPTIONS` solo PM, `QUIET_HOURS_END_OPTIONS` solo AM), no un rango libre | `NotificationSettings.dc.html` dibuja el control pero no dice cómo se valida; en vez de una función que rechace combinaciones raras ("10 PM to 3 PM"), esa combinación deja de ser una opción posible en el desplegable |
 | "Upload photo" en `/profile` es funcional de verdad (`FileReader.readAsDataURL`) | A diferencia del resto de botones sin backend detrás, leer un archivo local y pintarlo en el círculo del avatar es una capacidad del navegador, no una llamada a un servicio de LuxePass — mismo criterio que ya vale para el `.ics` del Epic 4 y el "Copy" del Epic 3 |
+| El listado de invitados de `/partner` no pliega filas por antigüedad, a diferencia de `Main.dc.html`/`LiveUpdate.dc.html` | El artboard pliega las llegadas más antiguas en una fila "N earlier arrivals"; aquí se listan los 14 invitados con nombre en todo momento para que "guest list display: name, contact, email" (Story 7.1) se pueda comprobar sobre cualquier fila, no solo sobre las que el artboard deja expandidas en el instante que dibuja |
+| Marcus Ellery y Priya Raghunathan (`lib/partner.ts`) son invitados completos, no la fila anónima "2 earlier arrivals" de `Main.dc.html` | `EmailDigest.dc.html` sí los nombra con LP# propio — se reconcilian como el mismo dato en vez de mantener dos versiones (una anónima, una nombrada) del mismo par de llegadas de las 9:00 AM |
+| La reserva en vivo de Naomi Feldstein y la cancelación+promoción de Harriet Osei/Victor Almeida disparan por temporizador al entrar en `/partner`, no por el paso real del reloj | Igual que el chequeo de disponibilidad del Epic 4: sin backend no hay un evento real que las dispare, así que son deterministas (`applyLiveBooking`/`applyCancellationAndPromotion`) para que "real-time updates" (Story 7.1) y las alertas de cancelación/waitlist (Story 7.2) se puedan alcanzar y probar |
+| `TodayDashboard` (`/partner`) acepta `liveBookingDelayMs`/`cancellationDelayMs` como props en vez de una constante fija | Los tests que verifican la actualización en vivo usan temporizadores reales con estos valores acortados — mezclar fake timers con el scheduler de React bajo jsdom se cuelga, porque jsdom implementa `requestAnimationFrame` sobre `setTimeout` |
+| El eyebrow "Attendance" del modal de no-show sustituye a "Story 7.1 · attendance" de `NoShow.dc.html` | Ese texto lee como una anotación del propio proceso de diseño, no como copy de producto — no hay motivo de negocio para que la etiqueta de la historia aparezca en pantalla |
+| El motivo elegido al reportar un no-show no cambia el flujo visible más allá de marcar la fila | Los tres motivos de `NoShow.dc.html` narran distintos matices (ventana cerrada, nota para soporte), pero ninguna historia define un tratamiento distinto por motivo; se guarda en `PartnerGuest.noShowReason` para el futuro informe "No-show log" (`Reports.dc.html`) |
+| El rail de configuración de `/partner/reports` usa las mismas cinco columnas para los seis informes | `Reports.dc.html` solo detalla la configuración de "Monthly booking volume"; los otros cinco informes reutilizan esa misma anatomía de rail hasta que cada uno tenga su propio modelo de columnas |
+| El segmented "Came back" de `RepeatGuests.dc.html` no está preseleccionado por defecto | El propio artboard dibuja a Elena Vasquez con una sola visita ("First visit") en su tabla de 10 filas mientras el segmented marca "Came back" — con ese filtro activo Elena no podría aparecer. Aquí el filtro por defecto es "Everyone" para que las tres etiquetas de lealtad se puedan ver sin interactuar |
+| El gráfico "Bookings a day" no usa `SimpleBarChart` (Recharts) | Su cromo por defecto (ejes, tooltip, leyenda) no se parece a las barras mínimas que dibuja `Analytics.dc.html`; se construye con divs simples, igual que "When they come". `SimpleBarChart`/`SimpleLineChart` siguen sin un primer uso real — se retoman cuando un gráfico necesite de verdad ejes o tooltips interactivos sobre muchos puntos |
+| La suma de las 14 barras de "Bookings a day" da 186, no 187 (el tile "Bookings") | Desajuste ya presente en `Analytics.dc.html` — la distribución semanal de "When they come" sí suma 187 exactos. Se documenta, no se corrige de más |
+| El botón "Print list" (`/partner`) y "Download CSV"/"Print updated list" de los emails llaman a `window.print()`/`downloadTextFile` de verdad | Capacidades del navegador, no llamadas a un servicio de LuxePass — mismo criterio que el resto de descargas reales del proyecto (`.ics`, "Copy", "Upload photo") |

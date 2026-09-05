@@ -44,7 +44,7 @@ Ejemplos ya hechos: la comprobación de email duplicado consulta una lista de do
 
 **Diseño: los 9 epics están diseñados** (Fase 9 cerrada). Cualquier trabajo de diseño nuevo es revisión o corrección.
 
-**Código: 16 de 24 historias implementadas** — los Epics 1, 2, 3, 4, 5 y 6 están completos.
+**Código: 19 de 24 historias implementadas** — los Epics 1, 2, 3, 4, 5, 6 y 7 están completos.
 
 | Epic | Historias | Estado |
 |---|---|---|
@@ -64,7 +64,9 @@ Ejemplos ya hechos: la comprobación de email duplicado consulta una lista de do
 | 6 · Member Experience & Notifications | 6.1 Booking management | ✅ **Implementada** |
 | | 6.2 In-app notifications | ✅ **Implementada** |
 | | 6.3 Member profile & preferences | ✅ **Implementada** |
-| 7 · Partner Dashboard | 7.1 · 7.2 · 7.3 | ⬜ Pendiente |
+| 7 · Partner Dashboard | 7.1 Daily guest management | ✅ **Implementada** |
+| | 7.2 Booking notifications for partners | ✅ **Implementada** |
+| | 7.3 Partner analytics | ✅ **Implementada** |
 | 8 · Admin & Support | 8.1 · 8.2 · 8.3 | ⬜ Pendiente |
 | 9 · Membership & Referrals | 9.1 · 9.2 | ⬜ Pendiente |
 

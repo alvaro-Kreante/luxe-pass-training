@@ -26,6 +26,12 @@ export function StatusChip({
   emphasis = false,
   /** "Cancelled" en `History.dc.html` no lleva el punto delante del texto. */
   dot = true,
+  /**
+   * Fijado en la Fase 2 — "Arrived" del chip de asistencia (oscuro) añade un
+   * borde `--gold-500` de 1px al fondo `bg-accent-soft` que "Confirmed" (claro)
+   * no lleva. Misma geometría, un borde más.
+   */
+  outlined = false,
   className,
 }: {
   children: React.ReactNode;
@@ -35,6 +41,7 @@ export function StatusChip({
   dashed?: boolean;
   emphasis?: boolean;
   dot?: boolean;
+  outlined?: boolean;
   className?: string;
 }) {
   return (
@@ -45,7 +52,7 @@ export function StatusChip({
         emphasis
           ? "border-[1.5px] border-accent bg-surface text-fg"
           : available
-            ? "bg-accent-soft text-fg"
+            ? cn("bg-accent-soft text-fg", outlined && "border border-accent")
             : dashed
               ? "border border-dashed border-fg-subtle text-fg-subtle"
               : "border border-line text-fg-subtle",
