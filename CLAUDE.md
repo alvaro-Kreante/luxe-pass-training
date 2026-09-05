@@ -70,105 +70,15 @@ Ejemplos ya hechos: la comprobación de email duplicado consulta una lista de do
 
 ### Rutas existentes
 
-| Ruta | Artboard | Story |
-|---|---|---|
-| `/` | `Home.dc.html` | Home del área de miembro, dentro del App shell |
-| `/signup` | `Main.dc.html` + `Terms.dc.html` | 1.1 |
-| `/verify-email` | `Verification.dc.html` | 1.1 |
-| `/onboarding/basics` | `ProfileBasic.dc.html` | 1.1 |
-| `/onboarding/personal` | `ProfilePersonal.dc.html` | 1.1 |
-| `/onboarding/professional` | `ProfileProfessional.dc.html` | 1.1 |
-| `/welcome` | `Welcome.dc.html` | 1.1 |
-| `/login` | `Login.dc.html` | 1.2 |
-| `/forgot-password` | `ForgotPassword.dc.html` | 1.2 |
-| `/explore` | Los 9 artboards de la Fase 3 | 2.1 · 2.2 · 2.3 |
-| `/lounges/[id]` | `Main.dc.html` + `Gallery.dc.html` + `Share.dc.html` + `NotAvailable.dc.html` + `Loading.dc.html` | 3.1 · 3.2 |
-| `/lounges/[id]/availability` | `Availability.dc.html` + `Closure.dc.html` | 3.2 |
-| `/lounges/[id]/reviews` | `Reviews.dc.html` + `NoRatings.dc.html` | 3.1 |
-| `/lounges/[id]/book` | `Main.dc.html` (+ `MembershipCovered.dc.html` sobre `?covered=1`) | 4.1 |
-| `/lounges/[id]/book/payment` | `Payment.dc.html` + `MembershipCovered.dc.html` | 4.2 |
-| `/lounges/[id]/book/summary` | `Summary.dc.html` + `Waitlist.dc.html` + `PaymentError.dc.html` | 4.1 |
-| `/lounges/[id]/book/confirmed` | `Confirmed.dc.html` + `Calendar.dc.html` | 4.1 · 4.3 |
-| `/lounges/[id]/book/receipt` | `Receipt.dc.html` | 4.2 |
-| `/my-pass` | `Main.dc.html` (Upcoming) + `History.dc.html` (Past), Fase 7 — sustituyen a `MyBookings.dc.html`/`NoShow.dc.html` de la Fase 6 | 6.1 |
-| `/my-pass/[reference]` | `Main.dc.html` + `ArrivalDay.dc.html` + `CheckedIn.dc.html` + `Expired.dc.html` (sobre `?state=`) | 5.1 |
-| `/my-pass/[reference]/reminder` | `Reminder.dc.html` | 5.3 |
-| `/reception` | `Reception.dc.html` + `CheckInError.dc.html` | 5.2 |
-| `/notifications` | `Notifications.dc.html` | 6.2 |
-| `/profile` | `Profile.dc.html` | 6.3 |
-| `/profile/preferences` | `Preferences.dc.html` | 6.3 |
-| `/profile/notifications` | `NotificationSettings.dc.html` | 6.2 |
-| `/profile/privacy` | `Privacy.dc.html` + `DeleteAccount.dc.html` | 6.3 |
+La tabla completa ruta → artboard → story vive en `docs/design/COMPONENT-MAP.md`
+(capa 3). Es la fuente única: no duplicarla aquí.
 
-#### Estados de `/explore`
-
-Siete de los nueve artboards de la Fase 3 son estados de la misma pantalla. Tres
-dependen del sistema o de la red, que aquí no existen, así que **se alcanzan por
-query param** — no salen de ningún artboard y desaparecen cuando haya lógica real
-(`docs/PENDIENTES.md` §2.2):
-
-| URL | Artboard | Qué enseña |
-|---|---|---|
-| `/explore` | `LocationPermission` → `Main` | Permiso, y tras concederlo el mapa |
-| `/explore` → "Enter a location instead" | `ManualLocation` | Entrada manual de ciudad |
-| `/explore` → botón **Filters** | `Filters` | Drawer de filtros (patrón 6) |
-| `/explore` → filtrar hasta cero | `NoResults` | Vacío con sugerencias |
-| `/explore` → segmented **List** | `ListView` | Lista con scroll infinito |
-| **`/explore?map=error`** | `MapError` | El mapa no carga: reintentar o pasar a lista |
-| **`/explore?offline=1`** | `Offline` | Lounges cacheados, búsqueda deshabilitada |
-| **`/explore?list=loading`** | `ListLoading` | Skeletons de la lista |
-
-Para llegar a `NoResults` como lo dibuja el artboard: Filters → WiFi → Co-working
-→ `< 2 mi` → día **14** → **2–6 PM**.
-
-#### Estados de `/my-pass/[reference]`
-
-`Main`, `ArrivalDay`, `CheckedIn` y `Expired.dc.html` son cuatro estados de la
-**misma tarjeta de pase** (design system §5 patrón 11) para la misma reserva de
-muestra, LP-842193. Sin un reloj real que los dispare, se alcanzan por query
-param — igual que `?covered=1` o `?map=error`:
-
-| URL | Artboard | Qué enseña |
-|---|---|---|
-| `/my-pass/LP-842193` | `Main` | Pase próximo, neutro |
-| `/my-pass/LP-842193?state=today` | `ArrivalDay` | El día de la reserva, cuenta atrás de check-in |
-| `/my-pass/LP-842193?state=checked-in` | `CheckedIn` | Con el check-in ya hecho |
-| `/my-pass/LP-842193?state=expired` | `Expired` | Tras cerrarse la ventana de la reserva |
-
-Los 10 artboards de la Fase 1, los 9 de la Fase 3, los 9 de la Fase 4, los 9 de
-la Fase 5, los 9 de la Fase 6 y los 11 de la Fase 7 están cubiertos. `/explore` reúne siete de los nueve de la Fase 3 como
-estados de una misma pantalla: solo el permiso de ubicación y la entrada manual
-son diálogos aparte. `/lounges/[id]` hace lo mismo con cinco de los nueve de la
-Fase 4 (`Main` · `Gallery` · `Share` · `NotAvailable` · `Loading`); los otros
-cuatro (`Availability` · `Closure` · `Reviews` · `NoRatings`) son estados de las
-dos sub-vistas. Los tres pasos de `/lounges/[id]/book` reúnen a su vez seis de
-los nueve artboards de la Fase 5 (`Main` · `Payment` · `Summary` ·
-`MembershipCovered` · `Waitlist` · `PaymentError`); los otros tres
-(`Confirmed` · `Calendar` · `Receipt`) tienen su propia ruta. De la Fase 6,
-`/my-pass/[reference]` reúne `Main`/`ArrivalDay`/`CheckedIn`/`Expired` como se
-explica arriba; `Reminder` tiene su propia ruta y `Reception`/`CheckInError`
-son la misma consola de recepción (`/reception`), alcanzados tecleando el
-número en vez de por query param porque sí son una interacción real de la
-pantalla. De la Fase 7, `/my-pass` reúne `Main` y `History` como sus pestañas
-Upcoming/Past — sustituyendo ahí a `MyBookings`/`NoShow` de la Fase 6, ver
-`docs/design/COMPONENT-MAP.md` — con `Cancel`/`CancelFee` como el diálogo de
-cancelar; `/profile` reúne `Profile`/`Preferences`/`NotificationSettings`/`Privacy`
-como las cuatro sub-vistas de la sección de cuenta, con `DeleteAccount` como su
-diálogo; y `MorningAlert` es el panel de la campana (patrón 14), reutilizado
-desde My Pass y desde toda la sección de cuenta en vez de tener ruta propia.
-
-Lo construido que ya sirve al resto: 31 primitivos, 14 patrones de pantalla y la
-capa de tokens completa. El **App shell (patrón 3)** fija la navegación de los
-Epics 2–6, el **drawer lateral (patrón 6)** es el que reutiliza el Partner
-Dashboard en oscuro, la **sub-vista de lounge (patrón 8)** es la base de las
-pantallas de disponibilidad y reseñas, y el **flujo por pasos con rail (patrón 9)**
-es la base de los tres pasos de reserva. El **pase digital (patrón 11)** extiende
-la tarjeta de confirmación oscura del patrón 10 sin reescribirla, y la
-**consola de recepción (patrón 12)** es la primera pantalla íntegramente oscura
-fuera del Partner Dashboard. La **sección de cuenta (patrón 13)** fija el sub-nav
-que reutilizará Membership en el Epic 9, y el **panel de notificaciones (patrón 14)**
-es el mismo que extenderá el panel de actividad del Partner Dashboard (Epic 7).
-Ver `docs/design/COMPONENT-MAP.md`.
+Varias pantallas reúnen varios artboards de una fase como estados de la misma
+vista, alcanzados por query param cuando dependen del sistema o de una lógica
+que aquí no existe (`?covered=1`, `?map=error`, `?state=today`…). El detalle de
+qué estado usa qué param está en `docs/PENDIENTES.md` §2.2 (estados de
+`/explore`) y en la tabla de desviaciones de `COMPONENT-MAP.md` (estados de
+`/my-pass/[reference]`, de `/lounges/[id]/book`, etc.).
 
 **Cada artboard tiene su propia frase de marca** en el panel izquierdo del patrón 1 (`Join a community of discerning travelers.`, `Your next moment of calm is waiting.`, `Tell us who you are.`…). No reutilizar la de otra pantalla: extraerla del `.dc.html` correspondiente.
 
@@ -308,124 +218,30 @@ Capa 3  pantallas     src/app/**/page.tsx        solo componen
 
 ## Metodología de test — TDD
 
-Toda historia nueva y todo bugfix siguen **Test-Driven Development**. La skill
-`test-driven-development` es obligatoria y se invoca **antes** de tocar código: no
-se salta porque el cambio sea pequeño.
+Toda historia nueva y todo bugfix siguen **Test-Driven Development** vía la
+skill `test-driven-development` (obligatoria, se invoca antes de tocar
+código): red → green → refactor, ciclo estándar que la skill ya cubre. Lo
+específico de este proyecto:
 
-1. **Red** — escribir un test que falle y capture el comportamiento buscado.
-2. **Green** — el código mínimo para que pase. Sin funcionalidad de más, sin abstracciones especulativas.
-3. **Refactor** — limpiar solo con el test en verde, y mantenerlo verde.
-
-**El orden no es una recomendación: es lo que distingue TDD de tener tests.** No se
-escribe una línea de código de producción antes de que exista un test que la
-reclame. Escribir el test después también da una suite verde, pero describe lo que
-el código hace en vez de lo que debería hacer, y ya no puede contradecirlo.
-
-Un test que pasa a la primera no demuestra nada: si no lo has visto fallar, no sabes
-qué está comprobando. Ante la duda, rompe a propósito lo que acabas de escribir y
-confirma que el test lo detecta.
-
-### Qué no lleva test
-
-Documentación, configuración sin efecto en el comportamiento, y ajustes puramente
-visuales (un margen, un color, una clase de Tailwind). Eso lo cubren el artboard,
-`tsc` y mirar la pantalla. Todo lo demás lleva test.
-
-### Bugs: reproducir antes de arreglar
-
-Ante un fallo, **no se empieza por arreglarlo**. Se escribe primero el test que lo
-reproduce, se comprueba que falla —eso confirma el diagnóstico— y solo entonces se
-corrige. El test que pasa es la prueba de que el arreglo funciona, y se queda como
-guardia contra la regresión.
-
-### De dónde sale el test
-
-**De los `## Acceptance Criteria` de la historia y de los nodos del flow. Nunca del `.dc.html`.**
-
-Copy, medidas, colores y clases de Tailwind **no se testean**: eso lo cubren el
-artboard, `tsc` y la revisión visual. Un test que transcribe el mockup no previene
-ningún fallo y se rompe cada vez que se ajusta el diseño.
-
-Se consulta siempre por rol y etiqueta (`getByRole`, `getByLabelText`), nunca por
-clase ni por estructura del DOM. Así un test solo falla cuando cambia el
-comportamiento — que es justo cuando queremos que falle.
-
-| Nivel | Qué cubre | Ejemplo |
-|---|---|---|
-| Lógica | `src/lib/*.ts` — validaciones, filtros, cálculos | `validateSignUp` devuelve el error de email ya registrado |
-| Estados | Error de validación, botón deshabilitado, vacío, bloqueado | Tras 5 fallos, `/login` muestra el aviso y deshabilita el formulario |
-| Navegación | Va a la ruta correcta · **no** navega con entrada inválida | Submit válido en `/signup` → `/verify-email?email=…` |
-
-Que **no** navegue con entrada inválida es tan parte del criterio como que navegue
-con entrada válida: es la mitad que más se rompe al refactorizar.
-
-### Runner
-
-`vitest` + Testing Library + `user-event` sobre jsdom. Los tests viven junto al
-archivo que prueban: `registration.test.ts` al lado de `registration.ts`,
-`page.test.tsx` al lado de `page.tsx`.
-
-`userEvent.setup({ delay: null })` siempre. Sin esa opción, user-event espera un
-tick del bucle de eventos entre cada pulsación y un formulario de tres campos se va
-a más de un segundo: la suite entera pasó de 19,8 s a 3,8 s solo con esto. El
-`delay` existe para simular a alguien tecleando, y en estas pantallas no hay nada
-—debounce, autocompletado— que dependa de ese ritmo.
-
-**`next/navigation` es el único mock permitido.** El router de Next no existe fuera
-del runtime del App Router, así que es una frontera legítima. Todo lo demás se
-prueba contra la implementación real: componentes de verdad, validaciones de verdad,
-datos de muestra de verdad. Mockear un componente propio para que el test pase es
-señal de que el test está mirando al sitio equivocado.
-
-Distinto es **rellenar una API del navegador que jsdom no trae**: eso no sustituye
-código del proyecto, lo hace ejecutable. `vitest.setup.ts` define un
-`IntersectionObserver` inerte porque sin él el scroll infinito de la lista no puede
-ni montarse; el test que necesita simular el centinela lo cambia por un doble con
-`vi.stubGlobal` y lo deshace en `afterEach`.
-
-Cuando llegue la capa de datos, se suma una fila de integración a la tabla de
-niveles; el ciclo y la regla de dónde sale el test no cambian.
-
-### Punto de partida para una pantalla nueva
-
-No hay que reinventar el andamiaje. `src/app/login/page.test.tsx` y
-`src/app/signup/page.test.tsx` son la referencia: el segundo incluye además el
-patrón para un modal de Radix (abrirlo, marcar sus casillas, aceptar).
-
-```tsx
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import MiPantalla from "./page";
-
-const push = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
-
-beforeEach(() => {
-  push.mockClear();
-});
-
-describe("navegación", () => {
-  it("avanza cuando los datos son válidos", async () => {
-    const user = userEvent.setup({ delay: null });
-    render(<MiPantalla />);
-
-    await user.click(screen.getByRole("button", { name: "Continue" }));
-
-    expect(push).toHaveBeenCalledWith("/siguiente");
-  });
-});
-```
-
-Los `describe` agrupan por comportamiento, no por componente: `navegación`,
-`validación del formulario`, `bloqueo tras cinco intentos fallidos`. El nombre de
-cada `it` describe lo que el miembro observa, no la función que se ejecuta — leídos
-en fila, los tests de un archivo son la especificación de esa pantalla.
-
-Cada test se lee entero sin saltar a un helper: se repite lo que haga falta para
-que se entienda solo. Los helpers son para recorridos largos que se repiten de
-verdad (rellenar el formulario, aceptar los términos), no para ahorrar tres líneas.
+- **El test sale de los `## Acceptance Criteria` de la historia y de los
+  nodos del flow — nunca del `.dc.html`.** Copy, medidas, colores y clases de
+  Tailwind no se testean: eso lo cubren el artboard, `tsc` y la revisión
+  visual. Documentación, configuración sin efecto en el comportamiento y
+  ajustes puramente visuales tampoco llevan test.
+- **Bugs**: se reproduce antes de arreglar. El test que falla confirma el
+  diagnóstico; el mismo test en verde queda de guardia contra la regresión.
+- Se consulta siempre por rol y etiqueta (`getByRole`, `getByLabelText`),
+  nunca por clase ni estructura del DOM.
+- `userEvent.setup({ delay: null })` siempre — sin esto la suite completa se
+  va de 3,8 s a 19,8 s por la espera de un tick entre cada pulsación.
+- **`next/navigation` es el único mock permitido** (el router de Next no
+  existe fuera del runtime del App Router). Todo lo demás corre contra la
+  implementación real. Rellenar una API del navegador que jsdom no trae
+  (`vitest.setup.ts` define un `IntersectionObserver` inerte) no cuenta como
+  mock: no sustituye código del proyecto, lo hace ejecutable.
+- Punto de partida para una pantalla nueva: `src/app/login/page.test.tsx` y
+  `src/app/signup/page.test.tsx` (este último incluye el patrón para un modal
+  de Radix). Los `describe` agrupan por comportamiento, no por componente.
 
 ---
 
@@ -443,118 +259,33 @@ verdad (rellenar el formulario, aceptar los términos), no para ahorrar tres lí
 
 ## Estructura
 
-```
-src/                      Código de la aplicación Next.js
-  app/
-    globals.css           Tokens: literales + semánticos + @theme inline
-    **/page.tsx           Pantallas — solo componen, no definen estilo
-  components/
-    ui/                   Primitivos = DESIGN-SYSTEM §4 (Button, Input, Chip, Card...)
-    patterns/             Layouts   = DESIGN-SYSTEM §5 (AuthSplit, Modal...)
-    onboarding/           Lógica del Epic 1 (TermsModal, ProfileDraft)
-    explore/              Lógica del Epic 2 (CityMap, FilterDrawer, LoungeList...)
-    lounges/              Thumb/Card compartidos (E1-E3) + el perfil, disponibilidad y reseñas del Epic 3
-    booking/              Lógica del Epic 4 (BookingContext, formularios de los 3 pasos, modales)
-    passes/               Lógica del Epic 5 (DigitalPassCard, patrón 11) + el diálogo de cancelar del Epic 6
-    account/              Lógica del Epic 6 (campana + panel de notificaciones, diálogo de borrar cuenta)
-    charts/               Gráficos Recharts (BarChart, LineChart)
-  lib/
-    utils.ts              Utilidades (cn() para Tailwind)
-    registration.ts       Reglas de validación de alta (Story 1.1)
-    authentication.ts     Credenciales, bloqueo y "remember me" (Story 1.2)
-    lounges.ts            Catálogo de muestra (12 en NY, 3 Newark, 1 New Rochelle, 1 Miami)
-    filters.ts            Pipeline de la Story 2.2, compartido por mapa y lista
-    amenities.ts          Las seis amenities, sus etiquetas y (Story 3.1) su descripción
-    availability.ts       Franjas, calendario y el "hoy" del mockup (2025-09-09)
-    lounge-profile.ts     Story 3.1 / 3.2 — contacto, horario, reseñas, cierres y disponibilidad semanal
-    distance.ts           Conversión mi/km y tiempo a pie
-    location.ts           Ciudades de muestra y su búsqueda
-    member.ts             El miembro de muestra del App shell
-    booking.ts            Story 4.1 / 4.2 — date picker, slots, precio, pago y referencias de reserva
-    calendar-export.ts    Story 4.3 — .ics real y URL real de Google Calendar
-    passes.ts             Story 5.1 / 5.2 — el pase de muestra y la consola de recepción; Story 6.1 — estados de reserva y política de cancelación
-    notifications.ts      Story 6.2 — los seis tipos de aviso, ajustes por canal y horas de silencio
-    profile.ts            Story 6.3 — perfil, preferencias, membresía, referido y privacidad
+Las 4 capas (`src/app/globals.css` → `components/ui/` → `components/patterns/` →
+`app/**/page.tsx`) se explican en "Al implementar una pantalla". Dentro de
+`components/` hay además una carpeta por epic para su lógica propia
+(`onboarding/`, `explore/`, `lounges/`, `booking/`, `passes/`, `account/`,
+`charts/`) y en `src/lib/` un módulo de datos de muestra por historia — para
+qué historia cubre cada uno, `git log` sobre el archivo o su cabecera son más
+fiables que una lista aquí, que se desactualiza con cada historia nueva.
 
-  **/*.test.ts(x)         Los tests van junto al archivo que prueban
+Puntos no derivables del árbol:
 
-scripts/                  Verificación visual con Playwright (puntual, no e2e masivo)
-  playwright/
-    scripts/              Scripts de verificación visual por feature
-    screenshots/          Capturas generadas (gitignored)
-    utils/                Funciones compartidas (browser.js, template.js)
-    README.md             Guía de uso
-
-docs/                     Diseño y especificaciones
-  PENDIENTES.md           Lo que queda abierto: bloqueos, provisionales y decisiones
-  design/
-    DESIGN-SYSTEM.md      Sistema de diseño: tokens, tipografía, componentes, patrones
-    COMPONENT-MAP.md      Qué componente de código implementa qué fila del design system
-    epic-N-slug/          Mockups de un epic: .dc.html + luxepass-epicN.html + canvas.json + logo.png
-  specs/
-    epic-N-slug/          Un folder por epic (9 en total)
-      story-N.M-slug.md   Una historia de usuario por archivo
-    flows/
-      flow-slug.md        Diagramas de flujo en Mermaid (texto)
-      images/             JPGs de los flujos (referencia visual)
-
-assets/
-  brand/logo.png          Logo oficial En Soleil (907 KB)
-
-public/
-  logo.png                Copia reducida (54 KB) que consume la app
-  manifest.json, sw.js    PWA (sw.js y workbox-*.js se regeneran en cada build)
-```
-
-### Epics (`docs/specs/epic-*`)
-
-9 epics, numerados 1–9, cada uno con sus historias de usuario:
-
-1. User Onboarding & Authentication
-2. Location Discovery & Search
-3. Lounge Profiles & Details
-4. Booking System
-5. QR Code & Check-in
-6. Member Experience & Notifications
-7. Partner Dashboard
-8. Admin & Support
-9. Membership & Referrals
-
-### Convención de nombres
-
-- Folders y archivos en **lowercase-kebab-case**, sin espacios ni caracteres especiales (`epic-1-user-onboarding-authentication`, `story-1.1-user-registration.md`).
-- Los números de story mantienen el punto (`1.1`, `4.2`) tal cual aparecen en la numeración original del proyecto.
-- Todas las historias de usuario son `.md`, no `.txt`.
-
-### Formato de una historia de usuario
-
-Cada `story-*.md` sigue esta estructura:
-
-```markdown
-# Story N.M: Título
-
-## User Story
-As a ... I want ... so that ...
-
-## Acceptance Criteria
-- [ ] Criterio 1
-- [ ] Criterio 2
-
-## Related Flow
-(ver sección siguiente)
-```
+- `logo.png` en cada carpeta de `docs/design/epic-N-slug/` y en `public/` son
+  copias reducidas (54 KB); el original de 907 KB vive en `assets/brand/`, no
+  se copia de ahí directamente.
+- `sw.js` y `workbox-*.js` en `public/` se regeneran en cada build — no
+  editarlos a mano.
+- `scripts/playwright/` es para verificación visual puntual, no una suite e2e
+  masiva — ver su `README.md`.
+- `docs/PENDIENTES.md` es la lista viva de bloqueos, provisionales y
+  decisiones abiertas; revisarla al cerrar cualquier historia (paso 9 de la
+  receta).
 
 ### Flujos (`docs/specs/flows/`)
 
-Los diagramas de flujo originales (6 JPGs de FigJam) fueron transcritos a **Mermaid** en archivos `.md` para que sean legibles como texto (no requieren visión). Cada flow file cubre uno o más epics, e incluye:
-
-- El diagrama Mermaid completo.
-- Una tabla "Story Segments" que indica qué nodos del diagrama corresponden a cada historia de usuario — esto es importante porque **varios diagramas abarcan más de un epic** (ej. `flow-complete-booking-journey.md` cubre Epic 3, Epic 4, Epic 5 y toca Epic 6).
-- Notas sobre huecos o inconsistencias encontradas al transcribir (ej. una historia sin nodo dedicado en ningún diagrama).
-
-Cada historia de usuario afectada enlaza de vuelta al flow file relevante en su sección `## Related Flow`, indicando el segmento específico que le corresponde. Si una historia no tiene diagrama asociado, esto se declara explícitamente en esa sección en lugar de omitirla.
-
-Mapeo diagrama → epics:
+Los diagramas de flujo viven como Mermaid en `docs/specs/flows/*.md`. Cada uno
+cubre uno o más epics y trae una tabla "Story Segments" — qué nodos
+corresponden a cada historia — porque varios diagramas abarcan más de un epic
+(ej. `flow-complete-booking-journey.md` cubre Epic 3, 4, 5 y toca el 6).
 
 | Flow file | Epics que cubre |
 |---|---|
@@ -587,13 +318,6 @@ Estos tokens están replicados en el código como **CSS custom properties** en `
 
 **Los números de fase no son cronológicos** — Fase 2 es Epic 7, aunque se diseñó después de Fase 7.
 
-## Al editar specs (`docs/specs/`)
-
-- Mantener la convención de nombres en minúsculas y con guiones.
-- Si se agrega una historia de usuario nueva, seguir el formato de sección `## User Story` / `## Acceptance Criteria` / `## Related Flow` de las demás.
-- Si una historia no tiene flujo asociado, decirlo explícitamente en `## Related Flow` en vez de omitir la sección o inventar un enlace.
-- Si se actualiza un diagrama Mermaid en `docs/specs/flows/`, revisar la tabla "Story Segments" para que siga siendo consistente.
-
 ## Stack tecnológico
 
 - **Next.js 15.1** — App Router, PWA
@@ -602,7 +326,7 @@ Estos tokens están replicados en el código como **CSS custom properties** en `
 - **Radix UI** — primitivas accesibles (Dialog, Select, Popover, DropdownMenu, Form)
 - **lucide-react** — iconos, con `strokeWidth={1.6}` para cumplir §1 del design system
 - **class-variance-authority** — variantes de componente
-- **Recharts** — gráficos (Epic 7 y 8, aún sin usar)
+- **Recharts** — gráficos (`components/charts/`: BarChart, LineChart), para Epic 7 y 8
 - **@ducanh2912/next-pwa** — service worker
 - **Vitest + Testing Library** — tests sobre jsdom, con `next/navigation` mockeado
 - **Playwright** — navegador automatizado para verificación visual (uso puntual, no suite e2e masiva)
@@ -630,23 +354,18 @@ Playwright está instalado y disponible para verificación visual puntual: cuand
 
 Scripts y screenshots se guardan organizados en `scripts/playwright/`: lee `scripts/playwright/README.md` para estructura y cómo crear un script de verificación.
 
-**Directorios de salida separados** (`distDir` en `next.config.ts`). Compartiendo
-`.next`, un build lanzado mientras el dev server está vivo le reescribe los chunks
-por debajo y lo deja sirviendo 500 (`__webpack_modules__[moduleId] is not a
-function`) o 404 en rutas que existen — sin avisar en su log. Si alguna vez vuelve
-a pasar: `rm -rf .next` y reiniciar el dev server.
+**Directorios de salida separados** (`distDir` en `next.config.ts`): `.next-build`
+para producción, `.next` para dev, para que un build no invalide el dev server.
 
 **Antes de dar por roto algo de una pantalla, comprobar que el dev server sirve
-React.** Ha pasado ya con los `distDir` separados: `.next` se queda sin
-`main-app.js` y la página **se ve entera pero no responde a nada** — la pinta el
-servidor. Ningún botón funciona y ningún modal ni drawer aparece, porque viven en
-portales que necesitan JavaScript; la nav lateral sí va, porque son `<a href>` de
-verdad. Se parece mucho a "falta implementar esa pantalla" y no lo es.
+React**: `.next` puede quedarse sin `main-app.js`, y entonces la página **se ve
+entera pero no responde a nada** (la pinta el servidor; ningún botón, modal ni
+drawer funciona porque viven en portales que necesitan JS). Se parece a "falta
+implementar esa pantalla" y no lo es.
 
 ```bash
-curl -s -o /dev/null -w '%{http_code}
-'   http://localhost:3000/_next/static/chunks/main-app.js   # 200 = sano
+curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/_next/static/chunks/main-app.js   # 200 = sano
 ```
 
 Si da 404: parar el dev server, `rm -rf .next`, arrancarlo otra vez y **recargar
-duro en el navegador** (Ctrl+Shift+R). Detalle en `docs/PENDIENTES.md` §4.2.
+duro en el navegador** (Ctrl+Shift+R). Detalle y causa en `docs/PENDIENTES.md` §4.2.
