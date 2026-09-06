@@ -1,9 +1,8 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 /**
- * Story 1.1 — reglas de registro.
- *
- * Sin backend todavía: la comprobación de email duplicado consulta una lista
- * de muestra. Cuando exista la API, `findExistingAccount` es el único punto
- * que cambia — la pantalla ya trata el caso.
+ * Story 1.1 — reglas de registro contra Supabase local (ver
+ * CLAUDE.md §Supabase Local Development).
  */
 
 /** Criterio de aceptación: "8+ chars, special characters". */
@@ -12,11 +11,8 @@ export const PASSWORD_MIN_LENGTH = 8;
 const SPECIAL_CHARACTER = /[^A-Za-z0-9]/;
 const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-/** Cuentas de muestra que disparan el error de email duplicado. */
-const REGISTERED_EMAILS = [
-  "alexandra.rivas@email.com",
-  "member@ensoleil.com",
-];
+export const DUPLICATE_EMAIL_MESSAGE =
+  "An account already exists with this email. Log in instead, or reset your password.";
 
 export interface PasswordCheck {
   hasMinLength: boolean;
@@ -38,8 +34,21 @@ export function isEmailShapeValid(email: string): boolean {
   return EMAIL_SHAPE.test(email.trim());
 }
 
-export function findExistingAccount(email: string): boolean {
-  return REGISTERED_EMAILS.includes(email.trim().toLowerCase());
+/**
+ * Consulta el RPC `email_exists` (ver `supabase/schemas/email_exists.sql`):
+ * Supabase Auth no revela por sí mismo si un email ya tiene cuenta cuando la
+ * confirmación por correo está activa, así que este es el punto explícito
+ * que cumple el AC de "clear error messaging".
+ */
+export async function emailExists(
+  supabase: SupabaseClient,
+  email: string,
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc("email_exists", {
+    p_email: email.trim().toLowerCase(),
+  });
+  if (error) throw error;
+  return data ?? false;
 }
 
 export interface SignUpValues {
@@ -60,9 +69,6 @@ export function validateSignUp(values: SignUpValues): SignUpErrors {
     errors.email = "Enter your email address.";
   } else if (!isEmailShapeValid(values.email)) {
     errors.email = "Enter a valid email address.";
-  } else if (findExistingAccount(values.email)) {
-    errors.email =
-      "An account already exists with this email. Log in instead, or reset your password.";
   }
 
   const password = checkPassword(values.password);

@@ -1,5 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { loadEnv } from "vite";
 import { defineConfig } from "vitest/config";
 
 /**
@@ -20,5 +21,9 @@ export default defineConfig({
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
     include: ["src/**/*.test.{ts,tsx}"],
+    // Story 1.1 — los tests que llaman a Supabase local necesitan las
+    // mismas variables que `npm run dev`. Vite no carga `.env.local` en
+    // modo "test" por convención, así que se pide con otro modo.
+    env: loadEnv("development", process.cwd(), ""),
   },
 });

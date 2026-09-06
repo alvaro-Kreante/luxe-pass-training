@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import { createClient } from "@/lib/supabase/client";
+
 import {
   checkPassword,
-  findExistingAccount,
+  emailExists,
   isEmailShapeValid,
   validateSignUp,
   type SignUpValues,
@@ -62,21 +64,23 @@ describe("isEmailShapeValid", () => {
   });
 });
 
-describe("findExistingAccount", () => {
-  it("encuentra una cuenta ya registrada", () => {
-    expect(findExistingAccount("member@ensoleil.com")).toBe(true);
+describe("emailExists", () => {
+  const supabase = createClient();
+
+  it("encuentra una cuenta ya registrada", async () => {
+    const email = `ya-existe-${Date.now()}@ensoleil-test.com`;
+    await supabase.auth.signUp({ email, password: "EnSoleil!2026" });
+
+    await expect(emailExists(supabase, email)).resolves.toBe(true);
+    await expect(emailExists(supabase, ` ${email.toUpperCase()} `)).resolves.toBe(
+      true,
+    );
   });
 
-  it("ignora las mayúsculas al comparar", () => {
-    expect(findExistingAccount("Member@EnSoleil.com")).toBe(true);
-  });
+  it("no encuentra una dirección desconocida", async () => {
+    const email = `nadie-${Date.now()}@ensoleil-test.com`;
 
-  it("ignora los espacios alrededor", () => {
-    expect(findExistingAccount("  member@ensoleil.com  ")).toBe(true);
-  });
-
-  it("no encuentra una dirección desconocida", () => {
-    expect(findExistingAccount("nueva.socia@email.com")).toBe(false);
+    await expect(emailExists(supabase, email)).resolves.toBe(false);
   });
 });
 
@@ -95,13 +99,6 @@ describe("validateSignUp", () => {
     const errors = validateSignUp(signUp({ email: "nueva.socia" }));
 
     expect(errors.email).toBe("Enter a valid email address.");
-  });
-
-  it("rechaza un email que ya tiene cuenta y ofrece la salida", () => {
-    const errors = validateSignUp(signUp({ email: "member@ensoleil.com" }));
-
-    expect(errors.email).toMatch(/An account already exists/);
-    expect(errors.email).toMatch(/Log in instead/);
   });
 
   it("exige la contraseña", () => {

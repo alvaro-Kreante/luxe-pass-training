@@ -18,6 +18,7 @@ import * as React from "react";
 
 export interface ProfileDraft {
   photoName: string | null;
+  photoFile: File | null;
   fullName: string;
   phone: string;
   birthDay: string;
@@ -32,6 +33,7 @@ export interface ProfileDraft {
 
 export const EMPTY_PROFILE: ProfileDraft = {
   photoName: null,
+  photoFile: null,
   fullName: "",
   phone: "",
   birthDay: "",

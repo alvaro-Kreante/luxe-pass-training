@@ -172,6 +172,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 |---|---|---|
 | `/signup` | `Main.dc.html` + `Terms.dc.html` | 1.1 |
 | `/verify-email` | `Verification.dc.html` | 1.1 |
+| `/auth/confirm` | — (Route Handler, no tiene artboard) | 1.1 |
 | `/onboarding/basics` | `ProfileBasic.dc.html` | 1.1 |
 | `/onboarding/personal` | `ProfilePersonal.dc.html` | 1.1 |
 | `/onboarding/professional` | `ProfileProfessional.dc.html` | 1.1 |
@@ -226,8 +227,9 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | Módulo | Qué resuelve |
 |---|---|
 | `onboarding/terms-modal.tsx` | Story 1.1 — aceptación de TOS + Privacy con fecha y versión |
-| `onboarding/profile-context.tsx` | Borrador de perfil compartido por los 3 pasos (Context, sin persistencia) |
-| `lib/registration.ts` | Validación de email, contraseña (8+ y 1 especial) y email duplicado |
+| `onboarding/profile-context.tsx` | Borrador de perfil compartido por los 3 pasos (Context, sin persistencia entre recargas; guarda también el `File` real de la foto para poder subirlo al final) |
+| `onboarding/require-session.tsx` | Story 1.1 — guarda de sesión de `/onboarding/*`: sin sesión (llega directo, sin pasar por `/auth/confirm`) manda a `/login` |
+| `lib/registration.ts` | Validación de email/contraseña (8+ y 1 especial) en cliente; `emailExists` consulta el RPC `email_exists` contra Supabase local para el email duplicado |
 | `lib/authentication.ts` | Story 1.2 — credenciales de muestra y las constantes de los criterios (5 intentos, 15 min, 30 días) |
 | `lib/lounges.ts` | Catálogo de muestra de lounges y los destacados del Home |
 | `lib/member.ts` | El miembro de muestra que pinta el App shell |
@@ -320,6 +322,38 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 
 ---
 
+## Backend real (Supabase local) — Story 1.1
+
+Único epic con backend real hasta ahora (ver CLAUDE.md §Supabase Local Development).
+Todo corre contra el proyecto local, nunca contra un Supabase remoto.
+
+| Módulo | Qué resuelve |
+|---|---|
+| `lib/supabase/client.ts` | Cliente de Supabase para componentes `"use client"` |
+| `lib/supabase/server.ts` | Cliente de Supabase para el Route Handler `/auth/confirm` |
+| `lib/supabase/middleware.ts` + `middleware.ts` (raíz) | Refresco de la sesión en cada request (patrón oficial de `@supabase/ssr`) |
+| `lib/testing/confirmed-user.ts` | Solo para tests: crea un usuario ya confirmado vía API de admin (service role) para no tener que leer Mailpit en cada test que necesita sesión |
+| `supabase/schemas/profiles.sql` | Tabla `public.profiles` (los campos de los 3 pasos de onboarding), RLS propia |
+| `supabase/schemas/email_exists.sql` | RPC `email_exists` — la excepción consciente al anti-enumeración de Supabase Auth, para poder cumplir el AC "clear error messaging" de emails duplicados |
+| `supabase/schemas/storage.sql` + bucket `profile-photos` (`config.toml`) | Foto de perfil opcional, un archivo por usuario bajo `{auth.uid()}/` |
+| `supabase/templates/confirmation.html` | Enlace propio a `/auth/confirm?token_hash=...` en vez del flujo implícito por defecto |
+
+`/auth/confirm` no lleva directo a `/onboarding/basics`: redirige a
+`/verify-email?verified=1&next=...`, un segundo estado de esa misma pantalla
+(sin artboard propio, reutiliza la anatomía de `Verification.dc.html` — mismo
+criterio que el acuse de `/forgot-password`) que confirma y continúa solo tras
+un momento, con un botón "Continue" para no depender del temporizador. La
+sesión que dejó `/auth/confirm` sigue activa: no hay un login de por medio,
+igual que documenta `flow-onboarding.md` (`EmailVerified → ProfileCreation`).
+
+Desviaciones conscientes de esta parte (no son bugs, son decisiones tomadas con el usuario):
+
+- **Welcome email** (AC "User receives welcome email with app download links"): sigue sin enviarse de verdad. Supabase Auth solo manda el correo de confirmación de forma nativa; un segundo correo exigiría un Database Webhook + Edge Function solo para esto. La pantalla `/welcome` ya muestra el estado (cuenta creada + botones de descarga).
+- **Duplicado de email**: Supabase Auth no revela por diseño si un email ya existe cuando la confirmación está activa (anti-enumeración). Se resolvió con `email_exists`, aceptando el trade-off a cambio de cumplir el AC al pie de la letra.
+- El enlace manual "I have verified my email" de `/verify-email` **ya no existe** — la verificación real llega por el enlace de Mailpit (`http://127.0.0.1:54334` en local) vía `/auth/confirm`.
+
+---
+
 ## Pendiente de implementar
 
 Lo que el design system especifica y **todavía no existe en código**. Antes de escribirlo,
@@ -400,7 +434,7 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 | Iconos con `lucide-react` en lugar de SVG copiados | §1 especifica *regla* (stroke 1.6–1.8, grid 24, round), no un set concreto. `lucide-react` ya estaba en `package.json` |
 | El desenfoque del patrón 4 no viaja en el HTML del servidor | El diálogo vive en un portal, que el servidor no renderiza. Si el desenfoque llegara en el HTML, la pantalla se vería borrosa y sin nada que lo explique hasta que hidratara — y así se quedaría si el JavaScript falla. `AppShell` lo aplica solo en cliente |
 | El `filter: blur(3px)` del patrón 4 lo aplica la pantalla, no el modal | Un modal en portal no puede alcanzar a su hermano en el árbol. `/signup` pasa `blur-[3px]` al `AuthSplit` mientras el modal está abierto |
-| `/verify-email` incluye "I have verified my email" | Sin backend, el enlace del correo no puede volver a la app. Desaparece cuando exista `/verify-email/[token]` |
+| ~~`/verify-email` incluye "I have verified my email"~~ | **Resuelto**: retirado al conectar Supabase Auth real. La verificación llega por el enlace de Mailpit vía `/auth/confirm` (ver "Backend real (Supabase local)" más arriba) |
 | Texto legal del modal de términos | Relleno estructural, tal como ya advierte `DESIGN-SYSTEM.md` §6 (Fase 1). A reemplazar por el documento real de En Soleil |
 | El acuse de "reset link sent" no tiene artboard | Se resuelve como segundo estado de `/forgot-password`, reutilizando la anatomía de `Verification.dc.html` (medallón de 76px + destinatario + reenvío), en lugar de inventar una pantalla |
 | `/login` añade una nota de 11.5px bajo "Remember me" | El artboard no la trae, pero `flow-onboarding.md` fija el alcance del token ("Set remember token: 30-day auto-logout"). Decirlo evita que el miembro adivine qué activa la casilla |
