@@ -65,18 +65,6 @@ sesión real — no hay sesión que cerrar, es solo el diseño del enlace.
 **Se resuelve:** el resto queda como está — cerrar sesión de verdad exige
 backend, fuera de alcance de este repo.
 
-### 2.1b El sub-nav de Account tiene un ítem "Membership" sin pantalla propia
-
-`AccountShell` (patrón 13) fija el sub-nav completo — Profile details ·
-Preferences · Notifications · Privacy and data · Membership — porque así lo
-declaran los artboards de la Fase 7 (`Profile.dc.html` y el resto repiten las
-cinco filas). Las cuatro primeras ya tienen ruta; **"Membership" queda inerte**
-(sin `href`, no navega), igual que "Write a review" en el Epic 3.
-
-**Se resuelve:** con el Epic 9 (`Main.dc.html` de Membership), que ya deja dicho
-en `DESIGN-SYSTEM.md` §6 (Fase 9) que esa vista "no añade una entrada nueva al
-sub-nav": el hueco ya está aquí, solo falta la pantalla.
-
 ### 2.2 Enlace "I have verified my email"
 
 En `/verify-email` hay un enlace que avanza al alta manualmente. Sin backend, el
@@ -246,6 +234,11 @@ nada los hace cumplir.
 | 8.3 | Upload and manage lounge images / image optimization and resizing | Las fotos de `LoungeEdit.dc.html` son bloques de marca decorativos; no hay subida de archivo real ni redimensionado — el texto "Resized to 1600, 800 and 400 px" solo lo anuncia |
 | 8.3 | Content approval workflow | "Approve and publish"/"Send back with a note" cambian el estado local (`useState`) de la sesión; no hay cola de aprobación real ni notificación a Theo Baptiste |
 
+| 9.1 | Renewal date and auto-renewal settings — aviso por email un mes antes | El texto "We email you on October 3" en `Main.dc.html` es solo la promesa en pantalla; ningún correo se programa ni se envía |
+| 9.1 | Upgrade options to monthly subscribers and pricing | "Pay $2,217.40 and switch" (`UpgradeConfirmModal`) no llama a Stripe ni cambia el plan de verdad — el modal cierra sin dejar rastro, igual que `WaitlistModal` en el Epic 4 |
+| 9.2 | Reward crediting for successful referrals (pending) | El paso de "Reward pending" a "Day pass credited" (Daniel Okonjo) se alcanza por `?state=credited` en `/profile/membership/referrals`, no por el primer pago de un amigo liquidando de verdad |
+| 9.2 | Friend's sign up confirmation notification | Las dos notificaciones de `RewardCredited.dc.html` solo existen cuando se abre esa misma URL con `?state=credited` (`extraItems` de `NotificationBellMenu`); no hay evento real de alta que las dispare |
+
 Los enlaces de las tiendas de `/welcome` apuntan a `#`: no existen todavía las
 fichas de App Store ni Google Play.
 
@@ -393,3 +386,4 @@ de la tarifa de no-show.
 | `/lounges/[id]` daba 404 desde cada "View details" del Epic 2 | 3 sept 2026 | Implementado el Epic 3: perfil de lounge, disponibilidad semanal y reseñas |
 | `/profile` daba 404 desde el ítem "Profile" del App shell | 4 sept 2026 | Implementado el Epic 6: sección de cuenta (patrón 13) con sus cuatro sub-vistas |
 | No existía el Partner Dashboard (Epic 7) | 5 sept 2026 | Implementadas las Stories 7.1/7.2/7.3: `/partner` (lista del día, en vivo), tres emails, Analytics, invitados recurrentes y Reports |
+| El sub-nav de Account tenía un ítem "Membership" sin pantalla propia | 6 sept 2026 | Implementado el Epic 9: `/profile/membership` (plan, beneficios, renovación), `/profile/membership/plans` (comparación) y `/profile/membership/referrals` (código, invitaciones, términos) |

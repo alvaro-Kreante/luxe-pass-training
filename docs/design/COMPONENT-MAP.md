@@ -97,6 +97,9 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `StatusChip` (ampliado, 4) | `status-chip.tsx` | §4 "Chip de estado de caso (oscuro)" | sin props nuevas — `CaseStatusChip` (`src/components/admin/case-status-chip.tsx`) compone `emphasis`/`available`+`outlined`/`dashed`/default ya existentes; solo "Escalated" es distinto de verdad (icono en vez de punto, ver el propio componente). `LoungeStatusChip` (`src/components/admin/lounge-status-chip.tsx`) reutiliza el mismo mapa para Live/Draft/N to approve, tal como ya declara la fila del design system | E8 |
 | `ApprovalDiff` | `approval-diff.tsx` | §4 "Diff de aprobación" | `change: PendingChange` — valor anterior tachado, flecha dorada, valor nuevo en negrita, nota opcional debajo | E8 |
 | `BulkActionBar` | `bulk-action-bar.tsx` | §4 "Barra de acción masiva" | `count` · `itemLabel` · `onClear`; `BulkActionButton` para cada acción (`destructive` con borde discontinuo) | E8 |
+| `MetricTile` (ampliado) | `metric-tile.tsx` | §4 "Tile de métrica (claro)" | nueva prop `tone`: `"dark"` (por defecto, sin tocar E7/E8) · `"light"` cambia el fondo a la Card de contenido (`bg-surface` + borde + sombra) en vez de `--dark-card` — mismo resto de anatomía, el gemelo claro que este mapa ya preveía | E9 |
+| `ComparisonTable` | `comparison-table.tsx` | §4 "Tabla comparativa" | `leadingLabel` · `columns` · `rows` (`values` mezcla texto, `boolean` para check dorado/`—`, y `isTotal` para la fila resaltada) | E9 |
+| `ConsumptionBar` | `consumption-bar.tsx` | §4 "Barra de consumo" | `used` · `included` · `unitLabel` — solo la barra + la cifra; cada pantalla la envuelve en su propio card (`VisitsCard` en `variant="full"`/`"compact"`) | E9 |
 
 ## Capa 2 — Patrones (`src/components/patterns/`)
 
@@ -104,7 +107,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 |---|---|---|---|
 | Split-screen de autenticación | `auth-split.tsx` | §5 patrón **1** | `cardWidth` 440/460 · `centered`. Sirve a sign up, log in, reset password, verificación y pasos de perfil |
 | Full-bleed de confirmación | `full-bleed-success.tsx` | §5 patrón **2** | Lleva `data-theme="dark"` incorporado |
-| App shell (miembro) | `app-shell.tsx` | §5 patrón **3** | Sidebar de 248px + área de contenido. `padded={false}` para el patrón 5 (Explore), que va a sangre. Fija la nav de los Epics 2–6 |
+| App shell (miembro) | `app-shell.tsx` | §5 patrón **3** | Sidebar de 248px + área de contenido. `padded={false}` para el patrón 5 (Explore), que va a sangre. Fija la nav de los Epics 2–6. Prop `member` (Story 9.1, por defecto `SAMPLE_MEMBER`) — el bloque de usuario de la sidebar es la cuenta de Naomi Feldstein en `MonthlyPlan.dc.html`/`Upgrade.dc.html`, no siempre Alexandra |
 | Modal sobre pantalla | `modal.tsx` | §5 patrón **4** | Radix Dialog. `width` 640 por defecto (520–540 en los diálogos de ubicación). `align="center"` + `media` para el diálogo de permiso. El patrón **18** (modal oscuro) es este mismo dentro de `data-theme="dark"` |
 | Drawer lateral | `drawer.tsx` | §5 patrón **6** | Radix Dialog con `modal={false}` — el fondo debe seguir siendo perceptible mientras se filtra. `width` 436 (472 en el patrón **18** oscuro) |
 | Explore (mapa + resultados) | `explore-layout.tsx` | §5 patrón **5** | Topbar de 88px, fila de filtros de 52px, panel de 372px + mapa. El panel es la `region` "Results" que comparten mapa y lista |
@@ -114,8 +117,8 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | Tarjeta de confirmación oscura | `confirmation-card.tsx` | §5 patrón **10** | Card de 344px, `data-theme="dark"` propio + `.surface-night.dot-pattern`. `rows: {label,value}[]` genérico para que el patrón 11 (pase digital, Fase 6) lo extienda sin reescribirlo |
 | Pase digital | `passes/digital-pass-card.tsx` | §5 patrón **11** | Card de 380px, `data-theme="dark"` propio. Cuatro estados por `state: PassLifecycleState` (`upcoming`·`today`·`checked-in`·`expired`) en vez de cuatro componentes — el pase es el mismo, solo cambia lo que muestra. El sello de expirado va inline (un solo uso, no se sube a primitivo) |
 | Consola de recepción | `app/reception/page.tsx` | §5 patrón **12** | Sin archivo de patrón aparte — como el perfil de lounge (patrón 7), la topbar de 72px y la columna de 900px solo las usa esta pantalla. El campo de lookup (oscuro) también va inline aquí, no como primitivo, por el mismo motivo |
-| Sección de cuenta con sub-nav | `patterns/account-shell.tsx` | §5 patrón **13** | Topbar 64px (miga "Account › X" + `topbarRight` + campana) + sub-nav de 232px. `topbarRight` es el botón "Save changes" en Profile details o el chip `SavedIndicatorChip` ("Saved as you change them") en el resto — misma pantalla, dos variantes de autoguardado que ya distinguen los propios artboards. `actionAfterBell` invierte el orden campana/acción: `Profile.dc.html` pone la campana antes de "Save changes"; el resto pone el chip antes de la campana |
-| Panel de notificaciones | `components/account/notification-bell-menu.tsx` | §5 patrón **14** | Radix Popover de 380px anclado a `NotificationBellButton`. No vive en `patterns/` porque trae su propio estado de datos (`lib/notifications.ts`), a diferencia de Modal/Drawer que son solo anatomía — mismo criterio que ya separa `passes/digital-pass-card.tsx` de los patrones puros |
+| Sección de cuenta con sub-nav | `patterns/account-shell.tsx` | §5 patrón **13** | Topbar 64px (miga "Account › X" + `topbarRight` + campana) + sub-nav de 232px. `topbarRight` es el botón "Save changes" en Profile details o el chip `SavedIndicatorChip` ("Saved as you change them") en el resto — misma pantalla, dos variantes de autoguardado que ya distinguen los propios artboards. `actionAfterBell` invierte el orden campana/acción: `Profile.dc.html` pone la campana antes de "Save changes"; el resto pone el chip antes de la campana. `breadcrumb` acepta un array (Story 9.1/9.2, miga de tres niveles "Account › Membership › Compare plans"/"› Referrals"); `notificationExtras` reenvía a `NotificationBellMenu` (Story 9.2, `?state=credited`); `member` reenvía a `AppShell` (Story 9.1, Naomi en las sub-vistas mensuales) |
+| Panel de notificaciones | `components/account/notification-bell-menu.tsx` | §5 patrón **14** | Radix Popover de 380px anclado a `NotificationBellButton`. No vive en `patterns/` porque trae su propio estado de datos (`lib/notifications.ts`), a diferencia de Modal/Drawer que son solo anatomía — mismo criterio que ya separa `passes/digital-pass-card.tsx` de los patrones puros. Prop `extraItems` (Story 9.2) antepone notificaciones de un estado concreto de pantalla sin mutar el array `NOTIFICATIONS` global |
 | App shell del partner | `patterns/partner-shell.tsx` | §5 patrón **15** | Gemelo oscuro del patrón 3, con su propia nav (Today · Guests · Analytics · Reports · Settings) y el bloque del local en vez del bloque de usuario. `topbarLabel`/`topbarMeta`/`topbarRight` para que cada pantalla componga su propia topbar; `blurred` como en `AppShell` |
 | Panel de actividad | `components/partner/activity-panel.tsx` | §5 patrón **17**, gemelo del 14 | Reutiliza `NotificationBellButton` + `NotificationRow` tal cual — solo cambia a oscuro por `data-theme`. No vive en `patterns/` por el mismo motivo que el panel de notificaciones (trae su propio estado) |
 | Vista de analítica | `app/partner/analytics/page.tsx` | §5 patrón **19**, sobre el 15 | Sin archivo de patrón aparte — como el perfil de lounge (patrón 7), la composición de 4 tiles + gráficos + rail de 344px solo la usa esta pantalla |
@@ -130,6 +133,23 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `ExportGuestListPopover` | — | Story 7.1 — exportación a CSV que sigue los filtros de pantalla (`Export.dc.html`), Radix Popover con selección de columnas real |
 | `GuestListTable` | §4 Fila de datos (oscura) + §5 patrón 16 | Story 7.1 — la lista del día (`Main.dc.html`). Inline, no primitivo — igual que `RepeatGuests` (Story 7.3) dibuja su propia fila de datos: **la fila de datos oscura sigue sin ser un primitivo compartido**, ver "Pendiente de implementar" |
 | `TodayDashboard` | — | Story 7.1/7.2 — toda la lógica de `/partner`. Vive fuera de `app/partner/page.tsx` porque un archivo de ruta del App Router solo puede exportar `default`; los tests importan `TodayDashboard` directamente con `liveBookingDelayMs`/`cancellationDelayMs` cortos en vez de fake timers (ver la nota en el propio archivo) |
+
+### Componentes de epic (`src/components/membership/`)
+
+| Componente | DESIGN-SYSTEM | Notas |
+|---|---|---|
+| `PlanSummaryCard` | Card de contenido | Story 9.1 — "Current plan", compartida por `Main.dc.html` (Alexandra, anual) y `MonthlyPlan.dc.html` (Naomi, mensual) |
+| `BenefitsGrid` | Grid 2×3 de "Fila de opción" | Story 9.1 — "What your membership includes" (`Main.dc.html`), solo el plan anual |
+| `VisitsCard` | Usa `ConsumptionBar` | Story 9.1 — "Visits this month"; `variant="full"` (card completa + aviso de day passes complementarios, `Main.dc.html`) y `variant="compact"` (fila corta sin ese aviso, `MonthlyPlan.dc.html` — Naomi no tiene day passes complementarios porque no ha enviado ninguna invitación) |
+| `RenewalRailCard` | Card + `Switch` | Story 9.1 — "Renewal"/"Next charge", compartida. `manageable=false` para Naomi (ver desviaciones) |
+| `BillingRailCard` | Card + `CardBrandBadge` | Story 9.1 — "Billing", compartida |
+| `ReferralSummaryRailCard` | Card + `ReferralCode` | Story 9.1/9.2 — "Referrals" del rail; el botón "Open referrals" solo aparece cuando la cuenta ya ha enviado invitaciones (Alexandra) |
+| `UpgradeOfferCard` | Card con borde dorado | Story 9.1 — "Switch to annual" (`MonthlyPlan.dc.html`), solo Naomi |
+| `AutoRenewModal` | Modal (patrón 4) | Story 9.1 — "Turn off auto-renewal?" (`AutoRenew.dc.html`), generaliza fecha/visitas/código a partir de la cuenta que lo abre |
+| `UpgradeConfirmModal` | Modal (patrón 4) | Story 9.1 — "Confirm your new plan" (`Upgrade.dc.html`), reutilizado desde `/profile/membership?plan=monthly` y desde `/profile/membership/plans?plan=monthly` |
+| `ReferralInvitationsTable` | "Lista de datos clara" (patrón 25) | Story 9.2 — las 5 invitaciones de `Referrals.dc.html`/`RewardCredited.dc.html`. Inline, no primitivo compartido — su rejilla de 4 columnas es propia, igual que `GuestListTable`/`RepeatGuests` con la fila de datos oscura (ver "Pendiente de implementar") |
+| `ReferralShareModal` | Calca `ShareDialog` (Story 3.1) | Story 9.2 — "Share your invitation" (`Share.dc.html`), `navigator.clipboard` real |
+| `ReferralTermsModal` | Modal (patrón 4) | Story 9.2 — "Terms and conditions" (`Terms.dc.html`), la nota de versión va en `headerExtra` |
 
 ### Utilidades de superficie (`globals.css`)
 
@@ -197,6 +217,9 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `/admin/lounges` | `Lounges.dc.html` | 8.3 |
 | `/admin/lounges/[id]` | `LoungeEdit.dc.html` | 8.3 |
 | `/admin/lounges/approvals` | `Approval.dc.html` | 8.3 |
+| `/profile/membership` | `Main` (Alexandra, anual) + `MonthlyPlan` (Naomi, mensual, sobre `?plan=monthly`) + `AutoRenew` + `Upgrade` | 9.1 |
+| `/profile/membership/plans` | `Plans.dc.html` (el plan "actual" se decide por `?plan=`) | 9.1 |
+| `/profile/membership/referrals` | `Referrals` + `RewardCredited` (sobre `?state=credited`) + `Share` + `Terms` | 9.2 |
 
 ### Lógica de epic (`src/components/onboarding/`, `src/lib/`)
 
@@ -289,6 +312,11 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `app/admin/lounges/page.tsx` | Story 8.3 — "Add/edit/remove lounge profiles" y "Bulk update capabilities": la lista con selección y barra de acción masiva (`Lounges.dc.html`) |
 | `app/admin/lounges/[id]/page.tsx` | Story 8.3 — editor de contenido (fotos, amenities, horario, disponibilidad) y aprobación inline (`LoungeEdit.dc.html`) |
 | `app/admin/lounges/approvals/page.tsx` | Story 8.3 — "Content approval workflow": cola de aprobación con comparación live/propuesto (`Approval.dc.html`) |
+| `lib/membership.ts` | Story 9.1 — los dos planes ($249/mes, $2,400/año), la cuenta anual de Alexandra (reutiliza `MEMBERSHIP_SUMMARY`/`REFERRAL_CODE` de `lib/profile.ts` y `VISITS_THIS_MONTH` de `lib/passes.ts`) y la mensual de Naomi Feldstein, los 6 beneficios, la tabla comparativa y la proración de `Upgrade.dc.html` |
+| `lib/referrals.ts` | Story 9.2 — las 5 invitaciones, las stats, los day passes del rail, los términos del programa y `referralViewState`, que deriva el estado "credited" (`RewardCredited.dc.html`) a partir del "default" (`Referrals.dc.html`) sin backend que lo dispare |
+| `app/profile/membership/page.tsx` | Story 9.1 — "Membership": estado del plan, beneficios, consumo del mes, renovación/auto-renovación y la oferta de subida mensual→anual (`Main.dc.html`/`MonthlyPlan.dc.html`) |
+| `app/profile/membership/plans/page.tsx` | Story 9.1 — "Compare plans": los dos planes lado a lado y la tabla comparativa (`Plans.dc.html`) |
+| `app/profile/membership/referrals/page.tsx` | Story 9.2 — "Referrals": código, invitaciones, day passes y términos (`Referrals.dc.html`/`RewardCredited.dc.html`) |
 
 ---
 
@@ -301,21 +329,29 @@ comprobar si un componente de arriba ya lo cubre con una variante.
 
 Item de nav · Fila de historial · Segmented (oscuro, geometría propia de 36px —
 se usa hoy con la variante `sm` existente, 38px, como aproximación) ·
-Barra de volumen (vertical y horizontal — el Epic 7 las dibuja inline en
-`app/partner/analytics/page.tsx`, no como primitivo, por ahora un único uso) ·
-Barra de consumo · Tabla comparativa
+Barra de volumen (vertical — el Epic 7 la dibuja inline en
+`app/partner/analytics/page.tsx`, no como primitivo, por ahora un único uso)
 
 Casilla de asistencia, Chip de asistencia (oscuro) y Tile de métrica (oscuro)
 se implementaron con el Epic 7 (`AttendanceCheckbox`, `StatusChip` ampliado y
 `MetricTile` — ver Capa 1). Chip de estado de caso, Badge de nav, Entrada de
 log de comunicación, Barra de acción masiva y Diff de aprobación se
 implementaron con el Epic 8 (`CaseStatusChip`, `NavBadge`, `CommLogEntry`,
-`BulkActionBar`, `ApprovalDiff` — ver Capa 1). **Fila de datos (oscura)** sigue sin
-subirse a primitivo compartido: `GuestListTable` (Story 7.1), `RepeatGuests`
-(Story 7.3) y las tres tablas del Epic 8 (`Main`, `MemberSearch`,
-`MemberProfile`) dibujan cada una su propia fila inline porque sus grids de
-columnas no coinciden — se sube a primitivo cuando un epic lo necesite y
-obligue a generalizar el grid.
+`BulkActionBar`, `ApprovalDiff` — ver Capa 1). Tile de métrica (claro), Barra
+de consumo y Tabla comparativa se implementaron con el Epic 9 (`MetricTile`
+con `tone="light"`, `ConsumptionBar`, `ComparisonTable` — ver Capa 1); la
+barra de volumen horizontal de la Fase 2 y la barra de consumo de la Fase 9
+son gemelas, pero como la primera sigue sin subirse a primitivo (vive inline
+en `app/partner/analytics/page.tsx`), `ConsumptionBar` nace como primitivo
+propio en vez de generalizar código que hoy no es compartido. **Fila de
+datos (oscura)** sigue sin subirse a primitivo compartido: `GuestListTable`
+(Story 7.1), `RepeatGuests` (Story 7.3) y las tres tablas del Epic 8 (`Main`,
+`MemberSearch`, `MemberProfile`) dibujan cada una su propia fila inline
+porque sus grids de columnas no coinciden — **su gemela clara** (`Fila de
+datos (clara)`, patrón 25) sigue el mismo criterio: `ReferralInvitationsTable`
+(Story 9.2) dibuja su propia rejilla de 4 columnas en vez de subir un
+primitivo compartido — se sube cuando un epic lo necesite y obligue a
+generalizar el grid.
 
 Código QR del pase, Sello de expirado, Campo de lookup (oscuro) y Botón
 fantasma (oscuro) ya están construidos (Fase 6, ver arriba) pero como piezas de
@@ -326,7 +362,9 @@ siguiente los vuelve a necesitar.
 
 ### Patrones de §5 sin implementar
 
-25 Lista de datos clara · 26 Comparación de planes
+Ninguno — el Epic 9 (Fase 9) cierra los dos últimos: 25 Lista de datos clara
+(inline, `ReferralInvitationsTable`, ver nota de arriba) y 26 Comparación de
+planes (`app/profile/membership/plans/page.tsx`, sobre el patrón 13).
 
 (11 Pase digital y 12 Consola de recepción se implementaron con el Epic 5; 13
 Sección de cuenta y 14 Panel de notificaciones con el Epic 6; 15 App shell del
@@ -334,8 +372,7 @@ partner, 16 Lista de datos oscura (inline, ver nota de arriba), 17 Panel de
 actividad, 18 Modal/drawer oscuros y 19 Vista de analítica con el Epic 7; 21
 App shell admin, 22 Ficha de miembro y 23 Caso con log con la Story 8.1, y 24
 Comparación live/propuesto con la Story 8.3 (`app/admin/lounges/approvals/page.tsx`) —
-ver la tabla de patrones arriba. El Epic 8 está completo: 25 y 26 son la
-Fase 9, todavía pendiente.)
+ver la tabla de patrones arriba.)
 
 ### Gemelos que deben compartir componente
 
@@ -344,14 +381,14 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 
 | Par | Epics | Cómo |
 |---|---|---|
-| Tile de métrica claro ↔ oscuro | E9 ↔ E7 (implementado) | mismo componente, `data-theme` — `MetricTile` solo tiene la mitad oscura hoy |
-| Fila de datos clara ↔ oscura | E9 ↔ E7/E8 | pendiente de generalizar — `GuestListTable`/`RepeatGuests` (E7) siguen inline, ver "Pendiente de implementar" |
-| Lista de datos clara (25) ↔ oscura (16, implementado) | E9 ↔ E7 | mismo componente, `data-theme` |
-| Chip de estado: reserva ↔ asistencia ↔ caso ↔ referido | E6 ↔ E7 (implementado) ↔ E8 (implementado) ↔ E9 | un `StatusChip` con mapa de estados por dominio |
+| Tile de métrica claro ↔ oscuro | E9 ↔ E7 (los dos implementados) | mismo componente — no por `data-theme` como preveía esta fila, sino por la nueva prop `tone` (`MetricTile` hardcodea `bg-dark-card` en vez de un token semántico, así que el tema no lo resolvía solo) |
+| Fila de datos clara ↔ oscura | E9 ↔ E7/E8 (los dos pendientes) | pendiente de generalizar — `ReferralInvitationsTable` (E9) sigue inline igual que `GuestListTable`/`RepeatGuests` (E7), ver "Pendiente de implementar" |
+| Lista de datos clara (25) ↔ oscura (16) | E9 ↔ E7 (los dos implementados) | no acabaron siendo un componente compartido: `ReferralInvitationsTable` (E9) y `GuestListTable`/`RepeatGuests` (E7) son implementaciones inline distintas, mismo motivo que la fila anterior |
+| Chip de estado: reserva ↔ asistencia ↔ caso ↔ referido | E6 ↔ E7 ↔ E8 ↔ E9 (los cuatro implementados) | un `StatusChip` con mapa de estados por dominio |
 | Modal/drawer claro (4/6) ↔ oscuro (18, implementado) | E1 ↔ E7 | mismo componente, `data-theme` — prop `dark` en `Modal`/`Drawer` |
 | App shell miembro (3) ↔ partner (15, implementado) ↔ admin (21, implementado) | E2–6 ↔ E7 ↔ E8 | mismo shell, distinta nav y `data-theme` |
 | Panel notificaciones (14) ↔ actividad (17, implementado) | E6 ↔ E7 | mismo componente, `data-theme` |
-| Barra de volumen horizontal ↔ barra de consumo | E7 ↔ E9 | mismo componente, `data-theme` |
+| Barra de volumen horizontal ↔ barra de consumo | E7 ↔ E9 (E9 implementado) | no llegaron a compartir componente: la horizontal de la Fase 2 sigue inline en `app/partner/analytics/page.tsx` (nunca se subió a primitivo), así que `ConsumptionBar` nace como primitivo propio en vez de generalizar código que hoy no es compartido |
 
 ---
 
@@ -444,3 +481,13 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 | "Add lounge", "Search lounges", "All cities" y los cuatro botones de la barra de acción masiva ("Update hours", "Add an amenity", "Set closure dates", "Archive") no llevan a ningún sitio | Ningún artboard dibuja el formulario de alta, el panel de filtro por ciudad ni el modal de edición masiva — quedan inertes, igual que el resto de botones sin destino de la Fase 8 |
 | Los botones de 44px sin fondo dorado (`Assign to me`, `Escalate`, `Keep the fee and reply`, `Preview as a member`, `Send back to Theo`, `Approve one by one`, `Open the lounge editor`, `Send back with a note`, `Cancel`) llevan `normal-case` | El primitivo `Button` pone mayúsculas siempre (§4 solo la fija para el botón de 52px dorado); los artboards de la Fase 8 no llevan `text-transform:uppercase` en estos botones fantasma — mismo ajuste que ya documentó la Fase 7 para sus botones de fila |
 | "Update hours" no sube a primitivo compartido con "Set closure dates" pese a tener la misma geometría | Ambos son `BulkActionButton` sin lógica propia — no hace falta una segunda variante, solo texto distinto |
+| `MEMBERSHIP_SUMMARY.memberSince` (Epic 6) pasa de "March 2026" a "November 2025" | `Profile.dc.html` decía a la vez "Member since March 2026" y "Renews November 3, 2026", que no forman un término de doce meses. `DESIGN-SYSTEM.md` §6 (Fase 9) exige elegir uno de los dos al implementar: se conserva la renovación (citada en varios artboards de la Fase 9) y se corrige el alta — mismo criterio que el corazón de favorito que la Fase 7 dejó pendiente para que lo resolviera la Fase 4 |
+| `AutoRenewModal` (`AutoRenew.dc.html`) solo se abre para el plan anual de Alexandra | Naomi (mensual) no tiene artboard propio del mismo diálogo con sus cifras — "Manage renewal" y el `Switch` quedan inertes en `/profile/membership?plan=monthly`, igual que otros controles sin destino documentados aquí |
+| "Switch to monthly" (`/profile/membership/plans`, cuando el actual es el anual de Alexandra) no abre ningún diálogo | Solo `Upgrade.dc.html` dibuja la confirmación de un cambio de plan, y es mensual→anual (inmediata, con prorrateo). La bajada anual→mensual "espera al final del término" (`DESIGN-SYSTEM.md` §6 Fase 9) sin una pantalla de confirmación propia — el botón queda inerte, con `cursor-default` en vez de fingir una acción |
+| `UpgradeConfirmModal` (`Upgrade.dc.html`) se reutiliza en dos puntos de entrada | "Switch to annual" de `/profile/membership?plan=monthly` y de `/profile/membership/plans?plan=monthly` abren el mismo modal — es la misma decisión de negocio (subir a anual desde el mensual de Naomi) alcanzada desde dos pantallas, no dos modales distintos |
+| El aviso "View" de los day passes complementarios (`Main.dc.html`), las filas de la tabla de invitaciones, "Send again" en la fila expirada, "Use a day pass", "Update" y "Invoices and receipts" de la card de facturación no llevan a ningún sitio | Ningún artboard de la Fase 9 dibuja su pantalla de destino (un detalle de day pass, el perfil de un amigo referido, un formulario de reenvío, un selector de day pass, un formulario de tarjeta, una lista de facturas) — quedan inertes, igual que el resto de botones sin destino ya documentados en este mapa |
+| El botón "Open referrals" del rail de Referrals no aparece en `MonthlyPlan.dc.html` (Naomi) | Ese artboard termina en la caja del código sin invitaciones que resumir — Naomi no ha enviado ninguna ("None sent"). `ReferralSummaryRailCard` lo omite cuando `referralsSentCount` es 0 en vez de mostrar un botón que abriría una pantalla sin nada que enseñar |
+| El estado "credited" de `/profile/membership/referrals` (`RewardCredited.dc.html`) se alcanza por `?state=credited`, no por el paso del tiempo | Igual que `?covered=1` o `?state=` en `/my-pass/[reference]`: no hay un evento real (el primer pago de Daniel liquidando) que lo dispare, así que el estado se elige por query param |
+| Las dos notificaciones de `RewardCredited.dc.html` solo aparecen cuando `/profile/membership/referrals` se abre con `?state=credited` | Se añaden como `extraItems` a `NotificationBellMenu` (nueva prop) en vez de sumarlas al array global `NOTIFICATIONS` de `lib/notifications.ts` — así no aparecen también en `/notifications` ni en el resto de la app, donde el amigo referido aún no se ha registrado |
+| La rejilla de `ReferralInvitationsTable` no usa los píxeles literales de `.rrow` (`minmax(0, 1fr) 148px 196px 128px`, `gap:14px`) | Medido en un navegador real a 1440×900 — el propio `Referrals.dc.html`, sin tocar nada de nuestro código — esas cifras ya exceden el ancho de la columna principal (512px menos el rail de 344px y el subnav de 232px deja ~470px de contenido; 148+196+128+3×14=514 no cabe), así que la columna "Friend" queda a 0px y el resto se solapa: un defecto del propio artboard, no de la implementación. Se reparte con `minmax(96px,1fr) 74px 146px 100px` y `gap:10px` — mismo criterio que ya aplicó `MemberSearch.dc.html` (columnas por fracción en vez de píxeles fijos) |
+| El bloque de usuario de la sidebar (`AppShell`) cambia a Naomi Feldstein en `/profile/membership?plan=monthly` y en `/profile/membership/plans?plan=monthly` | `DESIGN-SYSTEM.md` §6 Fase 9 lo pide explícitamente para `MonthlyPlan.dc.html`/`Upgrade.dc.html` ("el bloque de usuario de la sidebar lo dice"). `AppShell`/`AccountShell` ganan una prop opcional `member` (por defecto `SAMPLE_MEMBER`, sin tocar el resto de la app) — la extensión a la sub-vista de Compare plans es la misma generalización ya aceptada para esa pantalla (misma anatomía, solo cambia el dato "actual") |

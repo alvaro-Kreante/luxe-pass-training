@@ -7,6 +7,7 @@ import { Bell, Check, Heart, Shield, SlidersHorizontal, UserRound } from "lucide
 import { NotificationBellMenu } from "@/components/account/notification-bell-menu";
 import { AppShell } from "@/components/patterns/app-shell";
 import { cn } from "@/lib/utils";
+import type { NotificationItem } from "@/lib/notifications";
 
 /**
  * DESIGN-SYSTEM.md §5 patrón 13 — Sección de cuenta con sub-nav, dentro del
@@ -15,14 +16,15 @@ import { cn } from "@/lib/utils";
  * data · Membership). `Profile.dc.html` / `Preferences.dc.html` /
  * `NotificationSettings.dc.html` / `Privacy.dc.html`.
  *
- * "Membership" no tiene artboard en esta fase (lo diseña el Epic 9), así
- * que queda inerte en el sub-nav — igual que "Write a review" en el Epic 3.
+ * "Membership" (Epic 9) enlaza a `/profile/membership` — antes quedaba
+ * inerte porque esa vista aún no existía (ver COMPONENT-MAP.md).
  */
 const ACCOUNT_NAV = [
   { id: "profile", href: "/profile", label: "Profile details", icon: UserRound },
   { id: "preferences", href: "/profile/preferences", label: "Preferences", icon: SlidersHorizontal },
   { id: "notifications", href: "/profile/notifications", label: "Notifications", icon: Bell },
   { id: "privacy", href: "/profile/privacy", label: "Privacy and data", icon: Shield },
+  { id: "membership", href: "/profile/membership", label: "Membership", icon: Heart },
 ] as const;
 
 export type AccountSection = (typeof ACCOUNT_NAV)[number]["id"];
@@ -47,34 +49,62 @@ export function AccountShell({
    * campana. Mismo topbar, dos órdenes distintos.
    */
   actionAfterBell = false,
+  /** Notificaciones que solo aplican a un estado concreto de una pantalla (Story 9.2). */
+  notificationExtras,
+  /**
+   * `MonthlyPlan.dc.html`/`Upgrade.dc.html` (Story 9.1) son la cuenta de Naomi
+   * Feldstein: el bloque de usuario de la sidebar debe reflejarlo, no quedarse
+   * en `SAMPLE_MEMBER` (Alexandra) — ver `AppShell`.
+   */
+  member,
   children,
 }: {
   active: AccountSection;
-  breadcrumb: string;
+  /**
+   * Un string para la miga de dos niveles ("Account › X") que ya usan
+   * Profile/Preferences/Notifications/Privacy/Membership; un array para las
+   * sub-vistas de Membership ("Account › Membership › Compare plans" /
+   * "› Referrals") — Story 9.1/9.2, `Plans.dc.html`/`Referrals.dc.html`.
+   */
+  breadcrumb: string | string[];
   /** Botón "Save changes" (Profile) o el chip "Saved as you change them" (el resto). */
   topbarRight: React.ReactNode;
   actionAfterBell?: boolean;
+  notificationExtras?: NotificationItem[];
+  member?: { name: string; initials: string; tier: string };
   children: React.ReactNode;
 }) {
+  const crumbs = Array.isArray(breadcrumb) ? breadcrumb : [breadcrumb];
   return (
-    <AppShell padded={false}>
+    <AppShell padded={false} member={member}>
       <div className="flex h-full flex-col overflow-hidden">
         <div className="flex h-16 shrink-0 items-center gap-2.5 border-b border-line bg-surface px-8">
           <span className="text-[13.5px] font-bold text-fg">Account</span>
-          <span className="text-fg-subtle" aria-hidden>
-            ›
-          </span>
-          <span className="text-[13.5px] text-fg-subtle">{breadcrumb}</span>
+          {crumbs.map((crumb, index) => (
+            <React.Fragment key={crumb}>
+              <span className="text-fg-subtle" aria-hidden>
+                ›
+              </span>
+              <span
+                className={cn(
+                  "text-[13.5px]",
+                  index === crumbs.length - 1 ? "text-fg-subtle" : "text-fg-muted",
+                )}
+              >
+                {crumb}
+              </span>
+            </React.Fragment>
+          ))}
           <div className="flex-1" />
           {actionAfterBell ? (
             <>
-              <NotificationBellMenu />
+              <NotificationBellMenu extraItems={notificationExtras} />
               {topbarRight}
             </>
           ) : (
             <>
               {topbarRight}
-              <NotificationBellMenu />
+              <NotificationBellMenu extraItems={notificationExtras} />
             </>
           )}
         </div>
@@ -96,13 +126,9 @@ export function AccountShell({
                 {label}
               </Link>
             ))}
-            <span className="flex cursor-default items-center gap-2.5 rounded-nav px-3.5 py-3 text-[13.5px] font-semibold text-fg-subtle">
-              <Heart size={18} strokeWidth={1.7} className="text-fg-subtle" aria-hidden />
-              Membership
-            </span>
             <div className="flex-1" />
             <p className="m-0 px-3.5 text-[11.5px] leading-[1.55] text-fg-subtle">
-              Plan, invoices and referral rewards are managed in Membership.
+              Closing your account is under Privacy and data.
             </p>
           </nav>
 

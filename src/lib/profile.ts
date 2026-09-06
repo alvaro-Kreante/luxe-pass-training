@@ -34,10 +34,18 @@ export const SAMPLE_PROFILE: ProfileDraft = {
   travelCities: ["London", "Miami", "Paris"],
 };
 
+/**
+ * `memberSince`/`renews` no formaban un término de doce meses ("March 2026"
+ * → "November 3, 2026" son ocho meses, no doce). La Fase 9 (`DESIGN-SYSTEM.md`
+ * §6) exige elegir uno de los dos al implementar: se conserva la fecha de
+ * renovación, citada en varios artboards de esa fase, y se corrige el alta a
+ * "November 2025" — mismo criterio que el corazón de favorito que la Fase 7
+ * dejó pendiente para que lo resolviera la Fase 4.
+ */
 export const MEMBERSHIP_SUMMARY = {
   plan: "Annual",
   status: "Active" as const,
-  memberSince: "March 2026",
+  memberSince: "November 2025",
   renews: "November 3, 2026",
   visitsThisMonth: VISITS_THIS_MONTH,
 };

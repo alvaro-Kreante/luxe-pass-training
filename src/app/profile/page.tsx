@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useRouter } from "next/navigation";
 import { Camera, Check } from "lucide-react";
 
 import { AccountShell } from "@/components/patterns/account-shell";
@@ -16,6 +17,7 @@ import { MEMBERSHIP_SUMMARY, REFERRAL_CODE, SAMPLE_PROFILE, type ProfileDraft } 
  * sharing functionality". `Profile.dc.html`.
  */
 export default function ProfilePage() {
+  const router = useRouter();
   const [draft, setDraft] = React.useState<ProfileDraft>(SAMPLE_PROFILE);
   const [photoUrl, setPhotoUrl] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
@@ -142,7 +144,14 @@ export default function ProfilePage() {
                 value={`${MEMBERSHIP_SUMMARY.visitsThisMonth.used} of ${MEMBERSHIP_SUMMARY.visitsThisMonth.included}`}
               />
             </div>
-            <Button variant="secondary" size="md" block className="mt-4.5" type="button">
+            <Button
+              variant="secondary"
+              size="md"
+              block
+              className="mt-4.5"
+              type="button"
+              onClick={() => router.push("/profile/membership")}
+            >
               Manage membership
             </Button>
           </div>

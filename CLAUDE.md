@@ -44,7 +44,7 @@ Ejemplos ya hechos: la comprobación de email duplicado consulta una lista de do
 
 **Diseño: los 9 epics están diseñados** (Fase 9 cerrada). Cualquier trabajo de diseño nuevo es revisión o corrección.
 
-**Código: 22 de 24 historias implementadas** — los Epics 1, 2, 3, 4, 5, 6, 7 y 8 están completos.
+**Código: 24 de 24 historias implementadas** — los 9 epics están completos.
 
 | Epic | Historias | Estado |
 |---|---|---|
@@ -70,7 +70,8 @@ Ejemplos ya hechos: la comprobación de email duplicado consulta una lista de do
 | 8 · Admin & Support | 8.1 Customer support dashboard | ✅ **Implementada** |
 | | 8.2 Data export & analytics | ✅ **Implementada** |
 | | 8.3 Content management | ✅ **Implementada** |
-| 9 · Membership & Referrals | 9.1 · 9.2 | ⬜ Pendiente |
+| 9 · Membership & Referrals | 9.1 Membership | ✅ **Implementada** |
+| | 9.2 Referral Program | ✅ **Implementada** |
 
 ### Rutas existentes
 

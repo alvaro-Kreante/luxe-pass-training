@@ -10,8 +10,10 @@ import ProfilePage from "./page";
  * Story 6.3 — "Edit profile all fields input before", membership status y
  * código de referido. `Profile.dc.html`.
  */
+const push = vi.fn();
 vi.mock("next/navigation", () => ({
   usePathname: () => "/profile",
+  useRouter: () => ({ push }),
 }));
 
 describe("detalles del perfil", () => {
@@ -50,6 +52,15 @@ describe("detalles del perfil", () => {
     render(<ProfilePage />);
 
     expect(screen.getAllByText("Verified")).toHaveLength(2);
+  });
+
+  it("navega a /profile/membership al pulsar Manage membership", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ProfilePage />);
+
+    await user.click(screen.getByRole("button", { name: "Manage membership" }));
+
+    expect(push).toHaveBeenCalledWith("/profile/membership");
   });
 });
 

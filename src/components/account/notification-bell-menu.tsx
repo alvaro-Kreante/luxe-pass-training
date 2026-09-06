@@ -24,8 +24,14 @@ const ICONS: Record<NotificationIcon, React.ComponentType<{ size?: number; strok
   offer: Tag,
 };
 
-export function NotificationBellMenu() {
-  const [items, setItems] = React.useState<NotificationItem[]>(NOTIFICATIONS);
+/**
+ * `extraItems` antepone notificaciones que solo aplican en un estado concreto
+ * de una pantalla (Story 9.2 — "friend sign-up confirmation notification" en
+ * `/profile/membership/referrals?state=credited`), sin mutar el array
+ * `NOTIFICATIONS` global que también pinta `/notifications` y "My Pass".
+ */
+export function NotificationBellMenu({ extraItems }: { extraItems?: NotificationItem[] } = {}) {
+  const [items, setItems] = React.useState<NotificationItem[]>(() => [...(extraItems ?? []), ...NOTIFICATIONS]);
   const [open, setOpen] = React.useState(false);
   const unread = unreadNotificationCount(items);
 

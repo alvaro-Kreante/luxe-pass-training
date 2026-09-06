@@ -47,6 +47,13 @@ export interface AppShellProps {
   blurred?: boolean;
   /** Marcador del contenedor raíz, para poder comprobar el desenfoque. */
   className?: string;
+  /**
+   * Story 9.1 — `MonthlyPlan.dc.html`/`Upgrade.dc.html` son la cuenta de Naomi
+   * Feldstein, no la de Alexandra: "el bloque de usuario de la sidebar lo
+   * dice" (`DESIGN-SYSTEM.md` §6 Fase 9). Por defecto sigue siendo
+   * `SAMPLE_MEMBER` para el resto de la app.
+   */
+  member?: { name: string; initials: string; tier: string };
 }
 
 export function AppShell({
@@ -54,6 +61,7 @@ export function AppShell({
   padded = true,
   blurred = false,
   className,
+  member = SAMPLE_MEMBER,
 }: AppShellProps) {
   const pathname = usePathname();
 
@@ -126,14 +134,14 @@ export function AppShell({
             aria-hidden
             className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent font-display text-[13px] font-bold text-on-accent"
           >
-            {SAMPLE_MEMBER.initials}
+            {member.initials}
           </span>
           <span className="flex-1 overflow-hidden">
             <span className="block truncate text-[13px] font-bold text-fg">
-              {SAMPLE_MEMBER.name}
+              {member.name}
             </span>
             <span className="mt-0.5 block text-[11.5px] text-fg-subtle">
-              {SAMPLE_MEMBER.tier}
+              {member.tier}
             </span>
           </span>
           <Link href="/login" aria-label="Log out">
