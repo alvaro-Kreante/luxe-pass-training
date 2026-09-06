@@ -57,7 +57,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `Input` | `input.tsx` | §4 Input · §4 Input/búsqueda (oscuro) | `inputSize`: default(50px)·compact(44px) · `icon` · `trailing` | E1 |
 | `Select` | `select.tsx` | §4 Input / select | hereda `controlVariants` de `Input` · `icon` | E1 |
 | `Field` | `field.tsx` | §3 label 13px/600 · hint 12px | `required` · `optional` · `hint` | E1 |
-| `Checkbox` | `checkbox.tsx` | §4 Checkbox 18×18 | `align`: start(texto multilínea)·center(etiqueta de una línea) | E1 |
+| `Checkbox` | `checkbox.tsx` | §4 Checkbox 18×18 | `align`: start(texto multilínea)·center(etiqueta de una línea) · `aria-label` (Fase 8, casillas de selección de fila sin texto visible junto a ellas) | E1 · E8 |
 | `Card` | `card.tsx` | §4 Card/panel · Card de contenido | `variant`: panel(24px)·content(18px)·flat · `interactive` · `padded` | E1 |
 | `Eyebrow` | `eyebrow.tsx` | §3 eyebrow 12px/700 uppercase | `muted` (cabeceras de tabla, tile de métrica claro) | E1 |
 | `StepProgress` | `step-progress.tsx` | §4 Progress de pasos | `current` / `total` / `label` | E1 |
@@ -92,6 +92,11 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `Toast` | `toast.tsx` | §4 Toast (oscuro) | `icon`/`title`/`body`/`primaryLabel` · `onPrimary`/`onDismiss`. Fijo en `bottom:26px; right:32px` | E7 |
 | `Modal` (ampliado) | `modal.tsx` | §5 patrón 18 — modal oscuro | nueva prop `dark` pone `data-theme="dark"` en `Dialog.Overlay`/`Dialog.Content`, no en un wrapper externo — el diálogo vive en un portal, así que un wrapper en el árbol de React no es su ancestro real en el DOM | E7 |
 | `Drawer` (ampliado) | `drawer.tsx` | §5 patrón 18 — drawer oscuro (472px) | misma `dark` que `Modal`, mismo motivo | E7 |
+| `NavBadge` | `nav-badge.tsx` | §4 "Badge de nav (oscuro)" | `count` · `active` (fondo `--gold-500` en el item activo, borde `--gold-600` en uno inactivo) | E8 |
+| `CommLogEntry` | `comm-log-entry.tsx` | §4 "Entrada de log de comunicación" | `entry: CommLogEntryData`. El avatar cambia con `kind` (sistema/email automático = cuadro con icono; miembro = círculo dorado; nota interna/respuesta de soporte/partner = cuadro con borde `--gold-600`); el mensaje del miembro lleva caja con borde dorado y una nota interna el chip discontinuo | E8 |
+| `StatusChip` (ampliado, 4) | `status-chip.tsx` | §4 "Chip de estado de caso (oscuro)" | sin props nuevas — `CaseStatusChip` (`src/components/admin/case-status-chip.tsx`) compone `emphasis`/`available`+`outlined`/`dashed`/default ya existentes; solo "Escalated" es distinto de verdad (icono en vez de punto, ver el propio componente). `LoungeStatusChip` (`src/components/admin/lounge-status-chip.tsx`) reutiliza el mismo mapa para Live/Draft/N to approve, tal como ya declara la fila del design system | E8 |
+| `ApprovalDiff` | `approval-diff.tsx` | §4 "Diff de aprobación" | `change: PendingChange` — valor anterior tachado, flecha dorada, valor nuevo en negrita, nota opcional debajo | E8 |
+| `BulkActionBar` | `bulk-action-bar.tsx` | §4 "Barra de acción masiva" | `count` · `itemLabel` · `onClear`; `BulkActionButton` para cada acción (`destructive` con borde discontinuo) | E8 |
 
 ## Capa 2 — Patrones (`src/components/patterns/`)
 
@@ -114,6 +119,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | App shell del partner | `patterns/partner-shell.tsx` | §5 patrón **15** | Gemelo oscuro del patrón 3, con su propia nav (Today · Guests · Analytics · Reports · Settings) y el bloque del local en vez del bloque de usuario. `topbarLabel`/`topbarMeta`/`topbarRight` para que cada pantalla componga su propia topbar; `blurred` como en `AppShell` |
 | Panel de actividad | `components/partner/activity-panel.tsx` | §5 patrón **17**, gemelo del 14 | Reutiliza `NotificationBellButton` + `NotificationRow` tal cual — solo cambia a oscuro por `data-theme`. No vive en `patterns/` por el mismo motivo que el panel de notificaciones (trae su propio estado) |
 | Vista de analítica | `app/partner/analytics/page.tsx` | §5 patrón **19**, sobre el 15 | Sin archivo de patrón aparte — como el perfil de lounge (patrón 7), la composición de 4 tiles + gráficos + rail de 344px solo la usa esta pantalla |
+| App shell del admin | `patterns/admin-shell.tsx` | §5 patrón **21** | Gemelo oscuro del patrón 3/15, con su propia nav (Support · Members · Bookings · Lounges · Analytics · Reports) y `NavBadge` en Support/Lounges. El chip "Every action logged", la campana (inerte, ver desviaciones) y el refrescar van fijos en la topbar — a diferencia de `PartnerShell`, ninguna pantalla de la Fase 8 los personaliza, así que no viajan por `topbarRight` |
 
 ### Componentes de epic (`src/components/partner/`)
 
@@ -180,6 +186,17 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `/partner/analytics` | `Analytics.dc.html` | 7.3 |
 | `/partner/guests` | `RepeatGuests.dc.html` | 7.3 |
 | `/partner/reports` | `Reports.dc.html` | 7.3 |
+| `/admin/support` | `Main.dc.html` | 8.1 |
+| `/admin/support/[id]` | `CaseDetail` + `Refund` | 8.1 |
+| `/admin/members` | `MemberSearch.dc.html` | 8.1 |
+| `/admin/members/[id]` | `MemberProfile` + `BookingOverride` | 8.1 |
+| `/admin/analytics` | `Analytics.dc.html` | 8.2 |
+| `/admin/analytics/demand` | `Popularity.dc.html` | 8.2 |
+| `/admin/reports` | `Export.dc.html` | 8.2 |
+| `/admin/reports/scheduled` | `ScheduledReports.dc.html` | 8.2 |
+| `/admin/lounges` | `Lounges.dc.html` | 8.3 |
+| `/admin/lounges/[id]` | `LoungeEdit.dc.html` | 8.3 |
+| `/admin/lounges/approvals` | `Approval.dc.html` | 8.3 |
 
 ### Lógica de epic (`src/components/onboarding/`, `src/lib/`)
 
@@ -257,6 +274,21 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `app/partner/analytics/page.tsx` | Story 7.3 — volumen de reservas, atribución de ingresos (`Analytics.dc.html`) |
 | `app/partner/guests/page.tsx` | Story 7.3 — invitados recurrentes y niveles de lealtad (`RepeatGuests.dc.html`) |
 | `app/partner/reports/page.tsx` | Story 7.3 — centro de seis informes descargables (`Reports.dc.html`) |
+| `lib/admin.ts` | Story 8.1 — casos de soporte (`SUPPORT_CASES`), búsqueda de miembros (`searchMembers`), ficha de miembro (`getMemberProfile`) y caso con log de comunicación (`getCaseDetail`); Camille Duforest/CS-4417 son los únicos literales, el resto se deriva de su id — mismo criterio que `lounge-profile.ts` |
+| `app/admin/support/page.tsx` | Story 8.1 — la mesa de soporte (`Main.dc.html`): cola de casos con estado, responsable y antigüedad |
+| `app/admin/support/[id]/page.tsx` | Story 8.1 — caso con log de comunicación, resolución y escalado (`CaseDetail.dc.html`) |
+| `app/admin/members/page.tsx` | Story 8.1 — búsqueda de miembro por nombre, email, teléfono o LP# (`MemberSearch.dc.html`) |
+| `app/admin/members/[id]/page.tsx` | Story 8.1 — ficha de miembro: historial, pagos y membresía (`MemberProfile.dc.html`) |
+| `lib/admin-analytics.ts` | Story 8.2 — analítica de red, popularidad, datasets de export y reportes programados; los importes cuadran con `lib/partner.ts` (The Ainsworth: 187 reservas, $8,616.50) |
+| `app/admin/analytics/page.tsx` | Story 8.2 — "How the network is doing": reservas, no-shows, miembros e ingresos (`Analytics.dc.html`) |
+| `app/admin/analytics/demand/page.tsx` | Story 8.2 — "Where the demand is": lounges, amenities y ciudades más demandados (`Popularity.dc.html`) |
+| `app/admin/reports/page.tsx` | Story 8.2 — "Export data": dataset, filtros, columnas anonimizadas por defecto y entrega (`Export.dc.html`) |
+| `app/admin/reports/scheduled/page.tsx` | Story 8.2 — "Reports that send themselves": reportes automáticos y su historial de entrega (`ScheduledReports.dc.html`) |
+| `lib/admin-content.ts` | Story 8.3 — catálogo de 13 lounges (`ADMIN_LOUNGES`), los 3 cambios pendientes literales de The Vestry y su comparación live/propuesto |
+| `admin/lounge-status-chip.tsx` | Story 8.3 — `LoungeStatusChip`, el mapa Live/Draft/N to approve sobre `StatusChip` |
+| `app/admin/lounges/page.tsx` | Story 8.3 — "Add/edit/remove lounge profiles" y "Bulk update capabilities": la lista con selección y barra de acción masiva (`Lounges.dc.html`) |
+| `app/admin/lounges/[id]/page.tsx` | Story 8.3 — editor de contenido (fotos, amenities, horario, disponibilidad) y aprobación inline (`LoungeEdit.dc.html`) |
+| `app/admin/lounges/approvals/page.tsx` | Story 8.3 — "Content approval workflow": cola de aprobación con comparación live/propuesto (`Approval.dc.html`) |
 
 ---
 
@@ -271,15 +303,18 @@ Item de nav · Fila de historial · Segmented (oscuro, geometría propia de 36px
 se usa hoy con la variante `sm` existente, 38px, como aproximación) ·
 Barra de volumen (vertical y horizontal — el Epic 7 las dibuja inline en
 `app/partner/analytics/page.tsx`, no como primitivo, por ahora un único uso) ·
-Chip de estado de caso · Badge de nav · Barra de acción masiva · Entrada de log ·
-Diff de aprobación · Barra de consumo · Tabla comparativa
+Barra de consumo · Tabla comparativa
 
 Casilla de asistencia, Chip de asistencia (oscuro) y Tile de métrica (oscuro)
 se implementaron con el Epic 7 (`AttendanceCheckbox`, `StatusChip` ampliado y
-`MetricTile` — ver Capa 1). **Fila de datos (oscura)** sigue sin subirse a
-primitivo compartido: `GuestListTable` (Story 7.1) y `RepeatGuests` (Story 7.3)
-dibujan cada una su propia fila inline porque sus grids de columnas no
-coinciden — se sube a primitivo cuando un tercer epic (E8/E9) la necesite y
+`MetricTile` — ver Capa 1). Chip de estado de caso, Badge de nav, Entrada de
+log de comunicación, Barra de acción masiva y Diff de aprobación se
+implementaron con el Epic 8 (`CaseStatusChip`, `NavBadge`, `CommLogEntry`,
+`BulkActionBar`, `ApprovalDiff` — ver Capa 1). **Fila de datos (oscura)** sigue sin
+subirse a primitivo compartido: `GuestListTable` (Story 7.1), `RepeatGuests`
+(Story 7.3) y las tres tablas del Epic 8 (`Main`, `MemberSearch`,
+`MemberProfile`) dibujan cada una su propia fila inline porque sus grids de
+columnas no coinciden — se sube a primitivo cuando un epic lo necesite y
 obligue a generalizar el grid.
 
 Código QR del pase, Sello de expirado, Campo de lookup (oscuro) y Botón
@@ -291,14 +326,16 @@ siguiente los vuelve a necesitar.
 
 ### Patrones de §5 sin implementar
 
-21 App shell admin · 22 Ficha de miembro · 23 Caso con log ·
-24 Comparación live/propuesto · 25 Lista de datos clara · 26 Comparación de planes
+25 Lista de datos clara · 26 Comparación de planes
 
 (11 Pase digital y 12 Consola de recepción se implementaron con el Epic 5; 13
 Sección de cuenta y 14 Panel de notificaciones con el Epic 6; 15 App shell del
 partner, 16 Lista de datos oscura (inline, ver nota de arriba), 17 Panel de
-actividad, 18 Modal/drawer oscuros y 19 Vista de analítica con el Epic 7 — ver
-la tabla de patrones arriba.)
+actividad, 18 Modal/drawer oscuros y 19 Vista de analítica con el Epic 7; 21
+App shell admin, 22 Ficha de miembro y 23 Caso con log con la Story 8.1, y 24
+Comparación live/propuesto con la Story 8.3 (`app/admin/lounges/approvals/page.tsx`) —
+ver la tabla de patrones arriba. El Epic 8 está completo: 25 y 26 son la
+Fase 9, todavía pendiente.)
 
 ### Gemelos que deben compartir componente
 
@@ -310,9 +347,9 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 | Tile de métrica claro ↔ oscuro | E9 ↔ E7 (implementado) | mismo componente, `data-theme` — `MetricTile` solo tiene la mitad oscura hoy |
 | Fila de datos clara ↔ oscura | E9 ↔ E7/E8 | pendiente de generalizar — `GuestListTable`/`RepeatGuests` (E7) siguen inline, ver "Pendiente de implementar" |
 | Lista de datos clara (25) ↔ oscura (16, implementado) | E9 ↔ E7 | mismo componente, `data-theme` |
-| Chip de estado: reserva ↔ asistencia ↔ caso ↔ referido | E6 ↔ E7 (implementado) ↔ E8 ↔ E9 | un `StatusChip` con mapa de estados por dominio |
+| Chip de estado: reserva ↔ asistencia ↔ caso ↔ referido | E6 ↔ E7 (implementado) ↔ E8 (implementado) ↔ E9 | un `StatusChip` con mapa de estados por dominio |
 | Modal/drawer claro (4/6) ↔ oscuro (18, implementado) | E1 ↔ E7 | mismo componente, `data-theme` — prop `dark` en `Modal`/`Drawer` |
-| App shell miembro (3) ↔ partner (15, implementado) ↔ admin (21) | E2–6 ↔ E7 ↔ E8 | mismo shell, distinta nav y `data-theme` |
+| App shell miembro (3) ↔ partner (15, implementado) ↔ admin (21, implementado) | E2–6 ↔ E7 ↔ E8 | mismo shell, distinta nav y `data-theme` |
 | Panel notificaciones (14) ↔ actividad (17, implementado) | E6 ↔ E7 | mismo componente, `data-theme` |
 | Barra de volumen horizontal ↔ barra de consumo | E7 ↔ E9 | mismo componente, `data-theme` |
 
@@ -390,3 +427,20 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 | El gráfico "Bookings a day" no usa `SimpleBarChart` (Recharts) | Su cromo por defecto (ejes, tooltip, leyenda) no se parece a las barras mínimas que dibuja `Analytics.dc.html`; se construye con divs simples, igual que "When they come". `SimpleBarChart`/`SimpleLineChart` siguen sin un primer uso real — se retoman cuando un gráfico necesite de verdad ejes o tooltips interactivos sobre muchos puntos |
 | La suma de las 14 barras de "Bookings a day" da 186, no 187 (el tile "Bookings") | Desajuste ya presente en `Analytics.dc.html` — la distribución semanal de "When they come" sí suma 187 exactos. Se documenta, no se corrige de más |
 | El botón "Print list" (`/partner`) y "Download CSV"/"Print updated list" de los emails llaman a `window.print()`/`downloadTextFile` de verdad | Capacidades del navegador, no llamadas a un servicio de LuxePass — mismo criterio que el resto de descargas reales del proyecto (`.ics`, "Copy", "Upload photo") |
+| Camille Duforest (`camille-duforest`) es la única ficha de miembro y CS-4417 el único caso con log/reembolso literales del Epic 8 | Son los únicos que `MemberProfile.dc.html`, `CaseDetail.dc.html` y `Refund.dc.html` dibujan; el resto de `ADMIN_MEMBERS`/`SUPPORT_CASES` deriva un perfil o un caso mínimo de sus propios datos en `getMemberProfile`/`getCaseDetail` (`lib/admin.ts`) — mismo criterio que `lounge-profile.ts` para el contacto/reseñas del Epic 3 |
+| El reembolso ("Waive and refund") solo aparece en la ficha de un caso si modela un cargo (`refundableAmount`) | Solo CS-4417 lo trae; el resto muestra "Resolve case" sin reembolso. Ningún artboard dibuja el reembolso de un caso sin cargo asociado, así que no se inventa uno |
+| La campana de la topbar del admin (patrón 21) no abre ningún panel | Ningún artboard de la Fase 8 dibuja el panel de notificaciones abierto para el admin, a diferencia del panel de cuenta (14) o de actividad del partner (17) — queda inerte, como "Write a review" en el Epic 3 |
+| "New case", "Filters" (`/admin/support`), "Modify booking"/"Open case" cuando no hay reserva próxima y "Move to another lounge" (`BookingOverrideDrawer`) no llevan a ningún sitio propio | Ningún artboard dibuja un formulario de caso nuevo, un panel de filtros de casos, ni una segunda pantalla para elegir lounge de destino — quedan inertes en vez de inventar una pantalla |
+| Las tres sugerencias de "Not the person you are looking for?" (`/admin/members`) son leyenda, no botones con destino propio | Las tres capacidades que describen (buscar por referencia, por cargo de Stripe, listar cuentas cerradas) ya las resuelve el mismo cuadro de búsqueda de la pantalla — un botón que solo repitiera esa acción no aportaría nada nuevo |
+| La tabla de `MemberSearch.dc.html` reparte sus columnas con fracciones (`2fr 1.1fr 0.9fr 1fr 0.9fr`) en vez de los píxeles fijos del artboard | Los píxeles literales del artboard (`1fr 152px 128px 122px 112px 30px`) dejan la columna de miembro en ~94px una vez restados el rail de 344px y el resto de columnas — friable para un nombre real. Las fracciones reparten el mismo ancho total de forma proporcional en vez de fija |
+| El segmented "14 days / Month / Quarter" de `/admin/analytics` solo cambia su propia selección, no los datos | `lib/admin-analytics.ts` solo modela la quincena del 1 al 14 de septiembre que fija `DESIGN-SYSTEM.md` §6 (Fase 8); no hay otro dataset que enseñar, igual que el rango fijo "Sep 1 – Sep 14" del Epic 7 |
+| Los enlaces "Revenue by partner (CSV)" y "Open the acquisition report" (`/admin/analytics`) navegan a `/admin/reports?dataset=` con el dataset ya elegido | `Export.dc.html` no fija cómo se llega con un dataset preseleccionado, pero sin ese enlace el criterio "revenue reporting by partner" quedaría implementado y sin una ruta coherente para alcanzarlo desde donde se menciona |
+| Las fechas rápidas de `/admin/reports` ("Last 7 days", "Last month", "Quarter to date") cambian la etiqueta del rango a un texto de muestra, no recalculan un calendario real | No hay reloj de negocio ni motor de fechas detrás; los tres textos son los mismos que citaría un cálculo real para el 14 de septiembre, fijados a mano como en el resto del proyecto sin backend |
+| Marcar una columna personal en `/admin/reports` exige escribir un motivo antes de poder descargar | `DESIGN-SYSTEM.md` §6 (Fase 8) fija la regla ("marcar una de esas tres columnas exige un motivo que queda registrado"); se implementa como una validación real del formulario, no solo como el texto que la anuncia |
+| "New report" (`/admin/reports/scheduled`) enlaza a `/admin/reports?delivery=schedule` en vez de abrir un formulario propio | El propio artboard lo dice: "every scheduled report is one of the exports on the previous screen, saved with its filters and columns" — no hay una segunda pantalla de creación que inventar |
+| "Delivery history" (`/admin/reports/scheduled`) y "Add a filter"/"Select all" cuando incluye columnas personales sin motivo ya puesto no llevan a ningún sitio | Ningún artboard dibuja el historial de entregas completo ni un selector de filtros propio — quedan inertes, igual que "New case" en el Epic 8.1 |
+| Solo The Vestry trae el editor completo (fotos, amenities, horario, disponibilidad) y la cola de aprobación; el resto de `ADMIN_LOUNGES` muestra una ficha mínima en `/admin/lounges/[id]` | Es el único ejemplo que dibujan `LoungeEdit.dc.html`/`Approval.dc.html` — mismo criterio que `getMemberProfile` (Story 8.1) y `lounge-profile.ts` (Epic 3) |
+| La selección de la barra de acción masiva (`/admin/lounges`) empieza vacía, no con "3 lounges selected" como fija el artboard | El artboard congela un estado intermedio de la interacción; una casilla que arranca marcada sin que nadie la haya pulsado sería el estado real equivocado. Se implementa interactiva desde cero, como el resto de checkboxes del proyecto |
+| "Add lounge", "Search lounges", "All cities" y los cuatro botones de la barra de acción masiva ("Update hours", "Add an amenity", "Set closure dates", "Archive") no llevan a ningún sitio | Ningún artboard dibuja el formulario de alta, el panel de filtro por ciudad ni el modal de edición masiva — quedan inertes, igual que el resto de botones sin destino de la Fase 8 |
+| Los botones de 44px sin fondo dorado (`Assign to me`, `Escalate`, `Keep the fee and reply`, `Preview as a member`, `Send back to Theo`, `Approve one by one`, `Open the lounge editor`, `Send back with a note`, `Cancel`) llevan `normal-case` | El primitivo `Button` pone mayúsculas siempre (§4 solo la fija para el botón de 52px dorado); los artboards de la Fase 8 no llevan `text-transform:uppercase` en estos botones fantasma — mismo ajuste que ya documentó la Fase 7 para sus botones de fila |
+| "Update hours" no sube a primitivo compartido con "Set closure dates" pese a tener la misma geometría | Ambos son `BulkActionButton` sin lógica propia — no hace falta una segunda variante, solo texto distinto |

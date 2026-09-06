@@ -237,6 +237,15 @@ nada los hace cumplir.
 | 7.3 | Weekly/monthly booking volume reports / revenue attribution / repeat guest identification | `lib/partner.ts` fija cifras de muestra que cuadran entre sí (187 reservas, $8,616.50, 412 miembros); no hay un almacén de reservas real del que agregarlas |
 | 7.3 | Downloadable reports in CSV | Las descargas de `/partner/guests`, `/partner/analytics` y `/partner/reports` son CSV reales generados en el cliente (`downloadTextFile`); los "informes descargados recientemente" de `Reports.dc.html` son metadatos de muestra, no un historial real |
 
+| 8.1 | Communication log with customer / booking modification / refund processing | El composer de `/admin/support/[id]` añade la entrada al log en memoria (`useState`); "Reply to member" no envía ningún email de verdad, y "Waive and refund" no llama a Stripe — solo escribe una entrada de sistema y marca el caso resuelto |
+| 8.1 | Escalation to manager functionality | "Escalate" cambia el estado a `escalated` y muestra el aviso; Dana Mbeki no recibe ninguna notificación real, no hay bandeja de manager |
+| 8.1 | Every action logged (audit trail) | El chip "Every action logged" de la topbar es constante; no existe ningún registro de auditoría real detrás de reembolsos, cambios de reserva o respuestas |
+| 8.2 | Data export in CSV format / scheduled email delivery of reports | "Download CSV" en `/admin/reports` sí genera y descarga un archivo real (`downloadTextFile`), pero "Email it to me" y "Save as a scheduled report" no envían ningún correo ni crean un job real; `/admin/reports/scheduled` es una lista de muestra que no recibe reportes nuevos |
+| 8.2 | Automated daily/weekly report generation | Los seis reportes de `SCHEDULED_REPORTS` (`lib/admin-analytics.ts`) son de muestra con sus próximas/últimas ejecuciones fijas; nada los dispara realmente a las horas que anuncian |
+| 8.3 | Add/edit/remove lounge profiles | "Add lounge" en `/admin/lounges` no abre ningún formulario; no hay alta, edición de campo a campo ni borrado real de un lounge, solo la lista y el editor de contenido de The Vestry |
+| 8.3 | Upload and manage lounge images / image optimization and resizing | Las fotos de `LoungeEdit.dc.html` son bloques de marca decorativos; no hay subida de archivo real ni redimensionado — el texto "Resized to 1600, 800 and 400 px" solo lo anuncia |
+| 8.3 | Content approval workflow | "Approve and publish"/"Send back with a note" cambian el estado local (`useState`) de la sesión; no hay cola de aprobación real ni notificación a Theo Baptiste |
+
 Los enlaces de las tiendas de `/welcome` apuntan a `#`: no existen todavía las
 fichas de App Store ni Google Play.
 

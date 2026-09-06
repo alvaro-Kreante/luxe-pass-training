@@ -20,6 +20,8 @@ export interface CheckboxProps {
   align?: "start" | "center";
   id?: string;
   className?: string;
+  /** Nombre accesible cuando la casilla no lleva `children` visible junto a ella. */
+  "aria-label"?: string;
 }
 
 export function Checkbox({
@@ -29,6 +31,7 @@ export function Checkbox({
   align = "start",
   id,
   className,
+  "aria-label": ariaLabel,
 }: CheckboxProps) {
   return (
     <label
@@ -43,6 +46,7 @@ export function Checkbox({
         type="checkbox"
         checked={checked}
         onChange={(e) => onCheckedChange(e.target.checked)}
+        aria-label={ariaLabel}
         className="peer sr-only"
       />
       <span
