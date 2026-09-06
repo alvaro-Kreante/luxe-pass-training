@@ -10,6 +10,7 @@ import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Notice } from "@/components/ui/notice";
 import { isEmailShapeValid } from "@/lib/registration";
+import { createClient } from "@/lib/supabase/client";
 
 /**
  * Story 1.2 — "Password reset via email with secure token".
@@ -24,10 +25,12 @@ import { isEmailShapeValid } from "@/lib/registration";
 const RESEND_COOLDOWN_SECONDS = 30;
 
 export default function ForgotPasswordPage() {
+  const supabase = React.useMemo(() => createClient(), []);
   const [email, setEmail] = React.useState("");
   const [error, setError] = React.useState("");
   const [sentTo, setSentTo] = React.useState<string | null>(null);
   const [cooldown, setCooldown] = React.useState(0);
+  const [sending, setSending] = React.useState(false);
 
   React.useEffect(() => {
     if (cooldown <= 0) return;
@@ -35,7 +38,18 @@ export default function ForgotPasswordPage() {
     return () => clearTimeout(timer);
   }, [cooldown]);
 
-  function handleSubmit(event: React.FormEvent) {
+  async function requestReset(value: string) {
+    setSending(true);
+    try {
+      await supabase.auth.resetPasswordForEmail(value);
+      setSentTo(value);
+      setCooldown(RESEND_COOLDOWN_SECONDS);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     const value = email.trim();
 
@@ -49,7 +63,7 @@ export default function ForgotPasswordPage() {
     }
 
     setError("");
-    setSentTo(value);
+    await requestReset(value);
   }
 
   if (sentTo) {
@@ -77,8 +91,8 @@ export default function ForgotPasswordPage() {
           variant="outline"
           block
           className="mb-6 tracking-[0.1em]"
-          disabled={cooldown > 0}
-          onClick={() => setCooldown(RESEND_COOLDOWN_SECONDS)}
+          disabled={cooldown > 0 || sending}
+          onClick={() => requestReset(sentTo)}
         >
           {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend link"}
         </Button>
