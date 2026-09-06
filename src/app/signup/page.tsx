@@ -15,9 +15,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
+  DUPLICATE_EMAIL_MESSAGE,
+  emailExists,
   validateSignUp,
   type SignUpErrors,
 } from "@/lib/registration";
+import { createClient } from "@/lib/supabase/client";
 
 /**
  * Story 1.1 — User Registration.
@@ -26,6 +29,7 @@ import {
  */
 export default function SignUpPage() {
   const router = useRouter();
+  const supabase = React.useMemo(() => createClient(), []);
 
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -36,8 +40,9 @@ export default function SignUpPage() {
   );
   const [termsOpen, setTermsOpen] = React.useState(false);
   const [errors, setErrors] = React.useState<SignUpErrors>({});
+  const [submitting, setSubmitting] = React.useState(false);
 
-  function handleSubmit(event: React.FormEvent) {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     const found = validateSignUp({
       email,
@@ -45,10 +50,38 @@ export default function SignUpPage() {
       confirmPassword,
       termsAcceptedAt: acceptance?.acceptedAt ?? null,
     });
-    setErrors(found);
+    if (Object.keys(found).length > 0) {
+      setErrors(found);
+      return;
+    }
 
-    if (Object.keys(found).length === 0) {
-      router.push(`/verify-email?email=${encodeURIComponent(email.trim())}`);
+    setSubmitting(true);
+    setErrors({});
+    try {
+      const trimmedEmail = email.trim();
+      if (await emailExists(supabase, trimmedEmail)) {
+        setErrors({ email: DUPLICATE_EMAIL_MESSAGE });
+        return;
+      }
+
+      const { error } = await supabase.auth.signUp({
+        email: trimmedEmail,
+        password,
+        options: {
+          // El perfil se crea varios pasos y una redirección de email
+          // después; sin persistencia local, el momento de aceptación viaja
+          // aquí para que /onboarding/professional lo lea de vuelta.
+          data: { terms_accepted_at: acceptance?.acceptedAt },
+        },
+      });
+      if (error) {
+        setErrors({ email: error.message });
+        return;
+      }
+
+      router.push(`/verify-email?email=${encodeURIComponent(trimmedEmail)}`);
+    } finally {
+      setSubmitting(false);
     }
   }
 
@@ -191,8 +224,8 @@ export default function SignUpPage() {
             </button>
           </Checkbox>
 
-          <Button type="submit" block disabled={!acceptance}>
-            Create account
+          <Button type="submit" block disabled={!acceptance || submitting}>
+            {submitting ? "Creating account…" : "Create account"}
           </Button>
 
           <p className="m-0 mt-2.5 text-center text-xs text-fg-subtle">

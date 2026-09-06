@@ -172,12 +172,14 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 |---|---|---|
 | `/signup` | `Main.dc.html` + `Terms.dc.html` | 1.1 |
 | `/verify-email` | `Verification.dc.html` | 1.1 |
+| `/auth/confirm` | — (Route Handler, no tiene artboard) | 1.1 · 1.2 |
 | `/onboarding/basics` | `ProfileBasic.dc.html` | 1.1 |
 | `/onboarding/personal` | `ProfilePersonal.dc.html` | 1.1 |
 | `/onboarding/professional` | `ProfileProfessional.dc.html` | 1.1 |
 | `/welcome` | `Welcome.dc.html` | 1.1 |
 | `/login` | `Login.dc.html` | 1.2 |
 | `/forgot-password` | `ForgotPassword.dc.html` | 1.2 |
+| `/reset-password` | — (sin artboard, ver desviaciones) | 1.2 |
 | `/` | `Home.dc.html` (epic-1-onboarding) | Home del área de miembro |
 | `/explore` | `Main` + `LocationPermission` + `ManualLocation` + `MapError` + `Offline` + `Filters` + `NoResults` + `ListView` + `ListLoading` | 2.1 · 2.2 · 2.3 |
 | `/lounges/[id]` | `Main` + `Gallery` + `Share` + `NotAvailable` + `Loading` | 3.1 · 3.2 |
@@ -226,9 +228,10 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | Módulo | Qué resuelve |
 |---|---|
 | `onboarding/terms-modal.tsx` | Story 1.1 — aceptación de TOS + Privacy con fecha y versión |
-| `onboarding/profile-context.tsx` | Borrador de perfil compartido por los 3 pasos (Context, sin persistencia) |
-| `lib/registration.ts` | Validación de email, contraseña (8+ y 1 especial) y email duplicado |
-| `lib/authentication.ts` | Story 1.2 — credenciales de muestra y las constantes de los criterios (5 intentos, 15 min, 30 días) |
+| `onboarding/profile-context.tsx` | Borrador de perfil compartido por los 3 pasos (Context, sin persistencia entre recargas; guarda también el `File` real de la foto para poder subirlo al final) |
+| `onboarding/require-session.tsx` | Story 1.1 — guarda de sesión de `/onboarding/*`: sin sesión (llega directo, sin pasar por `/auth/confirm`) manda a `/login` |
+| `lib/registration.ts` | Validación de email/contraseña (8+ y 1 especial) en cliente; `emailExists` consulta el RPC `email_exists` contra Supabase local para el email duplicado |
+| `lib/authentication.ts` | Story 1.2 — solo las constantes de los criterios (5 intentos, 15 min, 30 días); deben coincidir con `supabase/schemas/login_attempts.sql` y `config.toml`. El acceso en sí es real (`/login` llama a Supabase Auth) |
 | `lib/lounges.ts` | Catálogo de muestra de lounges y los destacados del Home |
 | `lib/member.ts` | El miembro de muestra que pinta el App shell |
 | `lounges/featured-lounge-card.tsx` | Card de lounge destacado del Home |
@@ -320,6 +323,59 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 
 ---
 
+## Backend real (Supabase local) — Epic 1 (Stories 1.1 y 1.2)
+
+Único epic con backend real hasta ahora (ver CLAUDE.md §Supabase Local Development).
+Todo corre contra el proyecto local, nunca contra un Supabase remoto.
+
+| Módulo | Qué resuelve |
+|---|---|
+| `lib/supabase/client.ts` | Cliente de Supabase para componentes `"use client"` |
+| `lib/supabase/server.ts` | Cliente de Supabase para el Route Handler `/auth/confirm` |
+| `lib/supabase/middleware.ts` + `middleware.ts` (raíz) | Refresco de la sesión en cada request (patrón oficial de `@supabase/ssr`) |
+| `lib/testing/confirmed-user.ts` | Solo para tests: crea un usuario ya confirmado vía API de admin (service role) para no tener que leer Mailpit en cada test que necesita sesión |
+| `supabase/schemas/profiles.sql` | Tabla `public.profiles` (los campos de los 3 pasos de onboarding), RLS propia |
+| `supabase/schemas/email_exists.sql` | Story 1.1 — RPC `email_exists`, la excepción consciente al anti-enumeración de Supabase Auth, para poder cumplir el AC "clear error messaging" de emails duplicados |
+| `supabase/schemas/login_attempts.sql` | Story 1.2 — tabla `login_attempts` + RPC `check_login_lock`/`record_failed_login`/`reset_login_attempts`. Supabase Auth no tiene lockout por cuenta (solo rate-limit por IP); sin policies, solo se toca vía esas funciones `security definer` |
+| `supabase/schemas/storage.sql` + bucket `profile-photos` (`config.toml`) | Foto de perfil opcional, un archivo por usuario bajo `{auth.uid()}/` |
+| `supabase/templates/confirmation.html` | Story 1.1 — enlace propio a `/auth/confirm?token_hash=...&type=signup` en vez del flujo implícito por defecto |
+| `supabase/templates/recovery.html` | Story 1.2 — mismo patrón para `type=recovery`, destino `/reset-password` |
+| `[auth.sessions] inactivity_timeout` (`config.toml`) | Story 1.2 — "Automatic logout after 30 days of inactivity", real y global (ver desviación de "Remember me" más abajo) |
+
+`/auth/confirm` es el único Route Handler y sirve a las dos historias: según
+el `type` del enlace, `signup` pasa primero por el estado "Email confirmed"
+de `/verify-email` (ver más abajo) y cualquier otro tipo (`recovery`, …) va
+directo a `next`. **Bug real encontrado y corregido al construir la 1.2**: en
+`next dev`, `new URL(request.url).origin` puede devolver `localhost` sin
+importar el host por el que entró la petición; si el navegador usaba
+`127.0.0.1` (como fija `site_url`), el redirect saltaba de dominio y el
+navegador perdía la cookie de sesión recién puesta (dominios distintos para
+cookies). Se corrigió leyendo el host real de la cabecera `Host`/`X-Forwarded-Host`.
+
+`/auth/confirm` no lleva directo a `/onboarding/basics` en el caso `signup`:
+redirige a `/verify-email?verified=1&next=...`, un segundo estado de esa
+misma pantalla (sin artboard propio, reutiliza la anatomía de
+`Verification.dc.html` — mismo criterio que el acuse de `/forgot-password`)
+que confirma y continúa solo tras un momento, con un botón "Continue" para no
+depender del temporizador. La sesión que dejó `/auth/confirm` sigue activa:
+no hay un login de por medio, igual que documenta `flow-onboarding.md`
+(`EmailVerified → ProfileCreation`).
+
+`/reset-password` (Story 1.2, sin artboard propio) hace lo mismo para
+`type=recovery`: la sesión de recuperación permite `supabase.auth.updateUser`,
+y al terminar va a Home (`/`), no a login — así lo fija el nodo
+`PwdReset → HomeScreen` de `flow-onboarding.md`.
+
+Desviaciones conscientes de esta parte (no son bugs, son decisiones tomadas con el usuario):
+
+- **Welcome email** (AC "User receives welcome email with app download links"): sigue sin enviarse de verdad. Supabase Auth solo manda el correo de confirmación de forma nativa; un segundo correo exigiría un Database Webhook + Edge Function solo para esto. La pantalla `/welcome` ya muestra el estado (cuenta creada + botones de descarga).
+- **Duplicado de email**: Supabase Auth no revela por diseño si un email ya existe cuando la confirmación está activa (anti-enumeración). Se resolvió con `email_exists`, aceptando el trade-off a cambio de cumplir el AC al pie de la letra.
+- El enlace manual "I have verified my email" de `/verify-email` **ya no existe** — la verificación real llega por el enlace de Mailpit (`http://127.0.0.1:54334` en local) vía `/auth/confirm`.
+- **Bloqueo de cuenta (Story 1.2) es por email, no por usuario autenticado**: cualquiera que conozca el email de otra persona puede bloquearle el acceso 15 min fallando adrede. Es inherente a "lockout tras N intentos" tal como lo pide el AC; no se resuelve con más infraestructura (IP+email, captcha) porque el AC no lo pide.
+- **"Remember me" (Story 1.2) no crea dos modos de sesión reales**: implementar de verdad una cookie persistente vs. una de solo-sesión exigiría que el middleware conociera esa elección en cada refresco de token (una cookie aparte, chequeada en cada request) — infraestructura desproporcionada para dos historias marcadas como pequeñas. El checkbox se queda como preferencia de UI con su nota explicativa; el logout a los 30 días de inactividad (`inactivity_timeout`) es real pero global, no depende de si se marcó "Remember me".
+
+---
+
 ## Pendiente de implementar
 
 Lo que el design system especifica y **todavía no existe en código**. Antes de escribirlo,
@@ -400,10 +456,11 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 | Iconos con `lucide-react` en lugar de SVG copiados | §1 especifica *regla* (stroke 1.6–1.8, grid 24, round), no un set concreto. `lucide-react` ya estaba en `package.json` |
 | El desenfoque del patrón 4 no viaja en el HTML del servidor | El diálogo vive en un portal, que el servidor no renderiza. Si el desenfoque llegara en el HTML, la pantalla se vería borrosa y sin nada que lo explique hasta que hidratara — y así se quedaría si el JavaScript falla. `AppShell` lo aplica solo en cliente |
 | El `filter: blur(3px)` del patrón 4 lo aplica la pantalla, no el modal | Un modal en portal no puede alcanzar a su hermano en el árbol. `/signup` pasa `blur-[3px]` al `AuthSplit` mientras el modal está abierto |
-| `/verify-email` incluye "I have verified my email" | Sin backend, el enlace del correo no puede volver a la app. Desaparece cuando exista `/verify-email/[token]` |
+| ~~`/verify-email` incluye "I have verified my email"~~ | **Resuelto**: retirado al conectar Supabase Auth real. La verificación llega por el enlace de Mailpit vía `/auth/confirm` (ver "Backend real (Supabase local)" más arriba) |
 | Texto legal del modal de términos | Relleno estructural, tal como ya advierte `DESIGN-SYSTEM.md` §6 (Fase 1). A reemplazar por el documento real de En Soleil |
 | El acuse de "reset link sent" no tiene artboard | Se resuelve como segundo estado de `/forgot-password`, reutilizando la anatomía de `Verification.dc.html` (medallón de 76px + destinatario + reenvío), en lugar de inventar una pantalla |
-| `/login` añade una nota de 11.5px bajo "Remember me" | El artboard no la trae, pero `flow-onboarding.md` fija el alcance del token ("Set remember token: 30-day auto-logout"). Decirlo evita que el miembro adivine qué activa la casilla |
+| `/reset-password` no tiene artboard | Decisión tomada con el usuario: se construye igualmente para completar el AC de reset de contraseña, componiendo `Field`/`Input`/`Button` ya existentes (mismos campos de contraseña que `/signup`) en vez de inventar un layout nuevo |
+| `/login` añade una nota de 11.5px bajo "Remember me" | El artboard no la trae, pero `flow-onboarding.md` fija el alcance del token ("Set remember token: 30-day auto-logout"). Decirlo evita que el miembro adivine qué activa la casilla — aunque el backend no diferencia hoy dos modos de sesión reales (ver "Backend real (Supabase local)") |
 | El scroll infinito de la lista carga de cuatro en cuatro | El artboard muestra "Showing 4 of 12" y el pie "Loading more lounges…". Un `IntersectionObserver` sobre ese pie pide la siguiente tanda |
 | `vitest.setup.ts` rellena `IntersectionObserver` | jsdom no lo implementa, y sin él el scroll infinito no puede ni existir. Es una API del navegador que falta, no un mock de código del proyecto — la única excepción además de `next/navigation` |
 | El día 14 de septiembre de 2025 es domingo, y el artboard lo llama "Sat" | La rejilla del propio artboard pone el 1 en lunes y el 14 en la columna del domingo, así que el calendario y el chip son coherentes entre sí aunque no con esa palabra |

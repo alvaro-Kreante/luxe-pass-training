@@ -1,6 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { createClient } from "@/lib/supabase/client";
 
 import SignUpPage from "./page";
 
@@ -18,8 +20,17 @@ vi.mock("next/navigation", () => ({
 
 type User = ReturnType<typeof userEvent.setup>;
 
-const NEW_EMAIL = "nueva.socia@email.com";
+const NEW_EMAIL = `nueva.socia-${Date.now()}@ensoleil-test.com`;
+const DUPLICATE_EMAIL = `ya-existe-${Date.now()}@ensoleil-test.com`;
 const VALID_PASSWORD = "EnSoleil!2026";
+
+beforeAll(async () => {
+  const supabase = createClient();
+  await supabase.auth.signUp({
+    email: DUPLICATE_EMAIL,
+    password: VALID_PASSWORD,
+  });
+});
 
 beforeEach(() => {
   push.mockClear();
@@ -71,8 +82,10 @@ describe("navegación", () => {
     await fillForm(user);
     await user.click(submitButton());
 
-    expect(push).toHaveBeenCalledWith(
-      `/verify-email?email=${encodeURIComponent(NEW_EMAIL)}`,
+    await waitFor(() =>
+      expect(push).toHaveBeenCalledWith(
+        `/verify-email?email=${encodeURIComponent(NEW_EMAIL)}`,
+      ),
     );
   });
 
@@ -190,10 +203,12 @@ describe("validación del formulario", () => {
     render(<SignUpPage />);
 
     await acceptTerms(user);
-    await fillForm(user, { email: "member@ensoleil.com" });
+    await fillForm(user, { email: DUPLICATE_EMAIL });
     await user.click(submitButton());
 
-    expect(screen.getByText(/An account already exists/)).toBeVisible();
+    await waitFor(() =>
+      expect(screen.getByText(/An account already exists/)).toBeVisible(),
+    );
     expect(push).not.toHaveBeenCalled();
   });
 

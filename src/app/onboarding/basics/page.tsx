@@ -36,7 +36,7 @@ export default function ProfileBasicsPage() {
       return;
     }
     setErrors((prev) => ({ ...prev, photo: "" }));
-    update({ photoName: file.name });
+    update({ photoName: file.name, photoFile: file });
   }
 
   function handleSubmit(event: React.FormEvent) {

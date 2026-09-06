@@ -6,6 +6,7 @@ import { Briefcase, Building2, ChevronLeft } from "lucide-react";
 
 import { AuthSplit } from "@/components/patterns/auth-split";
 import {
+  BIRTH_MONTHS,
   INDUSTRIES,
   useProfileDraft,
 } from "@/components/onboarding/profile-context";
@@ -14,6 +15,7 @@ import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { StepProgress } from "@/components/ui/step-progress";
+import { createClient } from "@/lib/supabase/client";
 
 /**
  * Story 1.1 — paso 3 de 3 del perfil.
@@ -22,16 +24,70 @@ import { StepProgress } from "@/components/ui/step-progress";
 export default function ProfileProfessionalPage() {
   const router = useRouter();
   const { draft, update } = useProfileDraft();
+  const supabase = React.useMemo(() => createClient(), []);
   const [error, setError] = React.useState("");
+  const [submitting, setSubmitting] = React.useState(false);
 
-  function handleSubmit(event: React.FormEvent) {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (!draft.industry) {
       setError("Select your industry.");
       return;
     }
     setError("");
-    router.push("/welcome");
+    setSubmitting(true);
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+
+      let photoUrl: string | null = null;
+      if (draft.photoFile) {
+        const extension = draft.photoFile.name.split(".").pop() ?? "jpg";
+        const path = `${user.id}/avatar.${extension}`;
+        const { error: uploadError } = await supabase.storage
+          .from("profile-photos")
+          .upload(path, draft.photoFile, { upsert: true });
+        if (!uploadError) {
+          photoUrl = supabase.storage
+            .from("profile-photos")
+            .getPublicUrl(path).data.publicUrl;
+        }
+      }
+
+      const { error: insertError } = await supabase.from("profiles").insert({
+        id: user.id,
+        full_name: draft.fullName,
+        phone: draft.phone,
+        photo_url: photoUrl,
+        birth_day: draft.birthDay ? Number(draft.birthDay) : null,
+        birth_month: draft.birthMonth
+          ? BIRTH_MONTHS.indexOf(draft.birthMonth) + 1
+          : null,
+        interests: draft.interests,
+        city: draft.city,
+        travel_cities: draft.travelCities,
+        job_title: draft.jobTitle || null,
+        industry: draft.industry,
+        company: draft.company || null,
+        terms_accepted_at:
+          (user.user_metadata?.terms_accepted_at as string | undefined) ??
+          new Date().toISOString(),
+      });
+      if (insertError) {
+        setError(insertError.message);
+        return;
+      }
+
+      router.push("/welcome");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -106,8 +162,8 @@ export default function ProfileProfessionalPage() {
           >
             <ChevronLeft size={18} strokeWidth={1.8} />
           </Button>
-          <Button type="submit" className="flex-1">
-            Complete profile
+          <Button type="submit" className="flex-1" disabled={submitting}>
+            {submitting ? "Saving…" : "Complete profile"}
           </Button>
         </div>
       </form>

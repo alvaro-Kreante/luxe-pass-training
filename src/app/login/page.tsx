@@ -12,12 +12,12 @@ import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Notice } from "@/components/ui/notice";
 import {
-  credentialsMatch,
   LOCKOUT_MINUTES,
   MAX_FAILED_ATTEMPTS,
   REMEMBER_ME_DAYS,
 } from "@/lib/authentication";
 import { isEmailShapeValid } from "@/lib/registration";
+import { createClient } from "@/lib/supabase/client";
 
 /**
  * Story 1.2 — User Login & Authentication.
@@ -26,6 +26,7 @@ import { isEmailShapeValid } from "@/lib/registration";
  */
 export default function LoginPage() {
   const router = useRouter();
+  const supabase = React.useMemo(() => createClient(), []);
 
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -34,14 +35,15 @@ export default function LoginPage() {
   const [fieldErrors, setFieldErrors] = React.useState<
     Partial<Record<"email" | "password", string>>
   >({});
-  const [credentialsError, setCredentialsError] = React.useState("");
-  const [failedAttempts, setFailedAttempts] = React.useState(0);
+  const [credentialsError, setCredentialsError] = React.useState<
+    React.ReactNode
+  >("");
+  const [locked, setLocked] = React.useState(false);
+  const [submitting, setSubmitting] = React.useState(false);
 
-  const locked = failedAttempts >= MAX_FAILED_ATTEMPTS;
-
-  function handleSubmit(event: React.FormEvent) {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (locked) return;
+    if (locked || submitting) return;
 
     const errors: Partial<Record<"email" | "password", string>> = {};
     if (!email.trim()) {
@@ -59,25 +61,61 @@ export default function LoginPage() {
       return;
     }
 
-    if (credentialsMatch(email, password)) {
-      router.push("/");
-      return;
+    const trimmedEmail = email.trim();
+    setSubmitting(true);
+    setCredentialsError("");
+    try {
+      const { data: lock } = await supabase.rpc("check_login_lock", {
+        p_email: trimmedEmail,
+      });
+      if (lock?.[0]?.locked) {
+        setLocked(true);
+        return;
+      }
+
+      const { error } = await supabase.auth.signInWithPassword({
+        email: trimmedEmail,
+        password,
+      });
+
+      if (!error) {
+        await supabase.rpc("reset_login_attempts", { p_email: trimmedEmail });
+        router.push("/");
+        return;
+      }
+
+      if (error.message === "Email not confirmed") {
+        setCredentialsError(
+          <>
+            Confirm your email before logging in.{" "}
+            <Link href={`/verify-email?email=${encodeURIComponent(trimmedEmail)}`} className="font-bold">
+              Resend the link
+            </Link>
+            .
+          </>,
+        );
+        return;
+      }
+
+      const { data: attempt } = await supabase.rpc("record_failed_login", {
+        p_email: trimmedEmail,
+      });
+      const result = attempt?.[0];
+
+      if (result?.locked) {
+        setLocked(true);
+        return;
+      }
+
+      const left = MAX_FAILED_ATTEMPTS - (result?.failed_count ?? 1);
+      setCredentialsError(
+        `We could not find an account with that email and password. ${left} ${
+          left === 1 ? "attempt" : "attempts"
+        } left before the account is locked.`,
+      );
+    } finally {
+      setSubmitting(false);
     }
-
-    const attempts = failedAttempts + 1;
-    setFailedAttempts(attempts);
-
-    if (attempts >= MAX_FAILED_ATTEMPTS) {
-      setCredentialsError("");
-      return;
-    }
-
-    const left = MAX_FAILED_ATTEMPTS - attempts;
-    setCredentialsError(
-      `We could not find an account with that email and password. ${left} ${
-        left === 1 ? "attempt" : "attempts"
-      } left before the account is locked.`,
-    );
   }
 
   return (
@@ -120,7 +158,7 @@ export default function LoginPage() {
             placeholder="you@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            disabled={locked}
+            disabled={locked || submitting}
             aria-invalid={Boolean(fieldErrors.email || credentialsError)}
             icon={<Mail size={18} strokeWidth={1.6} />}
           />
@@ -145,7 +183,7 @@ export default function LoginPage() {
             placeholder="Enter your password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            disabled={locked}
+            disabled={locked || submitting}
             aria-invalid={Boolean(fieldErrors.password || credentialsError)}
             icon={<Lock size={18} strokeWidth={1.6} />}
             trailing={
@@ -185,8 +223,12 @@ export default function LoginPage() {
           device.
         </p>
 
-        <Button type="submit" block disabled={locked}>
-          {locked ? `Locked for ${LOCKOUT_MINUTES} minutes` : "Log in"}
+        <Button type="submit" block disabled={locked || submitting}>
+          {locked
+            ? `Locked for ${LOCKOUT_MINUTES} minutes`
+            : submitting
+              ? "Logging in…"
+              : "Log in"}
         </Button>
       </form>
 
