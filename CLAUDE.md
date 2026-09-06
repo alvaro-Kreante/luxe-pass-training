@@ -16,9 +16,12 @@ Repositorio integral del proyecto **LuxePass** (plataforma de membresía de lujo
 
 La app en producción vive en `app.luxepass.co` y es un proyecto aparte: este repositorio **no se conecta a ella** ni a ningún servicio.
 
+**Excepción:** Supabase está habilitado **solo localmente** (rama `chore/supabase-local-setup` adelante) para desarrollo. No se conecta a producción ni a servicios externos. Ver "Supabase Local Development" más abajo.
+
 **No hacer, salvo que se pida explícitamente:**
 
-- ❌ Instalar ORM o cliente de base de datos (Prisma, Drizzle, Supabase…)
+- ❌ Instalar ORM o cliente de base de datos (Prisma, Drizzle) **excepto** Supabase local
+- ❌ Conectarse a Supabase en producción o a cualquier proyecto remoto
 - ❌ Crear route handlers en `src/app/api/`
 - ❌ Añadir autenticación real (NextAuth, sesiones, JWT, middleware de auth)
 - ❌ Server Actions que escriban en algún sitio
@@ -230,6 +233,7 @@ específico de este proyecto:
 | `design` | Crear o re-sembrar un canvas de mockups `.dc.html` |
 | `systematic-debugging` | Algo falla y la causa no es evidente |
 | `verification-before-completion` | Antes de dar una historia por terminada |
+| `supabase` | **Antes de cualquier cambio de schema o comando de Supabase.** Ver "Supabase Local Development" |
 
 ---
 
@@ -345,3 +349,119 @@ curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/_next/static/chunks
 
 Si da 404: parar el dev server, `rm -rf .next`, arrancarlo otra vez y **recargar
 duro en el navegador** (Ctrl+Shift+R). Detalle y causa en `docs/PENDIENTES.md` §4.2.
+
+---
+
+## Supabase Local Development
+
+**REGLA CRÍTICA:** Todo lo que toque Supabase o la base de datos usa **el proyecto local** (Docker, vía Supabase CLI). Este proyecto **nunca se enlaza** (`supabase link`) a un proyecto remoto ni se ejecuta `supabase db push`/`supabase db pull` sin `--local` — esos comandos actúan sobre un proyecto remoto enlazado, no sobre el Docker local. Si en algún momento hace falta enlazar un proyecto remoto, **parar y pedir confirmación explícita** antes de correr `supabase link`.
+
+### Verificar que usas el proyecto local
+
+Antes de cualquier comando de Supabase, confirma:
+
+```bash
+supabase status              # "API URL" debe ser http://127.0.0.1:54331 (puerto de [api] en config.toml)
+cat .env.local                # NEXT_PUBLIC_SUPABASE_URL debe apuntar a ese mismo 127.0.0.1:54331
+```
+
+Si `.env.local` o cualquier variable apunta a `*.supabase.co`, **parar inmediatamente** — no ejecutar nada hasta confirmar que se volvió a local.
+
+`.env.local` está en `.gitignore` (vía `supabase/.gitignore` y el `.gitignore` raíz): nunca comitear claves, ni siquiera las de local.
+
+### Schema management: Declarative Schemas obligatorio
+
+Este proyecto usa **Declarative Schemas** (nunca migraciones escritas a mano, nunca SQL suelto vía `execute_sql`/`db query` para cambios de esquema). Ya configurado en `supabase/config.toml`:
+
+```toml
+[db.migrations]
+schema_paths = ["./schemas/*.sql"]   # fuente de verdad — no volver a [] ni borrar sin confirmación
+```
+
+`supabase/schemas/` es la carpeta (ya creada, vacía hasta el primer schema) donde vive el estado **final y completo** deseado de cada tabla/vista/función — no el historial de cambios, eso lo generan las migraciones.
+
+### Flujo de trabajo para cambios de schema
+
+**1. Iniciar Supabase local (si no está corriendo):**
+```bash
+supabase start
+```
+
+**2. Editar el esquema deseado** en `supabase/schemas/*.sql` (un archivo por entidad es buena práctica, p. ej. `members.sql`). Editar **solo estos archivos** — cambios hechos a mano en Studio o vía SQL editor son invisibles para el diff.
+
+```sql
+-- supabase/schemas/members.sql
+create table if not exists public.members (
+  id uuid primary key default gen_random_uuid(),
+  email text unique not null,
+  name text,
+  created_at timestamptz not null default now()
+);
+
+alter table public.members enable row level security;
+
+create policy "select own data" on public.members
+  for select to authenticated
+  using ( (select auth.uid()) = id );
+```
+
+**3. Generar la migración** comparando los schema files contra las migraciones existentes:
+
+```bash
+supabase db diff --local -f add_members_table
+```
+
+Esto escribe un archivo nuevo en `supabase/migrations/` — nunca crear ni editar ese archivo a mano.
+
+**4. Revisar el archivo generado** antes de aplicar nada:
+- ✅ No hay `DROP`/`ALTER` destructivos inesperados
+- ✅ RLS y policies están presentes para cada tabla nueva
+- ✅ Tipos, defaults e índices son los que se querían
+
+**5. Aplicar la migración al Docker local:**
+
+```bash
+supabase migration up      # aplica solo las migraciones pendientes
+# o, si se necesita repartir desde cero (borra datos):
+# supabase db reset
+```
+
+**6. Verificar y comitear:**
+```bash
+supabase db advisors        # revisar warnings de seguridad/performance
+npm run dev                 # confirmar que la app sigue compilando
+```
+Comitear tanto el/los archivo(s) de `supabase/schemas/` como la migración generada en `supabase/migrations/` — ambos son código versionado, ninguno es descartable.
+
+### Comandos básicos de Supabase local
+
+| Comando | Qué hace |
+|---|---|
+| `supabase start` | Levanta Supabase local en Docker |
+| `supabase stop` | Para los contenedores locales |
+| `supabase status` | Estado y URLs/puertos (API 54331, DB 54332, Studio 54333) |
+| `supabase db diff --local -f <nombre>` | Genera migración comparando `supabase/schemas/` contra migraciones existentes |
+| `supabase migration up` | Aplica migraciones pendientes al Docker local |
+| `supabase db reset` | Recrea el Docker local desde cero: migraciones + `seed.sql` (borra datos) |
+| `supabase migration list --local` | Lista migraciones aplicadas localmente |
+| `supabase db advisors` | Escanea el esquema en busca de issues de seguridad/performance |
+
+**`supabase db push` y `supabase db pull` (sin `--local`) actúan sobre un proyecto remoto enlazado — no se usan en este proyecto.**
+
+### Seguridad: Checklist antes de cada cambio de schema
+
+Antes de comitear una migración nueva (usar la skill `supabase` — ver tabla de Skills — para el detalle completo):
+
+- ✅ **RLS activado** en toda tabla nueva de `public`: `alter table ... enable row level security`
+- ✅ **Policies con `TO authenticated`/`TO anon` + predicado** (`auth.uid() = user_id`), nunca solo `TO authenticated` sin filtro de fila (eso es autenticación sin autorización)
+- ✅ **UPDATE con `USING` y `WITH CHECK`** — sin `WITH CHECK` un usuario puede reasignar el `user_id` de su propia fila
+- ✅ Nunca `auth.role() = 'authenticated'` (deprecado y roto con anonymous sign-ins) — usar la cláusula `TO`
+- ✅ **Sin `SECURITY DEFINER`** salvo necesidad real; si se usa, en schema no expuesta y con `auth.uid()` verificado en el cuerpo
+- ✅ **Vistas con `security_invoker = true`** en Postgres 15+ (este proyecto usa Postgres 17, ver `major_version` en `config.toml`)
+- ✅ `supabase db advisors` sin warnings sin resolver
+
+### No tocar (esto lo controla Supabase CLI)
+
+- ❌ No editar archivos en `supabase/migrations/` a mano — los genera `db diff`
+- ❌ No comitear `supabase/.temp/` ni `supabase/.branches/` (ya en `supabase/.gitignore`)
+- ❌ No correr `supabase link` ni cambiar `schema_paths`/puertos en `config.toml` sin confirmación explícita
