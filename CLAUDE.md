@@ -42,36 +42,10 @@ Ejemplos ya hechos: la comprobación de email duplicado consulta una lista de do
 
 ## Estado de implementación
 
-**Diseño: los 9 epics están diseñados** (Fase 9 cerrada). Cualquier trabajo de diseño nuevo es revisión o corrección.
-
-**Código: 24 de 24 historias implementadas** — los 9 epics están completos.
-
-| Epic | Historias | Estado |
-|---|---|---|
-| 1 · User Onboarding & Authentication | 1.1 User registration | ✅ **Implementada** |
-| | 1.2 User login & authentication | ✅ **Implementada** |
-| 2 · Location Discovery & Search | 2.1 Map-based lounge discovery | ✅ **Implementada** |
-| | 2.2 Lounge filtering & search | ✅ **Implementada** |
-| | 2.3 List view alternative | ✅ **Implementada** |
-| 3 · Lounge Profiles & Details | 3.1 Detailed lounge information | ✅ **Implementada** |
-| | 3.2 Availability | ✅ **Implementada** |
-| 4 · Booking System | 4.1 Seamless booking flow | ✅ **Implementada** |
-| | 4.2 Payment processing | ✅ **Implementada** |
-| | 4.3 Calendar integration | ✅ **Implementada** |
-| 5 · QR Code & Check-in | 5.1 Digital pass generation | ✅ **Implementada** |
-| | 5.2 Lounge check-in process | ✅ **Implementada** |
-| | 5.3 Booking reminder notification | ✅ **Implementada** |
-| 6 · Member Experience & Notifications | 6.1 Booking management | ✅ **Implementada** |
-| | 6.2 In-app notifications | ✅ **Implementada** |
-| | 6.3 Member profile & preferences | ✅ **Implementada** |
-| 7 · Partner Dashboard | 7.1 Daily guest management | ✅ **Implementada** |
-| | 7.2 Booking notifications for partners | ✅ **Implementada** |
-| | 7.3 Partner analytics | ✅ **Implementada** |
-| 8 · Admin & Support | 8.1 Customer support dashboard | ✅ **Implementada** |
-| | 8.2 Data export & analytics | ✅ **Implementada** |
-| | 8.3 Content management | ✅ **Implementada** |
-| 9 · Membership & Referrals | 9.1 Membership | ✅ **Implementada** |
-| | 9.2 Referral Program | ✅ **Implementada** |
+**Diseño y código: completos.** Los 9 epics (24 historias) están implementados y
+diseñados. `git log` tiene el historial por epic; `docs/specs/` lista las historias
+por nombre. Trabajo a partir de aquí es bugfix, refactor o una historia adicional
+fuera del alcance original — sigue "Cómo implementar una historia nueva" más abajo.
 
 ### Rutas existentes
 
@@ -89,7 +63,7 @@ qué estado usa qué param está en `docs/PENDIENTES.md` §2.2 (estados de
 
 ---
 
-## Cómo implementar la siguiente historia
+## Cómo implementar una historia nueva
 
 ### Ramas
 
@@ -194,9 +168,6 @@ Si no aparece el `.dc.html` de la pantalla que toca construir:
 1. **Parar. No inventar un diseño.**
 2. Preguntar dónde está el artboard, o si se acepta avanzar sin él.
 3. Continuar solo con confirmación explícita.
-
-La única excepción viva es `src/app/page.tsx` (índice provisional de pantallas), ya
-anotada en `docs/PENDIENTES.md` y que desaparece con el Epic 2.
 
 ---
 
