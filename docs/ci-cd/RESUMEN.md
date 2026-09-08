@@ -91,16 +91,18 @@ use en local.
       fast-forward y push).
 - [x] Rama `chore/ci-cd-pipeline-setup` creada desde `staging` ya sincronizada,
       para probar todo este plan sin tocar `staging` directamente.
-- [ ] Proyecto Supabase de dev/staging creado.
-- [ ] Proyecto Supabase de producción creado.
-- [ ] Primera aplicación del schema actual a ambos proyectos remotos.
+- [x] Proyecto Supabase de dev/staging creado (`luxepass-dev`, 8 sept 2026).
+- [x] Proyecto Supabase de producción creado (`luxepass-prod`, 8 sept 2026).
+- [ ] Primera aplicación del schema actual a ambos proyectos remotos —
+      pendiente de mergear este PR a `staging` (dispara `deploy.yml` contra
+      `luxepass-dev`); el de `luxepass-prod` llega con el PR `staging` → `main`.
 - [ ] Cuenta de Vercel creada.
 - [ ] Proyecto de Vercel "dev" creado (trackeando `staging`).
 - [ ] Proyecto de Vercel "prod" creado (trackeando `main`).
 - [ ] Variables de entorno configuradas en cada proyecto de Vercel.
-- [ ] Secrets configurados en GitHub (ver Fase 6 de la guía para la lista
-      completa) — necesarios para que `deploy.yml` corra de verdad; sin ellos
-      falla con un error de secret vacío, lo cual es esperado hasta la Fase 1.
+- [x] Secrets configurados en GitHub (8 sept 2026): `SUPABASE_ACCESS_TOKEN`,
+      `SUPABASE_DEV_PROJECT_REF`, `SUPABASE_DEV_DB_PASSWORD`,
+      `SUPABASE_PROD_PROJECT_REF`, `SUPABASE_PROD_DB_PASSWORD`.
 - [x] `.github/workflows/ci.yml` creado (8 sept 2026) — lint, `tsc --noEmit`,
       tests (levanta Supabase local en el runner) y build, en 4 jobs
       paralelos. Corre en PR y push a `staging`/`main`.
@@ -109,26 +111,41 @@ use en local.
       según la rama). El release a Vercel se añade a los mismos jobs cuando
       existan esos proyectos (Fase 3-4).
 - [ ] Protección de rama configurada en GitHub (`main` y `staging`).
-- [ ] Flujo completo probado de punta a punta en `chore/ci-cd-pipeline-setup`
-      (bloqueado por Fase 1: sin proyectos remotos, `deploy.yml` no tiene
-      nada real contra qué correr).
+- [x] PR de prueba abierto: `chore/ci-cd-pipeline-setup` → `staging`
+      ([#1](https://github.com/alvaro-Kreante/luxe-pass-training/pull/1)).
+      `ci.yml` corre y pasa completo (lint, tipos, tests contra Supabase real,
+      build).
+- [ ] Falta mergear el PR #1 para que `deploy.yml` migre `luxepass-dev` de
+      verdad (primera vez) y para probar el PR `staging` → `main` después.
 - [ ] `CLAUDE.md` actualizado: quitar/matizar §"Alcance: SOLO frontend" y
       documentar la excepción de CI a la regla de Supabase local.
 
 ### De paso, verificando que `ci.yml` fuera a estar en verde
 
-- [x] Bug real encontrado y arreglado: `npm test` fallaba en 8 archivos porque
-      el código leía `NEXT_PUBLIC_SUPABASE_ANON_KEY` pero `.env.local` ya usa
-      el nombre nuevo de Supabase, `PUBLISHABLE_KEY`. Ver fila en
-      `docs/PENDIENTES.md` §Resueltos.
-- [x] Bug real encontrado y arreglado: `npm run lint` daba 25 errores en
-      `scripts/playwright/**` (scripts de verificación visual, no de la app).
-      Añadidos a los ignores de `eslint.config.mjs`.
-- [ ] `npm test` no se pudo confirmar 100% en verde en esta sesión: Docker
-      Desktop no estaba accesible para levantar Supabase local aquí. Los 11
-      tests que dependen de Supabase (login, signup, onboarding professional,
-      require-session) sí corrieron sin el error de API key — solo falta
-      confirmarlos con Docker arriba.
+Cuatro bugs reales encontrados y arreglados (ninguno se había notado porque
+nada corría `lint`/`test`/`build` de forma automática hasta ahora):
+
+- [x] `client.ts`/`server.ts`/`middleware.ts` leían
+      `NEXT_PUBLIC_SUPABASE_ANON_KEY`, pero `.env.local` ya usa el nombre
+      nuevo de Supabase (`PUBLISHABLE_KEY`) — 8 archivos de test fallaban.
+- [x] `npm run lint` daba 25 errores en `scripts/playwright/**` (scripts de
+      verificación visual, no de la app) — excluidos del lint.
+- [x] `package-lock.json` estaba en `.gitignore` desde el scaffolding
+      inicial — nunca se subió al repo, así que `npm ci` fallaba en CI con
+      "Dependencies lock file is not found". Versionado.
+- [x] `next build` prerrenderiza páginas que instancian el cliente de
+      Supabase (@supabase/ssr valida que URL/key no vengan vacíos aunque no
+      hace red ahí) — el job `build` de `ci.yml` necesitó un valor no vacío,
+      no necesariamente real.
+- [x] El job `test` parseaba `supabase status` como texto plano; el CLI
+      instalado usa una tabla con bordes Unicode y JSON con claves planas
+      (`API_URL`, `PUBLISHABLE_KEY`, `SECRET_KEY`, con `ANON_KEY`/
+      `SERVICE_ROLE_KEY` como alias legacy) — cambiado a `-o json` + `jq`
+      con los paths correctos, confirmados contra un run real.
+
+`npm test` confirmado 100% en verde en CI (job `test` del PR #1, con Supabase
+local real levantado en el runner) — ver fila en `docs/PENDIENTES.md`
+§Resueltos.
 
 ## Decisiones que todavía faltan por tomar
 
