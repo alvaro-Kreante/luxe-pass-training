@@ -242,20 +242,6 @@ fichas de App Store ni Google Play.
 
 ## 4. Infraestructura pendiente
 
-### 4.1 No hay CI
-
-Nada ejecuta `npm test`, `tsc --noEmit`, `lint` ni `build` de forma automática: las
-cuatro comprobaciones del paso 8 de la receta dependen de que quien implementa se
-acuerde de correrlas. Con TDD ya declarado obligatorio en `CLAUDE.md`, esa
-disciplina no tiene red.
-
-Falta un workflow de GitHub Actions que corra las cuatro en cada push y en cada PR,
-y que la regla "una historia sin tests no entra" pase de convención a puerta real.
-
-**Desbloquea:** decidir si el repo va a tener PRs de verdad o se sigue trabajando
-por commits directos sobre `design/screens`. Con lo segundo, el workflow en push
-sigue teniendo sentido; sin lo primero, no hay dónde bloquear un merge.
-
 ### 4.2 El `.next` de dev se vuelve a quedar sin `main-app.js`
 
 Pasó el 31 de agosto de 2026, **con los `distDir` ya separados**: el dev server
@@ -385,3 +371,6 @@ de la tarifa de no-show.
 | El sub-nav de Account tenía un ítem "Membership" sin pantalla propia | 6 sept 2026 | Implementado el Epic 9: `/profile/membership` (plan, beneficios, renovación), `/profile/membership/plans` (comparación) y `/profile/membership/referrals` (código, invitaciones, términos) |
 | La Story 1.1 (registro) no tenía backend: email duplicado y verificación de email eran simulados | 6 sept 2026 | Conectada a Supabase local real: Auth (signup + confirmación por email vía Mailpit), tabla `profiles` con RLS, RPC `email_exists` (excepción consciente al anti-enumeración de Supabase Auth) y bucket `profile-photos`. Ver `COMPONENT-MAP.md` §Backend real (Supabase local) |
 | La Story 1.2 (login) no tenía backend: credenciales, bloqueo y reset de contraseña eran simulados | 6 sept 2026 | Conectada a Supabase local real: `signInWithPassword`, tabla `login_attempts` + RPC para el bloqueo tras 5 intentos (Supabase Auth no lo tiene nativo), `resetPasswordForEmail` + `/reset-password` (pantalla nueva, sin artboard) para completar el reset de verdad. De paso se encontró y corrigió un bug real en `/auth/confirm`: en `next dev`, el origin calculado desde `request.url` podía ser "localhost" en vez del host real (127.0.0.1), perdiendo la cookie de sesión tras el redirect |
+| No había CI: nada ejecutaba `lint`/`tsc`/`test`/`build` en cada PR ni push | 8 sept 2026 | `.github/workflows/ci.yml` (lint, tipos, tests contra Supabase local levantado en el runner, y build en jobs paralelos) y `.github/workflows/deploy.yml` (migra `supabase/migrations` al Supabase remoto de dev/prod tras push a `staging`/`main`, excepción acotada a CLAUDE.md §Supabase Local Development). Ver `docs/ci-cd/RESUMEN.md` — Vercel y los 2 proyectos remotos de Supabase siguen pendientes de crear (Fase 1/3/4 de la guía) |
+| `npm test` fallaba en 8 archivos (login, signup, onboarding, require-session) con "URL and API key are required" | 8 sept 2026 | `.env.local` ya usaba el nombre nuevo de Supabase (`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) pero `client.ts`/`server.ts`/`middleware.ts` seguían leyendo `NEXT_PUBLIC_SUPABASE_ANON_KEY` (nombre viejo, deprecado por Supabase). Los tres archivos y `env.example` renombrados a `PUBLISHABLE_KEY` |
+| `npm run lint` daba 25 errores de `no-require-imports` en `scripts/playwright/**` | 8 sept 2026 | Son scripts CommonJS de verificación visual puntual (ver su `README.md`), no código de la app — añadidos a los ignores de `eslint.config.mjs` junto al resto de rutas generadas/no-fuente |

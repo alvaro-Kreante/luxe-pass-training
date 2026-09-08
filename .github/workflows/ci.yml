@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [staging, main]
+  push:
+    branches: [staging, main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+      - run: npm ci
+      - run: npm run lint
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+      - run: npm ci
+      - run: npx tsc --noEmit
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+      - run: npm ci
+      - run: npm run build
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+      - run: npm ci
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # `supabase start` aplica supabase/migrations sobre un Postgres
+      # efímero en el runner — nunca toca un proyecto remoto. Los tests de
+      # este proyecto no mockean Supabase (ver CLAUDE.md §Metodología de
+      # test), así que necesitan una instancia real para correr.
+      - name: Levantar Supabase local
+        run: supabase start
+
+      # El texto de `supabase status` varía entre versiones del CLI
+      # ("anon key" vs "publishable key", "service_role key" vs "secret
+      # key"), así que se busca por etiqueta en vez de fijar un nombre de
+      # campo — evita que un upgrade del CLI rompa el pipeline en silencio.
+      - name: Exportar credenciales del Supabase local
+        run: |
+          STATUS="$(supabase status)"
+          API_URL="$(printf '%s\n' "$STATUS" | grep -oP '(?<=API URL: ).*' | tr -d '[:space:]')"
+          PUBLISHABLE_KEY="$(printf '%s\n' "$STATUS" | grep -iE 'publishable key|anon key' | head -n1 | sed -E 's/^[^:]*:[[:space:]]*//')"
+          SERVICE_ROLE_KEY="$(printf '%s\n' "$STATUS" | grep -iE 'service_role key|secret key' | head -n1 | sed -E 's/^[^:]*:[[:space:]]*//')"
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+          } >> "$GITHUB_ENV"
+
+      - run: npm test
