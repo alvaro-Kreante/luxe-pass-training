@@ -76,20 +76,17 @@ jobs:
       - name: Levantar Supabase local
         run: supabase start
 
-      # `supabase status -o json` es más estable que parsear la tabla de
-      # texto (que en versiones recientes del CLI cambió a un formato con
-      # bordes Unicode y renombró "anon"/"service_role" a
-      # "publishable"/"secret"). El `cat` es solo diagnóstico: las claves de
-      # Supabase local son valores por defecto públicos, no secretos reales
-      # (el propio `supabase start` ya las imprime en claro).
+      # `supabase status -o json` da un objeto plano (`API_URL`,
+      # `PUBLISHABLE_KEY`, `SECRET_KEY`, con `ANON_KEY`/`SERVICE_ROLE_KEY`
+      # como alias legacy) — confirmado contra la versión del CLI que usa
+      # este proyecto, ver docs/ci-cd/RESUMEN.md.
       - name: Exportar credenciales del Supabase local
         run: |
           supabase status -o json > /tmp/supabase-status.json
-          cat /tmp/supabase-status.json
 
-          API_URL="$(jq -r '.API.URL // .api.url // empty' /tmp/supabase-status.json)"
-          PUBLISHABLE_KEY="$(jq -r '.API.PUBLISHABLE_KEY // .api.publishable_key // .API.ANON_KEY // .api.anon_key // empty' /tmp/supabase-status.json)"
-          SERVICE_ROLE_KEY="$(jq -r '.API.SECRET_KEY // .api.secret_key // .API.SERVICE_ROLE_KEY // .api.service_role_key // empty' /tmp/supabase-status.json)"
+          API_URL="$(jq -r '.API_URL // empty' /tmp/supabase-status.json)"
+          PUBLISHABLE_KEY="$(jq -r '.PUBLISHABLE_KEY // .ANON_KEY // empty' /tmp/supabase-status.json)"
+          SERVICE_ROLE_KEY="$(jq -r '.SECRET_KEY // .SERVICE_ROLE_KEY // empty' /tmp/supabase-status.json)"
 
           {
             echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
