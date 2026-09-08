@@ -38,7 +38,7 @@ jobs:
       - name: Aplicar migraciones pendientes
         run: supabase db push
       - name: Revisar advisors de seguridad/performance
-        run: supabase db advisors
+        run: supabase db advisors --linked
         continue-on-error: true
 
   migrate-prod:
@@ -58,5 +58,5 @@ jobs:
       - name: Aplicar migraciones pendientes
         run: supabase db push
       - name: Revisar advisors de seguridad/performance
-        run: supabase db advisors
+        run: supabase db advisors --linked
         continue-on-error: true
