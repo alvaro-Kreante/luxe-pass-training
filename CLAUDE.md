@@ -106,6 +106,8 @@ Receta completa. Seguirla en orden evita duplicar componentes que ya existen.
 
 **2. Leer el flujo** que la historia enlaza en `## Related Flow`, en `docs/specs/flows/`. La tabla "Story Segments" dice qué nodos del diagrama le corresponden.
 
+**2.1. Si la historia toca Supabase, leer `docs/DATA-MODEL-MAP.md`** — dice qué epic es dueño de cada tabla candidata y qué cruces con otros epics ya se anticiparon, para no rediseñar una FK o duplicar una tabla que otro epic ya reclama.
+
 **3. Leer la fase de diseño** en `docs/design/DESIGN-SYSTEM.md` §6. **Ojo: los números de fase no coinciden con los de epic** (la Fase 2 es el Epic 7). La tabla de §6 dice qué artboards tiene cada fase y qué criterios cubren.
 
 **4. Leer los artboards** `.dc.html` de esa carpeta. Son HTML real con los estilos inline: son la fuente de verdad de medidas y copy, no una aproximación.
@@ -259,6 +261,9 @@ Puntos no derivables del árbol:
 - `docs/PENDIENTES.md` es la lista viva de bloqueos, provisionales y
   decisiones abiertas; revisarla al cerrar cualquier historia (paso 9 de la
   receta).
+- `docs/DATA-MODEL-MAP.md` es el mapa liviano de qué tabla de Supabase es
+  dueña de cada epic y qué cruces hay entre epics — no lista columnas ni RLS,
+  eso se decide historia por historia (paso 2.1 de la receta).
 
 ### Flujos (`docs/specs/flows/`)
 
@@ -388,6 +393,8 @@ supabase start
 ```
 
 **2. Editar el esquema deseado** en `supabase/schemas/*.sql` (un archivo por entidad es buena práctica, p. ej. `members.sql`). Editar **solo estos archivos** — cambios hechos a mano en Studio o vía SQL editor son invisibles para el diff.
+
+Antes de nombrar una tabla o FK nueva, revisar `docs/DATA-MODEL-MAP.md`: dice qué epic es su dueño y qué otros epics ya la referencian, para no duplicarla ni romper un cruce ya anticipado.
 
 ```sql
 -- supabase/schemas/members.sql
