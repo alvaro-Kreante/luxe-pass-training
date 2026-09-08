@@ -38,6 +38,14 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    # Varias pantallas (/forgot-password, /signup...) instancian el cliente
+    # de Supabase durante el prerender estático, aunque nunca llegan a hacer
+    # una llamada de red en ese paso — @supabase/ssr solo valida que URL y
+    # key no vengan vacíos. Sin Supabase local en este job (no hace falta:
+    # el build no ejecuta lógica de negocio), basta un valor no vacío.
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54331
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: build-placeholder-no-se-usa-en-red
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -68,16 +76,21 @@ jobs:
       - name: Levantar Supabase local
         run: supabase start
 
-      # El texto de `supabase status` varía entre versiones del CLI
-      # ("anon key" vs "publishable key", "service_role key" vs "secret
-      # key"), así que se busca por etiqueta en vez de fijar un nombre de
-      # campo — evita que un upgrade del CLI rompa el pipeline en silencio.
+      # `supabase status -o json` es más estable que parsear la tabla de
+      # texto (que en versiones recientes del CLI cambió a un formato con
+      # bordes Unicode y renombró "anon"/"service_role" a
+      # "publishable"/"secret"). El `cat` es solo diagnóstico: las claves de
+      # Supabase local son valores por defecto públicos, no secretos reales
+      # (el propio `supabase start` ya las imprime en claro).
       - name: Exportar credenciales del Supabase local
         run: |
-          STATUS="$(supabase status)"
-          API_URL="$(printf '%s\n' "$STATUS" | grep -oP '(?<=API URL: ).*' | tr -d '[:space:]')"
-          PUBLISHABLE_KEY="$(printf '%s\n' "$STATUS" | grep -iE 'publishable key|anon key' | head -n1 | sed -E 's/^[^:]*:[[:space:]]*//')"
-          SERVICE_ROLE_KEY="$(printf '%s\n' "$STATUS" | grep -iE 'service_role key|secret key' | head -n1 | sed -E 's/^[^:]*:[[:space:]]*//')"
+          supabase status -o json > /tmp/supabase-status.json
+          cat /tmp/supabase-status.json
+
+          API_URL="$(jq -r '.API.URL // .api.url // empty' /tmp/supabase-status.json)"
+          PUBLISHABLE_KEY="$(jq -r '.API.PUBLISHABLE_KEY // .api.publishable_key // .API.ANON_KEY // .api.anon_key // empty' /tmp/supabase-status.json)"
+          SERVICE_ROLE_KEY="$(jq -r '.API.SECRET_KEY // .api.secret_key // .API.SERVICE_ROLE_KEY // .api.service_role_key // empty' /tmp/supabase-status.json)"
+
           {
             echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
             echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
