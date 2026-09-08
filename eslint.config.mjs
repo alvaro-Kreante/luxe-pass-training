@@ -20,6 +20,9 @@ const eslintConfig = defineConfig([
     "public/sw.js.map",
     "public/workbox-*.js",
     "public/workbox-*.js.map",
+    // Scripts sueltos de verificación visual (ver scripts/playwright/README.md),
+    // no parte de la app: CommonJS con `require()` deliberado, no el código de Next.
+    "scripts/playwright/**",
   ]),
 ]);
 
