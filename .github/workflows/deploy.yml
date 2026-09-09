@@ -1,0 +1,62 @@
+name: Deploy
+
+# Excepción acotada a CLAUDE.md §"Supabase Local Development": solo este
+# pipeline enlaza proyectos remotos (`supabase link` + `db push`, sin
+# `--local`). Ningún desarrollador hace esto a mano en su máquina.
+#
+# El release a Vercel todavía no vive aquí — ver docs/ci-cd/RESUMEN.md y
+# GUIA-PASO-A-PASO.md (Fase 3-4 pendientes). Se añade a estos mismos jobs,
+# después del paso de migración, cuando esos proyectos existan.
+
+on:
+  push:
+    branches: [staging, main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  migrate-dev:
+    if: github.ref == 'refs/heads/staging'
+    runs-on: ubuntu-latest
+    environment: dev
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DEV_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Enlazar proyecto remoto luxepass-dev
+        run: supabase link --project-ref "${{ secrets.SUPABASE_DEV_PROJECT_REF }}"
+      - name: Aplicar migraciones pendientes
+        run: supabase db push
+      - name: Revisar advisors de seguridad/performance
+        run: supabase db advisors --linked
+        continue-on-error: true
+
+  migrate-prod:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_PROD_DB_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Enlazar proyecto remoto luxepass-prod
+        run: supabase link --project-ref "${{ secrets.SUPABASE_PROD_PROJECT_REF }}"
+      - name: Aplicar migraciones pendientes
+        run: supabase db push
+      - name: Revisar advisors de seguridad/performance
+        run: supabase db advisors --linked
+        continue-on-error: true

@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [staging, main]
+  push:
+    branches: [staging, main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+      - run: npm ci
+      - run: npm run lint
+
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+      - run: npm ci
+      - run: npx tsc --noEmit
+
+  build:
+    runs-on: ubuntu-latest
+    # Varias pantallas (/forgot-password, /signup...) instancian el cliente
+    # de Supabase durante el prerender estático, aunque nunca llegan a hacer
+    # una llamada de red en ese paso — @supabase/ssr solo valida que URL y
+    # key no vengan vacíos. Sin Supabase local en este job (no hace falta:
+    # el build no ejecuta lógica de negocio), basta un valor no vacío.
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54331
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: build-placeholder-no-se-usa-en-red
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+      - run: npm ci
+      - run: npm run build
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+      - run: npm ci
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # `supabase start` aplica supabase/migrations sobre un Postgres
+      # efímero en el runner — nunca toca un proyecto remoto. Los tests de
+      # este proyecto no mockean Supabase (ver CLAUDE.md §Metodología de
+      # test), así que necesitan una instancia real para correr.
+      - name: Levantar Supabase local
+        run: supabase start
+
+      # `supabase status -o json` da un objeto plano (`API_URL`,
+      # `PUBLISHABLE_KEY`, `SECRET_KEY`, con `ANON_KEY`/`SERVICE_ROLE_KEY`
+      # como alias legacy) — confirmado contra la versión del CLI que usa
+      # este proyecto, ver docs/ci-cd/RESUMEN.md.
+      - name: Exportar credenciales del Supabase local
+        run: |
+          supabase status -o json > /tmp/supabase-status.json
+
+          API_URL="$(jq -r '.API_URL // empty' /tmp/supabase-status.json)"
+          PUBLISHABLE_KEY="$(jq -r '.PUBLISHABLE_KEY // .ANON_KEY // empty' /tmp/supabase-status.json)"
+          SERVICE_ROLE_KEY="$(jq -r '.SECRET_KEY // .SERVICE_ROLE_KEY // empty' /tmp/supabase-status.json)"
+
+          {
+            echo "NEXT_PUBLIC_SUPABASE_URL=$API_URL"
+            echo "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$PUBLISHABLE_KEY"
+            echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
+          } >> "$GITHUB_ENV"
+
+      - run: npm test
