@@ -10,36 +10,35 @@ Repositorio integral del proyecto **LuxePass** (plataforma de membresía de lujo
 
 ---
 
-## ⚠️ Alcance: esto es SOLO frontend
+## ⚠️ Alcance: mockup navegable + backend real parcial (Supabase)
 
-**Este repo implementa el diseño en Next.js. No hay backend, no hay base de datos, no hay lógica de negocio real.**
+**Este repo empezó como un mockup navegable sin backend — eso ya no es así del todo.** Desde sept 2026, algunas historias tienen lógica real conectada a Supabase: Epic 1 completo (Story 1.1 User Registration, Story 1.2 Login & Authentication). El resto de epics sigue el patrón de mockup visual descrito abajo, historia por historia, hasta que se conecten a su vez.
 
-La app en producción vive en `app.luxepass.co` y es un proyecto aparte: este repositorio **no se conecta a ella** ni a ningún servicio.
+La app en producción de En Soleil vive en `app.luxepass.co`; si este repo la reemplaza o sigue siendo un proyecto aparte no está resuelto en este documento — no asumir ninguna de las dos sin confirmar.
 
-**Excepción:** Supabase está habilitado **solo localmente** (rama `chore/supabase-local-setup` adelante) para desarrollo. No se conecta a producción ni a servicios externos. Ver "Supabase Local Development" más abajo.
+**Infraestructura real ya montada:** 2 proyectos Supabase remotos (`luxepass-dev`, `luxepass-prod`) con sus migraciones aplicadas vía CI/CD (`.github/workflows/deploy.yml`). Detalle completo, incluyendo qué falta (Vercel, protección de ramas), en `docs/ci-cd/RESUMEN.md`.
 
 **No hacer, salvo que se pida explícitamente:**
 
-- ❌ Instalar ORM o cliente de base de datos (Prisma, Drizzle) **excepto** Supabase local
-- ❌ Conectarse a Supabase en producción o a cualquier proyecto remoto
-- ❌ Crear route handlers en `src/app/api/`
-- ❌ Añadir autenticación real (NextAuth, sesiones, JWT, middleware de auth)
-- ❌ Server Actions que escriban en algún sitio
-- ❌ `fetch` a servicios externos, pasarelas de pago, envío de emails
+- ❌ Instalar ORM o cliente de base de datos (Prisma, Drizzle) **excepto** Supabase
+- ❌ Enlazar (`supabase link`) un proyecto remoto de Supabase a mano, desde tu máquina — eso es exclusivo del pipeline de CI, ver "Supabase Local Development" §Excepción de CI
+- ❌ Crear route handlers en `src/app/api/` salvo que la historia que se implementa lo requiera de verdad
+- ❌ Añadir autenticación fuera de Supabase Auth (NextAuth, JWT propio, sesiones caseras)
+- ❌ Server Actions o `fetch` que escriban en servicios externos (pasarelas de pago, envío de emails) para historias que **no** están conectadas a Supabase — ver regla de abajo
 - ❌ Tests e2e con navegador masivos — Playwright existe para verificación visual (uso puntual, ver §Verificación)
-- ❌ Persistir estado (`localStorage`, `sessionStorage`, cookies). Recargar puede empezar de cero: es un mockup navegable, no una app con sesión
+- ❌ Persistir estado del lado del cliente (`localStorage`, `sessionStorage`, cookies propias) en historias sin backend — para las que sí tienen Supabase, la sesión la maneja Supabase Auth, no un estado casero
 
 **Sí hacer:**
 
-- ✅ Datos de muestra en módulos de `src/lib/` o constantes del propio componente
-- ✅ Estado de UI con `useState` / Context — lo justo para que la pantalla muestre sus estados
-- ✅ Validación **de cliente**, cuya finalidad es que la pantalla pueda mostrar sus estados (error, botón deshabilitado, campo inválido) — no es seguridad
+- ✅ Para historias **sin backend conectado**: datos de muestra en módulos de `src/lib/` o constantes del propio componente; estado de UI con `useState`/Context
+- ✅ Para historias **con backend conectado**: Supabase real (local en desarrollo, remoto vía CI en `staging`/`main`) — ver "Supabase Local Development"
+- ✅ Validación **de cliente**, cuya finalidad es que la pantalla pueda mostrar sus estados (error, botón deshabilitado, campo inválido) — no sustituye RLS/validación del lado del servidor en lo que sí toca Supabase
 - ✅ Navegación entre pantallas con `next/link` y `useRouter`
 - ✅ Tests con Vitest + Testing Library, escritos **antes** del código — ver "Metodología de test"
 
-**Criterios de aceptación que exigirían backend** (enviar un email, cobrar, verificar un token, comprobar duplicados contra la base) se cubren **visualmente**: se implementa la pantalla del estado y se simula el disparador con datos de muestra. La desviación se anota en la última sección de `docs/design/COMPONENT-MAP.md`.
+**Para una historia sin backend conectado todavía**, los criterios de aceptación que exigirían uno (enviar un email, cobrar, verificar un token, comprobar duplicados contra la base) se cubren **visualmente**: se implementa la pantalla del estado y se simula el disparador con datos de muestra. La desviación se anota en la última sección de `docs/design/COMPONENT-MAP.md`.
 
-Ejemplos ya hechos: la comprobación de email duplicado consulta una lista de dos correos en `src/lib/registration.ts`; el bloqueo tras 5 intentos de `/login` es un contador en `useState` que se limpia al recargar. **La regla es que la pantalla llegue a mostrar el estado, no que el estado sea real.**
+Ejemplo ya hecho de patrón mockup (epics aún no conectados): datos de muestra en constantes de componente para simular estados de red/servidor. Ejemplo ya hecho de patrón backend real: Story 1.1/1.2 contra Supabase local/remoto (ver `src/lib/supabase/`, `src/lib/authentication.ts`, `src/lib/registration.ts`). **La regla para una historia sin backend es que la pantalla llegue a mostrar el estado, no que el estado sea real; para una historia conectada a Supabase, el estado sí es real.**
 
 ---
 
@@ -72,13 +71,22 @@ qué estado usa qué param está en `docs/PENDIENTES.md` §2.2 (estados de
 
 | Rama | Para qué |
 |---|---|
-| `main` | Rama principal. No se trabaja directamente sobre ella |
-| `design/screens` | **Las pantallas implementadas en Next.js.** Aquí va todo el código |
+| `main` | Producción. Un push aquí dispara CI/CD: migra `supabase/migrations` al Supabase remoto `luxepass-prod` (ver `.github/workflows/deploy.yml`). No se trabaja directamente sobre ella |
+| `staging` | Integración de historias con backend real conectado a Supabase. Un push aquí migra `luxepass-dev`. Se promueve a `main` con un PR `staging` → `main` cuando se decide un release |
+| `design/screens` | Pantallas implementadas en Next.js para historias **sin** backend conectado — mockup navegable |
 | `docs/design` | Mockups `.dc.html` y canvas de los epics (`docs/design/`) |
 
-Las dos ramas `design/*` son el mismo trabajo en dos formatos: el canvas estático y
-las pantallas navegables. No se llama "frontend" a propósito — esto es el diseño
-llevado a código, no una aplicación con backend.
+Las ramas `design/*` son el mismo trabajo en dos formatos: el canvas estático y
+las pantallas navegables, para historias que siguen el patrón de mockup. Las
+historias con backend real conectado (ver §Alcance) integran contra `staging`
+en vez de `design/screens`.
+
+**Infraestructura de `staging`/`main`:** 2 proyectos Supabase remotos
+(`luxepass-dev`, `luxepass-prod`) — uno por rama — con las migraciones
+aplicadas automáticamente por CI, nunca a mano (ver "Supabase Local
+Development" §Excepción de CI). Vercel (2 proyectos, mismo esquema
+dev/prod) está planeado pero todavía no montado. Detalle completo y estado
+en `docs/ci-cd/RESUMEN.md`.
 
 Para trabajo puntual que no es una historia entera, se sale de `design/screens` con
 un prefijo y se vuelve a ella:
@@ -236,6 +244,7 @@ específico de este proyecto:
 | `systematic-debugging` | Algo falla y la causa no es evidente |
 | `verification-before-completion` | Antes de dar una historia por terminada |
 | `supabase` | **Antes de cualquier cambio de schema o comando de Supabase.** Ver "Supabase Local Development" |
+| `ci-cd-and-automation` | Al tocar `.github/workflows/*.yml` o el pipeline de CI/CD |
 
 ---
 
@@ -360,6 +369,20 @@ duro en el navegador** (Ctrl+Shift+R). Detalle y causa en `docs/PENDIENTES.md` �
 ## Supabase Local Development
 
 **REGLA CRÍTICA:** Todo lo que toque Supabase o la base de datos usa **el proyecto local** (Docker, vía Supabase CLI). Este proyecto **nunca se enlaza** (`supabase link`) a un proyecto remoto ni se ejecuta `supabase db push`/`supabase db pull` sin `--local` — esos comandos actúan sobre un proyecto remoto enlazado, no sobre el Docker local. Si en algún momento hace falta enlazar un proyecto remoto, **parar y pedir confirmación explícita** antes de correr `supabase link`.
+
+### Excepción de CI
+
+`.github/workflows/deploy.yml` es la única excepción a la regla anterior:
+en un push a `staging` o `main`, GitHub Actions corre `supabase link
+--project-ref <ref>` + `supabase db push` (sin `--local`) contra
+`luxepass-dev`/`luxepass-prod` respectivamente, usando
+`SUPABASE_ACCESS_TOKEN`/`SUPABASE_DEV_DB_PASSWORD`/`SUPABASE_PROD_DB_PASSWORD`
+como GitHub Secrets — nunca credenciales sueltas en el repo. Esta excepción
+es exclusiva del runner de CI: **ningún desarrollador enlaza un proyecto
+remoto a mano en su máquina**, la regla crítica de arriba sigue rigiendo
+para el trabajo local. `supabase db advisors --linked` corre después de
+cada migración (no bloquea el deploy; revisar sus warnings igual). Detalle
+completo en `docs/ci-cd/RESUMEN.md` y `docs/ci-cd/GUIA-PASO-A-PASO.md`.
 
 ### Verificar que usas el proyecto local
 

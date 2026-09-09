@@ -93,9 +93,11 @@ use en local.
       para probar todo este plan sin tocar `staging` directamente.
 - [x] Proyecto Supabase de dev/staging creado (`luxepass-dev`, 8 sept 2026).
 - [x] Proyecto Supabase de producción creado (`luxepass-prod`, 8 sept 2026).
-- [x] Primera aplicación del schema a `luxepass-dev` (8 sept 2026, confirmada
-      en el run de `deploy.yml`: las 2 migraciones se aplicaron). Falta la de
-      `luxepass-prod`, que llega con el PR `staging` → `main`.
+- [x] Primera aplicación del schema a `luxepass-dev` **y** `luxepass-prod` (8
+      sept 2026, confirmada en los runs de `deploy.yml`: las 2 migraciones se
+      aplicaron en ambos). `db advisors --linked` corrió contra los dos:
+      mismos warnings ya conocidos y deliberados de `login_attempts`/
+      `email_exists` (RPC `SECURITY DEFINER` para `anon`/`authenticated`).
 - [ ] Cuenta de Vercel creada.
 - [ ] Proyecto de Vercel "dev" creado (trackeando `staging`).
 - [ ] Proyecto de Vercel "prod" creado (trackeando `main`).
@@ -118,8 +120,9 @@ use en local.
       ambos ya conocidos y deliberados (`email_exists` y `check_login_lock`
       como `SECURITY DEFINER` anti-enumeración, ver Story 1.1/1.2 en
       `docs/PENDIENTES.md` §Resueltos) — no son nuevos, no requieren acción.
-- [ ] Falta probar el PR `staging` → `main` para confirmar la migración a
-      `luxepass-prod` (Fase 8 de la guía).
+- [x] PR #4 (`staging` → `main`) mergeado — confirmada la migración real a
+      `luxepass-prod`. **El ciclo completo de Supabase por CI (Fase 8) está
+      probado de punta a punta, en dev y en producción.**
 - [ ] `CLAUDE.md` actualizado: quitar/matizar §"Alcance: SOLO frontend" y
       documentar la excepción de CI a la regla de Supabase local.
 
