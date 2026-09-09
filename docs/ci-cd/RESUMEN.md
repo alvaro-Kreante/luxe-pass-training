@@ -93,9 +93,9 @@ use en local.
       para probar todo este plan sin tocar `staging` directamente.
 - [x] Proyecto Supabase de dev/staging creado (`luxepass-dev`, 8 sept 2026).
 - [x] Proyecto Supabase de producción creado (`luxepass-prod`, 8 sept 2026).
-- [ ] Primera aplicación del schema actual a ambos proyectos remotos —
-      pendiente de mergear este PR a `staging` (dispara `deploy.yml` contra
-      `luxepass-dev`); el de `luxepass-prod` llega con el PR `staging` → `main`.
+- [x] Primera aplicación del schema a `luxepass-dev` (8 sept 2026, confirmada
+      en el run de `deploy.yml`: las 2 migraciones se aplicaron). Falta la de
+      `luxepass-prod`, que llega con el PR `staging` → `main`.
 - [ ] Cuenta de Vercel creada.
 - [ ] Proyecto de Vercel "dev" creado (trackeando `staging`).
 - [ ] Proyecto de Vercel "prod" creado (trackeando `main`).
@@ -111,19 +111,23 @@ use en local.
       según la rama). El release a Vercel se añade a los mismos jobs cuando
       existan esos proyectos (Fase 3-4).
 - [ ] Protección de rama configurada en GitHub (`main` y `staging`).
-- [x] PR de prueba abierto: `chore/ci-cd-pipeline-setup` → `staging`
-      ([#1](https://github.com/alvaro-Kreante/luxe-pass-training/pull/1)).
-      `ci.yml` corre y pasa completo (lint, tipos, tests contra Supabase real,
-      build).
-- [ ] Falta mergear el PR #1 para que `deploy.yml` migre `luxepass-dev` de
-      verdad (primera vez) y para probar el PR `staging` → `main` después.
+- [x] PR #1 (`chore/ci-cd-pipeline-setup` → `staging`) mergeado — `ci.yml` en
+      verde completo, `deploy.yml` migró `luxepass-dev` de verdad.
+- [x] PR #2 (fix de `supabase db advisors --linked`, ver más abajo) mergeado
+      — confirmado corriendo contra `luxepass-dev`: 2 warnings de seguridad,
+      ambos ya conocidos y deliberados (`email_exists` y `check_login_lock`
+      como `SECURITY DEFINER` anti-enumeración, ver Story 1.1/1.2 en
+      `docs/PENDIENTES.md` §Resueltos) — no son nuevos, no requieren acción.
+- [ ] Falta probar el PR `staging` → `main` para confirmar la migración a
+      `luxepass-prod` (Fase 8 de la guía).
 - [ ] `CLAUDE.md` actualizado: quitar/matizar §"Alcance: SOLO frontend" y
       documentar la excepción de CI a la regla de Supabase local.
 
-### De paso, verificando que `ci.yml` fuera a estar en verde
+### De paso, verificando que `ci.yml` y `deploy.yml` fueran a estar en verde
 
-Cuatro bugs reales encontrados y arreglados (ninguno se había notado porque
-nada corría `lint`/`test`/`build` de forma automática hasta ahora):
+Cinco bugs reales encontrados y arreglados (ninguno se había notado porque
+nada corría `lint`/`test`/`build`/migraciones de forma automática hasta
+ahora):
 
 - [x] `client.ts`/`server.ts`/`middleware.ts` leían
       `NEXT_PUBLIC_SUPABASE_ANON_KEY`, pero `.env.local` ya usa el nombre
@@ -142,10 +146,20 @@ nada corría `lint`/`test`/`build` de forma automática hasta ahora):
       (`API_URL`, `PUBLISHABLE_KEY`, `SECRET_KEY`, con `ANON_KEY`/
       `SERVICE_ROLE_KEY` como alias legacy) — cambiado a `-o json` + `jq`
       con los paths correctos, confirmados contra un run real.
+- [x] `supabase db advisors` en `deploy.yml` fallaba con ECONNREFUSED: sin
+      `--linked`, revisa la base local (que no existe en ese job) en vez del
+      proyecto remoto recién enlazado. Agregado `--linked` a ambos jobs
+      (dev y prod).
 
 `npm test` confirmado 100% en verde en CI (job `test` del PR #1, con Supabase
-local real levantado en el runner) — ver fila en `docs/PENDIENTES.md`
-§Resueltos.
+local real levantado en el runner). La migración a `luxepass-dev` y los
+advisors contra el proyecto real, confirmados en el PR #2. Ver filas en
+`docs/PENDIENTES.md` §Resueltos.
+
+Nota aparte, sin acción: al reintentar el deploy tras el PR #2, un job falló
+una vez con "Failed to resolve latest Supabase CLI release: rate limit
+exceeded" (`supabase/setup-cli@v1` contra la API de GitHub) — transitorio,
+se resolvió solo con `gh run rerun --failed`.
 
 ## Decisiones que todavía faltan por tomar
 
