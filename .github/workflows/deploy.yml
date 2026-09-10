@@ -36,7 +36,7 @@ jobs:
         with:
           version: latest
       - name: Enlazar proyecto remoto luxepass-dev
-        run: supabase link --project-ref "${{ secrets.SUPABASE_DEV_PROJECT_REF }}"
+        run: supabase link --project-ref "${{ secrets.SUPABASE_DEV_PROJECT_REF }}" --debug
       - name: Aplicar migraciones pendientes
         run: supabase db push
       - name: Revisar advisors de seguridad/performance
