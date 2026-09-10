@@ -98,20 +98,32 @@ use en local.
       aplicaron en ambos). `db advisors --linked` corrió contra los dos:
       mismos warnings ya conocidos y deliberados de `login_attempts`/
       `email_exists` (RPC `SECURITY DEFINER` para `anon`/`authenticated`).
-- [ ] Cuenta de Vercel creada.
-- [ ] Proyecto de Vercel "dev" creado (trackeando `staging`).
-- [ ] Proyecto de Vercel "prod" creado (trackeando `main`).
-- [ ] Variables de entorno configuradas en cada proyecto de Vercel.
-- [x] Secrets configurados en GitHub (8 sept 2026): `SUPABASE_ACCESS_TOKEN`,
+- [x] Cuenta de Vercel creada.
+- [x] Proyecto de Vercel `luxepass-dev` creado (trackeando `staging`).
+- [x] Proyecto de Vercel `luxepass-prod` creado (trackeando `main`).
+- [x] Variables de entorno configuradas en cada proyecto de Vercel
+      (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+      como Config, no Secret — apuntando cada uno a su Supabase
+      correspondiente). Auto-deploy en push desactivado en ambos
+      (Settings → Git → Ignored Build Step → `exit 0`), el deploy lo
+      disparará `deploy.yml` desde GitHub Actions.
+- [x] Secrets configurados en GitHub: `SUPABASE_ACCESS_TOKEN`,
       `SUPABASE_DEV_PROJECT_REF`, `SUPABASE_DEV_DB_PASSWORD`,
-      `SUPABASE_PROD_PROJECT_REF`, `SUPABASE_PROD_DB_PASSWORD`.
+      `SUPABASE_PROD_PROJECT_REF`, `SUPABASE_PROD_DB_PASSWORD` (8 sept 2026);
+      `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID_DEV`,
+      `VERCEL_PROJECT_ID_PROD` (10 sept 2026).
 - [x] `.github/workflows/ci.yml` creado (8 sept 2026) — lint, `tsc --noEmit`,
       tests (levanta Supabase local en el runner) y build, en 4 jobs
       paralelos. Corre en PR y push a `staging`/`main`.
-- [x] `.github/workflows/deploy.yml` creado (8 sept 2026) — **solo la parte de
-      migraciones a Supabase remoto** (`supabase link` + `db push` a dev/prod
-      según la rama). El release a Vercel se añade a los mismos jobs cuando
-      existan esos proyectos (Fase 3-4).
+- [x] `.github/workflows/deploy.yml` creado (8 sept 2026) — migraciones a
+      Supabase remoto (`supabase link` + `db push` a dev/prod según la
+      rama). Ampliado (10 sept 2026) con el release a Vercel: tras la
+      migración, cada job instala el CLI de Vercel y corre `vercel pull` +
+      `vercel build --prod` + `vercel deploy --prebuilt --prod` contra el
+      proyecto correspondiente (`luxepass-dev` en `migrate-dev`,
+      `luxepass-prod` en `migrate-prod`), usando `VERCEL_TOKEN`,
+      `VERCEL_ORG_ID` y `VERCEL_PROJECT_ID_DEV`/`VERCEL_PROJECT_ID_PROD`.
+      Falta probarlo con un push real (Fase 8).
 - [ ] Protección de rama configurada en GitHub (`main` y `staging`).
 - [x] PR #1 (`chore/ci-cd-pipeline-setup` → `staging`) mergeado — `ci.yml` en
       verde completo, `deploy.yml` migró `luxepass-dev` de verdad.
@@ -123,8 +135,10 @@ use en local.
 - [x] PR #4 (`staging` → `main`) mergeado — confirmada la migración real a
       `luxepass-prod`. **El ciclo completo de Supabase por CI (Fase 8) está
       probado de punta a punta, en dev y en producción.**
-- [ ] `CLAUDE.md` actualizado: quitar/matizar §"Alcance: SOLO frontend" y
-      documentar la excepción de CI a la regla de Supabase local.
+- [x] `CLAUDE.md` actualizado (9a12c58, 10 sept 2026): §"Alcance" ahora
+      describe la fase de backend real parcial (Epic 1 conectado a Supabase,
+      resto en mockup) y documenta la excepción de CI a la regla de Supabase
+      local.
 
 ### De paso, verificando que `ci.yml` y `deploy.yml` fueran a estar en verde
 
