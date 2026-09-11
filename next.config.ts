@@ -12,8 +12,19 @@ const nextConfig: NextConfig = {
    *
    * `next build` y `next start` corren con NODE_ENV=production y usan
    * `.next-build`; `next dev` se queda con `.next`.
+   *
+   * Excepción: en Vercel (`vercel build`, con `VERCEL=1` seteado por su propio
+   * entorno) también corre con NODE_ENV=production, pero su builder de
+   * Next.js busca el resultado siempre en `.next` — un `distDir` custom ahí
+   * rompe el deploy con "The Next.js output directory '.next' was not
+   * found". En Vercel se vuelve al default; la separación de directorios
+   * solo importa en local.
    */
-  distDir: process.env.NODE_ENV === "production" ? ".next-build" : ".next",
+  distDir: process.env.VERCEL
+    ? ".next"
+    : process.env.NODE_ENV === "production"
+      ? ".next-build"
+      : ".next",
 };
 
 export default withPWA({
