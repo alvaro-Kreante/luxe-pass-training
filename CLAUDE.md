@@ -350,6 +350,11 @@ Scripts y screenshots se guardan organizados en `scripts/playwright/`: lee `scri
 
 **Directorios de salida separados** (`distDir` en `next.config.ts`): `.next-build`
 para producción, `.next` para dev, para que un build no invalide el dev server.
+**Excepción en Vercel:** su builder de Next.js espera el resultado siempre en
+`.next`, así que `next.config.ts` vuelve al default cuando detecta `VERCEL=1`
+(seteada automáticamente por Vercel) — un `distDir` custom ahí rompe
+`vercel build` con "The Next.js output directory '.next' was not found". La
+separación de directorios solo aplica en local.
 
 **Antes de dar por roto algo de una pantalla, comprobar que el dev server sirve
 React**: `.next` puede quedarse sin `main-app.js`, y entonces la página **se ve
