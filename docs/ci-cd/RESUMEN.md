@@ -127,7 +127,13 @@ use en local.
       reales encontrados y arreglados, ver más abajo. Run en verde
       confirmado: `migrate-dev` completo (`supabase link` → `db push` →
       advisors → `vercel build` → `vercel deploy`).
-- [ ] Protección de rama configurada en GitHub (`main` y `staging`).
+- [ ] Protección de rama configurada en GitHub (`main` y `staging`) —
+      **bloqueado, no solo pendiente**: el repo es privado y tanto la API de
+      branch protection clásica como la de rulesets devuelven `403
+      "Upgrade to GitHub Pro or make this repository public to enable this
+      feature"` (confirmado 11-12 sept 2026). Hace falta plan de pago
+      (Pro/Team) o hacer el repo público — ninguna de las dos es una
+      decisión técnica. Detalle en `docs/PENDIENTES.md` §4.1.
 - [x] PR #1 (`chore/ci-cd-pipeline-setup` → `staging`) mergeado — `ci.yml` en
       verde completo, `deploy.yml` migró `luxepass-dev` de verdad.
 - [x] PR #2 (fix de `supabase db advisors --linked`, ver más abajo) mergeado
