@@ -123,7 +123,10 @@ use en local.
       proyecto correspondiente (`luxepass-dev` en `migrate-dev`,
       `luxepass-prod` en `migrate-prod`), usando `VERCEL_TOKEN`,
       `VERCEL_ORG_ID` y `VERCEL_PROJECT_ID_DEV`/`VERCEL_PROJECT_ID_PROD`.
-      Falta probarlo con un push real (Fase 8).
+- [x] Primer deploy real de punta a punta probado (11-12 sept 2026): 3 bugs
+      reales encontrados y arreglados, ver más abajo. Run en verde
+      confirmado: `migrate-dev` completo (`supabase link` → `db push` →
+      advisors → `vercel build` → `vercel deploy`).
 - [ ] Protección de rama configurada en GitHub (`main` y `staging`).
 - [x] PR #1 (`chore/ci-cd-pipeline-setup` → `staging`) mergeado — `ci.yml` en
       verde completo, `deploy.yml` migró `luxepass-dev` de verdad.
@@ -177,6 +180,61 @@ Nota aparte, sin acción: al reintentar el deploy tras el PR #2, un job falló
 una vez con "Failed to resolve latest Supabase CLI release: rate limit
 exceeded" (`supabase/setup-cli@v1` contra la API de GitHub) — transitorio,
 se resolvió solo con `gh run rerun --failed`.
+
+### Primer deploy real de punta a punta (11-12 sept 2026): 3 bugs reales, uno tapando al otro
+
+Al probar el release a Vercel con un push real, `migrate-dev` falló en tres
+puntos distintos y **secuenciales** — cada fix dejaba ver el siguiente bug,
+que ya estaba ahí pero era invisible porque el pipeline nunca llegaba tan
+lejos:
+
+- [x] **Credenciales de Supabase equivocadas.** `supabase link` fallaba con
+      `Authorization failed for the access token and project ref pair:
+      "Your account does not have the necessary privileges..."`. El
+      `SUPABASE_ACCESS_TOKEN` guardado en GitHub Secrets pertenecía a una
+      cuenta/organización sin relación con LuxePass (confirmado conectando
+      el MCP de Supabase: la sesión mostraba una organización ajena,
+      "Audio Docent", ninguna traza de `luxepass-dev`/`luxepass-prod`). Este
+      mismo token había migrado correctamente `luxepass-dev` y
+      `luxepass-prod` el 8-9 sept — dejó de tener privilegios en algún
+      punto entre el 9 y el 10 (revocado o regenerado, no hay forma de
+      confirmar la causa exacta sin el log de auditoría de la cuenta).
+      Arreglado generando un token nuevo desde la organización correcta
+      (`LuxePass Training`, confirmada vía MCP) y actualizando el secret.
+      `SUPABASE_DEV_PROJECT_REF`/`SUPABASE_PROD_PROJECT_REF` también se
+      sobreescribieron con los refs confirmados por el MCP
+      (`ymquzqwlmgylggjhepif`/`qtidqvduqtacdhuehjmq`) para descartar esa
+      variable — GitHub no permite leer el valor previo de un secret, solo
+      sobrescribirlo, así que no se pudo aislar si el ref ya estaba bien.
+- [x] **`distDir` custom rompía `vercel build`.** Con las credenciales ya
+      resueltas, el pipeline avanzó y falló en "Construir el proyecto":
+      `Error: The Next.js output directory ".next" was not found`.
+      `next.config.ts` fuerza `distDir: ".next-build"` cuando
+      `NODE_ENV === "production"` (para que un build local no invalide el
+      dev server, ver `CLAUDE.md`) — pero `vercel build` también corre con
+      `NODE_ENV=production`, así que heredaba ese mismo `distDir`, y el
+      builder de Vercel siempre espera el resultado en `.next` sin importar
+      el `distDir` configurado. Arreglado detectando `VERCEL=1` (variable
+      que Vercel setea automáticamente en su propio entorno de build) para
+      volver al default ahí — el comportamiento local no cambia. PR #7.
+- [x] **Next.js con vulnerabilidades críticas.** Con el build ya generando
+      `.next`, el pipeline llegó a `vercel deploy` y Vercel lo bloqueó:
+      `Error: Vulnerable version of Next.js detected, please update
+      immediately`. `npm audit` confirmó que `next@15.1.0` tenía 3
+      vulnerabilidades **críticas** (path traversal, deserialización
+      insegura, bypass de autorización en middleware) más varias
+      altas/moderadas (DoS, cache poisoning, SSRF). Arreglado con bump a
+      `next@15.5.25` (última estable en la misma major que resuelve todo lo
+      reportado para el paquete directo — queda un moderado transitivo vía
+      `postcss` que solo se arregla saltando a Next 16, fuera de alcance).
+      Verificado: `tsc`, `lint`, 586/586 tests y `build` en verde antes de
+      mergear. PR #8.
+
+Con los 3 arreglados, el run de `migrate-dev` completó todos sus pasos
+(`supabase link` → `db push` → advisors → `vercel build` → `vercel deploy`)
+sin intervención manual. **La Fase 8 (release a Vercel) queda confirmada de
+punta a punta en dev**, pendiente de repetir la confirmación en prod cuando
+se promueva `staging` → `main`.
 
 ## Decisiones que todavía faltan por tomar
 
