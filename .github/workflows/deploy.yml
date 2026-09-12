@@ -4,9 +4,11 @@ name: Deploy
 # pipeline enlaza proyectos remotos (`supabase link` + `db push`, sin
 # `--local`). Ningún desarrollador hace esto a mano en su máquina.
 #
-# El release a Vercel todavía no vive aquí — ver docs/ci-cd/RESUMEN.md y
-# GUIA-PASO-A-PASO.md (Fase 3-4 pendientes). Se añade a estos mismos jobs,
-# después del paso de migración, cuando esos proyectos existan.
+# El release a Vercel se dispara desde aquí, después de la migración —
+# nunca por el auto-deploy nativo de Vercel al detectar el push (desactivado
+# en ambos proyectos vía Ignored Build Step, ver docs/ci-cd/RESUMEN.md).
+# Así se garantiza el orden: migración de base de datos primero, código
+# nuevo después.
 
 on:
   push:
@@ -40,6 +42,23 @@ jobs:
       - name: Revisar advisors de seguridad/performance
         run: supabase db advisors --linked
         continue-on-error: true
+      - name: Instalar Vercel CLI
+        run: npm install --global vercel@latest
+      - name: Descargar configuración del proyecto luxepass-dev
+        run: vercel pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_DEV }}
+      - name: Construir el proyecto
+        run: vercel build --prod --token="${{ secrets.VERCEL_TOKEN }}"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_DEV }}
+      - name: Desplegar en Vercel (luxepass-dev)
+        run: vercel deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_DEV }}
 
   migrate-prod:
     if: github.ref == 'refs/heads/main'
@@ -60,3 +79,20 @@ jobs:
       - name: Revisar advisors de seguridad/performance
         run: supabase db advisors --linked
         continue-on-error: true
+      - name: Instalar Vercel CLI
+        run: npm install --global vercel@latest
+      - name: Descargar configuración del proyecto luxepass-prod
+        run: vercel pull --yes --environment=production --token="${{ secrets.VERCEL_TOKEN }}"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_PROD }}
+      - name: Construir el proyecto
+        run: vercel build --prod --token="${{ secrets.VERCEL_TOKEN }}"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_PROD }}
+      - name: Desplegar en Vercel (luxepass-prod)
+        run: vercel deploy --prebuilt --prod --token="${{ secrets.VERCEL_TOKEN }}"
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_PROD }}

@@ -242,6 +242,31 @@ fichas de App Store ni Google Play.
 
 ## 4. Infraestructura pendiente
 
+### 4.1 Protección de rama bloqueada por el plan de GitHub
+
+`docs/ci-cd/RESUMEN.md` trae desde el 8 sept 2026 el pendiente de configurar
+branch protection en `main` y `staging` (exigir que `ci.yml` pase antes de
+mergear, bloquear force-push). Al intentar activarla (11-12 sept 2026), tanto
+la API clásica de branch protection como la de rulesets (su reemplazo
+moderno) devuelven el mismo error:
+
+```
+403 — "Upgrade to GitHub Pro or make this repository public to enable this feature."
+```
+
+El repo (`luxe-pass-training`) es **privado**, y esa función no está
+disponible en el plan gratuito para repos privados — no es algo que se
+arregle con configuración, hace falta una de estas dos cosas:
+
+- Actualizar a GitHub Pro (o mover a una organización con plan Team), o
+- Hacer el repo público — probablemente no aceptable, es código de un
+  cliente (En Soleil).
+
+**Desbloquea:** que se decida cuál de las dos opciones tomar. Mientras
+tanto, no hay nada a nivel de GitHub que impida un push directo o un
+force-push a `main`/`staging` — la disciplina de usar PRs es solo
+convención, no está reforzada por la plataforma.
+
 ### 4.2 El `.next` de dev se vuelve a quedar sin `main-app.js`
 
 Pasó el 31 de agosto de 2026, **con los `distDir` ya separados**: el dev server

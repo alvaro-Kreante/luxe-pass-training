@@ -93,24 +93,47 @@ use en local.
       para probar todo este plan sin tocar `staging` directamente.
 - [x] Proyecto Supabase de dev/staging creado (`luxepass-dev`, 8 sept 2026).
 - [x] Proyecto Supabase de producción creado (`luxepass-prod`, 8 sept 2026).
-- [x] Primera aplicación del schema a `luxepass-dev` (8 sept 2026, confirmada
-      en el run de `deploy.yml`: las 2 migraciones se aplicaron). Falta la de
-      `luxepass-prod`, que llega con el PR `staging` → `main`.
-- [ ] Cuenta de Vercel creada.
-- [ ] Proyecto de Vercel "dev" creado (trackeando `staging`).
-- [ ] Proyecto de Vercel "prod" creado (trackeando `main`).
-- [ ] Variables de entorno configuradas en cada proyecto de Vercel.
-- [x] Secrets configurados en GitHub (8 sept 2026): `SUPABASE_ACCESS_TOKEN`,
+- [x] Primera aplicación del schema a `luxepass-dev` **y** `luxepass-prod` (8
+      sept 2026, confirmada en los runs de `deploy.yml`: las 2 migraciones se
+      aplicaron en ambos). `db advisors --linked` corrió contra los dos:
+      mismos warnings ya conocidos y deliberados de `login_attempts`/
+      `email_exists` (RPC `SECURITY DEFINER` para `anon`/`authenticated`).
+- [x] Cuenta de Vercel creada.
+- [x] Proyecto de Vercel `luxepass-dev` creado (trackeando `staging`).
+- [x] Proyecto de Vercel `luxepass-prod` creado (trackeando `main`).
+- [x] Variables de entorno configuradas en cada proyecto de Vercel
+      (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
+      como Config, no Secret — apuntando cada uno a su Supabase
+      correspondiente). Auto-deploy en push desactivado en ambos
+      (Settings → Git → Ignored Build Step → `exit 0`), el deploy lo
+      disparará `deploy.yml` desde GitHub Actions.
+- [x] Secrets configurados en GitHub: `SUPABASE_ACCESS_TOKEN`,
       `SUPABASE_DEV_PROJECT_REF`, `SUPABASE_DEV_DB_PASSWORD`,
-      `SUPABASE_PROD_PROJECT_REF`, `SUPABASE_PROD_DB_PASSWORD`.
+      `SUPABASE_PROD_PROJECT_REF`, `SUPABASE_PROD_DB_PASSWORD` (8 sept 2026);
+      `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID_DEV`,
+      `VERCEL_PROJECT_ID_PROD` (10 sept 2026).
 - [x] `.github/workflows/ci.yml` creado (8 sept 2026) — lint, `tsc --noEmit`,
       tests (levanta Supabase local en el runner) y build, en 4 jobs
       paralelos. Corre en PR y push a `staging`/`main`.
-- [x] `.github/workflows/deploy.yml` creado (8 sept 2026) — **solo la parte de
-      migraciones a Supabase remoto** (`supabase link` + `db push` a dev/prod
-      según la rama). El release a Vercel se añade a los mismos jobs cuando
-      existan esos proyectos (Fase 3-4).
-- [ ] Protección de rama configurada en GitHub (`main` y `staging`).
+- [x] `.github/workflows/deploy.yml` creado (8 sept 2026) — migraciones a
+      Supabase remoto (`supabase link` + `db push` a dev/prod según la
+      rama). Ampliado (10 sept 2026) con el release a Vercel: tras la
+      migración, cada job instala el CLI de Vercel y corre `vercel pull` +
+      `vercel build --prod` + `vercel deploy --prebuilt --prod` contra el
+      proyecto correspondiente (`luxepass-dev` en `migrate-dev`,
+      `luxepass-prod` en `migrate-prod`), usando `VERCEL_TOKEN`,
+      `VERCEL_ORG_ID` y `VERCEL_PROJECT_ID_DEV`/`VERCEL_PROJECT_ID_PROD`.
+- [x] Primer deploy real de punta a punta probado (11-12 sept 2026): 3 bugs
+      reales encontrados y arreglados, ver más abajo. Run en verde
+      confirmado: `migrate-dev` completo (`supabase link` → `db push` →
+      advisors → `vercel build` → `vercel deploy`).
+- [ ] Protección de rama configurada en GitHub (`main` y `staging`) —
+      **bloqueado, no solo pendiente**: el repo es privado y tanto la API de
+      branch protection clásica como la de rulesets devuelven `403
+      "Upgrade to GitHub Pro or make this repository public to enable this
+      feature"` (confirmado 11-12 sept 2026). Hace falta plan de pago
+      (Pro/Team) o hacer el repo público — ninguna de las dos es una
+      decisión técnica. Detalle en `docs/PENDIENTES.md` §4.1.
 - [x] PR #1 (`chore/ci-cd-pipeline-setup` → `staging`) mergeado — `ci.yml` en
       verde completo, `deploy.yml` migró `luxepass-dev` de verdad.
 - [x] PR #2 (fix de `supabase db advisors --linked`, ver más abajo) mergeado
@@ -118,10 +141,13 @@ use en local.
       ambos ya conocidos y deliberados (`email_exists` y `check_login_lock`
       como `SECURITY DEFINER` anti-enumeración, ver Story 1.1/1.2 en
       `docs/PENDIENTES.md` §Resueltos) — no son nuevos, no requieren acción.
-- [ ] Falta probar el PR `staging` → `main` para confirmar la migración a
-      `luxepass-prod` (Fase 8 de la guía).
-- [ ] `CLAUDE.md` actualizado: quitar/matizar §"Alcance: SOLO frontend" y
-      documentar la excepción de CI a la regla de Supabase local.
+- [x] PR #4 (`staging` → `main`) mergeado — confirmada la migración real a
+      `luxepass-prod`. **El ciclo completo de Supabase por CI (Fase 8) está
+      probado de punta a punta, en dev y en producción.**
+- [x] `CLAUDE.md` actualizado (9a12c58, 10 sept 2026): §"Alcance" ahora
+      describe la fase de backend real parcial (Epic 1 conectado a Supabase,
+      resto en mockup) y documenta la excepción de CI a la regla de Supabase
+      local.
 
 ### De paso, verificando que `ci.yml` y `deploy.yml` fueran a estar en verde
 
@@ -160,6 +186,61 @@ Nota aparte, sin acción: al reintentar el deploy tras el PR #2, un job falló
 una vez con "Failed to resolve latest Supabase CLI release: rate limit
 exceeded" (`supabase/setup-cli@v1` contra la API de GitHub) — transitorio,
 se resolvió solo con `gh run rerun --failed`.
+
+### Primer deploy real de punta a punta (11-12 sept 2026): 3 bugs reales, uno tapando al otro
+
+Al probar el release a Vercel con un push real, `migrate-dev` falló en tres
+puntos distintos y **secuenciales** — cada fix dejaba ver el siguiente bug,
+que ya estaba ahí pero era invisible porque el pipeline nunca llegaba tan
+lejos:
+
+- [x] **Credenciales de Supabase equivocadas.** `supabase link` fallaba con
+      `Authorization failed for the access token and project ref pair:
+      "Your account does not have the necessary privileges..."`. El
+      `SUPABASE_ACCESS_TOKEN` guardado en GitHub Secrets pertenecía a una
+      cuenta/organización sin relación con LuxePass (confirmado conectando
+      el MCP de Supabase: la sesión mostraba una organización ajena,
+      "Audio Docent", ninguna traza de `luxepass-dev`/`luxepass-prod`). Este
+      mismo token había migrado correctamente `luxepass-dev` y
+      `luxepass-prod` el 8-9 sept — dejó de tener privilegios en algún
+      punto entre el 9 y el 10 (revocado o regenerado, no hay forma de
+      confirmar la causa exacta sin el log de auditoría de la cuenta).
+      Arreglado generando un token nuevo desde la organización correcta
+      (`LuxePass Training`, confirmada vía MCP) y actualizando el secret.
+      `SUPABASE_DEV_PROJECT_REF`/`SUPABASE_PROD_PROJECT_REF` también se
+      sobreescribieron con los refs confirmados por el MCP
+      (`ymquzqwlmgylggjhepif`/`qtidqvduqtacdhuehjmq`) para descartar esa
+      variable — GitHub no permite leer el valor previo de un secret, solo
+      sobrescribirlo, así que no se pudo aislar si el ref ya estaba bien.
+- [x] **`distDir` custom rompía `vercel build`.** Con las credenciales ya
+      resueltas, el pipeline avanzó y falló en "Construir el proyecto":
+      `Error: The Next.js output directory ".next" was not found`.
+      `next.config.ts` fuerza `distDir: ".next-build"` cuando
+      `NODE_ENV === "production"` (para que un build local no invalide el
+      dev server, ver `CLAUDE.md`) — pero `vercel build` también corre con
+      `NODE_ENV=production`, así que heredaba ese mismo `distDir`, y el
+      builder de Vercel siempre espera el resultado en `.next` sin importar
+      el `distDir` configurado. Arreglado detectando `VERCEL=1` (variable
+      que Vercel setea automáticamente en su propio entorno de build) para
+      volver al default ahí — el comportamiento local no cambia. PR #7.
+- [x] **Next.js con vulnerabilidades críticas.** Con el build ya generando
+      `.next`, el pipeline llegó a `vercel deploy` y Vercel lo bloqueó:
+      `Error: Vulnerable version of Next.js detected, please update
+      immediately`. `npm audit` confirmó que `next@15.1.0` tenía 3
+      vulnerabilidades **críticas** (path traversal, deserialización
+      insegura, bypass de autorización en middleware) más varias
+      altas/moderadas (DoS, cache poisoning, SSRF). Arreglado con bump a
+      `next@15.5.25` (última estable en la misma major que resuelve todo lo
+      reportado para el paquete directo — queda un moderado transitivo vía
+      `postcss` que solo se arregla saltando a Next 16, fuera de alcance).
+      Verificado: `tsc`, `lint`, 586/586 tests y `build` en verde antes de
+      mergear. PR #8.
+
+Con los 3 arreglados, el run de `migrate-dev` completó todos sus pasos
+(`supabase link` → `db push` → advisors → `vercel build` → `vercel deploy`)
+sin intervención manual. **La Fase 8 (release a Vercel) queda confirmada de
+punta a punta en dev**, pendiente de repetir la confirmación en prod cuando
+se promueva `staging` → `main`.
 
 ## Decisiones que todavía faltan por tomar
 
