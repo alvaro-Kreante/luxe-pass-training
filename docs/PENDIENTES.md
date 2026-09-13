@@ -312,53 +312,6 @@ aporta.
 **Desbloquea:** que el Epic 2 cierre el App shell (patrón 3) y los flujos
 multi-pantalla dejen de cambiar de forma. Ahí un e2e por historia empieza a pagar.
 
-### 4.4 Auth Hook "Send Email" (Brevo) — registro manual pendiente en dev/prod
-
-Story 1.1/1.2 (rama `feat/brevo-email-hook`, 13 sept 2026): el envío de email
-de confirmación/recovery pasó de SMTP simulado (Inbucket/Mailpit local) a un
-Auth Hook que llama a la Edge Function `supabase/functions/send-email`, la
-cual despacha vía Brevo. Funciona en local (`supabase start`); en
-`luxepass-dev`/`luxepass-prod` falta un paso manual **a propósito**: se
-decidió no automatizar el registro del hook vía `supabase config push` porque
-ese comando sincroniza *todo* `config.toml` contra el proyecto remoto (no solo
-el hook), con riesgo de pisar `site_url`, redirect URLs u otra config de Auth
-que solo exista en el dashboard.
-
-**Runbook, una vez por proyecto (dev, luego prod):**
-
-1. Cargar en GitHub Secrets: `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`,
-   `BREVO_SENDER_NAME` (compartidos dev/prod — un solo token de Brevo),
-   `APP_URL_DEV`/`APP_URL_PROD` (la URL pública de cada deploy de Vercel —
-   la function la necesita para armar el link de `/auth/confirm`, no se
-   puede derivar del payload del hook, ver bug #2 más abajo) y
-   `SEND_EMAIL_HOOK_SECRET_DEV`/`SEND_EMAIL_HOOK_SECRET_PROD` (vacíos por
-   ahora, se rellenan en el paso 3).
-2. Push a `staging` (o `main`) dispara `deploy.yml`, que ya despliega
-   `send-email` (`supabase functions deploy send-email --no-verify-jwt`) —
-   necesaria antes del paso 3 porque el dashboard tiene que poder apuntar a
-   algo que ya existe.
-3. En el dashboard del proyecto (`Authentication` → `Hooks` → `Send Email`):
-   crear un hook tipo HTTP apuntando a
-   `https://<project-ref>.supabase.co/functions/v1/send-email`. El dashboard
-   genera el secreto de firma — copiarlo.
-4. Pegar ese secreto como `SEND_EMAIL_HOOK_SECRET_DEV`/`_PROD` en GitHub
-   Secrets. El siguiente push a esa rama lo empuja a la function vía
-   `supabase secrets set` (ya en `deploy.yml`).
-5. **Subir el rate limit de envío de email** en el mismo dashboard:
-   `Authentication → Rate Limits → Rate limit for sending emails`. Viene en
-   2/hora por defecto en un proyecto nuevo y **aplica aunque el envío real
-   vaya por Brevo** (no es el mailer nativo el que lo dispara, es un límite
-   general del endpoint de Auth) — sin este paso, el forgot-password (y el
-   resend de confirmación) fallan silenciosamente después de un par de
-   pruebas: nada en los logs de la function, el hook nunca se invoca. Para
-   `luxepass-dev` ya se subió (ver `docs/ci-cd/RESUMEN.md`, bug #4); para
-   `luxepass-prod` el valor lo define quien conozca el tráfico esperado, no
-   es una decisión técnica.
-
-**Desbloquea:** que alguien con acceso a los dashboards de `luxepass-dev` y
-`luxepass-prod` y a los secrets de GitHub del repo haga los 5 pasos. Detalle
-completo del wiring de CI en `docs/ci-cd/RESUMEN.md`.
-
 ---
 
 ## 5. Decisiones abiertas
@@ -449,3 +402,9 @@ de la tarifa de no-show.
 | `package-lock.json` nunca se subió al repo (estaba en `.gitignore` desde el scaffolding inicial) | 8 sept 2026 | `npm ci` fallaba en CI con "Dependencies lock file is not found" — quitado del `.gitignore` y versionado el lockfile |
 | El job `build` de CI fallaba prerrenderizando `/forgot-password` ("URL and API key are required"); el job `test` parseaba `supabase status` como texto y el CLI cambió a tabla Unicode + JSON con claves nuevas | 8 sept 2026 | `build` recibe `NEXT_PUBLIC_SUPABASE_*` con un valor no vacío (no hace red en el prerender); extracción de credenciales del `test` cambiada a `supabase status -o json` con los paths correctos (`API_URL`, `PUBLISHABLE_KEY`, `SECRET_KEY`) |
 | `deploy.yml` migró `luxepass-dev` bien, pero `supabase db advisors` fallaba con ECONNREFUSED | 8 sept 2026 | Sin `--linked`, revisa la base local (que no existe en ese job) en vez del proyecto remoto recién enlazado. Con el fix, corrió contra `luxepass-dev` de verdad: 2 warnings de `SECURITY DEFINER` en `email_exists`/`check_login_lock`, ambos ya conocidos y deliberados (ver filas de Story 1.1/1.2 arriba) |
+| Story 1.1/1.2 mandaban el email de confirmación/recovery por el SMTP simulado (Inbucket/Mailpit), sin entrega real | 13 sept 2026 | Auth Hook `send_email` (`config.toml`) + Edge Function `supabase/functions/send-email`, que despacha vía Brevo. Subject con prefijo de ambiente (`[LOCAL]`/`[STAGING]`/`[PROD]`, secret `APP_ENV`). Probado de punta a punta (signup + forgot-password, email real) en local, `luxepass-dev` y `luxepass-prod`. Detalle en `docs/ci-cd/RESUMEN.md` y `CLAUDE.md` §Envío de email transaccional |
+| El signup en local daba `422 Failed to reach hook within maximum time of 5.000000 seconds` | 13 sept 2026 | `uri` de `[auth.hook.send_email]` tenía el puerto *default* de Supabase (`54321`, copiado literal de la doc) en vez del puerto real de este proyecto (`54331`, `[api] port`) |
+| El link de confirmación del correo apuntaba a `127.0.0.1:54331` (el API de Supabase) en vez del dev server de Next | 13 sept 2026 | `email_data.site_url` del payload del hook no es `auth.site_url` — la function ahora usa su propio secret `APP_URL`, explícito por ambiente |
+| El primer deploy real de `send-email` a `luxepass-dev` fallaba en `supabase db push` con `Invalid hook config: ... secrets must be formatted as v1,whsec_...` | 13 sept 2026 | El CLI valida todo `config.toml` en cualquier comando, no solo en los pasos que tocan la function — `SEND_EMAIL_HOOK_SECRET_DEV`/`_PROD` añadidos también al `env:` de cada job de `deploy.yml` (antes solo se pasaban a `supabase secrets set`, un mecanismo distinto) |
+| El forgot-password no llegaba ni en `luxepass-dev` ni en `luxepass-prod`, sin nada en los logs de la function | 13 sept 2026 | `Authentication → Rate Limits → Rate limit for sending emails` viene en 2/hora por defecto y aplica aunque el envío real vaya por Brevo — subido a mano en ambos dashboards |
+| Signup/login en `luxepass-prod` daban `Invalid API key` ("might be owned by another Supabase project") | 13 sept 2026 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` en el proyecto de Vercel `luxepass-prod` estaba desactualizada (no relacionado al trabajo de Brevo, ya estaba mal desde antes). Diagnosticado comparando el bundle JS de producción contra `supabase projects api-keys --project-ref` (de solo lectura). Corregida la env var en Vercel + redeploy manual (`gh workflow run deploy.yml --ref main`, necesario porque `NEXT_PUBLIC_*` se hornea en build time) |

@@ -531,7 +531,17 @@ simulado de Supabase (Inbucket/Mailpit) — Auth llama al Hook `send_email`
   nunca vía `supabase config push`, que sincroniza *todo* `config.toml`
   contra el proyecto remoto (no solo el hook) y arriesga pisar `site_url`,
   redirect URLs u otra config de Auth puesta a mano en el dashboard.
-  Runbook completo (orden de pasos, secrets de GitHub a cargar) en
-  `docs/PENDIENTES.md` §4.4; wiring de CI (`supabase functions deploy` +
-  `supabase secrets set`, en `.github/workflows/deploy.yml`) en
-  `docs/ci-cd/RESUMEN.md`.
+  Ya hecho para `luxepass-dev` y `luxepass-prod`; detalle del rollout
+  (orden de pasos, secrets de GitHub, los 4 bugs reales que salieron en el
+  camino) en `docs/ci-cd/RESUMEN.md` y `docs/PENDIENTES.md` → Resueltos.
+  Wiring de CI (`supabase functions deploy` + `supabase secrets set`) en
+  `.github/workflows/deploy.yml`.
+- **Rate limit de Auth: también a mano, por proyecto remoto.** Un proyecto
+  Supabase nuevo trae `Authentication → Rate Limits → Rate limit for
+  sending emails` en 2/hora por defecto, y ese límite **aplica aunque el
+  envío real vaya por el Hook a Brevo** — no es el mailer nativo el que lo
+  dispara, es un límite general del endpoint de Auth. Sin subirlo, el
+  signup funciona un par de veces y luego el resto de flujos (recovery,
+  resend) fallan en silencio: nada en los logs de la function, el hook ni
+  se invoca. Súbelo junto con el registro del hook, antes de dar por
+  probado un ambiente nuevo.

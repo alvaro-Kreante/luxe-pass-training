@@ -154,15 +154,23 @@ use en local.
       vez del SMTP simulado): `supabase secrets set` + `supabase functions
       deploy send-email --no-verify-jwt`, en ambos jobs, justo después de
       `db advisors`.
-- [ ] Secrets nuevos en GitHub para lo anterior (ver checklist abajo) —
-      **pendiente de que el usuario los cargue**, yo no tengo acceso a
-      GitHub Secrets.
-- [ ] Registro del Auth Hook "Send Email" en los dashboards de
-      `luxepass-dev`/`luxepass-prod` — **decisión explícita: manual, no vía
-      `supabase config push`** (ese comando sincroniza *todo* `config.toml`
-      contra el proyecto remoto, no solo el hook — riesgo de pisar `site_url`,
-      redirect URLs u otra config de Auth ya puesta a mano en el dashboard).
-      Runbook en `docs/PENDIENTES.md`.
+- [x] Secrets nuevos en GitHub cargados por el usuario (13 sept 2026):
+      `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME`,
+      `APP_URL_DEV`, `APP_URL_PROD`, `SEND_EMAIL_HOOK_SECRET_DEV`,
+      `SEND_EMAIL_HOOK_SECRET_PROD`.
+- [x] Registro del Auth Hook "Send Email" hecho a mano en los dashboards de
+      `luxepass-dev` y `luxepass-prod` (13 sept 2026) — **decisión
+      explícita: manual, no vía `supabase config push`** (ese comando
+      sincroniza *todo* `config.toml` contra el proyecto remoto, no solo el
+      hook — riesgo de pisar `site_url`, redirect URLs u otra config de Auth
+      ya puesta a mano en el dashboard).
+- [x] Rate limit de envío de email subido a mano en ambos dashboards (bug
+      #4 abajo) — sin esto el hook nunca se invocaba pasadas las primeras
+      pruebas.
+- [x] Probado de punta a punta con email real (Brevo) en `luxepass-dev` y en
+      `luxepass-prod`: signup, confirmación y forgot-password, los tres
+      funcionando (13 sept 2026). PRs #12, #13, #14 (`staging`) y #15
+      (`staging` → `main`).
 
 #### Secrets de GitHub a añadir para `send-email` (13 sept 2026)
 
@@ -183,7 +191,7 @@ al crear el hook:
 `APP_ENV` (`STAGING`/`PROD`) no es secret — va literal en `deploy.yml`, cada job
 con el suyo. En local es `APP_ENV=LOCAL` en `supabase/functions/.env`.
 
-#### Cuatro bugs reales encontrados llevando esto a producción (13 sept 2026)
+#### Cinco bugs reales encontrados llevando esto a producción (13 sept 2026)
 
 1. **Puerto equivocado en el hook.** `uri` del `[auth.hook.send_email]` tenía
    `host.docker.internal:54321` (el puerto *default* de Supabase, copiado
@@ -225,10 +233,21 @@ con el suyo. En local es `APP_ENV=LOCAL` en `supabase/functions/.env`.
    `[auth.rate_limit]`) — ahí sí tiene efecto, cosa que el comentario
    original de Story 1.1 no anticipaba ("sin efecto en producción"). Se
    subió a mano en el dashboard de `luxepass-dev` (no vía `config push`,
-   mismo motivo que el hook) y el forgot-password funcionó. **Pendiente:
-   subir el mismo límite en `luxepass-prod`** antes de probar ahí — el valor
-   para prod es una decisión de tráfico esperado, no técnica, ver
-   `docs/PENDIENTES.md` §4.4.
+   mismo motivo que el hook) y el forgot-password funcionó. Repetido en
+   `luxepass-prod` — mismo síntoma, mismo arreglo, confirmado con email real.
+5. **`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` de Vercel `luxepass-prod`
+   desactualizada — "Invalid API key" en signup/login.** No es un bug de
+   este trabajo (la variable se configuró el 10 sept, antes de todo esto),
+   pero salió a la luz probando el flujo completo en prod por primera vez.
+   La URL (`NEXT_PUBLIC_SUPABASE_URL`) apuntaba bien al proyecto correcto;
+   la key publicable horneada en el build no coincidía con ninguna key
+   vigente de `luxepass-prod` — probablemente rotada en Supabase sin
+   actualizar Vercel. Diagnosticado comparando el bundle JS servido en
+   producción (`curl` + `grep` del chunk que arma el cliente de Supabase)
+   contra `supabase projects api-keys --project-ref <ref>` (de solo lectura,
+   no requiere `supabase link`). Arreglo: actualizar la env var en Vercel +
+   redeploy (`gh workflow run deploy.yml --ref main`, ya que `NEXT_PUBLIC_*`
+   se hornea en build time — cambiar la env var sola no alcanza).
 
 ### De paso, verificando que `ci.yml` y `deploy.yml` fueran a estar en verde
 
