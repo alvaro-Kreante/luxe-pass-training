@@ -40,6 +40,8 @@ La app en producción de En Soleil vive en `app.luxepass.co`; si este repo la re
 
 Ejemplo ya hecho de patrón mockup (epics aún no conectados): datos de muestra en constantes de componente para simular estados de red/servidor. Ejemplo ya hecho de patrón backend real: Story 1.1/1.2 contra Supabase local/remoto (ver `src/lib/supabase/`, `src/lib/authentication.ts`, `src/lib/registration.ts`). **La regla para una historia sin backend es que la pantalla llegue a mostrar el estado, no que el estado sea real; para una historia conectada a Supabase, el estado sí es real.**
 
+**Envío de email real (Story 1.1/1.2):** desde sept 2026, el email de confirmación/recovery ya no es un SMTP simulado — va vía Brevo, disparado por un Supabase Auth Hook (`send_email`) que invoca la Edge Function `supabase/functions/send-email`. Es la excepción viva a la regla "❌ Server Actions o fetch a servicios externos" de arriba: aplica porque Epic 1 **sí** está conectado a Supabase. Detalle completo en "Supabase Local Development" §Envío de email transaccional.
+
 ---
 
 ## Estado de implementación
@@ -322,6 +324,7 @@ Estos tokens están replicados en el código como **CSS custom properties** en `
 - **class-variance-authority** — variantes de componente
 - **Recharts** — gráficos (`components/charts/`: BarChart, LineChart), para Epic 7 y 8
 - **@ducanh2912/next-pwa** — service worker
+- **Brevo** — envío de email transaccional real (confirmación, recovery de Story 1.1/1.2), vía Supabase Auth Hook `send_email` + Edge Function `supabase/functions/send-email`. Detalle en "Supabase Local Development" §Envío de email transaccional
 - **Vitest + Testing Library** — tests sobre jsdom, con `next/navigation` mockeado
 - **Playwright** — navegador automatizado para verificación visual (uso puntual, no suite e2e masiva)
 
@@ -500,3 +503,35 @@ Antes de comitear una migración nueva (usar la skill `supabase` — ver tabla d
 - ❌ No editar archivos en `supabase/migrations/` a mano — los genera `db diff`
 - ❌ No comitear `supabase/.temp/` ni `supabase/.branches/` (ya en `supabase/.gitignore`)
 - ❌ No correr `supabase link` ni cambiar `schema_paths`/puertos en `config.toml` sin confirmación explícita
+
+### Envío de email transaccional (Auth Hook + Brevo)
+
+Desde Story 1.1/1.2, el email de confirmación y de recovery no usa el SMTP
+simulado de Supabase (Inbucket/Mailpit) — Auth llama al Hook `send_email`
+(`[auth.hook.send_email]` en `config.toml`), que invoca la Edge Function
+`supabase/functions/send-email`, la cual despacha el correo real vía Brevo.
+
+- **Secrets de la function** — nunca commitear: `supabase/functions/.env`
+  (gitignored vía el `.env` del `.gitignore` raíz), plantilla en
+  `supabase/functions/.env.example`. Incluye `BREVO_API_KEY`,
+  `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME`, `SEND_EMAIL_HOOK_SECRET`,
+  `APP_URL`, `APP_ENV`.
+- **`APP_URL` no es `auth.site_url` ni `email_data.site_url`** del payload
+  del hook — ese último campo resuelve al puerto del API de Supabase
+  (`127.0.0.1:54331` en local), no al dev server de Next. `APP_URL` es su
+  propio secret (`http://127.0.0.1:3000` en local); si `npm run dev` corre
+  en otro puerto en tu máquina, ajustarlo ahí y reiniciar Supabase.
+- **Regla del subject: prefijo de ambiente entre corchetes.** El asunto de
+  cada correo lleva `[LOCAL]`, `[STAGING]` o `[PROD]` según el secret
+  `APP_ENV` de esa function (`send-email/index.ts` lo antepone al subject de
+  cada plantilla) — así se distingue de un vistazo de qué ambiente vino un
+  correo de prueba. Nunca se pone a mano en Brevo ni en el template.
+- **Staging/prod:** el hook se registra **a mano**, una vez por proyecto
+  remoto, en su dashboard (`Authentication` → `Hooks` → `Send Email`) —
+  nunca vía `supabase config push`, que sincroniza *todo* `config.toml`
+  contra el proyecto remoto (no solo el hook) y arriesga pisar `site_url`,
+  redirect URLs u otra config de Auth puesta a mano en el dashboard.
+  Runbook completo (orden de pasos, secrets de GitHub a cargar) en
+  `docs/PENDIENTES.md` §4.4; wiring de CI (`supabase functions deploy` +
+  `supabase secrets set`, en `.github/workflows/deploy.yml`) en
+  `docs/ci-cd/RESUMEN.md`.
