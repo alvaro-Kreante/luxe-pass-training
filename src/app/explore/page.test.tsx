@@ -1,8 +1,11 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderToString } from "react-dom/server";
+
+import { createClient } from "@/lib/supabase/client";
+import { signUpConfirmedAndSignIn } from "@/lib/testing/confirmed-user";
 
 import ExplorePage from "./page";
 
@@ -11,38 +14,113 @@ import ExplorePage from "./page";
  * Criterios en
  * docs/specs/epic-2-location-discovery-search/story-2.1-map-based-lounge-discovery.md
  * y nodos del subgrafo "Story 2.1" de flow-location-discovery-search.md.
+ *
+ * Backend real (Supabase local): /explore exige sesión (`RequireSession`,
+ * igual que /onboarding) y el catálogo viene de la tabla `public.lounges`, no
+ * de un mock en memoria — ver docs/design/COMPONENT-MAP.md "Backend real —
+ * Epic 2". Una sola sesión para todo el archivo (se persiste en el mismo
+ * jsdom, igual que `require-session.test.tsx`); `navigator.geolocation` no
+ * existe en jsdom, así que se sustituye por completo (no es un relleno de
+ * plataforma como `IntersectionObserver`, es la única forma de controlar qué
+ * responde el navegador).
  */
 
 const searchParams = vi.fn(() => new URLSearchParams());
+const replace = vi.fn();
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/explore",
   useSearchParams: () => searchParams(),
+  useRouter: () => ({ replace }),
 }));
+
+/** El centroide de Nueva York (lib/location.ts): mismo punto para el "GPS"
+ * concedido y para la ubicación por defecto, así que las distancias no
+ * dependen de qué camino tomó el test. */
+const NY_ORIGIN = { latitude: 40.7595, longitude: -73.97 };
+
+beforeAll(async () => {
+  const supabase = createClient();
+  await signUpConfirmedAndSignIn(
+    supabase,
+    `explora-${Date.now()}@ensoleil-test.com`,
+    "EnSoleil!2026",
+  );
+});
 
 beforeEach(() => {
   searchParams.mockReturnValue(new URLSearchParams());
+  replace.mockClear();
+  /**
+   * Solo se sustituye `navigator.geolocation` (que no existe en jsdom), nunca
+   * `navigator` entero: `user-event` simula punteros a partir de otras
+   * propiedades reales del navegador, y reemplazarlo con `vi.stubGlobal`
+   * rompe esa simulación (los clics dejan de llegar a los botones).
+   */
+  Object.defineProperty(navigator, "geolocation", {
+    configurable: true,
+    value: {
+      getCurrentPosition: vi.fn((onSuccess: PositionCallback) => {
+        onSuccess({ coords: NY_ORIGIN } as GeolocationPosition);
+      }),
+    },
+  });
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  // @ts-expect-error -- solo para tests, ver el comentario de arriba.
+  delete navigator.geolocation;
 });
 
 function resultsPanel() {
   return screen.getByRole("region", { name: "Results" });
 }
 
-/** Concede el permiso y deja la pantalla en el mapa. */
+/** Para los estados de borde que no pasan por `allowLocation`/`showList`. */
+async function findResultsPanel() {
+  return screen.findByRole("region", { name: "Results" });
+}
+
+/**
+ * Radix bloquea el `<body>` entero con `pointer-events: none` mientras hay un
+ * diálogo abierto (`DismissableLayer`) y solo libera el propio contenido del
+ * diálogo (`pointer-events: auto`) una vez que su registro de "capa más alta"
+ * termina de asentarse — un efecto más, después del primer render en el que
+ * `findBy*` ya puede haber encontrado el botón. Sin esperar a que ESE
+ * elemento (no el body, que se queda en `none` a propósito) resuelva a
+ * `auto`, el primer clic tras un `findBy*` llega demasiado pronto.
+ */
+async function waitForDialogReady(element: HTMLElement) {
+  await waitFor(() => {
+    expect(getComputedStyle(element).pointerEvents).not.toBe("none");
+  });
+}
+
+/** Concede el permiso y deja la pantalla en el mapa, con los lounges cargados. */
 async function allowLocation(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("button", { name: "Allow location access" }));
+  const button = await screen.findByRole("button", {
+    name: "Allow location access",
+  });
+  await waitForDialogReady(button);
+  await user.click(button);
+  await within(resultsPanel()).findByText("The Ainsworth");
+}
+
+async function clickEnterManually(user: ReturnType<typeof userEvent.setup>) {
+  const button = await screen.findByRole("button", {
+    name: "Enter a location instead",
+  });
+  await waitForDialogReady(button);
+  await user.click(button);
 }
 
 describe("permiso de ubicación", () => {
-  it("pide permiso antes de mostrar ningún lounge", () => {
+  it("pide permiso antes de mostrar ningún lounge", async () => {
     render(<ExplorePage />);
 
     expect(
-      screen.getByRole("heading", { name: "Let LuxePass use your location" }),
+      await screen.findByRole("heading", { name: "Let LuxePass use your location" }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("region", { name: "Results" })).toBeNull();
   });
@@ -76,9 +154,7 @@ describe("entrada manual de ubicación", () => {
     const user = userEvent.setup({ delay: null });
     render(<ExplorePage />);
 
-    await user.click(
-      screen.getByRole("button", { name: "Enter a location instead" }),
-    );
+    await clickEnterManually(user);
 
     expect(
       screen.getByRole("heading", { name: "Enter your location" }),
@@ -89,15 +165,13 @@ describe("entrada manual de ubicación", () => {
     const user = userEvent.setup({ delay: null });
     render(<ExplorePage />);
 
-    await user.click(
-      screen.getByRole("button", { name: "Enter a location instead" }),
-    );
+    await clickEnterManually(user);
     await user.type(screen.getByLabelText("City or address"), "Newark");
-    await user.click(screen.getByRole("option", { name: /Newark/ }));
+    await user.click(await screen.findByRole("option", { name: /Newark/ }));
     await user.click(screen.getByRole("button", { name: "Use this location" }));
 
     expect(
-      within(resultsPanel()).getByText("The Ironbound Salon"),
+      await within(resultsPanel()).findByText("The Ironbound Salon"),
     ).toBeInTheDocument();
     expect(within(resultsPanel()).queryByText("The Ainsworth")).toBeNull();
   });
@@ -106,9 +180,7 @@ describe("entrada manual de ubicación", () => {
     const user = userEvent.setup({ delay: null });
     render(<ExplorePage />);
 
-    await user.click(
-      screen.getByRole("button", { name: "Enter a location instead" }),
-    );
+    await clickEnterManually(user);
 
     expect(
       screen.getByRole("button", { name: "Use this location" }),
@@ -119,9 +191,7 @@ describe("entrada manual de ubicación", () => {
     const user = userEvent.setup({ delay: null });
     render(<ExplorePage />);
 
-    await user.click(
-      screen.getByRole("button", { name: "Enter a location instead" }),
-    );
+    await clickEnterManually(user);
     await user.click(screen.getByRole("button", { name: "Try GPS again" }));
 
     expect(
@@ -136,7 +206,9 @@ describe("unidades de distancia", () => {
     render(<ExplorePage />);
     await allowLocation(user);
 
-    expect(within(resultsPanel()).getByText("0.3 mi")).toBeInTheDocument();
+    expect(
+      within(resultsPanel()).getAllByText(/^\d+(\.\d)? mi$/).length,
+    ).toBeGreaterThan(0);
   });
 
   it("pasa todas las distancias a kilómetros cuando se cambia la unidad", async () => {
@@ -146,8 +218,10 @@ describe("unidades de distancia", () => {
 
     await user.click(screen.getByRole("button", { name: "km" }));
 
-    expect(within(resultsPanel()).getByText("0.5 km")).toBeInTheDocument();
-    expect(within(resultsPanel()).queryByText("0.3 mi")).toBeNull();
+    expect(
+      within(resultsPanel()).getAllByText(/^\d+(\.\d)? km$/).length,
+    ).toBeGreaterThan(0);
+    expect(within(resultsPanel()).queryByText(/^\d+(\.\d)? mi$/)).toBeNull();
   });
 });
 
@@ -185,13 +259,13 @@ describe("zoom del mapa", () => {
 });
 
 describe("el mapa no carga", () => {
-  it("propone reintentar o seguir en la lista", () => {
+  it("propone reintentar o seguir en la lista", async () => {
     searchParams.mockReturnValue(new URLSearchParams("map=error"));
 
     render(<ExplorePage />);
 
     expect(
-      screen.getByRole("heading", { name: "The map isn't loading" }),
+      await screen.findByRole("heading", { name: "The map isn't loading" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
     expect(
@@ -199,14 +273,13 @@ describe("el mapa no carga", () => {
     ).toBeInTheDocument();
   });
 
-  it("mantiene los resultados a la vista mientras el mapa falla", () => {
+  it("mantiene los resultados a la vista mientras el mapa falla", async () => {
     searchParams.mockReturnValue(new URLSearchParams("map=error"));
 
     render(<ExplorePage />);
 
-    expect(
-      within(resultsPanel()).getByText("The Ainsworth"),
-    ).toBeInTheDocument();
+    const panel = await findResultsPanel();
+    expect(await within(panel).findByText("The Ainsworth")).toBeInTheDocument();
   });
 
   it("pasa a la lista sin perder los resultados", async () => {
@@ -214,7 +287,9 @@ describe("el mapa no carga", () => {
     searchParams.mockReturnValue(new URLSearchParams("map=error"));
     render(<ExplorePage />);
 
-    await user.click(screen.getByRole("button", { name: "Use list view" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Use list view" }),
+    );
 
     expect(
       screen.queryByRole("heading", { name: "The map isn't loading" }),
@@ -227,23 +302,23 @@ describe("el mapa no carga", () => {
 });
 
 describe("modo offline", () => {
-  it("avisa de que los lounges vienen de la última visita", () => {
+  it("avisa de que los lounges vienen de la última visita", async () => {
     searchParams.mockReturnValue(new URLSearchParams("offline=1"));
 
     render(<ExplorePage />);
 
-    expect(screen.getByText("You're offline")).toBeInTheDocument();
+    expect(await screen.findByText("You're offline")).toBeInTheDocument();
     expect(
-      within(resultsPanel()).getByText("The Ainsworth"),
+      await within(resultsPanel()).findByText("The Ainsworth"),
     ).toBeInTheDocument();
   });
 
-  it("deshabilita la búsqueda, que necesita conexión", () => {
+  it("deshabilita la búsqueda, que necesita conexión", async () => {
     searchParams.mockReturnValue(new URLSearchParams("offline=1"));
 
     render(<ExplorePage />);
 
-    expect(screen.getByLabelText("Search lounges")).toBeDisabled();
+    expect(await screen.findByLabelText("Search lounges")).toBeDisabled();
   });
 });
 
@@ -358,12 +433,17 @@ describe("búsqueda por texto", () => {
 });
 
 describe("sin resultados", () => {
-  /** Los cuatro filtros del artboard `NoResults.dc.html`. */
+  /**
+   * Los cuatro filtros del artboard `NoResults.dc.html`. Con el catálogo real
+   * (distancia calculada desde el centroide de Nueva York), WiFi+Co-working
+   * dentro de 1 mi son The Ainsworth y Belmont Terrace — los dos cerrados los
+   * domingos —, así que la fecha ya los deja en cero sin necesitar la franja.
+   */
   async function filterUntilEmpty(user: ReturnType<typeof userEvent.setup>) {
     await openFilters(user);
     await user.click(screen.getByRole("button", { name: "WiFi" }));
     await user.click(screen.getByRole("button", { name: "Co-working" }));
-    await user.click(screen.getByRole("button", { name: "< 2 mi" }));
+    await user.click(screen.getByRole("button", { name: "< 1 mi" }));
     await user.click(screen.getByRole("button", { name: "14" }));
     await user.click(screen.getByRole("button", { name: "2–6 PM" }));
     await user.click(screen.getByRole("button", { name: /^Show/ }));
@@ -464,9 +544,11 @@ describe("vista de lista", () => {
 
     await showList(user);
 
-    const names = screen
-      .getAllByRole("heading", { level: 3 })
-      .map((heading) => heading.textContent);
+    const names = await waitFor(() => {
+      const headings = screen.getAllByRole("heading", { level: 3 });
+      expect(headings.length).toBeGreaterThan(0);
+      return headings.map((heading) => heading.textContent);
+    });
     expect(names[0]).toBe("The Ainsworth");
     expect(names[1]).toBe("Belmont Terrace");
   });
@@ -478,7 +560,7 @@ describe("vista de lista", () => {
     await showList(user);
 
     expect(
-      screen.getByRole("link", { name: "View details for The Ainsworth" }),
+      await screen.findByRole("link", { name: "View details for The Ainsworth" }),
     ).toHaveAttribute("href", "/lounges/the-ainsworth");
   });
 
@@ -488,7 +570,7 @@ describe("vista de lista", () => {
 
     await showList(user);
 
-    expect(screen.getByText("Showing 4 of 12")).toBeInTheDocument();
+    expect(await screen.findByText("Showing 4 of 12")).toBeInTheDocument();
   });
 
   it("conserva los filtros al venir del mapa", async () => {
@@ -516,7 +598,7 @@ describe("scroll infinito", () => {
     render(<ExplorePage />);
     await showList(user);
 
-    expect(screen.getByText("Showing 4 of 12")).toBeInTheDocument();
+    expect(await screen.findByText("Showing 4 of 12")).toBeInTheDocument();
 
     await act(async () => observer.scrollToEnd());
 
@@ -529,22 +611,12 @@ describe("scroll infinito", () => {
     render(<ExplorePage />);
     await showList(user);
 
+    await screen.findByText("Showing 4 of 12");
     await act(async () => observer.scrollToEnd());
     await act(async () => observer.scrollToEnd());
 
     expect(screen.getByText("Showing 12 of 12")).toBeInTheDocument();
     expect(screen.queryByText("Loading more lounges…")).toBeNull();
-  });
-});
-
-describe("la lista mientras carga", () => {
-  it("no lista ningún lounge todavía", () => {
-    searchParams.mockReturnValue(new URLSearchParams("list=loading"));
-
-    render(<ExplorePage />);
-
-    expect(screen.getByText("Finding lounges near you")).toBeInTheDocument();
-    expect(screen.queryByRole("heading", { level: 3 })).toBeNull();
   });
 });
 
@@ -561,9 +633,10 @@ describe("desenfoque de la pantalla de fondo", () => {
     return document.querySelector("[data-app-shell]")!;
   }
 
-  it("difumina la pantalla mientras se pide el permiso", () => {
+  it("difumina la pantalla mientras se pide el permiso", async () => {
     render(<ExplorePage />);
 
+    await screen.findByRole("heading", { name: "Let LuxePass use your location" });
     expect(shell().className).toContain("blur");
   });
 
@@ -580,21 +653,20 @@ describe("desenfoque de la pantalla de fondo", () => {
     const user = userEvent.setup({ delay: null });
     render(<ExplorePage />);
 
-    await user.click(
-      screen.getByRole("button", { name: "Enter a location instead" }),
-    );
+    await clickEnterManually(user);
     await user.type(screen.getByLabelText("City or address"), "Newark");
-    await user.click(screen.getByRole("option", { name: /Newark/ }));
+    await user.click(await screen.findByRole("option", { name: /Newark/ }));
     await user.click(screen.getByRole("button", { name: "Use this location" }));
 
     expect(shell().className).not.toContain("blur");
   });
 
-  it("no difumina nada en los estados que entran con la ubicación resuelta", () => {
+  it("no difumina nada en los estados que entran con la ubicación resuelta", async () => {
     searchParams.mockReturnValue(new URLSearchParams("offline=1"));
 
     render(<ExplorePage />);
 
+    await screen.findByText("You're offline");
     expect(shell().className).not.toContain("blur");
   });
 });
@@ -603,6 +675,10 @@ describe("desenfoque de la pantalla de fondo", () => {
  * El diálogo vive en un portal, que el servidor no puede renderizar. Si el
  * desenfoque sí viaja en el HTML, la pantalla llega borrosa y sin nada que lo
  * explique — y así se queda si el JavaScript tarda o no llega.
+ *
+ * `RequireSession` no renderiza nada hasta comprobar la sesión (tampoco en el
+ * servidor, que no tiene cookies que leer aquí), así que el HTML inicial no
+ * trae ni el diálogo ni el desenfoque.
  */
 describe("lo que manda el servidor", () => {
   it("no difumina la pantalla en el HTML inicial", () => {

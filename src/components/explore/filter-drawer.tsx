@@ -13,7 +13,7 @@ import {
   isOpenOn,
   type Filters,
 } from "@/lib/filters";
-import type { Lounge } from "@/lib/lounges";
+import type { LoungeWithDistance } from "@/lib/lounge-directory";
 import { cn } from "@/lib/utils";
 
 /**
@@ -32,7 +32,7 @@ export function FilterDrawer({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  lounges: Lounge[];
+  lounges: LoungeWithDistance[];
   filters: Filters;
   onChange: (filters: Filters) => void;
 }) {

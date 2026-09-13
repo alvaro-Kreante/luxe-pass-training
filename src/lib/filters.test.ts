@@ -8,16 +8,147 @@ import {
   suggestionsToRecoverResults,
   type Filters,
 } from "./filters";
-import { LOUNGES, loungesIn } from "./lounges";
+import type { LoungeWithDistance } from "./lounge-directory";
 
 /**
  * Story 2.2 — Lounge Filtering & Search.
  * Criterios en
  * docs/specs/epic-2-location-discovery-search/story-2.2-lounge-filtering-search.md
  * El mismo pipeline sirve al mapa y a la lista (nota del flow).
+ *
+ * Fixture propio (ya no `lib/lounges.ts`, que sigue siendo el mock de
+ * Epic 3-9): los mismos 12 lounges de Nueva York que ya traía el catálogo de
+ * muestra, con `distanceMiles` ya calculada (como la deja `withDistance`) en
+ * vez de un campo fijo del mock.
  */
+function loungeFixture(
+  overrides: Partial<LoungeWithDistance> & Pick<LoungeWithDistance, "id">,
+): LoungeWithDistance {
+  return {
+    name: "",
+    neighborhood: "",
+    city: "New York",
+    cityId: "new-york",
+    lat: 0,
+    lng: 0,
+    amenities: [],
+    rating: 4.5,
+    openNow: true,
+    slotsToday: 1,
+    hours: "",
+    bands: [],
+    closedWeekdays: [],
+    featured: false,
+    distanceMiles: 0,
+    ...overrides,
+  };
+}
 
-const nearby = loungesIn("new-york");
+const nearby: LoungeWithDistance[] = [
+  loungeFixture({
+    id: "the-ainsworth",
+    name: "The Ainsworth",
+    neighborhood: "Midtown East",
+    amenities: ["wifi", "co-working", "lounge", "luggage-storage"],
+    distanceMiles: 0.3,
+    bands: ["morning", "afternoon", "evening"],
+    closedWeekdays: [0],
+  }),
+  loungeFixture({
+    id: "belmont-terrace",
+    name: "Belmont Terrace",
+    neighborhood: "Bryant Park",
+    amenities: ["wifi", "co-working", "luggage-storage"],
+    distanceMiles: 0.6,
+    bands: ["morning", "afternoon", "evening"],
+    closedWeekdays: [0],
+  }),
+  loungeFixture({
+    id: "aurelia-house",
+    name: "Aurelia House",
+    neighborhood: "NoMad",
+    amenities: ["wifi", "co-working", "spa", "day-rooms"],
+    distanceMiles: 0.9,
+    bands: ["morning", "afternoon"],
+    closedWeekdays: [0],
+  }),
+  loungeFixture({
+    id: "the-winslow-club",
+    name: "The Winslow Club",
+    neighborhood: "Flatiron",
+    amenities: ["wifi", "co-working", "day-rooms"],
+    distanceMiles: 1.2,
+    bands: ["morning", "afternoon", "evening"],
+    closedWeekdays: [0],
+  }),
+  loungeFixture({
+    id: "celeste-rooftop",
+    name: "Céleste Rooftop",
+    neighborhood: "Chelsea",
+    amenities: ["wifi", "lounge", "spa"],
+    distanceMiles: 1.6,
+    bands: ["afternoon", "evening"],
+  }),
+  loungeFixture({
+    id: "halcyon-reading-room",
+    name: "Halcyon Reading Room",
+    neighborhood: "Gramercy",
+    amenities: ["wifi", "lounge"],
+    distanceMiles: 2.1,
+    bands: ["morning", "afternoon"],
+    closedWeekdays: [1],
+  }),
+  loungeFixture({
+    id: "the-meridian-salon",
+    name: "The Meridian Salon",
+    neighborhood: "SoHo",
+    amenities: ["wifi", "lounge", "spa", "luggage-storage"],
+    distanceMiles: 2.8,
+    bands: ["afternoon", "evening"],
+  }),
+  loungeFixture({
+    id: "rue-lafayette-club",
+    name: "Rue Lafayette Club",
+    neighborhood: "West Village",
+    amenities: ["wifi", "co-working", "lounge"],
+    distanceMiles: 3.3,
+    bands: ["morning", "afternoon", "evening"],
+  }),
+  loungeFixture({
+    id: "the-cordelia",
+    name: "The Cordelia",
+    neighborhood: "Upper East Side",
+    amenities: ["wifi", "spa", "day-rooms", "luggage-storage"],
+    distanceMiles: 3.7,
+    bands: ["morning", "evening"],
+    closedWeekdays: [2],
+  }),
+  loungeFixture({
+    id: "sable-and-stone",
+    name: "Sable & Stone",
+    neighborhood: "Tribeca",
+    amenities: ["wifi", "co-working", "luggage-storage"],
+    distanceMiles: 4.1,
+    bands: ["morning", "afternoon"],
+  }),
+  loungeFixture({
+    id: "the-ellery-room",
+    name: "The Ellery Room",
+    neighborhood: "Murray Hill",
+    amenities: ["wifi", "lounge", "day-rooms"],
+    distanceMiles: 4.5,
+    bands: ["afternoon", "evening"],
+    closedWeekdays: [1],
+  }),
+  loungeFixture({
+    id: "verandah-no-9",
+    name: "Verandah No. 9",
+    neighborhood: "Hudson Yards",
+    amenities: ["wifi", "co-working", "spa", "lounge"],
+    distanceMiles: 4.9,
+    bands: ["morning", "afternoon", "evening"],
+  }),
+];
 
 function withFilters(partial: Partial<Filters>): Filters {
   return { ...EMPTY_FILTERS, ...partial };
@@ -201,8 +332,8 @@ describe("sugerencias cuando no hay resultados", () => {
 });
 
 describe("cuántos lounges devolvería un cambio", () => {
-  it("cuenta sobre el catálogo que se le pasa, no sobre el global", () => {
+  it("cuenta sobre el catálogo que se le pasa, no sobre un global fijo", () => {
     expect(countMatching(nearby, EMPTY_FILTERS)).toBe(nearby.length);
-    expect(countMatching(LOUNGES, EMPTY_FILTERS)).toBe(LOUNGES.length);
+    expect(countMatching(nearby.slice(0, 5), EMPTY_FILTERS)).toBe(5);
   });
 });

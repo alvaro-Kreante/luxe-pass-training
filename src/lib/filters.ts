@@ -7,7 +7,7 @@ import {
   type TimeBand,
 } from "./availability";
 import { formatDistanceBand, type DistanceUnit } from "./distance";
-import type { Lounge } from "./lounges";
+import type { LoungeWithDistance } from "./lounge-directory";
 
 /**
  * Story 2.2 — Lounge Filtering & Search.
@@ -47,7 +47,7 @@ export function hasActiveFilters(filters: Filters): boolean {
 }
 
 /** El buscador mira nombre, barrio, ciudad y amenities (criterio de la 2.2). */
-function matchesQuery(lounge: Lounge, query: string): boolean {
+function matchesQuery(lounge: LoungeWithDistance, query: string): boolean {
   const needle = query.trim().toLowerCase();
 
   if (needle === "") return true;
@@ -64,11 +64,14 @@ function matchesQuery(lounge: Lounge, query: string): boolean {
   return haystack.includes(needle);
 }
 
-export function isOpenOn(lounge: Lounge, date: string): boolean {
+export function isOpenOn(lounge: LoungeWithDistance, date: string): boolean {
   return !(lounge.closedWeekdays ?? []).includes(weekdayOf(date));
 }
 
-export function applyFilters(lounges: Lounge[], filters: Filters): Lounge[] {
+export function applyFilters(
+  lounges: LoungeWithDistance[],
+  filters: Filters,
+): LoungeWithDistance[] {
   return lounges.filter((lounge) => {
     if (!filters.amenities.every((id) => lounge.amenities.includes(id))) {
       return false;
@@ -91,7 +94,10 @@ export function applyFilters(lounges: Lounge[], filters: Filters): Lounge[] {
   });
 }
 
-export function countMatching(lounges: Lounge[], filters: Filters): number {
+export function countMatching(
+  lounges: LoungeWithDistance[],
+  filters: Filters,
+): number {
   return applyFilters(lounges, filters).length;
 }
 
@@ -148,7 +154,7 @@ export interface FilterSuggestion {
  * las cifras se cuentan de verdad y solo se ofrece lo que trae resultados.
  */
 export function suggestionsToRecoverResults(
-  lounges: Lounge[],
+  lounges: LoungeWithDistance[],
   filters: Filters,
 ): FilterSuggestion[] {
   if (countMatching(lounges, filters) > 0) return [];

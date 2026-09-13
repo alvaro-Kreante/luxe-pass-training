@@ -5,7 +5,7 @@ import { Crosshair, Minus, Plus } from "lucide-react";
 
 import { CityMapBase, MAP_VIEWBOX } from "./city-map-base";
 import { SunMark } from "./sun-mark";
-import type { Lounge } from "@/lib/lounges";
+import type { LoungeWithDistance } from "@/lib/lounge-directory";
 import { cn } from "@/lib/utils";
 
 /**
@@ -25,8 +25,10 @@ function percent(value: number, total: number) {
   return `${(value / total) * 100}%`;
 }
 
+export type MapLounge = LoungeWithDistance & { map?: { x: number; y: number } };
+
 export interface CityMapProps {
-  lounges: Lounge[];
+  lounges: MapLounge[];
   selectedId?: string;
   onSelect: (id: string) => void;
   /** El plano se apaga y los markers pierden el dorado (§5 "Mapa"). */

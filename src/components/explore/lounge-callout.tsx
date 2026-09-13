@@ -12,7 +12,7 @@ import {
   type DistanceUnit,
 } from "@/lib/distance";
 import { MAP_VIEWBOX } from "./city-map-base";
-import type { Lounge } from "@/lib/lounges";
+import type { MapLounge } from "./city-map";
 
 /**
  * Callout del lounge seleccionado sobre el mapa (Main.dc.html): card de 302px
@@ -29,7 +29,7 @@ export function LoungeCallout({
   lounge,
   unit,
 }: {
-  lounge: Lounge;
+  lounge: MapLounge;
   unit: DistanceUnit;
 }) {
   if (!lounge.map) return null;
