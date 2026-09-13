@@ -148,6 +148,58 @@ use en local.
       describe la fase de backend real parcial (Epic 1 conectado a Supabase,
       resto en mockup) y documenta la excepción de CI a la regla de Supabase
       local.
+- [x] `.github/workflows/deploy.yml` ampliado (13 sept 2026, rama
+      `feat/brevo-email-hook`) con el despliegue de la Edge Function
+      `send-email` (Story 1.1/1.2 — envío de email transaccional vía Brevo en
+      vez del SMTP simulado): `supabase secrets set` + `supabase functions
+      deploy send-email --no-verify-jwt`, en ambos jobs, justo después de
+      `db advisors`.
+- [ ] Secrets nuevos en GitHub para lo anterior (ver checklist abajo) —
+      **pendiente de que el usuario los cargue**, yo no tengo acceso a
+      GitHub Secrets.
+- [ ] Registro del Auth Hook "Send Email" en los dashboards de
+      `luxepass-dev`/`luxepass-prod` — **decisión explícita: manual, no vía
+      `supabase config push`** (ese comando sincroniza *todo* `config.toml`
+      contra el proyecto remoto, no solo el hook — riesgo de pisar `site_url`,
+      redirect URLs u otra config de Auth ya puesta a mano en el dashboard).
+      Runbook en `docs/PENDIENTES.md`.
+
+#### Secrets de GitHub a añadir para `send-email` (13 sept 2026)
+
+Un solo token de Brevo compartido entre dev y prod (decisión del usuario);
+el secreto del Auth Hook si es por proyecto, porque lo genera cada dashboard
+al crear el hook:
+
+| Secret | Alcance | Valor |
+|---|---|---|
+| `BREVO_API_KEY` | Repo (compartido) | API key de Brevo (`app.brevo.com` → SMTP & API → API Keys) |
+| `BREVO_SENDER_EMAIL` | Repo (compartido) | Remitente verificado en Brevo |
+| `BREVO_SENDER_NAME` | Repo (compartido) | p. ej. `LuxePass` |
+| `SEND_EMAIL_HOOK_SECRET_DEV` | Repo | Lo genera el dashboard de `luxepass-dev` al crear el hook (Authentication → Hooks → Send Email) |
+| `SEND_EMAIL_HOOK_SECRET_PROD` | Repo | Igual, pero en `luxepass-prod` |
+| `APP_URL_DEV` | Repo | URL pública del deploy de Vercel que trackea `staging` (`luxepass-dev`) |
+| `APP_URL_PROD` | Repo | URL pública del deploy de Vercel que trackea `main` (`luxepass-prod`) |
+
+`APP_ENV` (`STAGING`/`PROD`) no es secret — va literal en `deploy.yml`, cada job
+con el suyo. En local es `APP_ENV=LOCAL` en `supabase/functions/.env`.
+
+#### Dos bugs reales encontrados probando el signup en local (13 sept 2026)
+
+1. **Puerto equivocado en el hook.** `uri` del `[auth.hook.send_email]` tenía
+   `host.docker.internal:54321` (el puerto *default* de Supabase, copiado
+   literal de la documentación) en vez de `54331` (el puerto real de este
+   proyecto, `[api] port` en `config.toml`). Síntoma: `422 Failed to reach
+   hook within maximum time of 5.000000 seconds` en el signup, nada en los
+   logs de Brevo (la request nunca llegó a la function). Diagnosticado con
+   `docker logs supabase_auth_Luxe_Pass`, que loguea la `uri` exacta que
+   intentó alcanzar.
+2. **`email_data.site_url` del payload del hook no es `auth.site_url`.**
+   Devuelve el host:puerto del API de Supabase (`127.0.0.1:54331` en local),
+   no el del dev server de Next (`127.0.0.1:3000`) — al contrario que
+   `{{ .SiteURL }}` en los templates SMTP de `supabase/templates/`, que sí
+   resuelve a `auth.site_url`. La function ahora usa su propio secret
+   `APP_URL` en vez de ese campo del payload, con un valor explícito por
+   ambiente (ver tabla arriba).
 
 ### De paso, verificando que `ci.yml` y `deploy.yml` fueran a estar en verde
 
