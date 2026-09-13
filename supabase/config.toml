@@ -260,6 +260,9 @@ otp_expiry = 3600
 
 # Story 1.1 — enlace propio a /auth/confirm en vez del flujo implícito
 # por defecto, para poder controlar la redirección tras verificar.
+# Nota: con el Auth Hook "Send Email" habilitado abajo, Auth ya no envía el
+# correo usando este template — el envío lo hace supabase/functions/send-email
+# vía Brevo. Se mantiene como la fuente de copy/link que esa function replica.
 [auth.email.template.confirmation]
 subject = "Confirm your LuxePass account"
 content_path = "./supabase/templates/confirmation.html"
@@ -268,6 +271,15 @@ content_path = "./supabase/templates/confirmation.html"
 [auth.email.template.recovery]
 subject = "Reset your LuxePass password"
 content_path = "./supabase/templates/recovery.html"
+
+# Story 1.1/1.2 — Auth Hook "Send Email": Auth llama a esta Edge Function en
+# vez de enviar el correo él mismo. La function verifica la firma
+# (Standard Webhooks) y despacha vía Brevo. host.docker.internal es
+# necesario porque el contenedor de Auth debe alcanzar al de Functions.
+[auth.hook.send_email]
+enabled = true
+uri = "http://host.docker.internal:54331/functions/v1/send-email"
+secrets = "env(SEND_EMAIL_HOOK_SECRET)"
 
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
@@ -408,6 +420,12 @@ deno_version = 2
 
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
+
+# Story 1.1/1.2 — el Auth Hook "Send Email" llama a esta function antes de
+# emitir un JWT de usuario, así que no puede exigir uno propio (la firma la
+# verifica standardwebhooks dentro de la function, no el gateway).
+[functions.send-email]
+verify_jwt = false
 
 [analytics]
 enabled = true

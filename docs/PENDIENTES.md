@@ -312,6 +312,43 @@ aporta.
 **Desbloquea:** que el Epic 2 cierre el App shell (patrón 3) y los flujos
 multi-pantalla dejen de cambiar de forma. Ahí un e2e por historia empieza a pagar.
 
+### 4.4 Auth Hook "Send Email" (Brevo) — registro manual pendiente en dev/prod
+
+Story 1.1/1.2 (rama `feat/brevo-email-hook`, 13 sept 2026): el envío de email
+de confirmación/recovery pasó de SMTP simulado (Inbucket/Mailpit local) a un
+Auth Hook que llama a la Edge Function `supabase/functions/send-email`, la
+cual despacha vía Brevo. Funciona en local (`supabase start`); en
+`luxepass-dev`/`luxepass-prod` falta un paso manual **a propósito**: se
+decidió no automatizar el registro del hook vía `supabase config push` porque
+ese comando sincroniza *todo* `config.toml` contra el proyecto remoto (no solo
+el hook), con riesgo de pisar `site_url`, redirect URLs u otra config de Auth
+que solo exista en el dashboard.
+
+**Runbook, una vez por proyecto (dev, luego prod):**
+
+1. Cargar en GitHub Secrets: `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`,
+   `BREVO_SENDER_NAME` (compartidos dev/prod — un solo token de Brevo),
+   `APP_URL_DEV`/`APP_URL_PROD` (la URL pública de cada deploy de Vercel —
+   la function la necesita para armar el link de `/auth/confirm`, no se
+   puede derivar del payload del hook, ver bug #2 más abajo) y
+   `SEND_EMAIL_HOOK_SECRET_DEV`/`SEND_EMAIL_HOOK_SECRET_PROD` (vacíos por
+   ahora, se rellenan en el paso 3).
+2. Push a `staging` (o `main`) dispara `deploy.yml`, que ya despliega
+   `send-email` (`supabase functions deploy send-email --no-verify-jwt`) —
+   necesaria antes del paso 3 porque el dashboard tiene que poder apuntar a
+   algo que ya existe.
+3. En el dashboard del proyecto (`Authentication` → `Hooks` → `Send Email`):
+   crear un hook tipo HTTP apuntando a
+   `https://<project-ref>.supabase.co/functions/v1/send-email`. El dashboard
+   genera el secreto de firma — copiarlo.
+4. Pegar ese secreto como `SEND_EMAIL_HOOK_SECRET_DEV`/`_PROD` en GitHub
+   Secrets. El siguiente push a esa rama lo empuja a la function vía
+   `supabase secrets set` (ya en `deploy.yml`).
+
+**Desbloquea:** que alguien con acceso a los dashboards de `luxepass-dev` y
+`luxepass-prod` y a los secrets de GitHub del repo haga los 4 pasos. Detalle
+completo del wiring de CI en `docs/ci-cd/RESUMEN.md`.
+
 ---
 
 ## 5. Decisiones abiertas

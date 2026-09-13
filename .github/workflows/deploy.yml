@@ -42,6 +42,17 @@ jobs:
       - name: Revisar advisors de seguridad/performance
         run: supabase db advisors --linked
         continue-on-error: true
+      - name: Configurar secrets de la Edge Function send-email
+        run: |
+          supabase secrets set \
+            BREVO_API_KEY="${{ secrets.BREVO_API_KEY }}" \
+            BREVO_SENDER_EMAIL="${{ secrets.BREVO_SENDER_EMAIL }}" \
+            BREVO_SENDER_NAME="${{ secrets.BREVO_SENDER_NAME }}" \
+            SEND_EMAIL_HOOK_SECRET="${{ secrets.SEND_EMAIL_HOOK_SECRET_DEV }}" \
+            APP_URL="${{ secrets.APP_URL_DEV }}" \
+            APP_ENV="STAGING"
+      - name: Desplegar la Edge Function send-email
+        run: supabase functions deploy send-email --no-verify-jwt
       - name: Instalar Vercel CLI
         run: npm install --global vercel@latest
       - name: Descargar configuración del proyecto luxepass-dev
@@ -79,6 +90,17 @@ jobs:
       - name: Revisar advisors de seguridad/performance
         run: supabase db advisors --linked
         continue-on-error: true
+      - name: Configurar secrets de la Edge Function send-email
+        run: |
+          supabase secrets set \
+            BREVO_API_KEY="${{ secrets.BREVO_API_KEY }}" \
+            BREVO_SENDER_EMAIL="${{ secrets.BREVO_SENDER_EMAIL }}" \
+            BREVO_SENDER_NAME="${{ secrets.BREVO_SENDER_NAME }}" \
+            SEND_EMAIL_HOOK_SECRET="${{ secrets.SEND_EMAIL_HOOK_SECRET_PROD }}" \
+            APP_URL="${{ secrets.APP_URL_PROD }}" \
+            APP_ENV="PROD"
+      - name: Desplegar la Edge Function send-email
+        run: supabase functions deploy send-email --no-verify-jwt
       - name: Instalar Vercel CLI
         run: npm install --global vercel@latest
       - name: Descargar configuración del proyecto luxepass-prod
