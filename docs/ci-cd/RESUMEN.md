@@ -183,7 +183,7 @@ al crear el hook:
 `APP_ENV` (`STAGING`/`PROD`) no es secret — va literal en `deploy.yml`, cada job
 con el suyo. En local es `APP_ENV=LOCAL` en `supabase/functions/.env`.
 
-#### Dos bugs reales encontrados probando el signup en local (13 sept 2026)
+#### Tres bugs reales encontrados llevando esto a producción (13 sept 2026)
 
 1. **Puerto equivocado en el hook.** `uri` del `[auth.hook.send_email]` tenía
    `host.docker.internal:54321` (el puerto *default* de Supabase, copiado
@@ -200,6 +200,17 @@ con el suyo. En local es `APP_ENV=LOCAL` en `supabase/functions/.env`.
    resuelve a `auth.site_url`. La function ahora usa su propio secret
    `APP_URL` en vez de ese campo del payload, con un valor explícito por
    ambiente (ver tabla arriba).
+3. **`env(SEND_EMAIL_HOOK_SECRET)` no resolvía en CI.** El CLI valida *todo*
+   `config.toml` en cualquier comando, no solo en los pasos que tocan la
+   function — así que `supabase db push` (el primer paso del job, antes de
+   llegar siquiera a `secrets set`/`functions deploy`) fallaba con `Invalid
+   hook config: ... secrets must be formatted as v1,whsec_...`.
+   `supabase secrets set` configura secrets del *proyecto remoto* para las
+   Edge Functions — un mecanismo completamente distinto del `env()` que lee
+   `config.toml`, que resuelve de las variables de entorno del *job* de
+   GitHub Actions. Arreglo: `SEND_EMAIL_HOOK_SECRET_DEV`/`_PROD` ahora
+   también están en el `env:` de cada job (no solo en el paso `secrets set`).
+   PR #13 (`fix/send-email-hook-secret-ci-env` → `staging`).
 
 ### De paso, verificando que `ci.yml` y `deploy.yml` fueran a estar en verde
 
