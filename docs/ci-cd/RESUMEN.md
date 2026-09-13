@@ -183,7 +183,7 @@ al crear el hook:
 `APP_ENV` (`STAGING`/`PROD`) no es secret — va literal en `deploy.yml`, cada job
 con el suyo. En local es `APP_ENV=LOCAL` en `supabase/functions/.env`.
 
-#### Tres bugs reales encontrados llevando esto a producción (13 sept 2026)
+#### Cuatro bugs reales encontrados llevando esto a producción (13 sept 2026)
 
 1. **Puerto equivocado en el hook.** `uri` del `[auth.hook.send_email]` tenía
    `host.docker.internal:54321` (el puerto *default* de Supabase, copiado
@@ -211,6 +211,24 @@ con el suyo. En local es `APP_ENV=LOCAL` en `supabase/functions/.env`.
    GitHub Actions. Arreglo: `SEND_EMAIL_HOOK_SECRET_DEV`/`_PROD` ahora
    también están en el `env:` de cada job (no solo en el paso `secrets set`).
    PR #13 (`fix/send-email-hook-secret-ci-env` → `staging`).
+4. **Rate limit de Auth agotado — no es un bug de código, es config de
+   plataforma.** Con el hook y la function ya funcionando de verdad en
+   `luxepass-dev` (signup real confirmado), el forgot-password no llegaba —
+   nada en los logs de la function (el hook nunca se invocó), y en
+   Authentication → Logs del dashboard aparecía un error de rate limit.
+   Causa: `Authentication → Rate Limits → Rate limit for sending emails`
+   viene en **2/hora por defecto** en un proyecto nuevo, y aplica **aunque
+   el envío real vaya por un Hook custom a Brevo** — no es un límite del
+   mailer nativo de Supabase, es un límite general de abuso sobre el propio
+   endpoint de Auth. Las pruebas de signup ya lo habían agotado. Es el mismo
+   parámetro que en local ya está subido a 300 (`config.toml`, comentario en
+   `[auth.rate_limit]`) — ahí sí tiene efecto, cosa que el comentario
+   original de Story 1.1 no anticipaba ("sin efecto en producción"). Se
+   subió a mano en el dashboard de `luxepass-dev` (no vía `config push`,
+   mismo motivo que el hook) y el forgot-password funcionó. **Pendiente:
+   subir el mismo límite en `luxepass-prod`** antes de probar ahí — el valor
+   para prod es una decisión de tráfico esperado, no técnica, ver
+   `docs/PENDIENTES.md` §4.4.
 
 ### De paso, verificando que `ci.yml` y `deploy.yml` fueran a estar en verde
 

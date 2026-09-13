@@ -344,9 +344,19 @@ que solo exista en el dashboard.
 4. Pegar ese secreto como `SEND_EMAIL_HOOK_SECRET_DEV`/`_PROD` en GitHub
    Secrets. El siguiente push a esa rama lo empuja a la function vía
    `supabase secrets set` (ya en `deploy.yml`).
+5. **Subir el rate limit de envío de email** en el mismo dashboard:
+   `Authentication → Rate Limits → Rate limit for sending emails`. Viene en
+   2/hora por defecto en un proyecto nuevo y **aplica aunque el envío real
+   vaya por Brevo** (no es el mailer nativo el que lo dispara, es un límite
+   general del endpoint de Auth) — sin este paso, el forgot-password (y el
+   resend de confirmación) fallan silenciosamente después de un par de
+   pruebas: nada en los logs de la function, el hook nunca se invoca. Para
+   `luxepass-dev` ya se subió (ver `docs/ci-cd/RESUMEN.md`, bug #4); para
+   `luxepass-prod` el valor lo define quien conozca el tráfico esperado, no
+   es una decisión técnica.
 
 **Desbloquea:** que alguien con acceso a los dashboards de `luxepass-dev` y
-`luxepass-prod` y a los secrets de GitHub del repo haga los 4 pasos. Detalle
+`luxepass-prod` y a los secrets de GitHub del repo haga los 5 pasos. Detalle
 completo del wiring de CI en `docs/ci-cd/RESUMEN.md`.
 
 ---
