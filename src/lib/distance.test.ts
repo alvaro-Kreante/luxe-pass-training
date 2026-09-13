@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { formatDistance, formatDistanceBand, walkingMinutes } from "./distance";
+import {
+  formatDistance,
+  formatDistanceBand,
+  haversineMiles,
+  walkingMinutes,
+} from "./distance";
 
 /**
  * Story 2.1 — "Distance display in miles/km based on user preference".
@@ -33,6 +38,38 @@ describe("bandas de distancia de los filtros", () => {
   it("conserva el decimal cuando lo hay", () => {
     expect(formatDistanceBand(0.5, "mi")).toBe("0.5 mi");
     expect(formatDistanceBand(1, "km")).toBe("1.6 km");
+  });
+});
+
+describe("distancia real entre dos coordenadas (Story 2.1 — Supabase)", () => {
+  it("da cero para el mismo punto", () => {
+    const point = { lat: 40.758, lng: -73.968 };
+
+    expect(haversineMiles(point, point)).toBe(0);
+  });
+
+  it("un grado de longitud en el ecuador son unas 69 millas", () => {
+    const miles = haversineMiles(
+      { lat: 0, lng: 0 },
+      { lat: 0, lng: 1 },
+    );
+
+    expect(miles).toBeCloseTo(69.1, 0);
+  });
+
+  it("no depende del orden de los puntos", () => {
+    const a = { lat: 40.7536, lng: -73.9832 };
+    const b = { lat: 40.758, lng: -73.968 };
+
+    expect(haversineMiles(a, b)).toBeCloseTo(haversineMiles(b, a), 6);
+  });
+
+  it("da una distancia acorde a la que ya anuncia el catálogo de muestra (Manhattan-Newark, ~9-10 mi)", () => {
+    const manhattan = { lat: 40.7128, lng: -74.006 };
+    const newark = { lat: 40.7357, lng: -74.1724 };
+
+    expect(haversineMiles(manhattan, newark)).toBeGreaterThan(8);
+    expect(haversineMiles(manhattan, newark)).toBeLessThan(11);
   });
 });
 

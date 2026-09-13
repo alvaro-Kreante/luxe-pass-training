@@ -1,5 +1,3 @@
-import { LOUNGES } from "./lounges";
-
 /**
  * Story 2.1 — entrada manual de ubicación cuando el GPS no está disponible.
  * Artboard: ManualLocation.dc.html
@@ -9,18 +7,45 @@ export interface City {
   name: string;
   region: string;
   country: string;
+  /** Centroide de la ciudad: origen para calcular distancia real cuando el
+   * miembro elige la ciudad a mano en vez de dar su ubicación GPS. */
+  lat: number;
+  lng: number;
 }
 
 export const CITIES: City[] = [
-  { id: "new-york", name: "New York", region: "NY", country: "United States" },
-  { id: "newark", name: "Newark", region: "NJ", country: "United States" },
+  {
+    id: "new-york",
+    name: "New York",
+    region: "NY",
+    country: "United States",
+    lat: 40.7595,
+    lng: -73.97,
+  },
+  {
+    id: "newark",
+    name: "Newark",
+    region: "NJ",
+    country: "United States",
+    lat: 40.7357,
+    lng: -74.1724,
+  },
   {
     id: "new-rochelle",
     name: "New Rochelle",
     region: "NY",
     country: "United States",
+    lat: 40.9115,
+    lng: -73.7824,
   },
-  { id: "miami", name: "Miami", region: "FL", country: "United States" },
+  {
+    id: "miami",
+    name: "Miami",
+    region: "FL",
+    country: "United States",
+    lat: 25.7617,
+    lng: -80.1918,
+  },
 ];
 
 /** La ubicación por defecto: la del miembro de muestra. */
@@ -45,6 +70,13 @@ export function searchCities(query: string): City[] {
   return CITIES.filter((city) => city.name.toLowerCase().includes(needle));
 }
 
-export function loungeCountIn(cityId: string): number {
-  return LOUNGES.filter((lounge) => lounge.cityId === cityId).length;
+/**
+ * Cuenta sobre el catálogo ya traído de Supabase (`fetchLounges`), no sobre
+ * el mock — ver `lib/lounge-directory.ts`.
+ */
+export function loungeCountIn(
+  lounges: { cityId: string }[],
+  cityId: string,
+): number {
+  return lounges.filter((lounge) => lounge.cityId === cityId).length;
 }
