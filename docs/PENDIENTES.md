@@ -74,29 +74,29 @@ el flujo quedaría cortado.
 **Se sustituye:** por la ruta `/verify-email/[token]` cuando exista la API de
 verificación.
 
-### 2.2 El permiso de ubicación y los estados de borde de `/explore` están simulados
+### 2.2 El proveedor de mapa real y sus dos estados de borde siguen simulados
 
-La Story 2.1 tiene tres criterios que dependen del sistema o de la red. Como el
-repo es solo diseño, la pantalla **llega a mostrar cada estado** sin que nada lo
-provoque de verdad:
+La Story 2.1 tenía cuatro criterios que dependían del sistema o de la red.
+Al conectar Epic 2 a Supabase (sept 2026) se resolvieron el permiso de
+ubicación y la carga de la lista; el proveedor de mapa real sigue fuera de
+alcance de este repo (ver `docs/design/COMPONENT-MAP.md` "Backend real —
+Epic 2"), así que sus dos estados de borde siguen alcanzándose por query
+param:
 
 | Qué | Cómo está ahora | Qué lo sustituye |
 |---|---|---|
-| Permiso de ubicación | Diálogo propio y un `useState` con tres pasos (`asking` · `manual` · `located`). No se llama a `navigator.geolocation` | La API de geolocalización del navegador, conservando la rama manual para cuando la deniegan |
-| Error de carga del mapa | `\/explore?map=error`. "Retry" limpia el estado y el mapa aparece: no hay un segundo intento que pueda fallar | Un tiempo de espera real contra el proveedor de mapas, con el umbral de 3 s del criterio |
+| Permiso de ubicación | **Resuelto** — `lib/geolocation.ts` llama a `navigator.geolocation` de verdad; la rama manual sigue como fallback real, no simulado | — |
+| Error de carga del mapa | `\/explore?map=error`. "Retry" limpia el estado y el mapa aparece: no hay un segundo intento que pueda fallar | Un tiempo de espera real contra el proveedor de mapas, con el umbral de 3 s del criterio — llega junto con el proveedor real (§2.3) |
 | Modo offline | `\/explore?offline=1`, con los seis lounges más cercanos como "cacheados" | `navigator.onLine` + lo que el service worker tenga guardado de verdad |
-| Carga de la lista | `\/explore?list=loading` deja la lista en skeletons para siempre: no hay nada que esperar | El estado de carga real mientras se piden los lounges |
+| Carga de la lista | **Resuelto** — `LoungeList` recibe un `loading` real (pendiente de `fetchLounges`); su propio estado de carga se testea en `components/explore/lounge-list.test.tsx` | — |
 
-Los tres query params **no salen de ningún artboard**: son la única manera de
-alcanzar esos estados sin añadir a la interfaz un botón de simulación que el
-diseño no contempla.
+Los dos query params que quedan **no salen de ningún artboard**: siguen siendo
+la única manera de alcanzar esos dos estados mientras el proveedor de mapa
+real y el service worker no lleguen — añadir un botón de simulación que el
+diseño no contempla sería peor.
 
-**Al conectar la lógica real hay que quitar las tres simulaciones**, no dejarlas
-conviviendo con ella: los query params desaparecen, y con ellos la rama
-`startsWithMapError` y `listLoading` de `src/app/explore/page.tsx`.
-
-**Desbloquea:** que el proyecto deje de ser solo diseño — es decir, la app de
-`app.luxepass.co`, no este repo.
+**Desbloquea:** decidir el proveedor de mapa (§2.3) y el service worker real —
+ninguno de los dos cabe en este repositorio.
 
 ### 2.3 El plano de `\/explore` es el SVG del artboard
 
@@ -180,11 +180,9 @@ nada los hace cumplir.
 |---|---|---|
 | 1.1 | Welcome email with app download links | Pantalla `/welcome` con los botones de tienda; no se envía correo. Supabase Auth solo manda el de confirmación de forma nativa; un segundo correo exigiría Database Webhook + Edge Function — decisión tomada con el usuario de no añadirlo (ver `COMPONENT-MAP.md` §Backend real) |
 | 1.2 | "Remember me" como segundo modo de sesión (persistente vs. solo-de-sesión) | Decisión tomada con el usuario: implementarlo de verdad exigiría que el middleware conociera esa elección en cada refresco de token — desproporcionado para una historia marcada como pequeña. El checkbox se queda como preferencia de UI con su nota explicativa; `inactivity_timeout` (30 días) es real pero global, no depende de si se marcó. Ver `COMPONENT-MAP.md` §Backend real |
-| 2.1 | Current location detection with permission request | Diálogo propio; no se consulta `navigator.geolocation` — ver 2.2 |
-| 2.1 | Map loads within 3 seconds on good connection | No hay carga que medir: el plano es un SVG del propio bundle. El estado de fallo se alcanza por query param |
-| 2.1 | Offline mode shows cached nearby locations | Los "cacheados" son los seis primeros del catálogo; el service worker no interviene |
-| 2.1 | Distance display in miles/km based on user preference | El toggle de la topbar hace la conversión de verdad, pero el ajuste no se lee del teléfono ni se recuerda |
-| 2.3 | Loading states while fetching data | No hay petición que esperar: el estado se alcanza por query param — ver 2.2 |
+| 2.1 | Map loads within 3 seconds on good connection | No hay proveedor de mapa real que medir: el plano sigue siendo un SVG del propio bundle. El estado de fallo se alcanza por query param — ver §2.2 |
+| 2.1 | Offline mode shows cached nearby locations | Los "cacheados" son los seis más cercanos del catálogo real; el service worker no interviene — ver §2.2 |
+| 2.1 | Distance display in miles/km based on user preference | El toggle de la topbar convierte una distancia real (Haversine, ver `COMPONENT-MAP.md` §Backend real — Epic 2), pero la unidad sigue sin leerse del teléfono ni recordarse entre visitas |
 | 3.1 | Call and Directions quick action buttons (google maps url) | Enlaces reales (`tel:` y Google Maps con la dirección de muestra); no hay verificación de que el teléfono o la dirección existan |
 | 3.1 | Share lounge option via social/messaging apps | Los destinos (Messages, WhatsApp, Instagram…) son botones sin integración; solo "Copy" usa una API real del navegador (`navigator.clipboard`) |
 | 3.2 | Real-time availability status | `lounge.slotsToday` del catálogo de la Story 2.2, no un estado que cambie solo |

@@ -12,7 +12,7 @@ Repositorio integral del proyecto **LuxePass** (plataforma de membresía de lujo
 
 ## ⚠️ Alcance: mockup navegable + backend real parcial (Supabase)
 
-**Este repo empezó como un mockup navegable sin backend — eso ya no es así del todo.** Desde sept 2026, algunas historias tienen lógica real conectada a Supabase: Epic 1 completo (Story 1.1 User Registration, Story 1.2 Login & Authentication). El resto de epics sigue el patrón de mockup visual descrito abajo, historia por historia, hasta que se conecten a su vez.
+**Este repo empezó como un mockup navegable sin backend — eso ya no es así del todo.** Desde sept 2026, algunas historias tienen lógica real conectada a Supabase: Epic 1 completo (Story 1.1 User Registration, Story 1.2 Login & Authentication) y Epic 2 completo (Story 2.1 Map-Based Lounge Discovery, Story 2.2 Lounge Filtering & Search, Story 2.3 List View Alternative — catálogo real en `public.lounges`, ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 2). El resto de epics sigue el patrón de mockup visual descrito abajo, historia por historia, hasta que se conecten a su vez.
 
 La app en producción de En Soleil vive en `app.luxepass.co`; si este repo la reemplaza o sigue siendo un proyecto aparte no está resuelto en este documento — no asumir ninguna de las dos sin confirmar.
 

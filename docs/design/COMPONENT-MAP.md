@@ -376,6 +376,41 @@ Desviaciones conscientes de esta parte (no son bugs, son decisiones tomadas con 
 
 ---
 
+## Backend real (Supabase local) — Epic 2 (Stories 2.1, 2.2, 2.3)
+
+Segundo epic con backend real. `src/lib/lounges.ts` (el array `LOUNGES` y el
+tipo `Lounge`) **no se tocó**: lo siguen usando Home y Epic 3-9 (mockup
+todavía), y además pasa a ser la fuente literal del seed de abajo. Toda la
+lógica de red nueva vive en módulos propios que solo usa `/explore`.
+
+| Módulo | Qué resuelve |
+|---|---|
+| `supabase/schemas/lounges.sql` | Tabla `public.lounges` (nace en Epic 2, ver `docs/DATA-MODEL-MAP.md`), RLS de solo lectura `to authenticated` |
+| `supabase/migrations/..._seed_lounges_story_2_1.sql` | Seed de los 17 lounges, escrito a mano (el seed de datos no es DDL, `db diff`/`declarative sync` no lo genera) — copiado literal de `LOUNGES`, con lat/lng añadidos |
+| `lib/lounge-directory.ts` | `fetchLounges` (trae el catálogo completo — 17 filas, no compensa paginar en la query) y `withDistance` (adjunta `distanceMiles` real vía Haversine y ordena) |
+| `lib/distance.ts` | `haversineMiles`/`Coordinates` — distancia real entre dos puntos, sin PostGIS/RPC: el catálogo es pequeño y no hace falta |
+| `lib/geolocation.ts` | `getCurrentPosition`, envoltorio de `navigator.geolocation` en `Promise<LocationResult>` (`granted`/`denied`/`unavailable`/`timeout`) |
+| `lib/location.ts` | `CITIES` gana `lat`/`lng` (centroide, origen del fallback manual); `loungeCountIn` pasa a ser puro (cuenta sobre el catálogo que se le pasa, no sobre un mock global) |
+| `components/explore/lounge-map-positions.ts` | `LOUNGE_MAP_POSITIONS`: posición de cada lounge en el plano dibujado (dato de presentación, no geodato — no vive en `lounges`) |
+| `app/explore/page.tsx` | `RequireSession` (mismo patrón que `/onboarding`: sin sesión, redirige a `/login`); geolocalización real con fallback manual; fetch real del catálogo |
+
+`/explore` exige sesión real ahora (`RequireSession`), decisión tomada con el
+usuario: el catálogo es de un miembro autenticado (RLS `to authenticated`),
+no un directorio público, así que la pantalla se comporta como el resto de la
+app real lo haría en `app.luxepass.co`, aunque Epic 3-9 (el resto del área de
+miembro) siga sin exigirla mientras sigan siendo mockup.
+
+Desviaciones conscientes de esta parte (no son bugs, son decisiones tomadas con el usuario):
+
+- **El proveedor de mapa real (Mapbox/MapLibre/Google) sigue fuera de alcance.** `city-map-base.tsx` sigue siendo el SVG dibujado de `Main.dc.html`; decidir proveedor y dónde vive su clave no cabe en este repo (ver `docs/PENDIENTES.md` §2.3). Por tanto siguen simulados por query param, sin proveedor real que los dispare: `?map=error` ("Map loads within 3 seconds" no tiene nada real que medir) y `?offline=1` (no hay service worker real).
+- **El filtro de disponibilidad de 2.2 ("Calendar view") es una aproximación, no la agenda real de Epic 3.** `filters.date`/`filters.band` siguen filtrando por `bands`/`closed_weekdays` — ahora columnas reales de `lounges`, ya no del mock — pero esas columnas son una instantánea sembrada por migración, no el calendario semanal con capacidad y cierres especiales que traerá `lounge_availability` (Epic 3, sigue sin construirse). Se sustituye cuando esa tabla exista.
+- **`rating`/`open_now`/`slots_today` son columnas reales pero estáticas**, sembradas 1:1 desde el mock — no agregadas (rating) ni en vivo (disponibilidad). Maduran cuando Epic 3/4 aporten su propio modelo (rating agregado de reseñas, disponibilidad real de bookings).
+- **`map: {x,y}` del SVG no entra en `lounges`**: es posición de píxel del plano dibujado, no geodato. Vive aparte en `lounge-map-positions.ts`, comentado como candidato a desaparecer con el proveedor real.
+- **Solo lectura**: sin policies de insert/update/delete — el catálogo se siembra por migración hasta que Epic 8.3 diseñe su propio flujo de admin sobre `lounges` (ya anticipado en `docs/DATA-MODEL-MAP.md`).
+- **`explore/page.test.tsx` ya no cubre el instante exacto de "cargando" de la lista** (antes `?list=loading`, retirado: la carga ya es real). Ese estado tiene su propio test determinista en `components/explore/lounge-list.test.tsx`, sobre el componente directamente — una petición de red real no se puede fijar en un instante concreto desde un test.
+
+---
+
 ## Pendiente de implementar
 
 Lo que el design system especifica y **todavía no existe en código**. Antes de escribirlo,
