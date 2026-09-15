@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useSearchParams } from "next/navigation";
 import {
   LayoutList,
   Map as MapIcon,
@@ -65,30 +64,21 @@ const CACHED_LOUNGE_COUNT = 6;
 
 type LocationStep = "asking" | "manual" | "located";
 
-/**
- * El estado de borde `?map=error` se lee de la URL, y `useSearchParams`
- * obliga a un límite de Suspense para poder prerenderizar. El modo offline ya
- * no es un query param: sale de `navigator.onLine` vía `useOnlineStatus`.
- */
 export default function ExplorePage() {
   return (
     <RequireSession>
-      <React.Suspense>
-        <ExploreScreen />
-      </React.Suspense>
+      <ExploreScreen />
     </RequireSession>
   );
 }
 
 function ExploreScreen() {
-  const params = useSearchParams();
   const online = useOnlineStatus();
   const offline = !online;
-  const startsWithMapError = params.get("map") === "error";
 
   /** Un miembro que vuelve sin conexión ya dio su ubicación antes: se salta el permiso. */
   const [step, setStep] = React.useState<LocationStep>(
-    offline || startsWithMapError ? "located" : "asking",
+    offline ? "located" : "asking",
   );
   const [cityId, setCityId] = React.useState(DEFAULT_CITY_ID);
   const [origin, setOrigin] = React.useState(() => {
@@ -98,7 +88,7 @@ function ExploreScreen() {
   const [allLounges, setAllLounges] = React.useState<LoungeRow[] | null>(null);
   const [unit, setUnit] = React.useState<DistanceUnit>("mi");
   const [view, setView] = React.useState<"map" | "list">("map");
-  const [mapFailed, setMapFailed] = React.useState(startsWithMapError);
+  const [mapFailed, setMapFailed] = React.useState(false);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = React.useState(false);
   const [filters, setFilters] = React.useState<Filters>(EMPTY_FILTERS);
@@ -306,7 +296,7 @@ function ExploreScreen() {
               origin={origin}
               selectedId={selectedId ?? undefined}
               onSelect={setSelectedId}
-              onLoadError={() => {}}
+              onLoadError={() => setMapFailed(true)}
               offline={offline}
               footer={<MapFooter unit={unit} offline={offline} />}
             >

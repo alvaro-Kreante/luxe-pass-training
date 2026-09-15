@@ -1,8 +1,16 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { renderToString } from "react-dom/server";
+import { __resetModuleState } from "@vis.gl/react-google-maps";
 
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedAndSignIn } from "@/lib/testing/confirmed-user";
@@ -75,11 +83,6 @@ afterEach(() => {
 
 function resultsPanel() {
   return screen.getByRole("region", { name: "Results" });
-}
-
-/** Para los estados de borde que no pasan por `allowLocation`/`showList`. */
-async function findResultsPanel() {
-  return screen.findByRole("region", { name: "Results" });
 }
 
 /**
@@ -259,10 +262,56 @@ describe("zoom del mapa", () => {
 });
 
 describe("el mapa no carga", () => {
-  it("propone reintentar o seguir en la lista", async () => {
-    searchParams.mockReturnValue(new URLSearchParams("map=error"));
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
+  /**
+   * Simula que el script real de Google nunca terminó de cargar.
+   *
+   * Borrar `globalThis.google` no basta por sí solo: `@vis.gl/react-google-maps`
+   * guarda si la API "ya cargó" en una variable de módulo, no por instancia
+   * — sin `__resetModuleState()` (su propia API, pensada "for testing
+   * purposes only"), un `<APIProvider>` nuevo se da por cargado al instante
+   * con el resultado del test anterior (el que sí montó el mapa de verdad en
+   * `allowLocation`), real `google` o no. Tampoco basta con borrar `google`
+   * sobre el `CityMap` que ya cargó: su `useMapLoadStatus` ya vio `onLoad` y
+   * dejó `loadedRef` en `true` para siempre, así que hace falta un `CityMap`
+   * montado desde cero — se consigue pasando por la vista de lista y
+   * volviendo a la de mapa — para que su temporizador nazca ya bajo
+   * `vi.useFakeTimers()` y sin el stub.
+   */
+  async function triggerMapLoadFailure(user: ReturnType<typeof userEvent.setup>) {
+    await allowLocation(user);
+    await user.click(screen.getByRole("button", { name: "List" }));
+
+    const realGoogle = (globalThis as { google?: unknown }).google;
+    // @ts-expect-error -- se borra a propósito para simular un script que nunca carga.
+    delete globalThis.google;
+    __resetModuleState();
+
+    vi.useFakeTimers();
+    /**
+     * `userEvent.click` se cuelga bajo `vi.useFakeTimers()` en esta
+     * combinación de versiones (user-event 14.6.6 + vitest 4.1.11) — mismo
+     * gotcha documentado en `use-map-load-status.test.tsx`. `fireEvent` no
+     * pierde cobertura real: el clic es un evento síncrono simple.
+     */
+    fireEvent.click(screen.getByRole("button", { name: "Map" }));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(3000);
+    });
+    vi.useRealTimers();
+
+    (globalThis as { google?: unknown }).google = realGoogle;
+  }
+
+  it("propone reintentar o seguir en la lista", async () => {
+    const user = userEvent.setup({ delay: null });
     render(<ExplorePage />);
+
+    await triggerMapLoadFailure(user);
 
     expect(
       await screen.findByRole("heading", { name: "The map isn't loading" }),
@@ -274,18 +323,20 @@ describe("el mapa no carga", () => {
   });
 
   it("mantiene los resultados a la vista mientras el mapa falla", async () => {
-    searchParams.mockReturnValue(new URLSearchParams("map=error"));
-
+    const user = userEvent.setup({ delay: null });
     render(<ExplorePage />);
 
-    const panel = await findResultsPanel();
-    expect(await within(panel).findByText("The Ainsworth")).toBeInTheDocument();
+    await triggerMapLoadFailure(user);
+
+    expect(
+      await within(resultsPanel()).findByText("The Ainsworth"),
+    ).toBeInTheDocument();
   });
 
   it("pasa a la lista sin perder los resultados", async () => {
     const user = userEvent.setup({ delay: null });
-    searchParams.mockReturnValue(new URLSearchParams("map=error"));
     render(<ExplorePage />);
+    await triggerMapLoadFailure(user);
 
     await user.click(
       await screen.findByRole("button", { name: "Use list view" }),
