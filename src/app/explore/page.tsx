@@ -40,6 +40,7 @@ import {
   type Filters,
 } from "@/lib/filters";
 import { getCurrentPosition, type LocationResult } from "@/lib/geolocation";
+import { useOnlineStatus } from "@/lib/online-status";
 import { DEFAULT_CITY_ID, cityById, cityLabel } from "@/lib/location";
 import {
   fetchLounges,
@@ -66,8 +67,9 @@ const CACHED_LOUNGE_COUNT = 6;
 type LocationStep = "asking" | "manual" | "located";
 
 /**
- * Los estados de borde (`?map=error`, `?offline=1`) se leen de la URL, y
- * `useSearchParams` obliga a un límite de Suspense para poder prerenderizar.
+ * El estado de borde `?map=error` se lee de la URL, y `useSearchParams`
+ * obliga a un límite de Suspense para poder prerenderizar. El modo offline ya
+ * no es un query param: sale de `navigator.onLine` vía `useOnlineStatus`.
  */
 export default function ExplorePage() {
   return (
@@ -81,10 +83,11 @@ export default function ExplorePage() {
 
 function ExploreScreen() {
   const params = useSearchParams();
-  const offline = params.get("offline") === "1";
+  const online = useOnlineStatus();
+  const offline = !online;
   const startsWithMapError = params.get("map") === "error";
 
-  /** Los estados de borde entran con la ubicación ya resuelta, como el artboard. */
+  /** Un miembro que vuelve sin conexión ya dio su ubicación antes: se salta el permiso. */
   const [step, setStep] = React.useState<LocationStep>(
     offline || startsWithMapError ? "located" : "asking",
   );

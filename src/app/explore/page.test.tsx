@@ -302,8 +302,18 @@ describe("el mapa no carga", () => {
 });
 
 describe("modo offline", () => {
+  afterEach(() => {
+    Object.defineProperty(navigator, "onLine", {
+      configurable: true,
+      value: true,
+    });
+  });
+
   it("avisa de que los lounges vienen de la última visita", async () => {
-    searchParams.mockReturnValue(new URLSearchParams("offline=1"));
+    Object.defineProperty(navigator, "onLine", {
+      configurable: true,
+      value: false,
+    });
 
     render(<ExplorePage />);
 
@@ -314,7 +324,10 @@ describe("modo offline", () => {
   });
 
   it("deshabilita la búsqueda, que necesita conexión", async () => {
-    searchParams.mockReturnValue(new URLSearchParams("offline=1"));
+    Object.defineProperty(navigator, "onLine", {
+      configurable: true,
+      value: false,
+    });
 
     render(<ExplorePage />);
 
@@ -662,12 +675,22 @@ describe("desenfoque de la pantalla de fondo", () => {
   });
 
   it("no difumina nada en los estados que entran con la ubicación resuelta", async () => {
-    searchParams.mockReturnValue(new URLSearchParams("offline=1"));
+    Object.defineProperty(navigator, "onLine", {
+      configurable: true,
+      value: false,
+    });
 
-    render(<ExplorePage />);
+    try {
+      render(<ExplorePage />);
 
-    await screen.findByText("You're offline");
-    expect(shell().className).not.toContain("blur");
+      await screen.findByText("You're offline");
+      expect(shell().className).not.toContain("blur");
+    } finally {
+      Object.defineProperty(navigator, "onLine", {
+        configurable: true,
+        value: true,
+      });
+    }
   });
 });
 
