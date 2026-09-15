@@ -1,11 +1,16 @@
 /**
+ * MUERTO desde la migración a Google Maps (Story 2.1): `city-map.tsx` ya no
+ * renderiza `CityMapBase`, es un proveedor real. Solo sigue aquí porque
+ * `lounge-callout.tsx` todavía importa `MAP_VIEWBOX` de este archivo. Se
+ * borra entero cuando esa historia posterior reescriba el callout sobre
+ * lat/lng reales — ver comentario en `city-map.tsx` sobre `MapLounge.map`.
+ */
+
+/**
  * El plano de la ciudad, portado literalmente de `Main.dc.html`.
  *
- * DESIGN-SYSTEM.md §5 "Mapa": es un SVG dibujado a mano (viewBox 0 0 820 760),
- * no un proveedor de tiles. Este repositorio es solo diseño y no llama a
- * servicios externos, así que el dibujo del artboard es el mapa. Si algún día
- * entra un proveedor real, lo que se conserva es el estilo de markers y
- * controles, no este archivo.
+ * DESIGN-SYSTEM.md §5 "Mapa": era un SVG dibujado a mano (viewBox 0 0 820
+ * 760), no un proveedor de tiles — cierto mientras este repo fue solo mockup.
  */
 export const MAP_VIEWBOX = { width: 820, height: 760 };
 
