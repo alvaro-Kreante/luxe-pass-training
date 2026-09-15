@@ -202,6 +202,15 @@ export function installGoogleMapsStub() {
             eventName: string,
             handler: () => void,
           ) => instance.addListener(eventName, handler),
+          /**
+           * `MarkerClusterer.onRemove()` (Task 9, clustering teardown) calls
+           * `google.maps.event.removeListener(this.idleListener)` with the
+           * handle `StubMapCanvas.addListener` returned — same shape as the
+           * real API's `MapsEventListener`, so removing it is just deferring
+           * to that handle's own `remove()`.
+           */
+          removeListener: (listener: { remove: () => void }) =>
+            listener.remove(),
           clearInstanceListeners: () => {},
         },
         importLibrary: async (name: string) => {

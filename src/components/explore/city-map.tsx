@@ -155,15 +155,17 @@ function ClusteredLoungeMarkers({
     if (!map) return;
     clusterer.current = new MarkerClusterer({ map });
     return () => {
-      clusterer.current?.clearMarkers();
+      clusterer.current?.setMap(null);
       clusterer.current = null;
     };
   }, [map]);
 
+  const loungeIds = lounges.map((lounge) => lounge.id).join(",");
+
   React.useEffect(() => {
     clusterer.current?.clearMarkers();
     clusterer.current?.addMarkers([...markers.current.values()]);
-  });
+  }, [loungeIds]);
 
   const setMarkerRef = React.useCallback(
     (id: string, marker: google.maps.marker.AdvancedMarkerElement | null) => {
