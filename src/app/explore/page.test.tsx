@@ -33,12 +33,10 @@ import ExplorePage from "./page";
  * responde el navegador).
  */
 
-const searchParams = vi.fn(() => new URLSearchParams());
 const replace = vi.fn();
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/explore",
-  useSearchParams: () => searchParams(),
   useRouter: () => ({ replace }),
 }));
 
@@ -57,7 +55,6 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
-  searchParams.mockReturnValue(new URLSearchParams());
   replace.mockClear();
   /**
    * Solo se sustituye `navigator.geolocation` (que no existe en jsdom), nunca
@@ -286,25 +283,35 @@ describe("el mapa no carga", () => {
     await user.click(screen.getByRole("button", { name: "List" }));
 
     const realGoogle = (globalThis as { google?: unknown }).google;
-    // @ts-expect-error -- se borra a propósito para simular un script que nunca carga.
-    delete globalThis.google;
-    __resetModuleState();
+    try {
+      // @ts-expect-error -- se borra a propósito para simular un script que nunca carga.
+      delete globalThis.google;
+      __resetModuleState();
 
-    vi.useFakeTimers();
-    /**
-     * `userEvent.click` se cuelga bajo `vi.useFakeTimers()` en esta
-     * combinación de versiones (user-event 14.6.6 + vitest 4.1.11) — mismo
-     * gotcha documentado en `use-map-load-status.test.tsx`. `fireEvent` no
-     * pierde cobertura real: el clic es un evento síncrono simple.
-     */
-    fireEvent.click(screen.getByRole("button", { name: "Map" }));
+      vi.useFakeTimers();
+      /**
+       * `userEvent.click` se cuelga bajo `vi.useFakeTimers()` en esta
+       * combinación de versiones (user-event 14.6.6 + vitest 4.1.11) — mismo
+       * gotcha documentado en `use-map-load-status.test.tsx`. `fireEvent` no
+       * pierde cobertura real: el clic es un evento síncrono simple.
+       */
+      fireEvent.click(screen.getByRole("button", { name: "Map" }));
 
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(3000);
-    });
-    vi.useRealTimers();
-
-    (globalThis as { google?: unknown }).google = realGoogle;
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3000);
+      });
+      vi.useRealTimers();
+    } finally {
+      /**
+       * `globalThis.google` se instala una sola vez para todo el archivo
+       * (`vitest.setup.ts`), no por test — si algo de lo de arriba lanza, el
+       * `finally` es lo único que evita que el resto de tests de este
+       * archivo (`modo offline`, `drawer de filtros`, `vista de lista`…)
+       * hereden un `google` borrado y fallen en cascada por una razón que no
+       * tiene nada que ver con ellos.
+       */
+      (globalThis as { google?: unknown }).google = realGoogle;
+    }
   }
 
   it("propone reintentar o seguir en la lista", async () => {
