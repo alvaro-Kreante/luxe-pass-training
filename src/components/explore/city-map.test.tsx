@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { CityMap } from "./city-map";
@@ -72,5 +73,46 @@ describe("CityMap", () => {
     );
 
     expect(await screen.findByText("You are here")).toBeInTheDocument();
+  });
+
+  describe("selección", () => {
+    it("llama a onSelect al hacer clic en un marker", async () => {
+      const user = userEvent.setup({ delay: null });
+      const onSelect = vi.fn();
+      render(
+        <CityMap
+          lounges={LOUNGES}
+          origin={{ lat: 40.7595, lng: -73.97 }}
+          onSelect={onSelect}
+          onLoadError={vi.fn()}
+        />,
+      );
+
+      await user.click(
+        await screen.findByRole("button", { name: "The Ainsworth on the map" }),
+      );
+
+      expect(onSelect).toHaveBeenCalledWith("the-ainsworth");
+    });
+
+    it("dibuja los children (callout) sobre el lounge seleccionado", async () => {
+      render(
+        <CityMap
+          lounges={LOUNGES}
+          origin={{ lat: 40.7595, lng: -73.97 }}
+          selectedId="the-ainsworth"
+          onSelect={vi.fn()}
+          onLoadError={vi.fn()}
+        >
+          <div role="group" aria-label="Selected lounge">
+            The Ainsworth detail
+          </div>
+        </CityMap>,
+      );
+
+      expect(
+        await screen.findByRole("group", { name: "Selected lounge" }),
+      ).toHaveTextContent("The Ainsworth detail");
+    });
   });
 });

@@ -11,20 +11,14 @@ import {
   walkingMinutes,
   type DistanceUnit,
 } from "@/lib/distance";
-import { MAP_VIEWBOX } from "./city-map-base";
 import type { MapLounge } from "./city-map";
 
 /**
- * Callout del lounge seleccionado sobre el mapa (Main.dc.html): card de 302px
- * anclada al marker, con la acción que sale de este flujo hacia el Epic 3.
- *
- * Se ancla en porcentaje del plano, no en píxeles: el marker que lo dispara
- * está posicionado igual, así que ambos se mueven juntos al redimensionar.
+ * Callout del lounge seleccionado sobre el mapa (Main.dc.html): card de
+ * 302px. Antes se anclaba en % del viewBox del SVG; ahora lo posiciona el
+ * `AdvancedMarker` que lo envuelve (mismas coordenadas lat/lng del pin), así
+ * que este componente ya no calcula su propia posición.
  */
-
-/** Pasado este punto el callout se dibuja a la izquierda para no salirse. */
-const FLIP_AT = 0.55;
-
 export function LoungeCallout({
   lounge,
   unit,
@@ -32,22 +26,11 @@ export function LoungeCallout({
   lounge: MapLounge;
   unit: DistanceUnit;
 }) {
-  if (!lounge.map) return null;
-
-  const left = lounge.map.x / MAP_VIEWBOX.width;
-  const top = lounge.map.y / MAP_VIEWBOX.height;
-  const flip = left > FLIP_AT;
-
   return (
     <div
       role="group"
       aria-label="Selected lounge"
-      className="absolute z-10 w-[302px] max-w-[calc(100%-40px)] overflow-hidden rounded-content bg-surface shadow-[0_24px_50px_-18px_rgb(34_26_20_/_0.40)]"
-      style={{
-        left: `${left * 100}%`,
-        top: `${top * 100}%`,
-        transform: `translate(${flip ? "calc(-100% - 28px)" : "28px"}, -60%)`,
-      }}
+      className="absolute bottom-full left-1/2 z-10 mb-4 w-[302px] max-w-[calc(100vw-40px)] -translate-x-1/2 overflow-hidden rounded-content bg-surface shadow-[0_24px_50px_-18px_rgb(34_26_20_/_0.40)]"
     >
       <div className="flex gap-3 px-3.5 pb-2.5 pt-3.5">
         <LoungeThumb

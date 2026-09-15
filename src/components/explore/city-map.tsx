@@ -24,17 +24,7 @@ const MIN_ZOOM = 12;
 const MAX_ZOOM = 16;
 const DEFAULT_ZOOM = MIN_ZOOM;
 
-/**
- * `map?: {x,y}` ya no lo pone nadie (el mapa real no usa coordenadas de
- * plano) — se conserva aquí solo para que `lounge-callout.tsx` siga
- * type-checking sin tocarlo en esta tarea: con el campo siempre `undefined`
- * su guarda `if (!lounge.map) return null` hace que el callout no se
- * dibuje, que es el estado "roto/sin usar" que una tarea posterior
- * reescribe sobre lat/lng reales.
- */
-export type MapLounge = LoungeWithDistance & {
-  map?: { x: number; y: number };
-};
+export type MapLounge = LoungeWithDistance;
 
 export interface CityMapProps {
   lounges: MapLounge[];
