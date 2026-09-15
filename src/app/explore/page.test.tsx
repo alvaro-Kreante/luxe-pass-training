@@ -646,6 +646,13 @@ describe("desenfoque de la pantalla de fondo", () => {
     return document.querySelector("[data-app-shell]")!;
   }
 
+  afterEach(() => {
+    Object.defineProperty(navigator, "onLine", {
+      configurable: true,
+      value: true,
+    });
+  });
+
   it("difumina la pantalla mientras se pide el permiso", async () => {
     render(<ExplorePage />);
 
@@ -680,17 +687,10 @@ describe("desenfoque de la pantalla de fondo", () => {
       value: false,
     });
 
-    try {
-      render(<ExplorePage />);
+    render(<ExplorePage />);
 
-      await screen.findByText("You're offline");
-      expect(shell().className).not.toContain("blur");
-    } finally {
-      Object.defineProperty(navigator, "onLine", {
-        configurable: true,
-        value: true,
-      });
-    }
+    await screen.findByText("You're offline");
+    expect(shell().className).not.toContain("blur");
   });
 });
 
