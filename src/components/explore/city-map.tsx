@@ -175,17 +175,34 @@ function LoungeMarker({
 
 function MapControls({ origin }: { origin: Coordinates }) {
   const map = useMap();
-  const [zoom, setZoomState] = React.useState(DEFAULT_ZOOM);
 
-  React.useEffect(() => {
-    if (!map) return;
-
-    const listener = map.addListener("zoom_changed", () => {
-      setZoomState(map.getZoom() ?? DEFAULT_ZOOM);
-    });
-
-    return () => listener.remove();
-  }, [map]);
+  /**
+   * El zoom real vive en el SDK de Google Maps, fuera de React — es el caso
+   * "external sync" que el propio mensaje de la regla eslint
+   * `react-hooks/set-state-in-effect` remite a `useSyncExternalStore`. A
+   * diferencia de un `useState` + `useEffect(() => setZoom(map.getZoom()))`,
+   * `getSnapshot` se lee en cada render (incluido el primero en que `map`
+   * deja de ser `null`), así que no hay hueco entre que el mapa está listo y
+   * que el botón "Zoom out" refleja su zoom real.
+   */
+  const subscribeToZoom = React.useCallback(
+    (onStoreChange: () => void) => {
+      if (!map) return () => {};
+      const listener = map.addListener("zoom_changed", onStoreChange);
+      return () => listener.remove();
+    },
+    [map],
+  );
+  const getZoomSnapshot = React.useCallback(
+    () => map?.getZoom() ?? DEFAULT_ZOOM,
+    [map],
+  );
+  const getZoomServerSnapshot = React.useCallback(() => DEFAULT_ZOOM, []);
+  const zoom = React.useSyncExternalStore(
+    subscribeToZoom,
+    getZoomSnapshot,
+    getZoomServerSnapshot,
+  );
 
   const changeZoom = (delta: number) => {
     if (!map) return;
