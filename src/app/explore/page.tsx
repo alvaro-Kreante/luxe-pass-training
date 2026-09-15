@@ -20,7 +20,6 @@ import {
   ManualLocationDialog,
 } from "@/components/explore/location-dialogs";
 import { FilterDrawer } from "@/components/explore/filter-drawer";
-import { LOUNGE_MAP_POSITIONS } from "@/components/explore/lounge-map-positions";
 import { LoungeCallout } from "@/components/explore/lounge-callout";
 import { LoungeList } from "@/components/explore/lounge-list";
 import { NoResults } from "@/components/explore/no-results";
@@ -125,10 +124,7 @@ function ExploreScreen() {
   /** Sin conexión solo existe lo que quedó guardado de la última visita. */
   const available = offline ? nearby.slice(0, CACHED_LOUNGE_COUNT) : nearby;
   const filtered = applyFilters(available, filters);
-  const lounges = filtered.map((lounge) => ({
-    ...lounge,
-    map: LOUNGE_MAP_POSITIONS[lounge.id],
-  }));
+  const lounges = filtered;
   const selected = lounges.find((lounge) => lounge.id === selectedId) ?? null;
 
   const chips = activeFilterChips(filters, unit);
@@ -307,8 +303,10 @@ function ExploreScreen() {
           ) : (
             <CityMap
               lounges={lounges}
+              origin={origin}
               selectedId={selectedId ?? undefined}
               onSelect={setSelectedId}
+              onLoadError={() => {}}
               offline={offline}
               footer={<MapFooter unit={unit} offline={offline} />}
             >

@@ -1,36 +1,51 @@
 "use client";
 
 import * as React from "react";
-import { Crosshair, Minus, Plus } from "lucide-react";
+import { APIProvider, AdvancedMarker, Map } from "@vis.gl/react-google-maps";
 
-import { CityMapBase, MAP_VIEWBOX } from "./city-map-base";
 import { SunMark } from "./sun-mark";
+import { useMapLoadStatus } from "./use-map-load-status";
+import type { Coordinates } from "@/lib/distance";
 import type { LoungeWithDistance } from "@/lib/lounge-directory";
 import { cn } from "@/lib/utils";
 
 /**
- * Story 2.1 — mapa interactivo: ubicación actual, markers de marca, zoom y pan.
- * Artboard: Main.dc.html · DESIGN-SYSTEM.md §5 "Mapa".
+ * Story 2.1 — mapa real de Google Maps: ubicación actual, markers de marca,
+ * zoom y pan. Artboard: Main.dc.html · DESIGN-SYSTEM.md §5 "Mapa" (el
+ * proveedor de tiles es real desde esta historia; el estilo/branding del
+ * marker y del callout se conservan del mockup, no el plano dibujado).
  */
 
-/** Zoom 1 es la vista más amplia: el plano ya cubre el área disponible. */
-const MIN_ZOOM = 1;
-const MAX_ZOOM = 3;
-const ZOOM_STEP = 0.5;
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!;
+const GOOGLE_MAPS_MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID!;
 
-/** Dónde está el miembro en el plano, en coordenadas del viewBox. */
-const CURRENT_LOCATION = { x: 267, y: 339 };
+/** Zoom de una vista de barrio con varios lounges cercanos. */
+const MIN_ZOOM = 12;
+const MAX_ZOOM = 16;
+const DEFAULT_ZOOM = MIN_ZOOM;
 
-function percent(value: number, total: number) {
-  return `${(value / total) * 100}%`;
-}
-
-export type MapLounge = LoungeWithDistance & { map?: { x: number; y: number } };
+/**
+ * `map?: {x,y}` ya no lo pone nadie (el mapa real no usa coordenadas de
+ * plano) — se conserva aquí solo para que `lounge-callout.tsx` siga
+ * type-checking sin tocarlo en esta tarea: con el campo siempre `undefined`
+ * su guarda `if (!lounge.map) return null` hace que el callout no se
+ * dibuje, que es el estado "roto/sin usar" que una tarea posterior
+ * reescribe sobre lat/lng reales.
+ */
+export type MapLounge = LoungeWithDistance & {
+  map?: { x: number; y: number };
+};
 
 export interface CityMapProps {
   lounges: MapLounge[];
+  origin: Coordinates;
   selectedId?: string;
   onSelect: (id: string) => void;
+  /** Dispara cuando el mapa no carga en 3s o el script falla. Debe ser
+   * estable (useCallback/useState setter) — si el caller pasa una función
+   * inline nueva en cada render, el timeout de useMapLoadStatus se reinicia
+   * en cada render y nunca llega a dispararse de verdad. */
+  onLoadError: () => void;
   /** El plano se apaga y los markers pierden el dorado (§5 "Mapa"). */
   offline?: boolean;
   /** Lo que se dibuja sobre el mapa: el callout del lounge seleccionado. */
@@ -40,189 +55,128 @@ export interface CityMapProps {
 
 export function CityMap({
   lounges,
+  origin,
   selectedId,
   onSelect,
+  onLoadError,
   offline = false,
   children,
   footer,
 }: CityMapProps) {
-  const [zoom, setZoom] = React.useState(MIN_ZOOM);
-  const [pan, setPan] = React.useState({ x: 0, y: 0 });
-  const drag = React.useRef<{ x: number; y: number } | null>(null);
-
-  const recentre = () => {
-    setZoom(MIN_ZOOM);
-    setPan({ x: 0, y: 0 });
-  };
-
-  const changeZoom = (delta: number) => {
-    setZoom((current) => {
-      const next = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, current + delta));
-      if (next === MIN_ZOOM) setPan({ x: 0, y: 0 });
-      return next;
-    });
-  };
-
-  /** Arrastrar solo tiene sentido cuando el plano desborda su contenedor. */
-  const pannable = zoom > MIN_ZOOM;
-
-  const onPointerDown = (event: React.PointerEvent) => {
-    if (!pannable) return;
-    drag.current = { x: event.clientX - pan.x, y: event.clientY - pan.y };
-    event.currentTarget.setPointerCapture(event.pointerId);
-  };
-
-  const onPointerMove = (event: React.PointerEvent) => {
-    if (!drag.current) return;
-    setPan({
-      x: event.clientX - drag.current.x,
-      y: event.clientY - drag.current.y,
-    });
-  };
-
-  const onPointerUp = () => {
-    drag.current = null;
-  };
+  const { handleLoad } = useMapLoadStatus(onLoadError);
+  const selected = lounges.find((lounge) => lounge.id === selectedId) ?? null;
 
   return (
     <div
       className={cn(
         "relative min-h-[320px] flex-1 overflow-hidden bg-map-land",
-        pannable && "cursor-grab active:cursor-grabbing",
+        offline && "map-offline",
       )}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
     >
-      <div
-        className={cn("map-canvas", offline && "map-offline")}
-        style={{
-          transform: `scale(${zoom}) translate(${pan.x / zoom}px, ${pan.y / zoom}px)`,
-        }}
+      <APIProvider
+        apiKey={GOOGLE_MAPS_API_KEY}
+        onLoad={handleLoad}
+        onError={onLoadError}
       >
-        <CityMapBase className="size-full" />
-
-        <span
-          className="absolute size-[18px]"
-          style={{
-            left: percent(CURRENT_LOCATION.x, MAP_VIEWBOX.width),
-            top: percent(CURRENT_LOCATION.y, MAP_VIEWBOX.height),
-            transform: `translate(-50%, -50%) scale(${1 / zoom})`,
-          }}
+        <Map
+          mapId={GOOGLE_MAPS_MAP_ID}
+          defaultCenter={origin}
+          defaultZoom={DEFAULT_ZOOM}
+          disableDefaultUI
+          gestureHandling="greedy"
+          className="size-full"
         >
-          <span
-            aria-hidden
-            className="absolute -left-[13px] -top-[13px] size-11 rounded-full bg-accent/30"
-          />
-          <span className="absolute inset-0 rounded-full border-[3px] border-white bg-ink-900 shadow-[0_4px_10px_-4px_rgb(34_26_20_/_0.6)]" />
-          <span className="absolute left-1/2 top-[34px] -translate-x-1/2 whitespace-nowrap rounded-[10px] bg-white/90 px-2 py-[3px] text-[11px] font-bold text-fg-muted">
-            {offline ? "Last known location" : "You are here"}
-          </span>
-        </span>
+          <CurrentLocationMarker origin={origin} offline={offline} />
 
-        {lounges
-          .filter((lounge) => lounge.map)
-          .map((lounge) => {
-            const selected = lounge.id === selectedId;
+          {lounges.map((lounge) => (
+            <LoungeMarker
+              key={lounge.id}
+              lounge={lounge}
+              selected={lounge.id === selectedId}
+              offline={offline}
+              onSelect={onSelect}
+            />
+          ))}
 
-            return (
-              <button
-                key={lounge.id}
-                type="button"
-                aria-label={`${lounge.name} on the map`}
-                aria-pressed={selected}
-                onClick={() => onSelect(lounge.id)}
-                data-selected={selected}
-                className={cn(
-                  "map-marker absolute flex cursor-pointer items-center justify-center border-2 border-white",
-                  "focus-visible:outline-none focus-visible:shadow-ring",
-                  selected
-                    ? "size-[46px] border-[2.5px] bg-accent-strong shadow-[0_0_0_7px_rgb(201_168_118_/_0.30),0_10px_22px_-8px_rgb(34_26_20_/_0.65)]"
-                    : "size-9 shadow-[0_8px_16px_-6px_rgb(34_26_20_/_0.55)]",
-                  offline && !selected ? "bg-ink-400" : "bg-accent",
-                )}
-                style={{
-                  left: percent(lounge.map!.x, MAP_VIEWBOX.width),
-                  top: percent(lounge.map!.y, MAP_VIEWBOX.height),
-                  transform: `translate(-50%, -50%) rotate(-45deg) scale(${1 / zoom})`,
-                }}
-              >
-                <SunMark
-                  size={selected ? 21 : 16}
-                  className="rotate-45 text-white"
-                />
-              </button>
-            );
-          })}
-      </div>
+          {selected && children ? (
+            <AdvancedMarker
+              position={{ lat: selected.lat, lng: selected.lng }}
+              zIndex={10}
+            >
+              {children}
+            </AdvancedMarker>
+          ) : null}
 
-      {children}
-
-      <div className="absolute right-5 top-5 flex flex-col gap-2.5">
-        <div className="flex flex-col overflow-hidden rounded-[11px] border border-line bg-surface shadow-[0_8px_20px_-12px_rgb(34_26_20_/_0.35)]">
-          <MapControl
-            label="Zoom in"
-            icon={Plus}
-            disabled={zoom >= MAX_ZOOM}
-            onClick={() => changeZoom(ZOOM_STEP)}
-            className="border-b border-line"
-          />
-          <MapControl
-            label="Zoom out"
-            icon={Minus}
-            disabled={zoom <= MIN_ZOOM}
-            onClick={() => changeZoom(-ZOOM_STEP)}
-          />
-        </div>
-        <MapControl
-          label="Recentre the map"
-          icon={Crosshair}
-          onClick={recentre}
-          accent
-          className="rounded-[11px] border border-line bg-surface shadow-[0_8px_20px_-12px_rgb(34_26_20_/_0.35)]"
-        />
-      </div>
+          <MapControls origin={origin} />
+        </Map>
+      </APIProvider>
 
       {footer}
     </div>
   );
 }
 
-function MapControl({
-  label,
-  icon: Icon,
-  onClick,
-  disabled,
-  accent,
-  className,
+function CurrentLocationMarker({
+  origin,
+  offline,
 }: {
-  label: string;
-  icon: typeof Plus;
-  onClick: () => void;
-  disabled?: boolean;
-  accent?: boolean;
-  className?: string;
+  origin: Coordinates;
+  offline: boolean;
 }) {
   return (
-    <button
-      type="button"
-      aria-label={label}
-      onClick={onClick}
-      disabled={disabled}
-      className={cn(
-        "flex size-[42px] cursor-pointer items-center justify-center bg-surface",
-        "transition-colors duration-150 hover:bg-accent-soft",
-        "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-surface",
-        "focus-visible:outline-none focus-visible:shadow-ring",
-        className,
-      )}
-    >
-      <Icon
-        size={accent ? 19 : 18}
-        strokeWidth={1.8}
-        className={accent ? "text-accent-strong" : "text-fg-muted"}
-      />
-    </button>
+    <AdvancedMarker position={origin} zIndex={2}>
+      <div className="relative flex flex-col items-center">
+        <span
+          aria-hidden
+          className="absolute -inset-[13px] rounded-full bg-accent/30"
+        />
+        <span className="relative size-[18px] rounded-full border-[3px] border-white bg-ink-900 shadow-[0_4px_10px_-4px_rgb(34_26_20_/_0.6)]" />
+        <span className="mt-2 whitespace-nowrap rounded-[10px] bg-white/90 px-2 py-[3px] text-[11px] font-bold text-fg-muted">
+          {offline ? "Last known location" : "You are here"}
+        </span>
+      </div>
+    </AdvancedMarker>
   );
+}
+
+function LoungeMarker({
+  lounge,
+  selected,
+  offline,
+  onSelect,
+}: {
+  lounge: MapLounge;
+  selected: boolean;
+  offline: boolean;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <AdvancedMarker
+      position={{ lat: lounge.lat, lng: lounge.lng }}
+      onClick={() => onSelect(lounge.id)}
+      zIndex={selected ? 5 : 1}
+    >
+      <button
+        type="button"
+        aria-label={`${lounge.name} on the map`}
+        aria-pressed={selected}
+        data-selected={selected}
+        className={cn(
+          "map-marker flex rotate-[-45deg] cursor-pointer items-center justify-center border-2 border-white",
+          "focus-visible:outline-none focus-visible:shadow-ring",
+          selected
+            ? "size-[46px] border-[2.5px] bg-accent-strong shadow-[0_0_0_7px_rgb(201_168_118_/_0.30),0_10px_22px_-8px_rgb(34_26_20_/_0.65)]"
+            : "size-9 shadow-[0_8px_16px_-6px_rgb(34_26_20_/_0.55)]",
+          offline && !selected ? "bg-ink-400" : "bg-accent",
+        )}
+      >
+        <SunMark size={selected ? 21 : 16} className="rotate-45 text-white" />
+      </button>
+    </AdvancedMarker>
+  );
+}
+
+function MapControls({ origin }: { origin: Coordinates }) {
+  // Se implementa en una tarea posterior — placeholder para no romper el layout.
+  return null;
 }
