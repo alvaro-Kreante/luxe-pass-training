@@ -27,6 +27,18 @@ export function LoungeCallout({
   unit: DistanceUnit;
 }) {
   return (
+    // `absolute bottom-full left-1/2 -translate-x-1/2` centra este callout
+    // sobre un punto de anclaje colapsado, sin tamaño propio: los wrapper
+    // divs internos del `AdvancedMarker` que envuelve este componente no
+    // llevan más contenido, así que colapsan a las coordenadas lat/lng del
+    // marker, y `position: absolute` saca a este nodo del flujo por
+    // completo (verificado contra el código real de
+    // `@vis.gl/react-google-maps`). Esto es intencional, no un accidente de
+    // flexbox — pero es frágil: no le añadas padding ni clases con
+    // contenido al `AdvancedMarker` que envuelve este callout en
+    // `city-map.tsx` (le daría tamaño propio al ancla y descentraría el
+    // callout), y no cambies la raíz de este componente de
+    // `position: absolute` a algo relativo.
     <div
       role="group"
       aria-label="Selected lounge"
