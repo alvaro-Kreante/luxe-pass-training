@@ -7,6 +7,7 @@ import {
   Map,
   useMap,
 } from "@vis.gl/react-google-maps";
+import { MarkerClusterer } from "@googlemaps/markerclusterer";
 import { Crosshair, Minus, Plus } from "lucide-react";
 
 import { SunMark } from "./sun-mark";
@@ -85,15 +86,12 @@ export function CityMap({
         >
           <CurrentLocationMarker origin={origin} offline={offline} />
 
-          {lounges.map((lounge) => (
-            <LoungeMarker
-              key={lounge.id}
-              lounge={lounge}
-              selected={lounge.id === selectedId}
-              offline={offline}
-              onSelect={onSelect}
-            />
-          ))}
+          <ClusteredLoungeMarkers
+            lounges={lounges}
+            selectedId={selectedId}
+            offline={offline}
+            onSelect={onSelect}
+          />
 
           {selected && children ? (
             <AdvancedMarker
@@ -136,19 +134,77 @@ function CurrentLocationMarker({
   );
 }
 
+function ClusteredLoungeMarkers({
+  lounges,
+  selectedId,
+  offline,
+  onSelect,
+}: {
+  lounges: MapLounge[];
+  selectedId: string | undefined;
+  offline: boolean;
+  onSelect: (id: string) => void;
+}) {
+  const map = useMap();
+  const markers = React.useRef(
+    new globalThis.Map<string, google.maps.marker.AdvancedMarkerElement>(),
+  );
+  const clusterer = React.useRef<MarkerClusterer | null>(null);
+
+  React.useEffect(() => {
+    if (!map) return;
+    clusterer.current = new MarkerClusterer({ map });
+    return () => {
+      clusterer.current?.clearMarkers();
+      clusterer.current = null;
+    };
+  }, [map]);
+
+  React.useEffect(() => {
+    clusterer.current?.clearMarkers();
+    clusterer.current?.addMarkers([...markers.current.values()]);
+  });
+
+  const setMarkerRef = React.useCallback(
+    (id: string, marker: google.maps.marker.AdvancedMarkerElement | null) => {
+      if (marker) markers.current.set(id, marker);
+      else markers.current.delete(id);
+    },
+    [],
+  );
+
+  return (
+    <>
+      {lounges.map((lounge) => (
+        <LoungeMarker
+          key={lounge.id}
+          lounge={lounge}
+          selected={lounge.id === selectedId}
+          offline={offline}
+          onSelect={onSelect}
+          markerRef={(marker) => setMarkerRef(lounge.id, marker)}
+        />
+      ))}
+    </>
+  );
+}
+
 function LoungeMarker({
   lounge,
   selected,
   offline,
   onSelect,
+  markerRef,
 }: {
   lounge: MapLounge;
   selected: boolean;
   offline: boolean;
   onSelect: (id: string) => void;
+  markerRef?: (marker: google.maps.marker.AdvancedMarkerElement | null) => void;
 }) {
   return (
     <AdvancedMarker
+      ref={markerRef}
       position={{ lat: lounge.lat, lng: lounge.lng }}
       onClick={() => onSelect(lounge.id)}
       zIndex={selected ? 5 : 1}

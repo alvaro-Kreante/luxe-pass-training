@@ -51,6 +51,16 @@ class StubMapCanvas {
     return this.center;
   }
 
+  /**
+   * Sin proyección real: hace que `MarkerClusterer.render()` (Task 9,
+   * clustering) devuelva de inmediato en vez de intentar calcular clusters
+   * con geometría que este stub no simula — el propio párrafo de la tarea
+   * dice que ese cálculo no es testeable de forma significativa en jsdom.
+   */
+  getProjection() {
+    return undefined;
+  }
+
   panTo(position: { lat: number; lng: number }) {
     this.center = new StubLatLng(position.lat, position.lng);
     this.emit("center_changed");
@@ -86,6 +96,43 @@ class StubSettings {
     return (StubSettings.#instance ??= new StubSettings());
   }
 }
+
+/**
+ * `@googlemaps/markerclusterer` (Task 9, clustering) subclasses its own base
+ * overlay by copying every enumerable member off `google.maps.OverlayView.prototype`
+ * onto its own prototype the first time it's instantiated — the same pattern
+ * the real Maps JS API uses (`OverlayView.prototype.setMap = function () {...}`,
+ * not ES class methods, which is why these are plain prototype assignments
+ * here too: ES class methods aren't enumerable and the copy would silently
+ * skip them). Only `setMap`/`getMap` are actually reached by the paths this
+ * project exercises (`MarkerClusterer`'s own `render()` bails out via
+ * `StubMapCanvas.getProjection()` above before touching real projection
+ * geometry), but `getProjection` is included too since the real API exposes
+ * it on every overlay.
+ */
+type StubOverlayViewInstance = {
+  map: StubMapCanvas | null;
+  onAdd?: () => void;
+  onRemove?: () => void;
+};
+
+class StubOverlayView implements StubOverlayViewInstance {
+  map: StubMapCanvas | null = null;
+}
+
+Object.assign(StubOverlayView.prototype, {
+  setMap(this: StubOverlayViewInstance, map: StubMapCanvas | null) {
+    this.map = map;
+    if (map) this.onAdd?.();
+    else this.onRemove?.();
+  },
+  getMap(this: StubOverlayViewInstance) {
+    return this.map;
+  },
+  getProjection() {
+    return undefined;
+  },
+});
 
 class StubAdvancedMarkerElement extends EventTarget {
   #map: StubMapCanvas | null = null;
@@ -145,6 +192,7 @@ export function installGoogleMapsStub() {
         Map: StubMapCanvas,
         LatLng: StubLatLng,
         Settings: StubSettings,
+        OverlayView: StubOverlayView,
         marker: {
           AdvancedMarkerElement: StubAdvancedMarkerElement,
         },
