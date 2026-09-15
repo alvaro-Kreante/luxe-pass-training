@@ -115,4 +115,39 @@ describe("CityMap", () => {
       ).toHaveTextContent("The Ainsworth detail");
     });
   });
+
+  describe("controles de zoom", () => {
+    it("empieza con 'Zoom out' deshabilitado en la vista más amplia", async () => {
+      render(
+        <CityMap
+          lounges={LOUNGES}
+          origin={{ lat: 40.7595, lng: -73.97 }}
+          onSelect={vi.fn()}
+          onLoadError={vi.fn()}
+        />,
+      );
+
+      expect(
+        await screen.findByRole("button", { name: "Zoom out" }),
+      ).toBeDisabled();
+    });
+
+    it("habilita 'Zoom out' tras un 'Zoom in'", async () => {
+      const user = userEvent.setup({ delay: null });
+      render(
+        <CityMap
+          lounges={LOUNGES}
+          origin={{ lat: 40.7595, lng: -73.97 }}
+          onSelect={vi.fn()}
+          onLoadError={vi.fn()}
+        />,
+      );
+
+      await user.click(
+        await screen.findByRole("button", { name: "Zoom in" }),
+      );
+
+      expect(screen.getByRole("button", { name: "Zoom out" })).toBeEnabled();
+    });
+  });
 });

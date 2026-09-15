@@ -1,7 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { APIProvider, AdvancedMarker, Map } from "@vis.gl/react-google-maps";
+import {
+  APIProvider,
+  AdvancedMarker,
+  Map,
+  useMap,
+} from "@vis.gl/react-google-maps";
+import { Crosshair, Minus, Plus } from "lucide-react";
 
 import { SunMark } from "./sun-mark";
 import { useMapLoadStatus } from "./use-map-load-status";
@@ -23,6 +29,7 @@ const GOOGLE_MAPS_MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID!;
 const MIN_ZOOM = 12;
 const MAX_ZOOM = 16;
 const DEFAULT_ZOOM = MIN_ZOOM;
+const ZOOM_STEP = 1;
 
 export type MapLounge = LoungeWithDistance;
 
@@ -167,6 +174,96 @@ function LoungeMarker({
 }
 
 function MapControls({ origin }: { origin: Coordinates }) {
-  // Se implementa en una tarea posterior — placeholder para no romper el layout.
-  return null;
+  const map = useMap();
+  const [zoom, setZoomState] = React.useState(DEFAULT_ZOOM);
+
+  React.useEffect(() => {
+    if (!map) return;
+
+    const listener = map.addListener("zoom_changed", () => {
+      setZoomState(map.getZoom() ?? DEFAULT_ZOOM);
+    });
+
+    return () => listener.remove();
+  }, [map]);
+
+  const changeZoom = (delta: number) => {
+    if (!map) return;
+    const next = Math.min(
+      MAX_ZOOM,
+      Math.max(MIN_ZOOM, (map.getZoom() ?? DEFAULT_ZOOM) + delta),
+    );
+    map.setZoom(next);
+  };
+
+  const recentre = () => {
+    if (!map) return;
+    map.panTo(origin);
+    map.setZoom(DEFAULT_ZOOM);
+  };
+
+  return (
+    <div className="absolute right-5 top-5 flex flex-col gap-2.5">
+      <div className="flex flex-col overflow-hidden rounded-[11px] border border-line bg-surface shadow-[0_8px_20px_-12px_rgb(34_26_20_/_0.35)]">
+        <MapControlButton
+          label="Zoom in"
+          icon={Plus}
+          disabled={zoom >= MAX_ZOOM}
+          onClick={() => changeZoom(ZOOM_STEP)}
+          className="border-b border-line"
+        />
+        <MapControlButton
+          label="Zoom out"
+          icon={Minus}
+          disabled={zoom <= MIN_ZOOM}
+          onClick={() => changeZoom(-ZOOM_STEP)}
+        />
+      </div>
+      <MapControlButton
+        label="Recentre the map"
+        icon={Crosshair}
+        onClick={recentre}
+        accent
+        className="rounded-[11px] border border-line bg-surface shadow-[0_8px_20px_-12px_rgb(34_26_20_/_0.35)]"
+      />
+    </div>
+  );
+}
+
+function MapControlButton({
+  label,
+  icon: Icon,
+  onClick,
+  disabled,
+  accent,
+  className,
+}: {
+  label: string;
+  icon: typeof Plus;
+  onClick: () => void;
+  disabled?: boolean;
+  accent?: boolean;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={onClick}
+      disabled={disabled}
+      className={cn(
+        "flex size-[42px] cursor-pointer items-center justify-center bg-surface",
+        "transition-colors duration-150 hover:bg-accent-soft",
+        "disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-surface",
+        "focus-visible:outline-none focus-visible:shadow-ring",
+        className,
+      )}
+    >
+      <Icon
+        size={accent ? 19 : 18}
+        strokeWidth={1.8}
+        className={accent ? "text-accent-strong" : "text-fg-muted"}
+      />
+    </button>
+  );
 }
