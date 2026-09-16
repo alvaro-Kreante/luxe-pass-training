@@ -35,7 +35,7 @@ export function LoungeCallout({
     const el = ref.current;
     if (!el) return;
 
-    const container = el.closest(".bg-map-land");
+    const container = el.closest("[data-map-surface]");
     if (!container) return;
 
     const calloutRect = el.getBoundingClientRect();
@@ -57,8 +57,11 @@ export function LoungeCallout({
     // componente de `position: absolute` a algo relativo.
     //
     // Por defecto se ancla arriba del pin (`bottom-full`); si el pin está
-    // cerca del borde superior del contenedor del mapa (`.bg-map-land`,
-    // `overflow-hidden`), el callout se clipea. `useLayoutEffect` mide la
+    // cerca del borde superior del contenedor del mapa (el wrapper
+    // `overflow-hidden` marcado con `data-map-surface` en `city-map.tsx` —
+    // un atributo de datos, no la clase de estilo `bg-map-land`, para que
+    // este anclaje no se rompa en silencio si esa clase cambia por motivos
+    // puramente visuales), el callout se clipea. `useLayoutEffect` mide la
     // posición real ya renderizada y, si hace falta, lo voltea a
     // `top-full` antes de que el navegador pinte — sin parpadeo.
     <div

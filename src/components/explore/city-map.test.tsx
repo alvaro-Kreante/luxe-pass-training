@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MarkerClusterer } from "@googlemaps/markerclusterer";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { CityMap } from "./city-map";
 
@@ -153,6 +153,14 @@ describe("CityMap", () => {
   });
 
   describe("clustering", () => {
+    // `afterEach`, no un `mockRestore()` manual al final del test: si el
+    // `waitFor` de abajo llega a fallar (el modo de fallo exacto que este
+    // test existe para detectar), un `mockRestore()` inline nunca llegaría a
+    // ejecutarse y el spy se filtraría a los tests siguientes del archivo.
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
     it("registra todos los lounges en el MarkerClusterer, no un array vacío", async () => {
       // Regresión: `AdvancedMarkerElement` se crea de forma asíncrona dentro
       // de `@vis.gl/react-google-maps` (espera a la librería `marker`, ver
@@ -185,8 +193,6 @@ describe("CityMap", () => {
         );
         expect(calledWithFullSet).toBe(true);
       });
-
-      addMarkersSpy.mockRestore();
     });
   });
 });

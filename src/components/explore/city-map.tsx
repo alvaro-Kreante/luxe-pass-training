@@ -66,6 +66,7 @@ export function CityMap({
 
   return (
     <div
+      data-map-surface
       className={cn(
         "relative min-h-[320px] flex-1 overflow-hidden bg-map-land",
         offline && "map-offline",

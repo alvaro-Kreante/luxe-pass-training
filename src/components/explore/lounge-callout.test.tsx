@@ -24,13 +24,17 @@ const LOUNGE: MapLounge = {
 };
 
 /**
- * `LoungeCallout` mide su propia posición contra su ancestro `.bg-map-land`
- * con `getBoundingClientRect` (regresión: antes del fix siempre se anclaba
- * `bottom-full`, arriba del pin, y se clipeaba cuando el pin caía cerca del
- * borde superior del mapa — `overflow-hidden`). jsdom no hace layout real
- * (todo `getBoundingClientRect` devuelve ceros), así que se stubea por
- * elemento: el contenedor `.bg-map-land` reporta un `top` fijo, y el
- * callout reporta el `top` que se quiera simular para cada escenario.
+ * `LoungeCallout` mide su propia posición contra su ancestro marcado con
+ * `[data-map-surface]` (el wrapper `overflow-hidden` real de `city-map.tsx`
+ * — un atributo de datos, no la clase de estilo `bg-map-land`, para que la
+ * consulta no se rompa en silencio si esa clase cambia por motivos
+ * puramente visuales) con `getBoundingClientRect` (regresión: antes del fix
+ * siempre se anclaba `bottom-full`, arriba del pin, y se clipeaba cuando el
+ * pin caía cerca del borde superior del mapa — `overflow-hidden`). jsdom no
+ * hace layout real (todo `getBoundingClientRect` devuelve ceros), así que
+ * se stubea por elemento: el contenedor `[data-map-surface]` reporta un
+ * `top` fijo, y el callout reporta el `top` que se quiera simular para cada
+ * escenario.
  */
 function mockRects({
   containerTop,
@@ -42,7 +46,7 @@ function mockRects({
   return vi
     .spyOn(HTMLElement.prototype, "getBoundingClientRect")
     .mockImplementation(function (this: HTMLElement) {
-      const top = this.classList.contains("bg-map-land")
+      const top = this.hasAttribute("data-map-surface")
         ? containerTop
         : calloutTop;
       return {
@@ -70,7 +74,7 @@ describe("LoungeCallout", () => {
     mockRects({ containerTop: 100, calloutTop: 40 });
 
     render(
-      <div className="bg-map-land">
+      <div data-map-surface>
         <LoungeCallout lounge={LOUNGE} unit="mi" />
       </div>,
     );
@@ -84,7 +88,7 @@ describe("LoungeCallout", () => {
     mockRects({ containerTop: 100, calloutTop: 150 });
 
     render(
-      <div className="bg-map-land">
+      <div data-map-surface>
         <LoungeCallout lounge={LOUNGE} unit="mi" />
       </div>,
     );
