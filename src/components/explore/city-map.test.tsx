@@ -1,5 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MarkerClusterer } from "@googlemaps/markerclusterer";
 import { describe, expect, it, vi } from "vitest";
 
 import { CityMap } from "./city-map";
@@ -148,6 +149,44 @@ describe("CityMap", () => {
       );
 
       expect(screen.getByRole("button", { name: "Zoom out" })).toBeEnabled();
+    });
+  });
+
+  describe("clustering", () => {
+    it("registra todos los lounges en el MarkerClusterer, no un array vacío", async () => {
+      // Regresión: `AdvancedMarkerElement` se crea de forma asíncrona dentro
+      // de `@vis.gl/react-google-maps` (espera a la librería `marker`, ver
+      // `src/test/google-maps-stub.ts`), así que el ref de cada marker llega
+      // después del primer render. Antes del fix, el efecto que alimentaba
+      // al clusterer solo corría una vez al montar y siempre lo hacía con
+      // `markers.current` vacío — `addMarkers` nunca llegaba a recibir los
+      // lounges reales. Comprobar solo que `addMarkers` se llamó (sin mirar
+      // con qué) habría dejado pasar ese bug: por eso se exige que, en algún
+      // momento, se haya llamado con el set completo.
+      const addMarkersSpy = vi.spyOn(MarkerClusterer.prototype, "addMarkers");
+
+      render(
+        <CityMap
+          lounges={LOUNGES}
+          origin={{ lat: 40.7595, lng: -73.97 }}
+          onSelect={vi.fn()}
+          onLoadError={vi.fn()}
+        />,
+      );
+
+      await screen.findByRole("button", { name: "The Ainsworth on the map" });
+      await screen.findByRole("button", {
+        name: "Belmont Terrace on the map",
+      });
+
+      await waitFor(() => {
+        const calledWithFullSet = addMarkersSpy.mock.calls.some(
+          (call) => call[0].length === LOUNGES.length,
+        );
+        expect(calledWithFullSet).toBe(true);
+      });
+
+      addMarkersSpy.mockRestore();
     });
   });
 });
