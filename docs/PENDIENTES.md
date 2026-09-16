@@ -304,6 +304,23 @@ aporta.
 **Desbloquea:** que el Epic 2 cierre el App shell (patrón 3) y los flujos
 multi-pantalla dejen de cambiar de forma. Ahí un e2e por historia empieza a pagar.
 
+### 4.4 La API key / Map ID de Google Maps no tiene rollout a Vercel (`staging`/`main`)
+
+`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` y `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` (Story 2.1,
+`/explore` con Google Maps real — ver §2.2/§2.3, resueltas) solo existen hoy en
+el `.env.local` de cada developer, sin comitear. Deliberado desde el diseño de
+la migración (`docs/superpowers/specs/2026-09-15-google-maps-integration-design.md`
+§Fuera de esta rama): Vercel todavía no está montado en el repo (2 proyectos
+planeados, dev/prod, mismo esquema que Supabase — ver `docs/ci-cd/RESUMEN.md`),
+así que no hay dónde poner la env var de un ambiente remoto todavía. `staging`/
+`main` no sirven `/explore` con mapa real hasta que exista ese rollout.
+
+**Desbloquea:** crear los 2 proyectos Vercel (`docs/ci-cd/RESUMEN.md`, Fase 3-4
+de la guía) y, ya con ellos, dar de alta ambas variables como env vars de cada
+proyecto (key/Map ID de `luxepass-dev` y de `luxepass-prod` pueden ser el mismo
+par o pares distintos — decisión pendiente, no técnica) antes de promover esta
+rama a `staging`.
+
 ---
 
 ## 5. Decisiones abiertas
