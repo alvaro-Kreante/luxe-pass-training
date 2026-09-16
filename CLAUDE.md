@@ -27,11 +27,13 @@ La app en producción de En Soleil vive en `app.luxepass.co`; si este repo la re
 - ❌ Server Actions o `fetch` que escriban en servicios externos (pasarelas de pago, envío de emails) para historias que **no** están conectadas a Supabase — ver regla de abajo
 - ❌ Tests e2e con navegador masivos — Playwright existe para verificación visual (uso puntual, ver §Verificación)
 - ❌ Persistir estado del lado del cliente (`localStorage`, `sessionStorage`, cookies propias) en historias sin backend — para las que sí tienen Supabase, la sesión la maneja Supabase Auth, no un estado casero
+- ❌ Implementar un mapa nuevo con SVG propio o un proveedor de tiles distinto a Google Maps — ver regla de mapas justo abajo
 
 **Sí hacer:**
 
 - ✅ Para historias **sin backend conectado**: datos de muestra en módulos de `src/lib/` o constantes del propio componente; estado de UI con `useState`/Context
 - ✅ Para historias **con backend conectado**: Supabase real (local en desarrollo, remoto vía CI en `staging`/`main`) — ver "Supabase Local Development"
+- ✅ Para **cualquier mapa** de la app (el de `/explore`, el mini-mapa aún sin construir de `/lounges/[id]`, o cualquier otro que salga en un epic futuro): Google Maps real (`@vis.gl/react-google-maps`, con `@googlemaps/markerclusterer` si agrupa markers) — proveedor único fijado al migrar Epic 2 (sept 2026), nunca un SVG propio ni otro proveedor de tiles. Detalle en `docs/design/COMPONENT-MAP.md` §Backend real — Epic 2
 - ✅ Validación **de cliente**, cuya finalidad es que la pantalla pueda mostrar sus estados (error, botón deshabilitado, campo inválido) — no sustituye RLS/validación del lado del servidor en lo que sí toca Supabase
 - ✅ Navegación entre pantallas con `next/link` y `useRouter`
 - ✅ Tests con Vitest + Testing Library, escritos **antes** del código — ver "Metodología de test"
@@ -323,6 +325,7 @@ Estos tokens están replicados en el código como **CSS custom properties** en `
 - **lucide-react** — iconos, con `strokeWidth={1.6}` para cumplir §1 del design system
 - **class-variance-authority** — variantes de componente
 - **Recharts** — gráficos (`components/charts/`: BarChart, LineChart), para Epic 7 y 8
+- **@vis.gl/react-google-maps + @googlemaps/markerclusterer** — Google Maps real, proveedor único de mapa de la app desde la migración de Epic 2 (`/explore`, `components/explore/city-map.tsx`). Cualquier mapa nuevo (mini-mapa de lounge profile, u otro futuro) lo reutiliza — nunca SVG propio ni otro proveedor de tiles
 - **@ducanh2912/next-pwa** — service worker
 - **Brevo** — envío de email transaccional real (confirmación, recovery de Story 1.1/1.2), vía Supabase Auth Hook `send_email` + Edge Function `supabase/functions/send-email`. Detalle en "Supabase Local Development" §Envío de email transaccional
 - **Vitest + Testing Library** — tests sobre jsdom, con `next/navigation` mockeado
