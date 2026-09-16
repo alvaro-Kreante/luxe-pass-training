@@ -27,7 +27,7 @@ const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!;
 const GOOGLE_MAPS_MAP_ID = process.env.NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID!;
 
 /** Zoom de una vista de barrio con varios lounges cercanos. */
-const MIN_ZOOM = 12;
+const MIN_ZOOM = 10;
 const MAX_ZOOM = 16;
 const DEFAULT_ZOOM = MIN_ZOOM;
 const ZOOM_STEP = 1;
@@ -150,6 +150,18 @@ function ClusteredLoungeMarkers({
     new globalThis.Map<string, google.maps.marker.AdvancedMarkerElement>(),
   );
   const clusterer = React.useRef<MarkerClusterer | null>(null);
+  /**
+   * `AdvancedMarkerElement` se crea de forma asíncrona dentro de
+   * `@vis.gl/react-google-maps` (espera a que cargue la librería `marker` de
+   * Google Maps), así que el `ref` de cada `AdvancedMarker` llega bastante
+   * después del montaje inicial. Sin este contador, el efecto de abajo que
+   * llama a `clusterer.addMarkers` solo corría una vez al montar —con
+   * `markers.current` todavía vacío— y el clusterer quedaba con 0 markers
+   * para siempre (confirmado con `clusteringend`: `clusters: []` pase lo que
+   * pase con el zoom). Cada registro de marker incrementa este contador para
+   * que el efecto se repita hasta que todos los markers ya estén dentro.
+   */
+  const [markerRegistrations, setMarkerRegistrations] = React.useState(0);
 
   React.useEffect(() => {
     if (!map) return;
@@ -165,12 +177,13 @@ function ClusteredLoungeMarkers({
   React.useEffect(() => {
     clusterer.current?.clearMarkers();
     clusterer.current?.addMarkers([...markers.current.values()]);
-  }, [loungeIds]);
+  }, [loungeIds, markerRegistrations]);
 
-  const setMarkerRef = React.useCallback(
+  const registerMarker = React.useCallback(
     (id: string, marker: google.maps.marker.AdvancedMarkerElement | null) => {
       if (marker) markers.current.set(id, marker);
       else markers.current.delete(id);
+      setMarkerRegistrations((count) => count + 1);
     },
     [],
   );
@@ -184,7 +197,7 @@ function ClusteredLoungeMarkers({
           selected={lounge.id === selectedId}
           offline={offline}
           onSelect={onSelect}
-          markerRef={(marker) => setMarkerRef(lounge.id, marker)}
+          registerMarker={registerMarker}
         />
       ))}
     </>
@@ -196,14 +209,29 @@ function LoungeMarker({
   selected,
   offline,
   onSelect,
-  markerRef,
+  registerMarker,
 }: {
   lounge: MapLounge;
   selected: boolean;
   offline: boolean;
   onSelect: (id: string) => void;
-  markerRef?: (marker: google.maps.marker.AdvancedMarkerElement | null) => void;
+  registerMarker: (
+    id: string,
+    marker: google.maps.marker.AdvancedMarkerElement | null,
+  ) => void;
 }) {
+  // Callback de ref estable (memoizado por `lounge.id`, no por identidad de
+  // función nueva en cada render): si `ref` cambiase de identidad en cada
+  // render, `AdvancedMarker` lo desmontaría y remontaría cada vez, y
+  // `registerMarker` nunca convergería en un set de markers estable para el
+  // `MarkerClusterer`.
+  const markerRef = React.useCallback(
+    (marker: google.maps.marker.AdvancedMarkerElement | null) => {
+      registerMarker(lounge.id, marker);
+    },
+    [lounge.id, registerMarker],
+  );
+
   return (
     <AdvancedMarker
       ref={markerRef}

@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 
 import { LoungeThumb } from "@/components/lounges/lounge-thumb";
@@ -11,6 +12,7 @@ import {
   walkingMinutes,
   type DistanceUnit,
 } from "@/lib/distance";
+import { cn } from "@/lib/utils";
 import type { MapLounge } from "./city-map";
 
 /**
@@ -26,23 +28,47 @@ export function LoungeCallout({
   lounge: MapLounge;
   unit: DistanceUnit;
 }) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const [flipped, setFlipped] = React.useState(false);
+
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const container = el.closest(".bg-map-land");
+    if (!container) return;
+
+    const calloutRect = el.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    setFlipped(calloutRect.top < containerRect.top);
+  }, [lounge.id]);
+
   return (
-    // `absolute bottom-full left-1/2 -translate-x-1/2` centra este callout
-    // sobre un punto de anclaje colapsado, sin tamaño propio: los wrapper
-    // divs internos del `AdvancedMarker` que envuelve este componente no
-    // llevan más contenido, así que colapsan a las coordenadas lat/lng del
-    // marker, y `position: absolute` saca a este nodo del flujo por
-    // completo (verificado contra el código real de
-    // `@vis.gl/react-google-maps`). Esto es intencional, no un accidente de
-    // flexbox — pero es frágil: no le añadas padding ni clases con
-    // contenido al `AdvancedMarker` que envuelve este callout en
-    // `city-map.tsx` (le daría tamaño propio al ancla y descentraría el
-    // callout), y no cambies la raíz de este componente de
-    // `position: absolute` a algo relativo.
+    // `absolute left-1/2 -translate-x-1/2` centra este callout sobre un
+    // punto de anclaje colapsado, sin tamaño propio: los wrapper divs
+    // internos del `AdvancedMarker` que envuelve este componente no llevan
+    // más contenido, así que colapsan a las coordenadas lat/lng del marker,
+    // y `position: absolute` saca a este nodo del flujo por completo
+    // (verificado contra el código real de `@vis.gl/react-google-maps`).
+    // Esto es intencional, no un accidente de flexbox — pero es frágil: no
+    // le añadas padding ni clases con contenido al `AdvancedMarker` que
+    // envuelve este callout en `city-map.tsx` (le daría tamaño propio al
+    // ancla y descentraría el callout), y no cambies la raíz de este
+    // componente de `position: absolute` a algo relativo.
+    //
+    // Por defecto se ancla arriba del pin (`bottom-full`); si el pin está
+    // cerca del borde superior del contenedor del mapa (`.bg-map-land`,
+    // `overflow-hidden`), el callout se clipea. `useLayoutEffect` mide la
+    // posición real ya renderizada y, si hace falta, lo voltea a
+    // `top-full` antes de que el navegador pinte — sin parpadeo.
     <div
+      ref={ref}
       role="group"
       aria-label="Selected lounge"
-      className="absolute bottom-full left-1/2 z-10 mb-4 w-[302px] max-w-[calc(100vw-40px)] -translate-x-1/2 overflow-hidden rounded-content bg-surface shadow-[0_24px_50px_-18px_rgb(34_26_20_/_0.40)]"
+      className={cn(
+        "absolute left-1/2 z-10 w-[302px] max-w-[calc(100vw-40px)] -translate-x-1/2 overflow-hidden rounded-content bg-surface shadow-[0_24px_50px_-18px_rgb(34_26_20_/_0.40)]",
+        flipped ? "top-full mt-4" : "bottom-full mb-4",
+      )}
     >
       <div className="flex gap-3 px-3.5 pb-2.5 pt-3.5">
         <LoungeThumb
