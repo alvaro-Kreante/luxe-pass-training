@@ -74,44 +74,25 @@ el flujo quedaría cortado.
 **Se sustituye:** por la ruta `/verify-email/[token]` cuando exista la API de
 verificación.
 
-### 2.2 El proveedor de mapa real y sus dos estados de borde siguen simulados
+### 2.2 El proveedor de mapa real y sus dos estados de borde — resuelto
 
-La Story 2.1 tenía cuatro criterios que dependían del sistema o de la red.
-Al conectar Epic 2 a Supabase (sept 2026) se resolvieron el permiso de
-ubicación y la carga de la lista; el proveedor de mapa real sigue fuera de
-alcance de este repo (ver `docs/design/COMPONENT-MAP.md` "Backend real —
-Epic 2"), así que sus dos estados de borde siguen alcanzándose por query
-param:
+**Resuelto** (sept 2026): Google Maps real (`@vis.gl/react-google-maps`),
+decisión tomada con el usuario. Los cuatro criterios de sistema/red de la
+Story 2.1 ya tienen su condición real:
 
-| Qué | Cómo está ahora | Qué lo sustituye |
-|---|---|---|
-| Permiso de ubicación | **Resuelto** — `lib/geolocation.ts` llama a `navigator.geolocation` de verdad; la rama manual sigue como fallback real, no simulado | — |
-| Error de carga del mapa | `\/explore?map=error`. "Retry" limpia el estado y el mapa aparece: no hay un segundo intento que pueda fallar | Un tiempo de espera real contra el proveedor de mapas, con el umbral de 3 s del criterio — llega junto con el proveedor real (§2.3) |
-| Modo offline | `\/explore?offline=1`, con los seis lounges más cercanos como "cacheados" | `navigator.onLine` + lo que el service worker tenga guardado de verdad |
-| Carga de la lista | **Resuelto** — `LoungeList` recibe un `loading` real (pendiente de `fetchLounges`); su propio estado de carga se testea en `components/explore/lounge-list.test.tsx` | — |
+| Qué | Cómo está ahora |
+|---|---|
+| Permiso de ubicación | `lib/geolocation.ts` llama a `navigator.geolocation` de verdad |
+| Error de carga del mapa | `useMapLoadStatus` — timeout real de 3s + `onError` del `APIProvider`, ya no `?map=error` |
+| Modo offline | `useOnlineStatus` — `navigator.onLine` real + eventos `online`/`offline`, ya no `?offline=1`. El service worker real (qué queda "cacheado" de verdad) sigue sin construirse |
+| Carga de la lista | `LoungeList` recibe un `loading` real de `fetchLounges` |
 
-Los dos query params que quedan **no salen de ningún artboard**: siguen siendo
-la única manera de alcanzar esos dos estados mientras el proveedor de mapa
-real y el service worker no lleguen — añadir un botón de simulación que el
-diseño no contempla sería peor.
+### 2.3 El plano de `\/explore` — resuelto
 
-**Desbloquea:** decidir el proveedor de mapa (§2.3) y el service worker real —
-ninguno de los dos cabe en este repositorio.
-
-### 2.3 El plano de `\/explore` es el SVG del artboard
-
-`src/components/explore/city-map-base.tsx` es el dibujo de `Main.dc.html`
-portado a JSX: calles, manzanas, parque y río de una ciudad inventada. El zoom,
-el desplazamiento y los markers sí son reales, pero se mueven sobre un plano que
-no es Nueva York.
-
-`DESIGN-SYSTEM.md` §6 (Fase 3) ya lo anticipaba: "al implementar se sustituye por
-el proveedor real conservando el estilo de markers y controles". Lo que se
-conserva entonces es `CityMap` — markers, controles, callout, escala —; lo que
-se tira es `city-map-base.tsx`.
-
-**Desbloquea:** decidir proveedor (Mapbox, MapLibre, Google) y dónde vive su
-clave. Nada de eso cabe en este repositorio.
+**Resuelto** (sept 2026): `city-map-base.tsx` (el SVG de `Main.dc.html`) se
+sustituyó por Google Maps real, conservando `CityMap` — markers, controles,
+callout, escala — tal como anticipaba `DESIGN-SYSTEM.md` §6 (Fase 3). Detalle
+en `docs/design/COMPONENT-MAP.md` "Backend real — Epic 2".
 
 ### 2.4 El perfil de lounge no tiene datos de detalle propios para 16 de los 17 lounges
 
@@ -167,6 +148,20 @@ recibe cada aviso, pero esa vista no está diseñada — `DESIGN-SYSTEM.md` §6
 
 **Se resuelve:** cuando una historia futura diseñe esa pantalla.
 
+### 2.9 Mini-mapa embebido en el perfil de lounge sigue sin construirse
+
+Con Google Maps ya real en `/explore` (§2.3, resuelto), quedó fuera de
+alcance añadir un mapa embebido en `/lounges/[id]` (Story 3.1) junto a los
+botones Call/Directions. Dos motivos, no uno: `/lounges/[id]` sigue usando el
+catálogo mock de `src/lib/lounges.ts` (Epic 3 sin conectar a Supabase, sin
+`lat`/`lng` reales — solo una dirección de texto generada por hash, no
+geocodificada), y no existe ningún artboard con un hueco de mapa en esa
+pantalla.
+
+**Desbloquea:** conectar Epic 3 a Supabase con datos de contacto reales
+(mucho más grande que "añadir un mapa"), y que una historia futura diseñe
+ese hueco en el artboard.
+
 ---
 
 ## 3. Criterios de aceptación cubiertos solo de forma declarativa
@@ -180,8 +175,7 @@ nada los hace cumplir.
 |---|---|---|
 | 1.1 | Welcome email with app download links | Pantalla `/welcome` con los botones de tienda; no se envía correo. Supabase Auth solo manda el de confirmación de forma nativa; un segundo correo exigiría Database Webhook + Edge Function — decisión tomada con el usuario de no añadirlo (ver `COMPONENT-MAP.md` §Backend real) |
 | 1.2 | "Remember me" como segundo modo de sesión (persistente vs. solo-de-sesión) | Decisión tomada con el usuario: implementarlo de verdad exigiría que el middleware conociera esa elección en cada refresco de token — desproporcionado para una historia marcada como pequeña. El checkbox se queda como preferencia de UI con su nota explicativa; `inactivity_timeout` (30 días) es real pero global, no depende de si se marcó. Ver `COMPONENT-MAP.md` §Backend real |
-| 2.1 | Map loads within 3 seconds on good connection | No hay proveedor de mapa real que medir: el plano sigue siendo un SVG del propio bundle. El estado de fallo se alcanza por query param — ver §2.2 |
-| 2.1 | Offline mode shows cached nearby locations | Los "cacheados" son los seis más cercanos del catálogo real; el service worker no interviene — ver §2.2 |
+| 2.1 | Offline mode shows cached nearby locations | Los "cacheados" son los seis más cercanos del catálogo real; `navigator.onLine` ya es real (§2.2), el service worker que guardaría datos de verdad no interviene todavía |
 | 2.1 | Distance display in miles/km based on user preference | El toggle de la topbar convierte una distancia real (Haversine, ver `COMPONENT-MAP.md` §Backend real — Epic 2), pero la unidad sigue sin leerse del teléfono ni recordarse entre visitas |
 | 3.1 | Call and Directions quick action buttons (google maps url) | Enlaces reales (`tel:` y Google Maps con la dirección de muestra); no hay verificación de que el teléfono o la dirección existan |
 | 3.1 | Share lounge option via social/messaging apps | Los destinos (Messages, WhatsApp, Instagram…) son botones sin integración; solo "Copy" usa una API real del navegador (`navigator.clipboard`) |
