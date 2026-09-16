@@ -257,7 +257,7 @@ describe("selección de un lounge", () => {
       '[data-stub-map-canvas="true"]',
     );
     expect(background).not.toBeNull();
-    fireEvent.click(background as HTMLElement);
+    await user.click(background as HTMLElement);
 
     expect(
       screen.queryByRole("group", { name: "Selected lounge" }),

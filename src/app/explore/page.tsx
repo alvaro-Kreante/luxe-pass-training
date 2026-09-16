@@ -127,6 +127,11 @@ function ExploreScreen() {
   /** Patrón 4: la pantalla de fondo se difumina mientras hay un diálogo abierto. */
   const behindDialog = step !== "located";
 
+  /** Estable (no una arrow inline): evita que el efecto de `useMapEvents` en
+   * @vis.gl/react-google-maps, atado a `[map, eventType, handler]`, quite y
+   * vuelva a poner el listener nativo de "click" en cada render. */
+  const handleDeselect = React.useCallback(() => setSelectedId(null), []);
+
   async function handleAllow() {
     const result: LocationResult = await getCurrentPosition();
 
@@ -298,7 +303,7 @@ function ExploreScreen() {
               origin={origin}
               selectedId={selectedId ?? undefined}
               onSelect={setSelectedId}
-              onDeselect={() => setSelectedId(null)}
+              onDeselect={handleDeselect}
               onLoadError={() => setMapFailed(true)}
               offline={offline}
               footer={<MapFooter unit={unit} offline={offline} />}
