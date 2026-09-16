@@ -54,9 +54,11 @@ import { createClient } from "@/lib/supabase/client";
  *
  * Backend real (Supabase local): el catálogo viene de `lib/lounge-directory.ts`
  * y la distancia se calcula de verdad desde la ubicación del miembro
- * (`lib/geolocation.ts`). El proveedor de mapa real, el modo offline con
- * service worker y el tiempo de carga real del mapa siguen fuera de alcance
- * — ver docs/design/COMPONENT-MAP.md "Backend real — Epic 2".
+ * (`lib/geolocation.ts`). El mapa es Google Maps real
+ * (`components/explore/city-map.tsx`), con detección real de error de carga
+ * y de offline. El service worker que guardaría datos reales para el modo
+ * offline sigue fuera de alcance — ver docs/design/COMPONENT-MAP.md
+ * "Backend real — Epic 2".
  */
 
 /** Cuántos lounges quedaron guardados de la última visita (Offline.dc.html). */

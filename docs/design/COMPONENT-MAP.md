@@ -409,6 +409,7 @@ Desviaciones conscientes de esta parte (no son bugs, son decisiones tomadas con 
 - **Mini-mapa embebido en el perfil de lounge (Story 3.1) queda fuera de esta historia**: `/lounges/[id]` sigue en `lib/lounges.ts` (mock de Epic 3-9, sin lat/lng reales) y no tiene artboard con un hueco de mapa — ver `docs/PENDIENTES.md` nueva entrada §2.9.
 - **Solo lectura**: sin policies de insert/update/delete — el catálogo se siembra por migración hasta que Epic 8.3 diseñe su propio flujo de admin sobre `lounges` (ya anticipado en `docs/DATA-MODEL-MAP.md`).
 - **`explore/page.test.tsx` ya no cubre el instante exacto de "cargando" de la lista** (antes `?list=loading`, retirado: la carga ya es real). Ese estado tiene su propio test determinista en `components/explore/lounge-list.test.tsx`, sobre el componente directamente — una petición de red real no se puede fijar en un instante concreto desde un test.
+- **El botón "Recentre the map" pana a la ubicación GPS real capturada al conceder el permiso, no a una nueva lectura en cada clic.** `origin` (pasado a `CityMap` desde `page.tsx`) es la coordenada real de `getCurrentPosition()` obtenida en `handleAllow` — ya no el punto fijo `{x:267,y:339}` que tenía el mock —, pero el botón no vuelve a pedir el GPS por clic: eso añadiría manejo de permiso denegado/timeout para un control secundario, desproporcionado para esta historia. Se sustituye si una historia futura pide una relectura de ubicación en vivo.
 
 ---
 
