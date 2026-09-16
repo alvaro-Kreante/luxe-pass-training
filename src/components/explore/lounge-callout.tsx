@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 
 import { LoungeThumb } from "@/components/lounges/lounge-thumb";
@@ -11,43 +12,66 @@ import {
   walkingMinutes,
   type DistanceUnit,
 } from "@/lib/distance";
-import { MAP_VIEWBOX } from "./city-map-base";
-import type { Lounge } from "@/lib/lounges";
+import { cn } from "@/lib/utils";
+import type { MapLounge } from "./city-map";
 
 /**
- * Callout del lounge seleccionado sobre el mapa (Main.dc.html): card de 302px
- * anclada al marker, con la acción que sale de este flujo hacia el Epic 3.
- *
- * Se ancla en porcentaje del plano, no en píxeles: el marker que lo dispara
- * está posicionado igual, así que ambos se mueven juntos al redimensionar.
+ * Callout del lounge seleccionado sobre el mapa (Main.dc.html): card de
+ * 302px. Antes se anclaba en % del viewBox del SVG; ahora lo posiciona el
+ * `AdvancedMarker` que lo envuelve (mismas coordenadas lat/lng del pin), así
+ * que este componente ya no calcula su propia posición.
  */
-
-/** Pasado este punto el callout se dibuja a la izquierda para no salirse. */
-const FLIP_AT = 0.55;
-
 export function LoungeCallout({
   lounge,
   unit,
 }: {
-  lounge: Lounge;
+  lounge: MapLounge;
   unit: DistanceUnit;
 }) {
-  if (!lounge.map) return null;
+  const ref = React.useRef<HTMLDivElement>(null);
+  const [flipped, setFlipped] = React.useState(false);
 
-  const left = lounge.map.x / MAP_VIEWBOX.width;
-  const top = lounge.map.y / MAP_VIEWBOX.height;
-  const flip = left > FLIP_AT;
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const container = el.closest("[data-map-surface]");
+    if (!container) return;
+
+    const calloutRect = el.getBoundingClientRect();
+    const containerRect = container.getBoundingClientRect();
+    setFlipped(calloutRect.top < containerRect.top);
+  }, [lounge.id]);
 
   return (
+    // `absolute left-1/2 -translate-x-1/2` centra este callout sobre un
+    // punto de anclaje colapsado, sin tamaño propio: los wrapper divs
+    // internos del `AdvancedMarker` que envuelve este componente no llevan
+    // más contenido, así que colapsan a las coordenadas lat/lng del marker,
+    // y `position: absolute` saca a este nodo del flujo por completo
+    // (verificado contra el código real de `@vis.gl/react-google-maps`).
+    // Esto es intencional, no un accidente de flexbox — pero es frágil: no
+    // le añadas padding ni clases con contenido al `AdvancedMarker` que
+    // envuelve este callout en `city-map.tsx` (le daría tamaño propio al
+    // ancla y descentraría el callout), y no cambies la raíz de este
+    // componente de `position: absolute` a algo relativo.
+    //
+    // Por defecto se ancla arriba del pin (`bottom-full`); si el pin está
+    // cerca del borde superior del contenedor del mapa (el wrapper
+    // `overflow-hidden` marcado con `data-map-surface` en `city-map.tsx` —
+    // un atributo de datos, no la clase de estilo `bg-map-land`, para que
+    // este anclaje no se rompa en silencio si esa clase cambia por motivos
+    // puramente visuales), el callout se clipea. `useLayoutEffect` mide la
+    // posición real ya renderizada y, si hace falta, lo voltea a
+    // `top-full` antes de que el navegador pinte — sin parpadeo.
     <div
+      ref={ref}
       role="group"
       aria-label="Selected lounge"
-      className="absolute z-10 w-[302px] max-w-[calc(100%-40px)] overflow-hidden rounded-content bg-surface shadow-[0_24px_50px_-18px_rgb(34_26_20_/_0.40)]"
-      style={{
-        left: `${left * 100}%`,
-        top: `${top * 100}%`,
-        transform: `translate(${flip ? "calc(-100% - 28px)" : "28px"}, -60%)`,
-      }}
+      className={cn(
+        "absolute left-1/2 z-10 w-[302px] max-w-[calc(100vw-40px)] -translate-x-1/2 overflow-hidden rounded-content bg-surface shadow-[0_24px_50px_-18px_rgb(34_26_20_/_0.40)]",
+        flipped ? "top-full mt-4" : "bottom-full mb-4",
+      )}
     >
       <div className="flex gap-3 px-3.5 pb-2.5 pt-3.5">
         <LoungeThumb

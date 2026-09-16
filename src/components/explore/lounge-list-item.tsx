@@ -12,7 +12,7 @@ import {
   walkingMinutes,
   type DistanceUnit,
 } from "@/lib/distance";
-import type { Lounge } from "@/lib/lounges";
+import type { LoungeWithDistance } from "@/lib/lounge-directory";
 
 /**
  * Story 2.3 — fila de la lista (ListView.dc.html): miniatura de 200×120,
@@ -23,7 +23,7 @@ export function LoungeListItem({
   lounge,
   unit,
 }: {
-  lounge: Lounge;
+  lounge: LoungeWithDistance;
   unit: DistanceUnit;
 }) {
   return (

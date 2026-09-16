@@ -9,7 +9,7 @@ import {
   LoungeListItemSkeleton,
 } from "./lounge-list-item";
 import type { DistanceUnit } from "@/lib/distance";
-import type { Lounge } from "@/lib/lounges";
+import type { LoungeWithDistance } from "@/lib/lounge-directory";
 
 /**
  * Story 2.3 — List View Alternative.
@@ -28,7 +28,7 @@ export function LoungeList({
   loading = false,
   distanceNote,
 }: {
-  lounges: Lounge[];
+  lounges: LoungeWithDistance[];
   unit: DistanceUnit;
   loading?: boolean;
   /** "Searching within 2 mi of your location" y equivalentes. */

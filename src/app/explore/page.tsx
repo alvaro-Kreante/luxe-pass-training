@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import { useSearchParams } from "next/navigation";
 import {
   LayoutList,
   Map as MapIcon,
@@ -11,6 +10,7 @@ import {
   WifiOff,
 } from "lucide-react";
 
+import { RequireSession } from "@/components/onboarding/require-session";
 import { AppShell } from "@/components/patterns/app-shell";
 import { ExploreLayout } from "@/components/patterns/explore-layout";
 import { CityMap } from "@/components/explore/city-map";
@@ -37,17 +37,28 @@ import {
   suggestionsToRecoverResults,
   type Filters,
 } from "@/lib/filters";
+import { getCurrentPosition, type LocationResult } from "@/lib/geolocation";
+import { useOnlineStatus } from "@/lib/online-status";
 import { DEFAULT_CITY_ID, cityById, cityLabel } from "@/lib/location";
-import { loungesIn } from "@/lib/lounges";
+import {
+  fetchLounges,
+  withDistance,
+  type LoungeRow,
+} from "@/lib/lounge-directory";
+import { createClient } from "@/lib/supabase/client";
 
 /**
  * Story 2.1 — Map-Based Lounge Discovery.
  * Artboards: Main.dc.html · LocationPermission.dc.html · ManualLocation.dc.html
  * MapError.dc.html · Offline.dc.html
  *
- * El permiso de ubicación, la caída del mapa y el modo offline están simulados:
- * ver `docs/PENDIENTES.md`. La pantalla llega a mostrar cada estado, que es lo
- * que el diseño tiene que enseñar; nada de eso consulta al sistema ni a la red.
+ * Backend real (Supabase local): el catálogo viene de `lib/lounge-directory.ts`
+ * y la distancia se calcula de verdad desde la ubicación del miembro
+ * (`lib/geolocation.ts`). El mapa es Google Maps real
+ * (`components/explore/city-map.tsx`), con detección real de error de carga
+ * y de offline. El service worker que guardaría datos reales para el modo
+ * offline sigue fuera de alcance — ver docs/design/COMPONENT-MAP.md
+ * "Backend real — Epic 2".
  */
 
 /** Cuántos lounges quedaron guardados de la última visita (Offline.dc.html). */
@@ -55,43 +66,57 @@ const CACHED_LOUNGE_COUNT = 6;
 
 type LocationStep = "asking" | "manual" | "located";
 
-/**
- * Los estados de borde (`?map=error`, `?offline=1`) se leen de la URL, y
- * `useSearchParams` obliga a un límite de Suspense para poder prerenderizar.
- */
 export default function ExplorePage() {
   return (
-    <React.Suspense>
+    <RequireSession>
       <ExploreScreen />
-    </React.Suspense>
+    </RequireSession>
   );
 }
 
 function ExploreScreen() {
-  const params = useSearchParams();
-  const offline = params.get("offline") === "1";
-  const startsWithMapError = params.get("map") === "error";
-  const listLoading = params.get("list") === "loading";
+  const online = useOnlineStatus();
+  const offline = !online;
 
-  /** Los estados de borde entran con la ubicación ya resuelta, como el artboard. */
+  /** Un miembro que vuelve sin conexión ya dio su ubicación antes: se salta el permiso. */
   const [step, setStep] = React.useState<LocationStep>(
-    offline || startsWithMapError || listLoading ? "located" : "asking",
+    offline ? "located" : "asking",
   );
   const [cityId, setCityId] = React.useState(DEFAULT_CITY_ID);
+  const [origin, setOrigin] = React.useState(() => {
+    const city = cityById(DEFAULT_CITY_ID);
+    return { lat: city.lat, lng: city.lng };
+  });
+  const [allLounges, setAllLounges] = React.useState<LoungeRow[] | null>(null);
   const [unit, setUnit] = React.useState<DistanceUnit>("mi");
-  const [view, setView] = React.useState<"map" | "list">(
-    listLoading ? "list" : "map",
-  );
-  const [mapFailed, setMapFailed] = React.useState(startsWithMapError);
+  const [view, setView] = React.useState<"map" | "list">("map");
+  const [mapFailed, setMapFailed] = React.useState(false);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = React.useState(false);
   const [filters, setFilters] = React.useState<Filters>(EMPTY_FILTERS);
 
+  React.useEffect(() => {
+    const supabase = createClient();
+    let active = true;
+
+    fetchLounges(supabase).then((rows) => {
+      if (active) setAllLounges(rows);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const city = cityById(cityId);
-  const nearby = loungesIn(cityId);
+  const cityLounges = (allLounges ?? []).filter(
+    (lounge) => lounge.cityId === cityId,
+  );
+  const nearby = withDistance(cityLounges, origin);
   /** Sin conexión solo existe lo que quedó guardado de la última visita. */
   const available = offline ? nearby.slice(0, CACHED_LOUNGE_COUNT) : nearby;
-  const lounges = applyFilters(available, filters);
+  const filtered = applyFilters(available, filters);
+  const lounges = filtered;
   const selected = lounges.find((lounge) => lounge.id === selectedId) ?? null;
 
   const chips = activeFilterChips(filters, unit);
@@ -102,8 +127,28 @@ function ExploreScreen() {
   /** Patrón 4: la pantalla de fondo se difumina mientras hay un diálogo abierto. */
   const behindDialog = step !== "located";
 
+  /** Estable (no una arrow inline): evita que el efecto de `useMapEvents` en
+   * @vis.gl/react-google-maps, atado a `[map, eventType, handler]`, quite y
+   * vuelva a poner el listener nativo de "click" en cada render. */
+  const handleDeselect = React.useCallback(() => setSelectedId(null), []);
+
+  async function handleAllow() {
+    const result: LocationResult = await getCurrentPosition();
+
+    if (result.status === "granted") {
+      setOrigin(result.coords);
+      setStep("located");
+      return;
+    }
+
+    /** AC "Fallback to manual location entry if GPS unavailable". */
+    setStep("manual");
+  }
+
   const chooseCity = (id: string) => {
+    const chosen = cityById(id);
     setCityId(id);
+    setOrigin({ lat: chosen.lat, lng: chosen.lng });
     setSelectedId(null);
     setStep("located");
   };
@@ -235,7 +280,7 @@ function ExploreScreen() {
           <LoungeList
             lounges={lounges}
             unit={unit}
-            loading={listLoading}
+            loading={allLounges === null}
             distanceNote={
               filters.maxDistanceMiles === null
                 ? `Searching near ${cityLabel(city)}`
@@ -255,8 +300,11 @@ function ExploreScreen() {
           ) : (
             <CityMap
               lounges={lounges}
+              origin={origin}
               selectedId={selectedId ?? undefined}
               onSelect={setSelectedId}
+              onDeselect={handleDeselect}
+              onLoadError={() => setMapFailed(true)}
               offline={offline}
               footer={<MapFooter unit={unit} offline={offline} />}
             >
@@ -268,7 +316,7 @@ function ExploreScreen() {
 
       <LocationPermissionDialog
         open={step === "asking"}
-        onAllow={() => setStep("located")}
+        onAllow={handleAllow}
         onEnterManually={() => setStep("manual")}
       />
 
@@ -284,6 +332,7 @@ function ExploreScreen() {
         open={step === "manual"}
         onConfirm={chooseCity}
         onRetryGps={() => setStep("asking")}
+        lounges={allLounges ?? []}
       />
     </AppShell>
   );

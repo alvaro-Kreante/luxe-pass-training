@@ -74,44 +74,25 @@ el flujo quedaría cortado.
 **Se sustituye:** por la ruta `/verify-email/[token]` cuando exista la API de
 verificación.
 
-### 2.2 El permiso de ubicación y los estados de borde de `/explore` están simulados
+### 2.2 El proveedor de mapa real y sus dos estados de borde — resuelto
 
-La Story 2.1 tiene tres criterios que dependen del sistema o de la red. Como el
-repo es solo diseño, la pantalla **llega a mostrar cada estado** sin que nada lo
-provoque de verdad:
+**Resuelto** (sept 2026): Google Maps real (`@vis.gl/react-google-maps`),
+decisión tomada con el usuario. Los cuatro criterios de sistema/red de la
+Story 2.1 ya tienen su condición real:
 
-| Qué | Cómo está ahora | Qué lo sustituye |
-|---|---|---|
-| Permiso de ubicación | Diálogo propio y un `useState` con tres pasos (`asking` · `manual` · `located`). No se llama a `navigator.geolocation` | La API de geolocalización del navegador, conservando la rama manual para cuando la deniegan |
-| Error de carga del mapa | `\/explore?map=error`. "Retry" limpia el estado y el mapa aparece: no hay un segundo intento que pueda fallar | Un tiempo de espera real contra el proveedor de mapas, con el umbral de 3 s del criterio |
-| Modo offline | `\/explore?offline=1`, con los seis lounges más cercanos como "cacheados" | `navigator.onLine` + lo que el service worker tenga guardado de verdad |
-| Carga de la lista | `\/explore?list=loading` deja la lista en skeletons para siempre: no hay nada que esperar | El estado de carga real mientras se piden los lounges |
+| Qué | Cómo está ahora |
+|---|---|
+| Permiso de ubicación | `lib/geolocation.ts` llama a `navigator.geolocation` de verdad |
+| Error de carga del mapa | `useMapLoadStatus` — timeout real de 3s + `onError` del `APIProvider`, ya no `?map=error` |
+| Modo offline | `useOnlineStatus` — `navigator.onLine` real + eventos `online`/`offline`, ya no `?offline=1`. El service worker real (qué queda "cacheado" de verdad) sigue sin construirse |
+| Carga de la lista | `LoungeList` recibe un `loading` real de `fetchLounges` |
 
-Los tres query params **no salen de ningún artboard**: son la única manera de
-alcanzar esos estados sin añadir a la interfaz un botón de simulación que el
-diseño no contempla.
+### 2.3 El plano de `\/explore` — resuelto
 
-**Al conectar la lógica real hay que quitar las tres simulaciones**, no dejarlas
-conviviendo con ella: los query params desaparecen, y con ellos la rama
-`startsWithMapError` y `listLoading` de `src/app/explore/page.tsx`.
-
-**Desbloquea:** que el proyecto deje de ser solo diseño — es decir, la app de
-`app.luxepass.co`, no este repo.
-
-### 2.3 El plano de `\/explore` es el SVG del artboard
-
-`src/components/explore/city-map-base.tsx` es el dibujo de `Main.dc.html`
-portado a JSX: calles, manzanas, parque y río de una ciudad inventada. El zoom,
-el desplazamiento y los markers sí son reales, pero se mueven sobre un plano que
-no es Nueva York.
-
-`DESIGN-SYSTEM.md` §6 (Fase 3) ya lo anticipaba: "al implementar se sustituye por
-el proveedor real conservando el estilo de markers y controles". Lo que se
-conserva entonces es `CityMap` — markers, controles, callout, escala —; lo que
-se tira es `city-map-base.tsx`.
-
-**Desbloquea:** decidir proveedor (Mapbox, MapLibre, Google) y dónde vive su
-clave. Nada de eso cabe en este repositorio.
+**Resuelto** (sept 2026): `city-map-base.tsx` (el SVG de `Main.dc.html`) se
+sustituyó por Google Maps real, conservando `CityMap` — markers, controles,
+callout, escala — tal como anticipaba `DESIGN-SYSTEM.md` §6 (Fase 3). Detalle
+en `docs/design/COMPONENT-MAP.md` "Backend real — Epic 2".
 
 ### 2.4 El perfil de lounge no tiene datos de detalle propios para 16 de los 17 lounges
 
@@ -167,6 +148,38 @@ recibe cada aviso, pero esa vista no está diseñada — `DESIGN-SYSTEM.md` §6
 
 **Se resuelve:** cuando una historia futura diseñe esa pantalla.
 
+### 2.9 Mini-mapa embebido en el perfil de lounge sigue sin construirse
+
+Con Google Maps ya real en `/explore` (§2.3, resuelto), quedó fuera de
+alcance añadir un mapa embebido en `/lounges/[id]` (Story 3.1) junto a los
+botones Call/Directions. Dos motivos, no uno: `/lounges/[id]` sigue usando el
+catálogo mock de `src/lib/lounges.ts` (Epic 3 sin conectar a Supabase, sin
+`lat`/`lng` reales — solo una dirección de texto generada por hash, no
+geocodificada), y no existe ningún artboard con un hueco de mapa en esa
+pantalla.
+
+**Desbloquea:** conectar Epic 3 a Supabase con datos de contacto reales
+(mucho más grande que "añadir un mapa"), y que una historia futura diseñe
+ese hueco en el artboard.
+
+### 2.10 `forgot-password/page.test.tsx` sigue esperando Mailpit, no Brevo
+
+El segundo test de esa historia (`page.test.tsx:38`) busca el email de
+recovery en Mailpit (`MAILPIT_URL`) — correcto antes de la migración a
+Brevo (13 sept), obsoleto desde que el hook `send_email` intercepta y
+manda el correo real por la API de Brevo (ver `CLAUDE.md` §Envío de email
+transaccional). Con el hook activo de verdad (local dev normal, `staging`,
+`main`), ese test falla: el correo nunca llega a Mailpit. Solo pasa hoy en
+CI porque `ci.yml` desactiva el hook en su copia efímera del checkout
+(ver `docs/ci-cd/RESUMEN.md`, bug 6) — un byproduct de evitar mandar
+emails reales por Brevo en cada corrida, no un arreglo del test en sí.
+
+**Se resuelve:** reescribiendo el test para no depender de un inbox real
+(verificar solo el acuse en pantalla, como ya hace el tercer test de ese
+mismo archivo) o, si se quiere seguir verificando el contenido del email,
+contra un doble de Brevo — ninguna de las dos se hizo aquí para no
+mezclar ese cambio con el trabajo de Epic 2/CI de esta rama.
+
 ---
 
 ## 3. Criterios de aceptación cubiertos solo de forma declarativa
@@ -180,11 +193,8 @@ nada los hace cumplir.
 |---|---|---|
 | 1.1 | Welcome email with app download links | Pantalla `/welcome` con los botones de tienda; no se envía correo. Supabase Auth solo manda el de confirmación de forma nativa; un segundo correo exigiría Database Webhook + Edge Function — decisión tomada con el usuario de no añadirlo (ver `COMPONENT-MAP.md` §Backend real) |
 | 1.2 | "Remember me" como segundo modo de sesión (persistente vs. solo-de-sesión) | Decisión tomada con el usuario: implementarlo de verdad exigiría que el middleware conociera esa elección en cada refresco de token — desproporcionado para una historia marcada como pequeña. El checkbox se queda como preferencia de UI con su nota explicativa; `inactivity_timeout` (30 días) es real pero global, no depende de si se marcó. Ver `COMPONENT-MAP.md` §Backend real |
-| 2.1 | Current location detection with permission request | Diálogo propio; no se consulta `navigator.geolocation` — ver 2.2 |
-| 2.1 | Map loads within 3 seconds on good connection | No hay carga que medir: el plano es un SVG del propio bundle. El estado de fallo se alcanza por query param |
-| 2.1 | Offline mode shows cached nearby locations | Los "cacheados" son los seis primeros del catálogo; el service worker no interviene |
-| 2.1 | Distance display in miles/km based on user preference | El toggle de la topbar hace la conversión de verdad, pero el ajuste no se lee del teléfono ni se recuerda |
-| 2.3 | Loading states while fetching data | No hay petición que esperar: el estado se alcanza por query param — ver 2.2 |
+| 2.1 | Offline mode shows cached nearby locations | Los "cacheados" son los seis más cercanos del catálogo real; `navigator.onLine` ya es real (§2.2), el service worker que guardaría datos de verdad no interviene todavía |
+| 2.1 | Distance display in miles/km based on user preference | El toggle de la topbar convierte una distancia real (Haversine, ver `COMPONENT-MAP.md` §Backend real — Epic 2), pero la unidad sigue sin leerse del teléfono ni recordarse entre visitas |
 | 3.1 | Call and Directions quick action buttons (google maps url) | Enlaces reales (`tel:` y Google Maps con la dirección de muestra); no hay verificación de que el teléfono o la dirección existan |
 | 3.1 | Share lounge option via social/messaging apps | Los destinos (Messages, WhatsApp, Instagram…) son botones sin integración; solo "Copy" usa una API real del navegador (`navigator.clipboard`) |
 | 3.2 | Real-time availability status | `lounge.slotsToday` del catálogo de la Story 2.2, no un estado que cambie solo |
@@ -312,6 +322,23 @@ aporta.
 **Desbloquea:** que el Epic 2 cierre el App shell (patrón 3) y los flujos
 multi-pantalla dejen de cambiar de forma. Ahí un e2e por historia empieza a pagar.
 
+### 4.4 La API key / Map ID de Google Maps no tiene rollout a Vercel (`staging`/`main`)
+
+`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` y `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` (Story 2.1,
+`/explore` con Google Maps real — ver §2.2/§2.3, resueltas) solo existen hoy en
+el `.env.local` de cada developer, sin comitear. Deliberado desde el diseño de
+la migración (`docs/superpowers/specs/2026-09-15-google-maps-integration-design.md`
+§Fuera de esta rama): Vercel todavía no está montado en el repo (2 proyectos
+planeados, dev/prod, mismo esquema que Supabase — ver `docs/ci-cd/RESUMEN.md`),
+así que no hay dónde poner la env var de un ambiente remoto todavía. `staging`/
+`main` no sirven `/explore` con mapa real hasta que exista ese rollout.
+
+**Desbloquea:** crear los 2 proyectos Vercel (`docs/ci-cd/RESUMEN.md`, Fase 3-4
+de la guía) y, ya con ellos, dar de alta ambas variables como env vars de cada
+proyecto (key/Map ID de `luxepass-dev` y de `luxepass-prod` pueden ser el mismo
+par o pares distintos — decisión pendiente, no técnica) antes de promover esta
+rama a `staging`.
+
 ---
 
 ## 5. Decisiones abiertas
@@ -408,3 +435,5 @@ de la tarifa de no-show.
 | El primer deploy real de `send-email` a `luxepass-dev` fallaba en `supabase db push` con `Invalid hook config: ... secrets must be formatted as v1,whsec_...` | 13 sept 2026 | El CLI valida todo `config.toml` en cualquier comando, no solo en los pasos que tocan la function — `SEND_EMAIL_HOOK_SECRET_DEV`/`_PROD` añadidos también al `env:` de cada job de `deploy.yml` (antes solo se pasaban a `supabase secrets set`, un mecanismo distinto) |
 | El forgot-password no llegaba ni en `luxepass-dev` ni en `luxepass-prod`, sin nada en los logs de la function | 13 sept 2026 | `Authentication → Rate Limits → Rate limit for sending emails` viene en 2/hora por defecto y aplica aunque el envío real vaya por Brevo — subido a mano en ambos dashboards |
 | Signup/login en `luxepass-prod` daban `Invalid API key` ("might be owned by another Supabase project") | 13 sept 2026 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` en el proyecto de Vercel `luxepass-prod` estaba desactualizada (no relacionado al trabajo de Brevo, ya estaba mal desde antes). Diagnosticado comparando el bundle JS de producción contra `supabase projects api-keys --project-ref` (de solo lectura). Corregida la env var en Vercel + redeploy manual (`gh workflow run deploy.yml --ref main`, necesario porque `NEXT_PUBLIC_*` se hornea en build time) |
+| Migrar `/explore` a Google Maps real: el clustering de markers no aparecía nunca, a ningún zoom, y el callout de un pin cerca del borde superior del mapa se recortaba contra el contenedor — ninguno de los dos lo detectaban los tests sobre jsdom | 16 sept 2026 | Verificación con Playwright contra el SDK real de Google Maps (`scripts/playwright/`), no cubierto por el stub de jsdom. Clustering: `MIN_ZOOM` de `city-map.tsx` estaba en 12 (rango de zoom donde nunca se alcanzaba el umbral de agrupado) y un bug real de timing — los refs de `AdvancedMarker` resuelven de forma asíncrona, después de que el efecto que alimenta a `MarkerClusterer` ya había corrido — dejaba el clustering en cero marcadores siempre; se bajó `MIN_ZOOM` a 10 y se añadió un contador `markerRegistrations` para re-sincronizar el clusterer cuando los markers montan de verdad. Callout: `lounge-callout.tsx` ahora mide su posición real con `useLayoutEffect` (vía el atributo `data-map-surface` del contenedor del mapa) y voltea a `top-full` en vez de `bottom-full` cuando el borde superior lo recortaría. Ambos con test de regresión (`city-map.test.tsx`, `lounge-callout.test.tsx`) |
+| El job `test` de `ci.yml` fallaba en `supabase start` con `Invalid hook config: ... secrets must be formatted as v1,whsec_...`, en todos los PR desde el 13 sept | 16 sept 2026 | El fix de `SEND_EMAIL_HOOK_SECRET_DEV`/`_PROD` de esa fecha solo tocó `deploy.yml`; `ci.yml` nunca recibió su propio secret. Añadirle uno con formato válido no bastaba — este runner no tiene `supabase/functions/.env` con Brevo real, y Auth corta `signUp`/`resetPasswordForEmail` entero si el hook falla. Decisión con el usuario: no mandar emails reales por Brevo en CI (riesgo de bounces); `ci.yml` desactiva el hook (`enabled = false`) solo en la copia efímera del checkout vía un `awk` antes de `supabase start` — Auth cae a Mailpit, que es lo que `forgot-password/page.test.tsx` ya esperaba. Detalle y verificación local en `docs/ci-cd/RESUMEN.md` |

@@ -248,6 +248,31 @@ con el suyo. En local es `APP_ENV=LOCAL` en `supabase/functions/.env`.
    no requiere `supabase link`). Arreglo: actualizar la env var en Vercel +
    redeploy (`gh workflow run deploy.yml --ref main`, ya que `NEXT_PUBLIC_*`
    se hornea en build time — cambiar la env var sola no alcanza).
+6. **El job `test` de `ci.yml` se quedó fuera del arreglo del bug 3 — venía
+   fallando en `supabase start` desde el 13 sept, sin que nadie lo notara.**
+   El fix de `SEND_EMAIL_HOOK_SECRET_DEV`/`_PROD` en el `env:` de cada job
+   (bug 3) solo tocó `deploy.yml`; `ci.yml` nunca recibió su propio secret,
+   así que el job `test` fallaba en el primer paso (`supabase start`) con el
+   mismo "Invalid hook config" — antes de llegar siquiera a `npm test`. Y
+   arreglarlo con un secret real no bastaba: este runner no tiene
+   `supabase/functions/.env` (gitignored) con credenciales reales de Brevo,
+   y Auth corta el flujo completo si el hook falla (no solo el email) — con
+   un secret con formato válido pero sin Brevo real detrás, `signUp`/
+   `resetPasswordForEmail` se habrían roto para cualquier test, no solo
+   `supabase start`. Se decidió con el usuario (16 sept 2026) **no** mandar
+   emails reales por Brevo en cada corrida de CI (riesgo de bounces contra
+   la reputación del remitente compartido con producción, direcciones
+   `@ensoleil-test.com` que no existen) — en vez de eso, `ci.yml` desactiva
+   el hook (`enabled = false`) solo en la copia efímera del checkout del
+   runner, vía un `awk` que reescribe `supabase/config.toml` antes de
+   `supabase start` (nunca toca el archivo real del repo). Con el hook
+   desactivado, Auth cae de vuelta a su SMTP simulado (Mailpit) — que es
+   justo lo que `forgot-password/page.test.tsx` ya esperaba encontrar en
+   `MAILPIT_URL`. Verificado en local: se aplicó el mismo parche a mano,
+   `supabase stop && supabase start`, y los 3 tests de `forgot-password` +
+   los de `signup`/`login` pasaron igual. Nota: con el hook real activo
+   (local dev normal, staging, prod), ese mismo test seguiría fallando
+   porque el correo ya no llega a Mailpit — ver `docs/PENDIENTES.md`.
 
 ### De paso, verificando que `ci.yml` y `deploy.yml` fueran a estar en verde
 

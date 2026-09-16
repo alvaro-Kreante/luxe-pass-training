@@ -5,7 +5,7 @@ import { StatusChip } from "@/components/ui/status-chip";
 import { AmenityIcon } from "./amenity-icon";
 import { availabilityLabel } from "@/lib/availability";
 import { formatDistance, type DistanceUnit } from "@/lib/distance";
-import type { Lounge } from "@/lib/lounges";
+import type { LoungeWithDistance } from "@/lib/lounge-directory";
 import { cn } from "@/lib/utils";
 
 /**
@@ -25,7 +25,7 @@ export function ResultCard({
   /** En offline no hay disponibilidad en vivo: se dice cuándo se guardó. */
   cachedNote,
 }: {
-  lounge: Lounge;
+  lounge: LoungeWithDistance;
   unit: DistanceUnit;
   selected: boolean;
   onSelect: () => void;
