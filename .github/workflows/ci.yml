@@ -69,6 +69,30 @@ jobs:
         with:
           version: latest
 
+      # El hook `send_email` (Story 1.1/1.2, envío real vía Brevo) exige
+      # `SEND_EMAIL_HOOK_SECRET` con formato "v1,whsec_<base64>" — el CLI
+      # valida config.toml completo en cualquier comando, así que sin él
+      # `supabase start` falla con "Invalid hook config: ... secrets must
+      # be formatted as v1,whsec_...", incluso antes de correr un test.
+      # Y aunque se le diera un valor válido, este runner no tiene
+      # `supabase/functions/.env` (gitignored, nunca se sube) con las
+      # credenciales reales de Brevo — sin ellas la function fallaría, y
+      # Auth corta el flujo entero si el hook falla (no solo el email), así
+      # que signUp/resetPasswordForEmail se romperían para cualquier test.
+      # Se desactiva el hook solo en esta copia efímera del checkout (nunca
+      # se comitea, no toca el config.toml real de local dev/staging/prod):
+      # Auth cae de vuelta a su SMTP simulado (Mailpit), que es justo lo que
+      # ya esperan los tests de este repo. Ver docs/ci-cd/RESUMEN.md.
+      - name: Desactivar el hook de email real (solo en este runner)
+        run: |
+          awk '
+            /^\[auth\.hook\.send_email\]/ { print; print "enabled = false"; skip=1; next }
+            /^\[/ { skip=0 }
+            skip && /^(enabled|uri|secrets) *=/ { next }
+            { print }
+          ' supabase/config.toml > supabase/config.toml.tmp
+          mv supabase/config.toml.tmp supabase/config.toml
+
       # `supabase start` aplica supabase/migrations sobre un Postgres
       # efímero en el runner — nunca toca un proyecto remoto. Los tests de
       # este proyecto no mockean Supabase (ver CLAUDE.md §Metodología de
