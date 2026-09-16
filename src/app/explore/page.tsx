@@ -298,6 +298,7 @@ function ExploreScreen() {
               origin={origin}
               selectedId={selectedId ?? undefined}
               onSelect={setSelectedId}
+              onDeselect={() => setSelectedId(null)}
               onLoadError={() => setMapFailed(true)}
               offline={offline}
               footer={<MapFooter unit={unit} offline={offline} />}

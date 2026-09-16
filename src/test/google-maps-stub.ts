@@ -20,7 +20,7 @@ class StubLatLng {
 class StubMapCanvas {
   zoom: number;
   center: StubLatLng;
-  private listeners: Record<string, Array<() => void>> = {};
+  private listeners: Record<string, Array<(payload?: unknown) => void>> = {};
 
   constructor(
     public div: HTMLElement,
@@ -31,6 +31,22 @@ class StubMapCanvas {
       options.center?.lat ?? 0,
       options.center?.lng ?? 0,
     );
+
+    /**
+     * Fix "cerrar el callout al hacer clic fuera": la API real traduce un
+     * clic nativo sobre el div del propio mapa en un evento "click" del
+     * `google.maps.Map` — aparte del clic sobre un `AdvancedMarkerElement`,
+     * que dispara su propio "gmp-click" y nunca llega aquí porque no
+     * burbujea como "click" del mapa (`AdvancedMarker` no lo deja). Se
+     * replica esa distinción con `event.target`: un clic real dentro de un
+     * marker o del callout llega con `target` en ese hijo, no en `this.div`.
+     */
+    this.div.dataset.stubMapCanvas = "true";
+    this.div.addEventListener("click", (event) => {
+      if (event.target === this.div) {
+        this.emit("click", { domEvent: event, stop: () => {} });
+      }
+    });
   }
 
   setOptions(options: { zoom?: number; center?: { lat: number; lng: number } }) {
@@ -66,7 +82,7 @@ class StubMapCanvas {
     this.emit("center_changed");
   }
 
-  addListener(event: string, callback: () => void) {
+  addListener(event: string, callback: (payload?: unknown) => void) {
     (this.listeners[event] ??= []).push(callback);
     return {
       remove: () => {
@@ -77,8 +93,8 @@ class StubMapCanvas {
     };
   }
 
-  private emit(event: string) {
-    for (const callback of this.listeners[event] ?? []) callback();
+  private emit(event: string, payload?: unknown) {
+    for (const callback of this.listeners[event] ?? []) callback(payload);
   }
 }
 

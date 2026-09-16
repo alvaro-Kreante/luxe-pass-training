@@ -242,6 +242,27 @@ describe("selección de un lounge", () => {
       "/lounges/belmont-terrace",
     );
   });
+
+  it("cierra el detalle al hacer clic fuera, en el fondo del mapa", async () => {
+    const user = userEvent.setup({ delay: null });
+    const { container } = render(<ExplorePage />);
+    await allowLocation(user);
+
+    await user.click(
+      within(resultsPanel()).getByRole("button", { name: /Belmont Terrace/ }),
+    );
+    screen.getByRole("group", { name: "Selected lounge" });
+
+    const background = container.querySelector(
+      '[data-stub-map-canvas="true"]',
+    );
+    expect(background).not.toBeNull();
+    fireEvent.click(background as HTMLElement);
+
+    expect(
+      screen.queryByRole("group", { name: "Selected lounge" }),
+    ).toBeNull();
+  });
 });
 
 describe("zoom del mapa", () => {

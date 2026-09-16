@@ -51,6 +51,7 @@ describe("CityMap", () => {
         lounges={LOUNGES}
         origin={{ lat: 40.7595, lng: -73.97 }}
         onSelect={vi.fn()}
+        onDeselect={vi.fn()}
         onLoadError={vi.fn()}
       />,
     );
@@ -69,6 +70,7 @@ describe("CityMap", () => {
         lounges={LOUNGES}
         origin={{ lat: 40.7595, lng: -73.97 }}
         onSelect={vi.fn()}
+        onDeselect={vi.fn()}
         onLoadError={vi.fn()}
       />,
     );
@@ -85,6 +87,7 @@ describe("CityMap", () => {
           lounges={LOUNGES}
           origin={{ lat: 40.7595, lng: -73.97 }}
           onSelect={onSelect}
+          onDeselect={vi.fn()}
           onLoadError={vi.fn()}
         />,
       );
@@ -103,6 +106,7 @@ describe("CityMap", () => {
           origin={{ lat: 40.7595, lng: -73.97 }}
           selectedId="the-ainsworth"
           onSelect={vi.fn()}
+          onDeselect={vi.fn()}
           onLoadError={vi.fn()}
         >
           <div role="group" aria-label="Selected lounge">
@@ -117,6 +121,58 @@ describe("CityMap", () => {
     });
   });
 
+  describe("cierre al hacer clic fuera", () => {
+    it("llama a onDeselect al hacer clic en el fondo del mapa", async () => {
+      const user = userEvent.setup({ delay: null });
+      const onDeselect = vi.fn();
+      const { container } = render(
+        <CityMap
+          lounges={LOUNGES}
+          origin={{ lat: 40.7595, lng: -73.97 }}
+          selectedId="the-ainsworth"
+          onSelect={vi.fn()}
+          onDeselect={onDeselect}
+          onLoadError={vi.fn()}
+        >
+          <div role="group" aria-label="Selected lounge">
+            The Ainsworth detail
+          </div>
+        </CityMap>,
+      );
+
+      await screen.findByRole("group", { name: "Selected lounge" });
+
+      const background = container.querySelector(
+        '[data-stub-map-canvas="true"]',
+      );
+      expect(background).not.toBeNull();
+
+      await user.click(background as HTMLElement);
+
+      expect(onDeselect).toHaveBeenCalledTimes(1);
+    });
+
+    it("NO llama a onDeselect al hacer clic en un marker", async () => {
+      const user = userEvent.setup({ delay: null });
+      const onDeselect = vi.fn();
+      render(
+        <CityMap
+          lounges={LOUNGES}
+          origin={{ lat: 40.7595, lng: -73.97 }}
+          onSelect={vi.fn()}
+          onDeselect={onDeselect}
+          onLoadError={vi.fn()}
+        />,
+      );
+
+      await user.click(
+        await screen.findByRole("button", { name: "The Ainsworth on the map" }),
+      );
+
+      expect(onDeselect).not.toHaveBeenCalled();
+    });
+  });
+
   describe("controles de zoom", () => {
     it("empieza con 'Zoom out' deshabilitado en la vista más amplia", async () => {
       render(
@@ -124,6 +180,7 @@ describe("CityMap", () => {
           lounges={LOUNGES}
           origin={{ lat: 40.7595, lng: -73.97 }}
           onSelect={vi.fn()}
+          onDeselect={vi.fn()}
           onLoadError={vi.fn()}
         />,
       );
@@ -140,6 +197,7 @@ describe("CityMap", () => {
           lounges={LOUNGES}
           origin={{ lat: 40.7595, lng: -73.97 }}
           onSelect={vi.fn()}
+          onDeselect={vi.fn()}
           onLoadError={vi.fn()}
         />,
       );
@@ -178,6 +236,7 @@ describe("CityMap", () => {
           lounges={LOUNGES}
           origin={{ lat: 40.7595, lng: -73.97 }}
           onSelect={vi.fn()}
+          onDeselect={vi.fn()}
           onLoadError={vi.fn()}
         />,
       );

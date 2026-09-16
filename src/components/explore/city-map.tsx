@@ -39,6 +39,9 @@ export interface CityMapProps {
   origin: Coordinates;
   selectedId?: string;
   onSelect: (id: string) => void;
+  /** Clic en el fondo del mapa (no en un marker ni en el callout): cierra el
+   * detalle seleccionado. */
+  onDeselect: () => void;
   /** Dispara cuando el mapa no carga en 3s o el script falla. Debe ser
    * estable (useCallback/useState setter) — si el caller pasa una función
    * inline nueva en cada render, el timeout de useMapLoadStatus se reinicia
@@ -56,6 +59,7 @@ export function CityMap({
   origin,
   selectedId,
   onSelect,
+  onDeselect,
   onLoadError,
   offline = false,
   children,
@@ -83,6 +87,11 @@ export function CityMap({
           defaultZoom={DEFAULT_ZOOM}
           disableDefaultUI
           gestureHandling="greedy"
+          onClick={onDeselect}
+          // Los iconos de negocio propios de Google no deben abrir su info
+          // window por defecto: confundirían junto al callout de marca.
+          // Verificado visualmente (Playwright), no hay señal jsdom-testeable.
+          clickableIcons={false}
           className="size-full"
         >
           <CurrentLocationMarker origin={origin} offline={offline} />
