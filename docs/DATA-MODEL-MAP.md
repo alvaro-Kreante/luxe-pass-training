@@ -124,6 +124,20 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
   cruce directo a Epic 1, señalar antes de tocar RLS.
 - 7.1/7.2 reutilizan `bookings` + `profiles` + `notifications`. 7.3
   (analytics) es vista agregada, sin tabla propia.
+- **Si una historia futura de este epic (u 8.3, "Add/edit/remove lounge
+  profiles") necesita que un partner dé de alta un lounge y sus días
+  disponibles: `lounges.bands`/`closed_weekdays`/`capacity`/`weekly_hours` y
+  `lounge_closures` (Epic 3) sí son reutilizables tal cual — son la
+  plantilla recurrente y los cierres puntuales, y un formulario de partner
+  puede escribirlos directo. `lounge_availability` (Epic 3) **no** lo es
+  todavía: hoy es un seed estático de filas por fecha (18 semanas desde
+  `TODAY`, generado una sola vez por migración, ver su fila más abajo) —
+  dar de alta un lounge nuevo no generaría sus propias filas de
+  disponibilidad. Antes de apoyarse en ella, evaluar reemplazarla por un
+  cálculo al vuelo desde la plantilla recurrente (decisión ya planteada y
+  conscientemente aplazada el 17 sept 2026, ver `docs/PENDIENTES.md`) o
+  esperar a que Epic 4 (`bookings`) exista y de ahí sí derivar plazas en
+  vivo.
 
 ### Epic 8 — Admin & Support
 

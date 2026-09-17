@@ -161,6 +161,31 @@ existe ningún artboard con un hueco de mapa en esa pantalla.
 
 **Desbloquea:** que una historia futura diseñe ese hueco en el artboard.
 
+### 2.10 `lounge_availability` (Epic 3) es un seed estático, no una agenda que un partner pueda alimentar
+
+Señalado por el usuario al revisar Epic 3 (17 sept 2026): las filas de
+`lounge_availability` (`seats_left` por lounge/fecha/franja) no se calculan
+solas — son un seed escrito una vez por
+`supabase/migrations/..._seed_lounge_profiles_story_3.sql`, con una ventana
+fija de 18 semanas desde `TODAY` (ver `docs/design/COMPONENT-MAP.md`
+"Backend real — Epic 3"). Es real en el sentido de que la app la consulta
+de verdad contra Supabase (no está hardcodeada en el frontend), pero el
+*contenido* es una foto fija: nada la mantiene creciendo hacia el futuro, y
+un partner que diera de alta un lounge nuevo (Epic 7/8.3) no tendría forma
+de generar sus propias filas sin, en la práctica, correr otra migración.
+
+Se planteó reemplazarla por un cálculo al vuelo desde la plantilla
+recurrente que ya vive en `lounges` (`bands`/`closed_weekdays`/`capacity`) +
+`lounge_closures` — sin tabla de filas por fecha, disponibilidad real
+"hoy" para cualquier lounge que exista, alta o viejo. **Se decidió
+conscientemente no hacerlo ahora** (17 sept 2026): se deja como deuda
+explícita en vez de tocar otra vez el schema recién mergeado de Epic 3.
+
+**Desbloquea:** antes de que Epic 7/8.3 permita dar de alta un lounge con
+sus propios días, resolver esto — o el rediseño de arriba, o esperar a que
+Epic 4 (`bookings`) exista y derivar de ahí las plazas en vivo (ver
+`docs/DATA-MODEL-MAP.md` §Epic 7).
+
 ---
 
 ## 3. Criterios de aceptación cubiertos solo de forma declarativa
