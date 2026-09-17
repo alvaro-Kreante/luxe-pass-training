@@ -68,6 +68,12 @@ export function LoungeCallout({
       ref={ref}
       role="group"
       aria-label="Selected lounge"
+      // `<Map onClick={onDeselect}>` (city-map.tsx) escucha el clic de
+      // Google Maps a nivel de mapa; sin cortar la propagación aquí, un
+      // clic en este callout (incluido "View details") burbujea hasta ese
+      // handler y deselecciona el lounge — desmontando este callout — antes
+      // de que la navegación del `Link` de abajo llegue a completarse.
+      onClick={(event) => event.stopPropagation()}
       className={cn(
         "absolute left-1/2 z-10 w-[302px] max-w-[calc(100vw-40px)] -translate-x-1/2 overflow-hidden rounded-content bg-surface shadow-[0_24px_50px_-18px_rgb(34_26_20_/_0.40)]",
         flipped ? "top-full mt-4" : "bottom-full mb-4",
@@ -99,6 +105,17 @@ export function LoungeCallout({
       <div className="px-3.5 pb-3.5">
         <Link
           href={`/lounges/${lounge.id}`}
+          // Google avisa en consola que el contenido de un AdvancedMarker
+          // (city-map.tsx) no soporta hijos enfocables ("Focusable child
+          // elements in AdvancedMarkerElement are not supported"): sin
+          // sacarlo del tab order, Google intercepta el foco entre
+          // mousedown y mouseup y desmonta este callout a mitad del clic,
+          // así que "View details" nunca llegaba a navegar (regresión
+          // cubierta en lounge-callout.test.tsx). Sigue siendo clickable
+          // con ratón y anunciable por lector de pantalla (rol de link
+          // nativo) — solo sale del tab order del teclado; el mismo lounge
+          // se puede tabular desde la lista de resultados.
+          tabIndex={-1}
           className="flex h-11 w-full items-center justify-center rounded-[11px] bg-accent text-[12.5px] font-bold uppercase tracking-[0.12em] text-on-accent transition-colors duration-150 hover:bg-accent-strong hover:text-on-accent"
         >
           View details
