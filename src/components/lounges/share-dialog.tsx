@@ -14,13 +14,14 @@ import {
 
 import { toneOf } from "@/components/lounges/lounge-thumb";
 import { Button } from "@/components/ui/button";
-import type { Lounge } from "@/lib/lounges";
 
 /**
  * Story 3.1 — "Share lounge option via social/messaging apps" (Share.dc.html).
  * No hay integración real con Mensajes/WhatsApp/Instagram — son destinos
  * visuales del mockup — pero copiar el enlace sí usa el portapapeles del
- * navegador, que es una API del cliente, no un servicio externo.
+ * navegador, que es una API del cliente, no un servicio externo. Forma
+ * mínima de lounge: la usan tanto el perfil real (Epic 3) como el flujo de
+ * booking mock (Epic 4, sin conectar todavía).
  */
 const SHARE_TARGETS = [
   { label: "Messages", icon: MessageCircle },
@@ -31,6 +32,13 @@ const SHARE_TARGETS = [
   { label: "More apps", icon: MoreHorizontal },
 ] as const;
 
+interface ShareableLounge {
+  id: string;
+  name: string;
+  neighborhood: string;
+  city: string;
+}
+
 export function ShareDialog({
   open,
   onOpenChange,
@@ -38,7 +46,7 @@ export function ShareDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  lounge: Lounge;
+  lounge: ShareableLounge;
 }) {
   const [copied, setCopied] = React.useState(false);
   const shareUrl = `luxepass.co/l/${lounge.id}`;

@@ -1,6 +1,9 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { createClient } from "@/lib/supabase/client";
+import { signUpConfirmedAndSignIn } from "@/lib/testing/confirmed-user";
 
 import LoungeProfilePage from "./page";
 
@@ -12,7 +15,12 @@ import LoungeProfilePage from "./page";
  *
  * El estado "Not available" (Story 3.2) vive en esta misma pantalla — la card
  * de disponibilidad del perfil, no una vista aparte — así que también se
- * cubre aquí, con Céleste Rooftop, que el catálogo ya trae sin plazas hoy.
+ * cubre aquí, con Céleste Rooftop, que la disponibilidad real ya sembrada
+ * trae sin plazas hoy (2025-09-09) en las tres franjas que soporta.
+ *
+ * Backend real (Supabase local): la pantalla exige sesión (`RequireSession`,
+ * mismo patrón que `/explore`) y trae el perfil de verdad, así que cada
+ * assert va detrás de un `waitFor`.
  */
 
 const params = vi.fn(() => ({ id: "the-ainsworth" }));
@@ -22,10 +30,20 @@ vi.mock("next/navigation", () => ({
   useParams: () => params(),
   useSearchParams: () => searchParams(),
   usePathname: () => "/lounges/the-ainsworth",
+  useRouter: () => ({ replace: vi.fn() }),
   notFound: () => {
     throw new Error("NEXT_NOT_FOUND");
   },
 }));
+
+beforeAll(async () => {
+  const supabase = createClient();
+  await signUpConfirmedAndSignIn(
+    supabase,
+    `lounge-page-${Date.now()}@ensoleil-test.com`,
+    "EnSoleil!2026",
+  );
+});
 
 beforeEach(() => {
   params.mockReturnValue({ id: "the-ainsworth" });
@@ -33,20 +51,24 @@ beforeEach(() => {
 });
 
 describe("información básica del lounge", () => {
-  it("muestra el nombre, la dirección y el teléfono", () => {
+  it("muestra el nombre, la dirección y el teléfono", async () => {
     render(<LoungeProfilePage />);
 
-    expect(screen.getByRole("heading", { name: "The Ainsworth" })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "The Ainsworth" })).toBeInTheDocument(),
+    );
     expect(screen.getByText("122 E 45th St, New York, NY 10017")).toBeInTheDocument();
     expect(screen.getAllByText("+1 (212) 555-0184").length).toBeGreaterThan(0);
   });
 
-  it("enlaza a la lista de resultados", () => {
+  it("enlaza a la lista de resultados", async () => {
     render(<LoungeProfilePage />);
 
-    expect(screen.getByRole("link", { name: "Back to results" })).toHaveAttribute(
-      "href",
-      "/explore",
+    await waitFor(() =>
+      expect(screen.getByRole("link", { name: "Back to results" })).toHaveAttribute(
+        "href",
+        "/explore",
+      ),
     );
   });
 });
@@ -56,7 +78,7 @@ describe("carousel de fotos", () => {
     const user = userEvent.setup({ delay: null });
     render(<LoungeProfilePage />);
 
-    expect(screen.getByText("1 / 6")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("1 / 6")).toBeInTheDocument());
 
     await user.click(screen.getByRole("button", { name: "Next photo" }));
 
@@ -67,6 +89,9 @@ describe("carousel de fotos", () => {
     const user = userEvent.setup({ delay: null });
     render(<LoungeProfilePage />);
 
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /View all \d photos/ })).toBeInTheDocument(),
+    );
     await user.click(screen.getByRole("button", { name: /View all \d photos/ }));
 
     const dialog = screen.getByRole("dialog", { name: /Photo gallery/ });
@@ -83,6 +108,9 @@ describe("compartir el lounge", () => {
     const user = userEvent.setup({ delay: null });
     render(<LoungeProfilePage />);
 
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Share" })).toBeInTheDocument(),
+    );
     await user.click(screen.getByRole("button", { name: "Share" }));
 
     const dialog = screen.getByRole("dialog", { name: "Share this lounge" });
@@ -99,6 +127,9 @@ describe("compartir el lounge", () => {
 
     render(<LoungeProfilePage />);
 
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Share" })).toBeInTheDocument(),
+    );
     await user.click(screen.getByRole("button", { name: "Share" }));
     await user.click(screen.getByRole("button", { name: "Copy" }));
 
@@ -107,12 +138,14 @@ describe("compartir el lounge", () => {
 });
 
 describe("quick actions", () => {
-  it("Call marca el teléfono y Directions abre Google Maps", () => {
+  it("Call marca el teléfono y Directions abre Google Maps", async () => {
     render(<LoungeProfilePage />);
 
-    expect(screen.getByRole("link", { name: "Call" })).toHaveAttribute(
-      "href",
-      "tel:+12125550184",
+    await waitFor(() =>
+      expect(screen.getByRole("link", { name: "Call" })).toHaveAttribute(
+        "href",
+        "tel:+12125550184",
+      ),
     );
     expect(screen.getByRole("link", { name: "Directions" })).toHaveAttribute(
       "href",
@@ -122,81 +155,91 @@ describe("quick actions", () => {
 });
 
 describe("amenities", () => {
-  it("lista cada amenity del lounge con su descripción", () => {
+  it("lista cada amenity del lounge con su descripción", async () => {
     render(<LoungeProfilePage />);
 
-    expect(screen.getByText("High-speed WiFi")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("High-speed WiFi")).toBeInTheDocument());
     expect(screen.getByText("1 Gbps, private member network")).toBeInTheDocument();
   });
 });
 
 describe("horario", () => {
-  it("destaca el horario de hoy", () => {
+  it("destaca el horario de hoy", async () => {
     render(<LoungeProfilePage />);
 
-    expect(screen.getByText(/· Today$/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/· Today$/)).toBeInTheDocument());
   });
 });
 
 describe("valoración y reseñas", () => {
-  it("enlaza el recuento de reseñas a la pantalla de reseñas", () => {
+  it("enlaza el recuento de reseñas a la pantalla de reseñas", async () => {
     render(<LoungeProfilePage />);
 
-    expect(
-      screen.getByRole("link", { name: "128 reviews" }),
-    ).toHaveAttribute("href", "/lounges/the-ainsworth/reviews");
+    await waitFor(() =>
+      expect(screen.getByRole("link", { name: "128 reviews" })).toHaveAttribute(
+        "href",
+        "/lounges/the-ainsworth/reviews",
+      ),
+    );
   });
 
-  it("cuando el lounge no tiene reseñas, lo dice en vez de un recuento", () => {
+  it("cuando el lounge no tiene reseñas, lo dice en vez de un recuento", async () => {
     params.mockReturnValue({ id: "belmont-terrace" });
     render(<LoungeProfilePage />);
 
-    expect(
-      screen.getByRole("link", { name: "No reviews yet" }),
-    ).toHaveAttribute("href", "/lounges/belmont-terrace/reviews");
+    await waitFor(() =>
+      expect(screen.getByRole("link", { name: "No reviews yet" })).toHaveAttribute(
+        "href",
+        "/lounges/belmont-terrace/reviews",
+      ),
+    );
   });
 });
 
 describe("disponibilidad en tiempo real", () => {
-  it("muestra Available y el botón de reserva cuando hay plazas", () => {
+  it("muestra Available y el botón de reserva cuando hay plazas", async () => {
     render(<LoungeProfilePage />);
 
-    expect(screen.getByText("Available")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Available")).toBeInTheDocument());
     expect(screen.getByRole("link", { name: "Book now" })).toBeInTheDocument();
   });
 
-  it("enlaza la disponibilidad semanal", () => {
+  it("enlaza la disponibilidad semanal", async () => {
     render(<LoungeProfilePage />);
 
-    expect(
-      screen.getByRole("link", { name: "View weekly availability" }),
-    ).toHaveAttribute("href", "/lounges/the-ainsworth/availability");
+    await waitFor(() =>
+      expect(
+        screen.getByRole("link", { name: "View weekly availability" }),
+      ).toHaveAttribute("href", "/lounges/the-ainsworth/availability"),
+    );
   });
 
-  it("muestra Not available y una sugerencia cuando el lounge está completo hoy", () => {
+  it("muestra Not available y una sugerencia cuando el lounge está completo hoy", async () => {
     params.mockReturnValue({ id: "celeste-rooftop" });
     render(<LoungeProfilePage />);
 
-    expect(screen.getByText("Not available")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText("Not available")).toBeInTheDocument());
     expect(screen.getByText("Fully booked today")).toBeInTheDocument();
-    expect(
-      screen.queryByRole("link", { name: "Book now" }),
-    ).toBeNull();
+    expect(screen.queryByRole("link", { name: "Book now" })).toBeNull();
   });
 
-  it("muestra el sello de frescura", () => {
+  it("muestra el sello de frescura", async () => {
     render(<LoungeProfilePage />);
 
-    expect(screen.getByText(/refreshes every 5 min/)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText(/refreshes every 5 min/)).toBeInTheDocument(),
+    );
   });
 });
 
 describe("carga", () => {
-  it("muestra el estado de carga cuando ?loading=1", () => {
+  it("muestra el estado de carga cuando ?loading=1", async () => {
     searchParams.mockReturnValue(new URLSearchParams("loading=1"));
     render(<LoungeProfilePage />);
 
-    expect(screen.getByText("Checking live availability…")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByText("Checking live availability…")).toBeInTheDocument(),
+    );
     expect(screen.queryByRole("heading", { name: "The Ainsworth" })).toBeNull();
   });
 });

@@ -94,17 +94,20 @@ sustituyó por Google Maps real, conservando `CityMap` — markers, controles,
 callout, escala — tal como anticipaba `DESIGN-SYSTEM.md` §6 (Fase 3). Detalle
 en `docs/design/COMPONENT-MAP.md` "Backend real — Epic 2".
 
-### 2.4 El perfil de lounge no tiene datos de detalle propios para 16 de los 17 lounges
+### 2.4 El perfil de lounge no tiene datos de detalle propios para 16 de los 17 lounges — resuelto
 
-`src/lib/lounge-profile.ts` deriva contacto (dirección, teléfono, email, web),
-reseñas y menciones frecuentes a partir del id del lounge cuando no hay un
-valor literal. Solo **The Ainsworth** (todos los artboards de la Fase 4) y
-**Belmont Terrace** (`NoRatings.dc.html`) tienen los datos exactos del mockup;
-el resto del catálogo recibe contacto plausible pero inventado y las mismas
-dos reseñas de muestra genéricas.
+**Resuelto** (sept 2026, Epic 3 conectado a Supabase local): contacto,
+horario, capacidad y restricciones son columnas reales de `public.lounges`
+para los 17 lounges — ver `docs/design/COMPONENT-MAP.md` "Backend real —
+Epic 3". Solo **The Ainsworth** (artboards de la Fase 4) y **Belmont
+Terrace** (`NoRatings.dc.html`) siguen con contacto literal citado del
+mockup; el resto recibe contacto plausible sembrado con la misma fórmula
+de antes — ya no derivado en cada carga, sembrado una vez en la migración.
 
-**Se resuelve:** cuando exista un catálogo de lounges real, con estos campos
-por lounge en vez de derivados.
+**Sigue sin resolver, a propósito:** el contenido de cada reseña individual
+(nombre, texto), el desglose por estrellas y "what members mention" siguen
+siendo datos de muestra — ninguna historia permite dejar una reseña, así
+que no hay tabla `reviews` (ver `docs/DATA-MODEL-MAP.md`).
 
 ### 2.5 "Write a review" no hace nada
 
@@ -150,17 +153,13 @@ recibe cada aviso, pero esa vista no está diseñada — `DESIGN-SYSTEM.md` §6
 
 ### 2.9 Mini-mapa embebido en el perfil de lounge sigue sin construirse
 
-Con Google Maps ya real en `/explore` (§2.3, resuelto), quedó fuera de
-alcance añadir un mapa embebido en `/lounges/[id]` (Story 3.1) junto a los
-botones Call/Directions. Dos motivos, no uno: `/lounges/[id]` sigue usando el
-catálogo mock de `src/lib/lounges.ts` (Epic 3 sin conectar a Supabase, sin
-`lat`/`lng` reales — solo una dirección de texto generada por hash, no
-geocodificada), y no existe ningún artboard con un hueco de mapa en esa
-pantalla.
+Con Google Maps ya real en `/explore` (§2.3, resuelto) y Epic 3 ya conectado
+a Supabase (`lounges.lat`/`lng` reales, disponibles también en el perfil),
+sigue fuera de alcance añadir un mapa embebido en `/lounges/[id]` (Story 3.1)
+junto a los botones Call/Directions — el único motivo que queda es que no
+existe ningún artboard con un hueco de mapa en esa pantalla.
 
-**Desbloquea:** conectar Epic 3 a Supabase con datos de contacto reales
-(mucho más grande que "añadir un mapa"), y que una historia futura diseñe
-ese hueco en el artboard.
+**Desbloquea:** que una historia futura diseñe ese hueco en el artboard.
 
 ---
 
@@ -179,9 +178,6 @@ nada los hace cumplir.
 | 2.1 | Distance display in miles/km based on user preference | El toggle de la topbar convierte una distancia real (Haversine, ver `COMPONENT-MAP.md` §Backend real — Epic 2), pero la unidad sigue sin leerse del teléfono ni recordarse entre visitas |
 | 3.1 | Call and Directions quick action buttons (google maps url) | Enlaces reales (`tel:` y Google Maps con la dirección de muestra); no hay verificación de que el teléfono o la dirección existan |
 | 3.1 | Share lounge option via social/messaging apps | Los destinos (Messages, WhatsApp, Instagram…) son botones sin integración; solo "Copy" usa una API real del navegador (`navigator.clipboard`) |
-| 3.2 | Real-time availability status | `lounge.slotsToday` del catálogo de la Story 2.2, no un estado que cambie solo |
-| 3.2 | Automatic refresh every 5 minutes | Contador local en `useState` (`FreshnessNote`) que vuelve a "just now" cada 5 minutos; no hay red que consultar, así que no refresca ningún dato, solo el sello |
-| 3.2 | Weekly availability calendar view | Las plazas son un hash determinista por lounge + fecha + franja, no una agenda real. Se explica en `src/lib/lounge-profile.ts` |
 | 4.1 | Final availability check before one-tap confirmation | `isAtRiskOfWaitlist` en `src/lib/booking.ts`: un slot con ≤2 plazas siempre ofrece la waitlist al confirmar, no una comprobación contra un sistema de reservas real |
 | 4.1 | Error handling: network issues, booking conflicts, system unavailability | `PaymentError.dc.html` se alcanza solo eligiendo la tarjeta de muestra Mastercard·8801 (`paymentWillDecline`), no un fallo real de red o de Stripe |
 | 4.2 | Stripe integration for secure payment processing | No hay SDK de Stripe ni llamada de red; los métodos de pago son datos de muestra en `SAMPLE_PAYMENT_METHODS` y el "cargo" es una comprobación local |
@@ -420,3 +416,4 @@ de la tarifa de no-show.
 | Migrar `/explore` a Google Maps real: el clustering de markers no aparecía nunca, a ningún zoom, y el callout de un pin cerca del borde superior del mapa se recortaba contra el contenedor — ninguno de los dos lo detectaban los tests sobre jsdom | 16 sept 2026 | Verificación con Playwright contra el SDK real de Google Maps (`scripts/playwright/`), no cubierto por el stub de jsdom. Clustering: `MIN_ZOOM` de `city-map.tsx` estaba en 12 (rango de zoom donde nunca se alcanzaba el umbral de agrupado) y un bug real de timing — los refs de `AdvancedMarker` resuelven de forma asíncrona, después de que el efecto que alimenta a `MarkerClusterer` ya había corrido — dejaba el clustering en cero marcadores siempre; se bajó `MIN_ZOOM` a 10 y se añadió un contador `markerRegistrations` para re-sincronizar el clusterer cuando los markers montan de verdad. Callout: `lounge-callout.tsx` ahora mide su posición real con `useLayoutEffect` (vía el atributo `data-map-surface` del contenedor del mapa) y voltea a `top-full` en vez de `bottom-full` cuando el borde superior lo recortaría. Ambos con test de regresión (`city-map.test.tsx`, `lounge-callout.test.tsx`) |
 | El job `test` de `ci.yml` fallaba en `supabase start` con `Invalid hook config: ... secrets must be formatted as v1,whsec_...`, en todos los PR desde el 13 sept | 16 sept 2026 | El fix de `SEND_EMAIL_HOOK_SECRET_DEV`/`_PROD` de esa fecha solo tocó `deploy.yml`; `ci.yml` nunca recibió su propio secret. Añadirle uno con formato válido no bastaba — este runner no tiene `supabase/functions/.env` con Brevo real, y Auth corta `signUp`/`resetPasswordForEmail` entero si el hook falla. Decisión con el usuario: no mandar emails reales por Brevo en CI (riesgo de bounces); `ci.yml` desactiva el hook (`enabled = false`) solo en la copia efímera del checkout vía un `awk` antes de `supabase start` — Auth cae a Mailpit, que es lo que `forgot-password/page.test.tsx` ya esperaba. Detalle y verificación local en `docs/ci-cd/RESUMEN.md` |
 | 5 tests fallando en local (signup, login, registration, forgot-password) con "Service currently unavailable due to hook" | 17 sept 2026 | Causa 1 (4 tests): el contenedor `supabase_edge_runtime_<project_id>` se había caído solo (exit code 255, sin error en logs) — el Auth Hook `send_email` depende de él para cualquier signup/reset con el hook activo (dev local normal). `docker start supabase_edge_runtime_Luxe_Pass` los revive; no es un bug de la app, revisar el contenedor si vuelve a pasar. Causa 2 (el 5º test, forgot-password): cierra §2.10 de arriba — el test seguía buscando el correo de recovery en Mailpit, obsoleto en local/staging/main (donde el hook está activo de verdad) desde la migración a Brevo del 13 sept; solo "pasaba" en CI porque ahí el hook está desactivado. Se quitó esa aserción, dejando el acuse en pantalla como verificación. Corregido en `fix/forgot-password-mailpit-test` |
+| Epic 3 (Lounge Profiles & Details) no tenía backend: contacto, horario, capacidad, restricciones, fotos y disponibilidad semanal eran derivados por hash o estáticos del mock | 17 sept 2026 | Conectado a Supabase local real: `lounges` extendida (contacto/horario/capacidad/restricciones/rating agregado), `lounge_images` (fotos, contenido sigue siendo bloques de marca), `lounge_availability` + `lounge_closures` (disponibilidad y cierres, horizonte de 18 semanas sembrado con la misma fórmula que ya usaba el mock). `lib/lounge-profile.ts` queda híbrido a propósito: las funciones síncronas viejas (`contactFor`, `weeklyAvailability`, etc.) se conservan tal cual para Epic 4 (`lib/booking.ts`, sin conectar todavía), que las sigue necesitando. Sin tabla `reviews` (ninguna historia permite dejar una reseña): rating/review_count son reales, el contenido de cada reseña sigue siendo de muestra. Ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 3" |

@@ -2,8 +2,8 @@ import { operatingHoursFor } from "@/lib/lounge-profile";
 import { cn } from "@/lib/utils";
 
 /** Story 3.1 — "Operating hours display with today's hours highlighted". */
-export function OperatingHours() {
-  const rows = operatingHoursFor();
+export function OperatingHours({ weeklyHours }: { weeklyHours: string[] }) {
+  const rows = operatingHoursFor(weeklyHours);
 
   return (
     <div>

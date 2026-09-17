@@ -5,8 +5,9 @@ import { FreshnessNote } from "./freshness-note";
 
 /**
  * Story 3.2 — "Last updated timestamp for availability data" y "Automatic
- * refresh every 5 minutes". Sin red que consultar, el refresco es un
- * contador local que vuelve a "just now" cada 5 minutos.
+ * refresh every 5 minutes". `lastUpdatedAt` es el instante real en que la
+ * página trajo la disponibilidad (ver `/lounges/[id]/availability`, que
+ * refetchea cada 5 min y le pasa un `lastUpdatedAt` nuevo cada vez).
  */
 beforeEach(() => {
   vi.useFakeTimers();
@@ -17,14 +18,15 @@ afterEach(() => {
 });
 
 describe("sello de frescura", () => {
-  it("empieza diciendo que se actualizó justo ahora", () => {
-    render(<FreshnessNote />);
+  it("dice que se actualizó justo ahora cuando lastUpdatedAt es el instante actual", () => {
+    render(<FreshnessNote lastUpdatedAt={new Date().toISOString()} />);
 
     expect(screen.getByText(/Updated just now/)).toBeInTheDocument();
   });
 
-  it("cuenta los minutos que pasan", () => {
-    render(<FreshnessNote />);
+  it("cuenta los minutos que pasan desde lastUpdatedAt", () => {
+    const lastUpdatedAt = new Date().toISOString();
+    render(<FreshnessNote lastUpdatedAt={lastUpdatedAt} />);
 
     act(() => {
       vi.advanceTimersByTime(60_000);
@@ -33,12 +35,18 @@ describe("sello de frescura", () => {
     expect(screen.getByText(/Updated 1 min ago/)).toBeInTheDocument();
   });
 
-  it("se refresca solo a los 5 minutos, volviendo a 'just now'", () => {
-    render(<FreshnessNote />);
+  it("vuelve a 'just now' cuando el padre refresca lastUpdatedAt", () => {
+    const first = new Date();
+    const { rerender } = render(
+      <FreshnessNote lastUpdatedAt={first.toISOString()} />,
+    );
 
     act(() => {
       vi.advanceTimersByTime(5 * 60_000);
     });
+    expect(screen.getByText(/Updated 5 min ago/)).toBeInTheDocument();
+
+    rerender(<FreshnessNote lastUpdatedAt={new Date().toISOString()} />);
 
     expect(screen.getByText(/Updated just now/)).toBeInTheDocument();
   });
