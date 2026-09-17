@@ -132,17 +132,25 @@ function ExploreScreen() {
    * vuelva a poner el listener nativo de "click" en cada render. */
   const handleDeselect = React.useCallback(() => setSelectedId(null), []);
 
-  async function handleAllow() {
-    const result: LocationResult = await getCurrentPosition();
+  /**
+   * Cierra el diálogo de inmediato: un fix real de posición puede tardar
+   * varios segundos incluso ya concedido el permiso, y esperarlo (`await`)
+   * antes de cambiar de paso dejaba el diálogo abierto todo ese tiempo. El
+   * mapa se muestra ya con la ciudad por defecto como origen provisional;
+   * `origin` se corrige en cuanto llega la posición real.
+   */
+  function handleAllow() {
+    setStep("located");
 
-    if (result.status === "granted") {
-      setOrigin(result.coords);
-      setStep("located");
-      return;
-    }
+    getCurrentPosition().then((result: LocationResult) => {
+      if (result.status === "granted") {
+        setOrigin(result.coords);
+        return;
+      }
 
-    /** AC "Fallback to manual location entry if GPS unavailable". */
-    setStep("manual");
+      /** AC "Fallback to manual location entry if GPS unavailable". */
+      setStep("manual");
+    });
   }
 
   const chooseCity = (id: string) => {

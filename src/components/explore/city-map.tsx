@@ -32,6 +32,11 @@ const MAX_ZOOM = 16;
 const DEFAULT_ZOOM = MIN_ZOOM;
 const ZOOM_STEP = 1;
 
+/** Zoom al abrir el detalle de un lounge desde el panel: suficientemente
+ * cerca para distinguirlo, sea cual sea el zoom del que se venía (muy
+ * abierto o ya muy cerca de otro punto). */
+const DETAIL_ZOOM = 15;
+
 export type MapLounge = LoungeWithDistance;
 
 export interface CityMapProps {
@@ -103,6 +108,13 @@ export function CityMap({
             onSelect={onSelect}
           />
 
+          <SelectionRecentre
+            id={selected?.id}
+            lat={selected?.lat}
+            lng={selected?.lng}
+          />
+          <OriginRecentre origin={origin} />
+
           {selected && children ? (
             <AdvancedMarker
               position={{ lat: selected.lat, lng: selected.lng }}
@@ -142,6 +154,60 @@ function CurrentLocationMarker({
       </div>
     </AdvancedMarker>
   );
+}
+
+/**
+ * Al seleccionar un lounge desde el panel de resultados (o desde su propio
+ * marker) el mapa se centra en él y corrige el zoom a una vista de detalle
+ * — sin esto, seleccionar uno mientras se está muy zoomed out (o muy zoomed
+ * in en otro punto) deja el lounge fuera de vista o casi imperceptible.
+ * Recibe lat/lng/id ya extraídos (no el lounge entero) para que el efecto
+ * solo dispare cuando la selección cambia de verdad, no en cada render.
+ */
+function SelectionRecentre({
+  id,
+  lat,
+  lng,
+}: {
+  id: string | undefined;
+  lat: number | undefined;
+  lng: number | undefined;
+}) {
+  const map = useMap();
+
+  React.useEffect(() => {
+    if (!map || id === undefined || lat === undefined || lng === undefined) {
+      return;
+    }
+    map.panTo({ lat, lng });
+    map.setZoom(DETAIL_ZOOM);
+  }, [map, id, lat, lng]);
+
+  return null;
+}
+
+/**
+ * El fix real de posición puede llegar después de que el mapa ya esté
+ * montado (ver `handleAllow` en `app/explore/page.tsx`, que ya no espera al
+ * GPS para cerrar el diálogo de permiso): `defaultCenter` solo se aplica una
+ * vez, así que sin esto el mapa se quedaría centrado en la ciudad por
+ * defecto aunque `origin` ya tenga la posición real.
+ */
+function OriginRecentre({ origin }: { origin: Coordinates }) {
+  const map = useMap();
+  const prevOrigin = React.useRef(origin);
+
+  React.useEffect(() => {
+    const changed =
+      prevOrigin.current.lat !== origin.lat ||
+      prevOrigin.current.lng !== origin.lng;
+    prevOrigin.current = origin;
+
+    if (!map || !changed) return;
+    map.panTo(origin);
+  }, [map, origin]);
+
+  return null;
 }
 
 function ClusteredLoungeMarkers({

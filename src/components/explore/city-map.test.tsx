@@ -210,6 +210,89 @@ describe("CityMap", () => {
     });
   });
 
+  describe("recentrado al seleccionar desde el panel de resultados", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("centra el mapa en el lounge seleccionado y ajusta el zoom a una vista de detalle", async () => {
+      const panToSpy = vi.spyOn(google.maps.Map.prototype, "panTo");
+      const setZoomSpy = vi.spyOn(google.maps.Map.prototype, "setZoom");
+
+      const { rerender } = render(
+        <CityMap
+          lounges={LOUNGES}
+          origin={{ lat: 40.7595, lng: -73.97 }}
+          onSelect={vi.fn()}
+          onDeselect={vi.fn()}
+          onLoadError={vi.fn()}
+        />,
+      );
+
+      await screen.findByRole("button", {
+        name: "Belmont Terrace on the map",
+      });
+      panToSpy.mockClear();
+      setZoomSpy.mockClear();
+
+      rerender(
+        <CityMap
+          lounges={LOUNGES}
+          origin={{ lat: 40.7595, lng: -73.97 }}
+          selectedId="belmont-terrace"
+          onSelect={vi.fn()}
+          onDeselect={vi.fn()}
+          onLoadError={vi.fn()}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(panToSpy).toHaveBeenCalledWith({ lat: 40.7465, lng: -74.0014 });
+      });
+      expect(setZoomSpy).toHaveBeenCalledWith(15);
+    });
+
+    it("también corrige el zoom cuando el mapa ya estaba mucho más cerca", async () => {
+      const user = userEvent.setup({ delay: null });
+      const setZoomSpy = vi.spyOn(google.maps.Map.prototype, "setZoom");
+
+      const { rerender } = render(
+        <CityMap
+          lounges={LOUNGES}
+          origin={{ lat: 40.7595, lng: -73.97 }}
+          onSelect={vi.fn()}
+          onDeselect={vi.fn()}
+          onLoadError={vi.fn()}
+        />,
+      );
+
+      await screen.findByRole("button", {
+        name: "Belmont Terrace on the map",
+      });
+
+      for (let i = 0; i < 6; i += 1) {
+        await user.click(screen.getByRole("button", { name: "Zoom in" }));
+      }
+
+      setZoomSpy.mockClear();
+
+      rerender(
+        <CityMap
+          lounges={LOUNGES}
+          origin={{ lat: 40.7595, lng: -73.97 }}
+          selectedId="belmont-terrace"
+          onSelect={vi.fn()}
+          onDeselect={vi.fn()}
+          onLoadError={vi.fn()}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(setZoomSpy).toHaveBeenCalledWith(15);
+      });
+    });
+  });
+
   describe("clustering", () => {
     // `afterEach`, no un `mockRestore()` manual al final del test: si el
     // `waitFor` de abajo llega a fallar (el modo de fallo exacto que este
