@@ -5,9 +5,8 @@ import { Eyebrow } from "@/components/ui/eyebrow";
 import {
   mentionsFor,
   ratingBreakdownFor,
-  reviewCountFor,
+  type LoungeProfile,
 } from "@/lib/lounge-profile";
-import type { Lounge } from "@/lib/lounges";
 
 /**
  * Story 3.1 — "User ratings and review count (if available)".
@@ -16,8 +15,8 @@ import type { Lounge } from "@/lib/lounges";
  * un guion, estrellas vacías y una explicación — el resto de la pantalla lo
  * cubre `EmptyState` en la página.
  */
-export function RatingSummary({ lounge }: { lounge: Lounge }) {
-  const count = reviewCountFor(lounge);
+export function RatingSummary({ lounge }: { lounge: LoungeProfile }) {
+  const count = lounge.reviewCount;
 
   return (
     <div>

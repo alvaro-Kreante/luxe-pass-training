@@ -1,9 +1,14 @@
+import * as React from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
 import { FreshnessNote } from "@/components/lounges/freshness-note";
 import { toneOf } from "@/components/lounges/lounge-thumb";
-import type { Lounge } from "@/lib/lounges";
+
+interface SubviewLounge {
+  id: string;
+  name: string;
+}
 
 /**
  * DESIGN-SYSTEM.md §5 patrón 8 — Sub-vista de lounge. Topbar de 64px +
@@ -27,8 +32,9 @@ export function LoungeSubviewHeader({
   trailingBadge,
   topbarRight,
   hideFreshness,
+  lastUpdatedAt,
 }: {
-  lounge: Lounge;
+  lounge: SubviewLounge;
   backHref: string;
   backLabel: string;
   address: string;
@@ -36,7 +42,12 @@ export function LoungeSubviewHeader({
   trailingBadge?: React.ReactNode;
   topbarRight?: React.ReactNode;
   hideFreshness?: boolean;
+  /** Epic 4 (sin conectar) no trae un timestamp real todavía — cae a "just
+   * now" fijado al montar, en vez de re-pedirlo en cada render. */
+  lastUpdatedAt?: string;
 }) {
+  const [fallbackTimestamp] = React.useState(() => new Date().toISOString());
+
   return (
     <>
       <div className="flex h-16 shrink-0 items-center gap-4 border-b border-line bg-surface px-8">
@@ -66,7 +77,9 @@ export function LoungeSubviewHeader({
         </div>
         <div className="flex-1" />
         {trailingBadge}
-        {hideFreshness ? null : <FreshnessNote />}
+        {hideFreshness ? null : (
+          <FreshnessNote lastUpdatedAt={lastUpdatedAt ?? fallbackTimestamp} />
+        )}
       </div>
     </>
   );

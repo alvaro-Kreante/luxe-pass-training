@@ -4,25 +4,28 @@ import * as React from "react";
 import { ChevronLeft, ChevronRight, GalleryHorizontal } from "lucide-react";
 
 import { HeroPhotoSurface } from "@/components/lounges/hero-photo-surface";
+import type { LoungeImage } from "@/lib/lounge-profile";
 import { cn } from "@/lib/utils";
-import { HERO_PHOTOS } from "./hero-photos";
 
 /**
  * Story 3.1 — "High-quality hero image carousel (min 3 images)".
  * Main.dc.html: imagen principal 1fr con flechas y contador, dos miniaturas
  * a la derecha (348px), la inferior con overlay "View all N photos" que abre
- * la galería (`PhotoGalleryDialog`).
+ * la galería (`PhotoGalleryDialog`). `images` viene de `lounge_images`
+ * (Supabase) — asume al menos 3 fotos, como exige el AC.
  */
 export function HeroCarousel({
   loungeId,
+  images,
   onOpenGallery,
 }: {
   loungeId: string;
+  images: LoungeImage[];
   onOpenGallery: (index: number) => void;
 }) {
   const [index, setIndex] = React.useState(0);
-  const total = HERO_PHOTOS.length;
-  const photo = HERO_PHOTOS[index];
+  const total = images.length;
+  const photo = images[index];
 
   return (
     <div className="grid h-[268px] shrink-0 grid-cols-[1fr_348px] gap-3 px-8 pt-5.5">
@@ -51,7 +54,7 @@ export function HeroCarousel({
         </span>
 
         <span className="absolute inset-x-0 bottom-4.5 flex items-center justify-center gap-1.5">
-          {HERO_PHOTOS.map((_, dotIndex) => (
+          {images.map((_, dotIndex) => (
             <span
               key={dotIndex}
               aria-hidden
@@ -69,7 +72,7 @@ export function HeroCarousel({
           <HeroPhotoSurface
             loungeId={loungeId}
             photoIndex={1}
-            caption={HERO_PHOTOS[1].caption}
+            caption={images[1].caption}
           />
         </div>
 

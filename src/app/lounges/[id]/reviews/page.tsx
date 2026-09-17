@@ -1,35 +1,69 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import { Star } from "lucide-react";
 
+import { RequireSession } from "@/components/onboarding/require-session";
 import { LoungeSubviewHeader } from "@/components/lounges/lounge-subview-header";
 import { RatingSummary } from "@/components/lounges/rating-summary";
 import { ReviewCard } from "@/components/lounges/review-card";
 import { AppShell } from "@/components/patterns/app-shell";
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { contactFor, reviewCountFor, reviewsFor } from "@/lib/lounge-profile";
-import { LOUNGES } from "@/lib/lounges";
+import {
+  fetchLoungeProfile,
+  reviewsFor,
+  type LoungeProfile,
+} from "@/lib/lounge-profile";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 /**
  * Story 3.1 — "User ratings and review count (if available)".
  * Sub-vista de lounge (DESIGN-SYSTEM.md §5 patrón 8).
  * Artboards: `Reviews.dc.html` y `NoRatings.dc.html`.
+ * `reviewCount` es real (`lounges.review_count`); el contenido de cada
+ * reseña sigue siendo dato de muestra — ver docs/DATA-MODEL-MAP.md.
  */
 export default function ReviewsPage() {
-  const { id } = useParams<{ id: string }>();
-  const lounge = LOUNGES.find((candidate) => candidate.id === id);
+  return (
+    <RequireSession>
+      <ReviewsScreen />
+    </RequireSession>
+  );
+}
 
-  if (!lounge) {
+function ReviewsScreen() {
+  const { id } = useParams<{ id: string }>();
+  const [lounge, setLounge] = React.useState<LoungeProfile | null | undefined>(
+    undefined,
+  );
+
+  React.useEffect(() => {
+    const supabase = createClient();
+    let active = true;
+
+    fetchLoungeProfile(supabase, id).then((profile) => {
+      if (active) setLounge(profile);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  if (lounge === null) {
     notFound();
     return null;
   }
 
-  const contact = contactFor(lounge);
-  const reviewCount = reviewCountFor(lounge);
+  if (!lounge) {
+    return <AppShell padded={false}>{null}</AppShell>;
+  }
+
+  const reviewCount = lounge.reviewCount;
   const reviews = reviewsFor(lounge);
   const badge =
     reviewCount === 0 ? (
@@ -45,8 +79,9 @@ export default function ReviewsPage() {
           lounge={lounge}
           backHref={`/lounges/${lounge.id}`}
           backLabel="Back to profile"
-          address={`${lounge.neighborhood} · ${lounge.city} · ${contact.address}`}
+          address={`${lounge.neighborhood} · ${lounge.city} · ${lounge.address}`}
           badge={badge}
+          hideFreshness
         />
 
         <div className="flex flex-1 gap-7 overflow-y-auto px-8 pb-7 pt-6">

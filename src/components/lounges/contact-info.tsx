@@ -1,11 +1,15 @@
 import { Globe, Info, Mail, Phone } from "lucide-react";
 
-import { contactFor } from "@/lib/lounge-profile";
-import type { Lounge } from "@/lib/lounges";
+import type { LoungeProfile } from "@/lib/lounge-profile";
 
 /** Story 3.1 — "Lounge name, address, and contact information". */
-export function ContactInfo({ lounge }: { lounge: Lounge }) {
-  const contact = contactFor(lounge);
+export function ContactInfo({ lounge }: { lounge: LoungeProfile }) {
+  const contact = {
+    phone: lounge.phone,
+    email: lounge.email,
+    website: lounge.website,
+    receptionNote: lounge.receptionNote,
+  };
 
   return (
     <div>

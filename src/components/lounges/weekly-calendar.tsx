@@ -3,11 +3,9 @@ import { Fragment } from "react";
 import { TODAY, addDays } from "@/lib/availability";
 import {
   WEEK_BANDS,
-  weeklyAvailability,
   type AvailabilityCell,
   type WeekBandId,
 } from "@/lib/lounge-profile";
-import type { Lounge } from "@/lib/lounges";
 import { cn } from "@/lib/utils";
 
 /**
@@ -30,18 +28,17 @@ function dayNumber(dateIso: string): number {
 }
 
 export function WeeklyCalendar({
-  lounge,
   weekStart,
+  cells,
   selected,
   onSelect,
 }: {
-  lounge: Lounge;
   weekStart: string;
+  cells: AvailabilityCell[];
   selected: SelectedCell | null;
   onSelect: (cell: { dateIso: string; band: WeekBandId; seatsLeft: number }) => void;
 }) {
   const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-  const cells = weeklyAvailability(lounge, weekStart);
   const cellAt = (dateIso: string, band: WeekBandId): AvailabilityCell =>
     cells.find((cell) => cell.dateIso === dateIso && cell.band === band)!;
 

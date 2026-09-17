@@ -247,16 +247,16 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `lib/location.ts` | Story 2.1 — ciudades de muestra y su búsqueda |
 | `lib/availability.ts` | Etiqueta de disponibilidad a partir de las plazas del día |
 | `lib/amenities.ts` | Las seis amenities de la Story 2.2, sus etiquetas y (Story 3.1) su descripción |
-| `lib/lounge-profile.ts` | Story 3.1 / 3.2 — contacto, horario, reseñas, cierres y calendario semanal derivados del lounge base (ver desviaciones) |
-| `lounges/hero-carousel.tsx` · `hero-photos.ts` | Story 3.1 — el carousel de la ficha y las 6 fotos de muestra que comparte con la galería |
-| `lounges/photo-gallery-dialog.tsx` | Story 3.1 — la galería a pantalla completa (`Gallery.dc.html`) |
+| `lib/lounge-profile.ts` | Story 3.1 / 3.2 — backend real (`fetchLoungeProfile`/`fetchLoungeImages`/`fetchWeeklyAvailability`/`fetchClosuresForWeek`/`fetchNextAvailableSlot`), más `reviewsFor`/`ratingBreakdownFor`/`mentionsFor` de muestra (sin tabla `reviews`) y una sección "legacy" (`contactFor`/`closureCovering`/`weeklyAvailability` síncronas sobre el mock) que Epic 4 sigue usando sin conectar — ver "Backend real — Epic 3" |
+| `lounges/hero-carousel.tsx` | Story 3.1 — el carousel de la ficha; recibe `images` de `lounge_images` (Supabase) |
+| `lounges/photo-gallery-dialog.tsx` | Story 3.1 — la galería a pantalla completa (`Gallery.dc.html`), mismas `images` reales |
 | `lounges/share-dialog.tsx` | Story 3.1 — la hoja de compartir (`Share.dc.html`); "Copy" sí usa `navigator.clipboard` |
-| `lounges/amenities-grid.tsx` · `operating-hours.tsx` · `contact-info.tsx` | Story 3.1 — las tres secciones de la columna principal del perfil |
-| `lounges/availability-card.tsx` · `booking-restrictions.tsx` · `freshness-note.tsx` | Story 3.2 — la card de disponibilidad del perfil (Available / Not available) y sus piezas compartidas |
+| `lounges/amenities-grid.tsx` · `operating-hours.tsx` · `contact-info.tsx` | Story 3.1 — las tres secciones de la columna principal del perfil; horario y contacto ya vienen del perfil real |
+| `lounges/availability-card.tsx` · `booking-restrictions.tsx` · `freshness-note.tsx` | Story 3.2 — la card de disponibilidad del perfil (Available / Not available), con plazas y `lastUpdatedAt` reales |
 | `lounges/profile-skeleton.tsx` | Estado de carga del perfil (`Loading.dc.html`), solo alcanzable por `?loading=1` |
 | `lounges/lounge-subview-header.tsx` | Story 3.1 / 3.2 — cabecera de la sub-vista de lounge (patrón 8) |
-| `lounges/weekly-calendar.tsx` · `closure-banner.tsx` | Story 3.2 — el calendario semanal de franjas y el aviso de cierre por festivo |
-| `lounges/rating-summary.tsx` · `review-card.tsx` | Story 3.1 — el resumen de valoración (con y sin reseñas) y cada reseña |
+| `lounges/weekly-calendar.tsx` · `closure-banner.tsx` | Story 3.2 — el calendario semanal de franjas (recibe `cells` ya resueltas) y el aviso de cierre por festivo |
+| `lounges/rating-summary.tsx` · `review-card.tsx` | Story 3.1 — el resumen de valoración (rating/recuento reales, desglose y reseñas de muestra) |
 | `lib/booking.ts` | Story 4.1 / 4.2 — date picker mensual, slots de llegada, precio (day pass vs. cubierto por membresía), métodos de pago de muestra, referencias de reserva y la cuenta atrás del slot |
 | `lib/calendar-export.ts` | Story 4.3 — `.ics` real y URL real de Google Calendar; la única lógica del epic que no se simula |
 | `booking/booking-context.tsx` | Borrador de reserva compartido por los 3 pasos y por `/book/confirmed`+`/book/receipt` (Context, sin persistencia); también la cuenta atrás compartida "Slot held for M:SS" |
@@ -412,6 +412,49 @@ Desviaciones conscientes de esta parte (no son bugs, son decisiones tomadas con 
 - **El botón "Recentre the map" pana a la ubicación GPS real capturada al conceder el permiso, no a una nueva lectura en cada clic.** `origin` (pasado a `CityMap` desde `page.tsx`) es la coordenada real de `getCurrentPosition()` obtenida en `handleAllow` — ya no el punto fijo `{x:267,y:339}` que tenía el mock —, pero el botón no vuelve a pedir el GPS por clic: eso añadiría manejo de permiso denegado/timeout para un control secundario, desproporcionado para esta historia. Se sustituye si una historia futura pide una relectura de ubicación en vivo.
 - **Seleccionar un lounge desde el panel de resultados recentra el mapa** (`SelectionRecentre` en `city-map.tsx`): pana a su lat/lng real y fija el zoom en `DETAIL_ZOOM` (15, entre `MIN_ZOOM` 10 y `MAX_ZOOM` 16), sin condicionarlo al zoom del que se venía — corrige tanto un zoom muy abierto (el pin no se notaría) como uno ya muy cerrado en otro punto. No estaba en el artboard porque el mock no tenía un mapa real que pudiera desincronizarse del panel.
 - **`handleAllow` cierra el diálogo de permiso antes de que resuelva `getCurrentPosition()`, no después.** Un fix real de GPS puede tardar varios segundos incluso ya concedido el permiso — esperarlo (`await`) dejaba el diálogo abierto todo ese tiempo, un problema invisible en el test (el stub de `navigator.geolocation` resuelve síncrono). El mapa se muestra ya con la ciudad por defecto como origen provisional; `origin` se corrige en cuanto llega la posición real, y `OriginRecentre` (`city-map.tsx`) pana el mapa a ese origen corregido — `defaultCenter` de `@vis.gl/react-google-maps` solo aplica una vez, así que sin esto el mapa se quedaría en el centro de la ciudad por defecto pese a que `origin` ya tuviera la posición real.
+- **Bug real (reportado por el usuario, sept 2026): "View details" del callout de un pin no navegaba nunca.** Invisible en jsdom (el stub de Google Maps no replica ni el `pointer-events` real ni los avisos de la librería) — solo se reprodujo con Playwright real. Dos causas independientes, ambas en el `AdvancedMarker` que envuelve el callout (`children` en `city-map.tsx`):
+  1. Sin ningún handler interactivo propio, `@vis.gl/react-google-maps` le ponía `pointer-events: none` al contenido del marker (lo trata como no-clickable y deja pasar el clic al mapa de debajo) — se le añadió `onClick={() => {}}`, con comentario explicando por qué existe un handler vacío.
+  2. Con eso corregido, el clic seguía sin llegar: Google Maps avisa en consola "Focusable child elements in AdvancedMarkerElement are not supported" y, en la práctica, intercepta el foco de un hijo enfocable (el `<Link>` "View details") entre `mousedown` y `mouseup`, desmontando el callout a mitad del clic. `tabIndex={-1}` en ese `Link` (`lounge-callout.tsx`) lo saca del focus-management de Google sin dejar de ser clickable con ratón ni de tener rol de link para lector de pantalla — dentro del callout del mapa deja de ser alcanzable por teclado, pero el mismo lounge se tabula desde el panel de resultados.
+  3. De paso, se añadió `onClick={(e) => e.stopPropagation()}` al callout: `<Map onClick={onDeselect}>` escucha clics a nivel de mapa, y sin cortar la propagación cualquier clic dentro del callout (no solo "View details") lo deselecciona.
+  Regresión cubierta en `lounge-callout.test.tsx` (lo que jsdom sí puede observar: `tabIndex` y que el clic no burbujee) y verificada de punta a punta con Playwright (`scripts/playwright/scripts/explore/view-details-from-pin-verification.js`).
+
+---
+
+## Backend real (Supabase local) — Epic 3 (Stories 3.1, 3.2)
+
+Tercer epic con backend real. Extiende `public.lounges` (Epic 2 sigue siendo
+dueño de la tabla) y añade tres tablas propias del Epic 3 — ver
+`docs/DATA-MODEL-MAP.md`.
+
+| Módulo | Qué resuelve |
+|---|---|
+| `supabase/schemas/lounges.sql` | Columnas nuevas: `address`, `phone`, `email`, `website`, `reception_note`, `weekly_hours` (jsonb, 7 entradas domingo→sábado), `review_count`, `capacity`, `booking_restrictions` |
+| `supabase/schemas/lounge_images.sql` | Tabla `lounge_images` (nace en Epic 3) — colección ordenada de fotos por lounge, sustituye el `hero-photos.ts` estático compartido por todo el catálogo |
+| `supabase/schemas/lounge_availability.sql` | Tabla `lounge_availability` (nace en Epic 3) — plazas por `(lounge_id, date, band)`; solo existe fila cuando la franja/día está soportado por `lounges.bands`/`closed_weekdays` |
+| `supabase/schemas/lounge_closures.sql` | Tabla `lounge_closures` (nace en Epic 3, no anticipada por nombre en `DATA-MODEL-MAP.md` — se documentó ahí como parte de "disponibilidad") — cierres por festivo con `reopens_label`/`posted_on`, separada de `lounge_availability` porque es un evento por rango de fechas, no una propiedad por celda |
+| `supabase/migrations/..._seed_lounge_profiles_story_3.sql` | Seed escrito a mano, reproduciendo la misma fórmula determinista que ya usaba el mock (`hashOf(id\|date\|band) % 21`) para no inventar números nuevos; ventana de disponibilidad sembrada: `mondayOf(TODAY) - 1 semana` a `TODAY + 16 semanas` |
+| `lib/lounge-profile.ts` | `fetchLoungeProfile`/`fetchLoungeImages`/`fetchWeeklyAvailability`/`fetchClosuresForWeek`/`fetchNextAvailableSlot` (todas contra Supabase); `operatingHoursFor` pasa a recibir `weeklyHours` en vez de leer una constante compartida |
+| `app/lounges/[id]/page.tsx`, `.../availability/page.tsx`, `.../reviews/page.tsx` | Las tres pasan a `RequireSession` (mismo patrón que `/explore`) y a resolver el lounge con `fetchLoungeProfile` en vez de `LOUNGES.find(...)` de `lib/lounges.ts` (ese archivo sigue intacto: lo siguen usando Home y Epic 4-9, sin conectar) |
+
+Desviaciones conscientes de esta parte:
+
+- **No hay tabla `reviews`.** Ninguna historia permite dejar una reseña
+  (ver `docs/DATA-MODEL-MAP.md`): `rating`/`review_count` son columnas reales
+  agregadas, pero el contenido de cada reseña, el desglose por estrellas y
+  "what members mention" (`reviewsFor`/`ratingBreakdownFor`/`mentionsFor`)
+  siguen siendo datos de muestra — mismo criterio que Camille Duforest
+  (Epic 8) o LP-842193 (Epic 5).
+- **`lib/lounge-profile.ts` es híbrido a propósito.** Conserva, sin tocar,
+  las funciones síncronas que operaban sobre el mock (`contactFor`,
+  `closuresFor`, `closureCovering`, `weeklyAvailability`, el tipo
+  `LoungeContact`) porque `lib/booking.ts` y las pantallas de
+  `/lounges/[id]/book/*` (Epic 4, sin conectar todavía) siguen dependiendo de
+  ellas tal cual. Se retiran cuando Epic 4 se conecte a su vez.
+- **Horizonte de disponibilidad finito (18 semanas), no infinito como el hash del mock.** Sembrar una tabla real exige un rango — se eligió uno que cubre la navegación semanal, `nextAvailableSlot` (3 semanas) y el cierre de Thanksgiving que ya citan artboards y tests. Navegar mucho más allá de ~4 meses desde TODAY no tiene filas y se trataría como sin datos (no ocurre en ningún flujo de la app hoy).
+- **Se retiró el chip de distancia ("0.3 mi away") del perfil.** No está en los Acceptance Criteria de la Story 3.1, y añadir geolocalización real a esta pantalla (como en `/explore`) para un dato puramente decorativo es desproporcionado — mismo criterio que otras simplificaciones ya aceptadas (p. ej. "Remember me" en Epic 1).
+- **`WeeklyCalendar` pasó de calcular sus celdas internamente a recibirlas por prop (`cells`).** El mock la dejaba recalcular `weeklyAvailability(lounge, weekStart)` por su cuenta (duplicado con el cálculo que ya hacía la página); con datos reales y async eso ya no es posible sin un estado de carga propio dentro del componente — se centralizó en la página, que ya tenía sus propias razones para calcular `cells`.
+- **`FreshnessNote` pasó de simular un contador local a recibir `lastUpdatedAt` real.** El refresco cada 5 minutos (AC de la Story 3.2) vive en la página (`setInterval` + refetch), no en el componente — que solo recalcula el texto "hace N min" cada 15s a partir de ese timestamp.
+- **La 4ª restricción de reserva ("Free cancellation up to 4 hours before") se añadió al sembrar.** El mock solo tenía 3; `Availability.dc.html` dibuja 4 — se cierra el gap al conectar el dato real en vez de arrastrarlo.
 
 ---
 

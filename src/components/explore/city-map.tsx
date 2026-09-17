@@ -119,6 +119,22 @@ export function CityMap({
             <AdvancedMarker
               position={{ lat: selected.lat, lng: selected.lng }}
               zIndex={10}
+              // Sin `onClick` propio, Google Maps hacía dos cosas mal con el
+              // contenido interactivo del callout (`children`, el mismo
+              // LoungeCallout con el link "View details"): (1)
+              // @vis.gl/react-google-maps pone `pointer-events: none` en el
+              // contenido cuando el marker no tiene ningún handler
+              // interactivo, dejando pasar el clic al mapa de debajo; (2)
+              // Google avisa en consola "Focusable child elements in
+              // AdvancedMarkerElement are not supported... use addListener()
+              // to register a 'click' event" — sin un listener de click
+              // registrado de verdad en el marker, el clic dentro del
+              // callout ni siquiera llega a burbujear por nuestro propio
+              // árbol de React (el `onClick` del callout nunca se disparaba).
+              // Un `onClick` real (aunque no haga nada) resuelve ambos: activa
+              // `pointer-events: all` y hace que Google trate el contenido
+              // como genuinamente clickable.
+              onClick={() => {}}
             >
               {children}
             </AdvancedMarker>

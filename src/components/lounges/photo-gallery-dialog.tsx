@@ -5,8 +5,8 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 
 import { HeroPhotoSurface } from "@/components/lounges/hero-photo-surface";
+import type { LoungeImage } from "@/lib/lounge-profile";
 import { cn } from "@/lib/utils";
-import { HERO_PHOTOS } from "./hero-photos";
 
 /**
  * `Gallery.dc.html` — lightbox a pantalla completa sobre el perfil
@@ -19,15 +19,17 @@ export function PhotoGalleryDialog({
   onOpenChange,
   loungeId,
   loungeName,
+  images,
   initialIndex,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   loungeId: string;
   loungeName: string;
+  images: LoungeImage[];
   initialIndex: number;
 }) {
-  const total = HERO_PHOTOS.length;
+  const total = images.length;
   const [index, setIndex] = React.useState(initialIndex);
   const [wasOpen, setWasOpen] = React.useState(open);
 
@@ -76,8 +78,8 @@ export function PhotoGalleryDialog({
             <HeroPhotoSurface
               loungeId={loungeId}
               photoIndex={index}
-              caption={HERO_PHOTOS[index].caption}
-              detail={HERO_PHOTOS[index].detail}
+              caption={images[index].caption}
+              detail={images[index].detail}
             />
             <button
               type="button"
@@ -98,7 +100,7 @@ export function PhotoGalleryDialog({
           </div>
 
           <div className="mt-4 flex gap-3">
-            {HERO_PHOTOS.map((thumb, thumbIndex) => (
+            {images.map((thumb, thumbIndex) => (
               <button
                 key={thumbIndex}
                 type="button"

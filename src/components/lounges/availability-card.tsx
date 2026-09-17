@@ -9,32 +9,38 @@ import { Eyebrow } from "@/components/ui/eyebrow";
 import { StatusChip } from "@/components/ui/status-chip";
 import { TODAY } from "@/lib/availability";
 import {
-  LOUNGE_CAPACITY,
   WEEK_BANDS,
   formatWeekdayDate,
-  nextAvailableSlot,
-  operatingHoursFor,
+  type HoursRow,
   type WeekBandId,
 } from "@/lib/lounge-profile";
-import type { Lounge } from "@/lib/lounges";
 import { cn } from "@/lib/utils";
 
 /**
  * Story 3.2 — "Real-time availability status: Available / Not Available"
  * (Main.dc.html / NotAvailable.dc.html). El catálogo solo modela franjas, no
  * horas exactas, así que "Next available times" ofrece las franjas del día
- * en vez de las horas concretas del artboard.
+ * en vez de las horas concretas del artboard. Todos los datos (plazas de
+ * hoy, hueco siguiente, marca de frescura) llegan ya resueltos de la página
+ * — vienen de `fetchWeeklyAvailability`/`fetchNextAvailableSlot` (Supabase).
  */
 function weekBandLabel(id: WeekBandId): string {
   return WEEK_BANDS.find((band) => band.id === id)!.label;
 }
 
-function closingTimeToday(): string {
-  return operatingHoursFor()[0].hours.split("–")[1]!.trim();
+export interface AvailabilityCardProps {
+  loungeId: string;
+  capacity: number;
+  bookingRestrictions: string[];
+  hoursToday: HoursRow;
+  available: boolean;
+  todaySeatsLeft: number;
+  nextAvailable?: { dateIso: string; band: WeekBandId; seatsLeft: number };
+  lastUpdatedAt: string;
 }
 
-export function AvailabilityCard({ lounge }: { lounge: Lounge }) {
-  const available = lounge.slotsToday > 0;
+export function AvailabilityCard(props: AvailabilityCardProps) {
+  const { available } = props;
 
   return (
     <Card
@@ -48,25 +54,27 @@ export function AvailabilityCard({ lounge }: { lounge: Lounge }) {
         </StatusChip>
       </div>
 
-      {available ? (
-        <AvailableBody lounge={lounge} />
-      ) : (
-        <NotAvailableBody lounge={lounge} />
-      )}
+      {available ? <AvailableBody {...props} /> : <NotAvailableBody {...props} />}
     </Card>
   );
 }
 
-function AvailableBody({ lounge }: { lounge: Lounge }) {
+function AvailableBody({
+  loungeId,
+  capacity,
+  bookingRestrictions,
+  hoursToday,
+  todaySeatsLeft,
+  lastUpdatedAt,
+}: AvailabilityCardProps) {
   const upcoming = WEEK_BANDS.slice(0, 3);
+  const closingTime = hoursToday.hours.split("–")[1]!.trim();
 
   return (
     <>
-      <h2 className="mb-1 mt-3 text-[22px] text-fg">
-        Open until {closingTimeToday()}
-      </h2>
+      <h2 className="mb-1 mt-3 text-[22px] text-fg">Open until {closingTime}</h2>
       <p className="m-0 text-[12.5px] text-fg-subtle">
-        {lounge.slotsToday} of {LOUNGE_CAPACITY} seats free right now
+        {todaySeatsLeft} of {capacity} seats free right now
       </p>
 
       <div className="my-4.5 h-px bg-line" />
@@ -86,14 +94,14 @@ function AvailableBody({ lounge }: { lounge: Lounge }) {
       </div>
 
       <Link
-        href={`/lounges/${lounge.id}/book`}
+        href={`/lounges/${loungeId}/book`}
         className={cn(buttonVariants({ size: "lg", block: true }), "mt-3.5")}
       >
         Book now
       </Link>
 
       <Link
-        href={`/lounges/${lounge.id}/availability`}
+        href={`/lounges/${loungeId}/availability`}
         className="mt-3 flex items-center justify-center gap-2 text-[12.5px] font-bold"
       >
         View weekly availability
@@ -104,16 +112,21 @@ function AvailableBody({ lounge }: { lounge: Lounge }) {
       <p className="m-0 mb-2.5 text-xs font-bold uppercase tracking-[0.1em] text-gold-600">
         Booking restrictions
       </p>
-      <BookingRestrictions />
+      <BookingRestrictions restrictions={bookingRestrictions} />
 
-      <FreshnessNote className="mt-4 border-t border-line pt-3.5" />
+      <FreshnessNote
+        lastUpdatedAt={lastUpdatedAt}
+        className="mt-4 border-t border-line pt-3.5"
+      />
     </>
   );
 }
 
-function NotAvailableBody({ lounge }: { lounge: Lounge }) {
-  const next = nextAvailableSlot(lounge);
-
+function NotAvailableBody({
+  loungeId,
+  nextAvailable,
+  lastUpdatedAt,
+}: AvailabilityCardProps) {
   return (
     <>
       <h2 className="mb-1 mt-3 text-[22px] text-fg">Fully booked today</h2>
@@ -123,21 +136,22 @@ function NotAvailableBody({ lounge }: { lounge: Lounge }) {
 
       <div className="my-4.5 h-px bg-line" />
 
-      {next ? (
+      {nextAvailable ? (
         <>
           <p className="m-0 mb-2.5 text-[12.5px] font-bold text-fg">
             Next available
           </p>
           <Link
-            href={`/lounges/${lounge.id}/availability`}
+            href={`/lounges/${loungeId}/availability`}
             className="flex items-center gap-3 rounded-xl border-[1.5px] border-accent bg-accent-soft p-3.5"
           >
             <span className="flex-1">
               <span className="block text-[13.5px] font-bold text-fg">
-                {formatWeekdayDate(next.dateIso)} · {weekBandLabel(next.band)}
+                {formatWeekdayDate(nextAvailable.dateIso)} ·{" "}
+                {weekBandLabel(nextAvailable.band)}
               </span>
               <span className="mt-0.5 block text-[11.5px] text-fg-muted">
-                {next.seatsLeft} seats free
+                {nextAvailable.seatsLeft} seats free
               </span>
             </span>
             <ChevronRight size={17} strokeWidth={1.9} className="text-accent-strong" />
@@ -146,7 +160,7 @@ function NotAvailableBody({ lounge }: { lounge: Lounge }) {
       ) : null}
 
       <Link
-        href={`/lounges/${lounge.id}/availability`}
+        href={`/lounges/${loungeId}/availability`}
         className={cn(buttonVariants({ size: "lg", block: true }), "mt-3.5")}
       >
         Pick another day
@@ -161,7 +175,10 @@ function NotAvailableBody({ lounge }: { lounge: Lounge }) {
         Back to search
       </Link>
 
-      <FreshnessNote className="mt-4 border-t border-line pt-3.5" />
+      <FreshnessNote
+        lastUpdatedAt={lastUpdatedAt}
+        className="mt-4 border-t border-line pt-3.5"
+      />
     </>
   );
 }

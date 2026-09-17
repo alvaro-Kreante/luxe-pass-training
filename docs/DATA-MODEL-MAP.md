@@ -36,30 +36,44 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
   real — Epic 2.
 - Amenities (WiFi, Spa, Co-working…): resuelto como `text[]` dentro de
   `lounges`, sin tabla propia — como ya anticipaba esta fila.
-- `rating`/`open_now`/`slots_today`/`bands`/`closed_weekdays` son columnas
-  reales pero **estáticas** (sembradas 1:1 del mock, no agregadas ni en
-  vivo): rating madura con Epic 3 (reseñas reales), disponibilidad con
-  Epic 3/4 (`lounge_availability`, `bookings`).
+- `open_now`/`slots_today` siguen siendo columnas reales pero **estáticas**
+  (sembradas 1:1 del mock, no en vivo): maduran cuando Epic 4 aporte
+  disponibilidad real de bookings. `rating`/`review_count` sí son reales
+  ahora (Epic 3) — siguen sin ser una agregación en vivo porque no existe
+  tabla `reviews` (ver su fila más abajo), pero ya no son del mock.
 - Sin tabla propia: 2.1 (el mapa dibujado sigue siendo cliente — proveedor
   real fuera de alcance, ver `docs/PENDIENTES.md` §2.3), 2.3 (vista de lista,
   paginada en cliente sobre el catálogo ya traído).
-- Cruce todavía abierto: el filtro "by availability" de 2.2 sigue siendo una
-  aproximación por `bands`/`closed_weekdays` de `lounges`, no la agenda real
-  de `lounge_availability`, que sigue naciendo en Epic 3 (aún no
-  implementado).
+- Cruce resuelto: el filtro "by availability" de 2.2 sigue siendo una
+  aproximación por `bands`/`closed_weekdays` de `lounges` (no consulta
+  `lounge_availability` fila a fila para el filtro, desproporcionado para
+  un filtro de catálogo) — `lounge_availability` ya existe (Epic 3,
+  implementada), pero 2.2 no se tocó al conectar Epic 3.
 
-### Epic 3 — Lounge Profiles & Details
+### Epic 3 — Lounge Profiles & Details *(implementado — Supabase local, sept 2026)*
 
-- Extiende `lounges` (mismo dueño, Epic 2) con hero images, horarios,
-  contacto, rating agregado. Ninguna historia permite *dejar* una reseña, así
-  que rating/review_count son columnas agregadas, no una tabla `reviews` —
-  señalar si aparece una historia futura de reviews.
-- `lounge_images` (candidata, dueño Epic 3) — colección ordenada; Epic 8.3 la
-  gestiona desde admin, así que conviene tabla propia en vez de array.
-- `lounge_availability` (**nace aquí**, dueño Epic 3) — calendario semanal,
-  capacidad, restricciones por tier, cierres especiales. Referenciada por
-  Epic 2 (filtro), Epic 4 (flujo de booking), Epic 9 (el tier de membresía
-  condiciona restricciones).
+- Extiende `lounges` (mismo dueño, Epic 2) con `address`/`phone`/`email`/
+  `website`/`reception_note`, `weekly_hours` (jsonb), `review_count`,
+  `capacity`, `booking_restrictions`. Ninguna historia permite *dejar* una
+  reseña, así que `rating`/`review_count` son columnas agregadas, no una
+  tabla `reviews` — el contenido de cada reseña sigue siendo dato de muestra
+  (`lib/lounge-profile.ts`) — señalar si aparece una historia futura de
+  reviews.
+- `lounge_images` (implementada, dueño Epic 3) — colección ordenada; Epic 8.3
+  la gestionará desde admin, de ahí tabla propia en vez de array. La
+  fotografía sigue sin ser real (bloques de marca, ver `DESIGN-SYSTEM.md`
+  §6 Fase 4) — lo real es que la fila viene de Supabase, no el contenido.
+- `lounge_availability` (implementada, dueño Epic 3) — plazas por
+  `(lounge_id, date, band)`, con horizonte finito sembrado (18 semanas desde
+  `TODAY`), no calendario infinito. Referenciada por Epic 2 (el filtro de
+  disponibilidad sigue siendo una aproximación, ver `COMPONENT-MAP.md`),
+  Epic 4 (flujo de booking, todavía sobre el mock), Epic 9 (el tier de
+  membresía condiciona restricciones, todavía no implementado).
+- `lounge_closures` (implementada, dueño Epic 3, **no anticipada por nombre
+  en la primera versión de este mapa** — se documentó aquí como parte de
+  "cierres especiales" de `lounge_availability`, pero se implementó como
+  tabla separada porque es un evento por rango de fechas con sus propios
+  metadatos, no una propiedad por celda día/franja).
 
 ### Epic 4 — Booking System
 
@@ -110,6 +124,20 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
   cruce directo a Epic 1, señalar antes de tocar RLS.
 - 7.1/7.2 reutilizan `bookings` + `profiles` + `notifications`. 7.3
   (analytics) es vista agregada, sin tabla propia.
+- **Si una historia futura de este epic (u 8.3, "Add/edit/remove lounge
+  profiles") necesita que un partner dé de alta un lounge y sus días
+  disponibles: `lounges.bands`/`closed_weekdays`/`capacity`/`weekly_hours` y
+  `lounge_closures` (Epic 3) sí son reutilizables tal cual — son la
+  plantilla recurrente y los cierres puntuales, y un formulario de partner
+  puede escribirlos directo. `lounge_availability` (Epic 3) **no** lo es
+  todavía: hoy es un seed estático de filas por fecha (18 semanas desde
+  `TODAY`, generado una sola vez por migración, ver su fila más abajo) —
+  dar de alta un lounge nuevo no generaría sus propias filas de
+  disponibilidad. Antes de apoyarse en ella, evaluar reemplazarla por un
+  cálculo al vuelo desde la plantilla recurrente (decisión ya planteada y
+  conscientemente aplazada el 17 sept 2026, ver `docs/PENDIENTES.md`) o
+  esperar a que Epic 4 (`bookings`) exista y de ahí sí derivar plazas en
+  vivo.
 
 ### Epic 8 — Admin & Support
 
@@ -143,6 +171,7 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
 | `lounges` | 2 (nace) / 3 (detalle) | 4, 5, 6, 7, 8 |
 | `lounge_availability` | 3 | 2, 4, 9 |
 | `lounge_images` | 3 | 8 (gestión) |
+| `lounge_closures` | 3 | 4 (booking, sin conectar) |
 | `bookings` | 4 | 5, 6, 7, 8, 9 |
 | `payments` | 4 | 8 (refunds) |
 | `notifications` | 6 | 5, 7, 9 |

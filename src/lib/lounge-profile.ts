@@ -1,16 +1,18 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { amenityLabel } from "./amenities";
-import type { Lounge } from "./lounges";
 import { TODAY, addDays, isPast, parseDate, weekdayOf } from "./availability";
+import type { LoungeRow } from "./lounge-directory";
+import type { Lounge } from "./lounges";
 
 /**
- * Story 3.1 / 3.2 — el catálogo de `lounges.ts` (Story 2.1/2.2) no trae
- * contacto, horario completo, reseñas ni disponibilidad semanal: son datos
- * de la Fase 4 que no existían todavía. Esta capa los deriva del lounge base,
- * y fija literalmente los de The Ainsworth y Belmont Terrace para que
- * reproduzcan los artboards que los citan (`Main.dc.html`, `Reviews.dc.html`,
- * `NoRatings.dc.html`, `Closure.dc.html`). El resto del catálogo recibe datos
- * de muestra generados a partir de su propio id, para que cualquier lounge
- * tenga un perfil navegable.
+ * Story 3.1 / 3.2 — perfil real de un lounge (tabla `public.lounges`
+ * extendida, más `lounge_images`/`lounge_availability`/`lounge_closures`).
+ * Sustituye la capa de derivación por hash que vivía aquí (ver historial de
+ * este archivo): contacto, horario, capacidad y restricciones ya son
+ * columnas reales; `reviewsFor`/`ratingBreakdownFor`/`mentionsFor` siguen
+ * siendo datos de muestra a propósito — ninguna historia permite dejar una
+ * reseña, así que no hay tabla `reviews` (ver docs/DATA-MODEL-MAP.md).
  */
 
 const WEEKDAY_NAMES = [
@@ -29,76 +31,138 @@ function hashOf(seed: string): number {
 }
 
 /* ------------------------------------------------------------------ */
-/* Contacto                                                            */
+/* Perfil del lounge (Story 3.1)                                       */
 /* ------------------------------------------------------------------ */
 
-export interface LoungeContact {
+export interface LoungeProfile extends LoungeRow {
   address: string;
   phone: string;
   email: string;
   website: string;
   receptionNote: string;
+  /** 7 entradas, domingo primero — ver `operatingHoursFor`. */
+  weeklyHours: string[];
+  reviewCount: number;
+  capacity: number;
+  bookingRestrictions: string[];
 }
 
-const AREA_CODE_BY_CITY: Record<string, string> = {
-  "new-york": "212",
-  newark: "973",
-  "new-rochelle": "914",
-  miami: "305",
-};
+interface LoungeProfileTableRow {
+  id: string;
+  name: string;
+  neighborhood: string;
+  city: string;
+  city_id: string;
+  lat: number;
+  lng: number;
+  amenities: string[];
+  rating: number;
+  open_now: boolean;
+  slots_today: number;
+  hours: string;
+  bands: string[];
+  closed_weekdays: number[];
+  featured: boolean;
+  address: string;
+  phone: string;
+  email: string;
+  website: string;
+  reception_note: string;
+  weekly_hours: string[];
+  review_count: number;
+  capacity: number;
+  booking_restrictions: string[];
+}
 
-const STATE_BY_CITY: Record<string, string> = {
-  "new-york": "NY",
-  newark: "NJ",
-  "new-rochelle": "NY",
-  miami: "FL",
-};
-
-const CONTACT_OVERRIDES: Record<string, LoungeContact> = {
-  "the-ainsworth": {
-    address: "122 E 45th St, New York, NY 10017",
-    phone: "+1 (212) 555-0184",
-    email: "reception@ainsworth.example",
-    website: "ainsworth.example",
-    receptionNote:
-      "Reception is on Level 2. Show your booking confirmation on arrival.",
-  },
-};
-
-export function contactFor(lounge: Lounge): LoungeContact {
-  const override = CONTACT_OVERRIDES[lounge.id];
-  if (override) return override;
-
-  const hash = hashOf(lounge.id);
-  const areaCode = AREA_CODE_BY_CITY[lounge.cityId] ?? "212";
-  const state = STATE_BY_CITY[lounge.cityId] ?? "NY";
-  const streetNumber = 100 + (hash % 800);
-  const phoneDigits = String(1000 + (hash % 9000)).padStart(4, "0");
-  const zip = String(10001 + (hash % 900));
-
+function fromProfileRow(row: LoungeProfileTableRow): LoungeProfile {
   return {
-    address: `${streetNumber} ${lounge.neighborhood} Ave, ${lounge.city}, ${state} ${zip}`,
-    phone: `+1 (${areaCode}) 555-${phoneDigits}`,
-    email: `reception@${lounge.id}.example`,
-    website: `${lounge.id}.example`,
-    receptionNote: "Show your booking confirmation at reception on arrival.",
+    id: row.id,
+    name: row.name,
+    neighborhood: row.neighborhood,
+    city: row.city,
+    cityId: row.city_id,
+    lat: row.lat,
+    lng: row.lng,
+    amenities: row.amenities as LoungeRow["amenities"],
+    rating: row.rating,
+    openNow: row.open_now,
+    slotsToday: row.slots_today,
+    hours: row.hours,
+    bands: row.bands as LoungeRow["bands"],
+    closedWeekdays: row.closed_weekdays,
+    featured: row.featured,
+    address: row.address,
+    phone: row.phone,
+    email: row.email,
+    website: row.website,
+    receptionNote: row.reception_note,
+    weeklyHours: row.weekly_hours,
+    reviewCount: row.review_count,
+    capacity: row.capacity,
+    bookingRestrictions: row.booking_restrictions,
   };
 }
 
+export async function fetchLoungeProfile(
+  supabase: SupabaseClient,
+  id: string,
+): Promise<LoungeProfile | null> {
+  const { data, error } = await supabase
+    .from("lounges")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  return fromProfileRow(data as LoungeProfileTableRow);
+}
+
 /* ------------------------------------------------------------------ */
-/* Horario semanal                                                     */
+/* Fotos (Story 3.1 — "Hero image carousel")                           */
 /* ------------------------------------------------------------------ */
 
-/** Mismo patrón de horario para todo el catálogo — dato de muestra único. */
-const STANDARD_WEEK_HOURS = [
-  "10:00 AM – 9:00 PM", // domingo
-  "8:00 AM – 11:00 PM", // lunes
-  "8:00 AM – 11:00 PM", // martes
-  "8:00 AM – 11:00 PM", // miércoles
-  "8:00 AM – 11:00 PM", // jueves
-  "8:00 AM – 1:00 AM", // viernes
-  "10:00 AM – 1:00 AM", // sábado
-];
+export interface LoungeImage {
+  id: string;
+  url: string;
+  caption: string;
+  detail?: string;
+  position: number;
+}
+
+interface LoungeImageTableRow {
+  id: string;
+  url: string;
+  caption: string;
+  detail: string | null;
+  position: number;
+}
+
+export async function fetchLoungeImages(
+  supabase: SupabaseClient,
+  loungeId: string,
+): Promise<LoungeImage[]> {
+  const { data, error } = await supabase
+    .from("lounge_images")
+    .select("id, url, caption, detail, position")
+    .eq("lounge_id", loungeId)
+    .order("position");
+
+  if (error) throw error;
+
+  return (data as LoungeImageTableRow[]).map((row) => ({
+    id: row.id,
+    url: row.url,
+    caption: row.caption,
+    detail: row.detail ?? undefined,
+    position: row.position,
+  }));
+}
+
+/* ------------------------------------------------------------------ */
+/* Horario semanal (Story 3.1)                                         */
+/* ------------------------------------------------------------------ */
 
 export interface HoursRow {
   label: string;
@@ -108,10 +172,10 @@ export interface HoursRow {
 
 /**
  * Fila de hoy primero, y el resto de la semana agrupado en rangos cuando el
- * horario se repite — igual que `Main.dc.html`, pero calculado para
- * cualquier día de hoy, no solo el jueves que dibuja el artboard.
+ * horario se repite — `weeklyHours` viene de `LoungeProfile.weeklyHours`
+ * (domingo primero, igual que `WEEKDAY_NAMES`).
  */
-export function operatingHoursFor(): HoursRow[] {
+export function operatingHoursFor(weeklyHours: string[]): HoursRow[] {
   const todayIndex = weekdayOf(TODAY);
   const order = Array.from({ length: 7 }, (_, i) => (todayIndex + i) % 7);
   const rows: HoursRow[] = [];
@@ -121,7 +185,7 @@ export function operatingHoursFor(): HoursRow[] {
     if (i === 0) {
       rows.push({
         label: `${WEEKDAY_NAMES[order[0]]} · Today`,
-        hours: STANDARD_WEEK_HOURS[order[0]],
+        hours: weeklyHours[order[0]],
         isToday: true,
       });
       i++;
@@ -131,7 +195,7 @@ export function operatingHoursFor(): HoursRow[] {
     let j = i;
     while (
       j + 1 < order.length &&
-      STANDARD_WEEK_HOURS[order[j + 1]] === STANDARD_WEEK_HOURS[order[i]]
+      weeklyHours[order[j + 1]] === weeklyHours[order[i]]
     ) {
       j++;
     }
@@ -141,7 +205,7 @@ export function operatingHoursFor(): HoursRow[] {
         ? `${WEEKDAY_NAMES[order[i]]} – ${WEEKDAY_NAMES[order[j]]}`
         : WEEKDAY_NAMES[order[i]];
 
-    rows.push({ label, hours: STANDARD_WEEK_HOURS[order[i]] });
+    rows.push({ label, hours: weeklyHours[order[i]] });
     i = j + 1;
   }
 
@@ -149,20 +213,7 @@ export function operatingHoursFor(): HoursRow[] {
 }
 
 /* ------------------------------------------------------------------ */
-/* Disponibilidad — capacidad y restricciones                          */
-/* ------------------------------------------------------------------ */
-
-/** Constante única para todo el catálogo — como en `Main.dc.html` ("de 40"). */
-export const LOUNGE_CAPACITY = 40;
-
-export const BOOKING_RESTRICTIONS = [
-  "Annual and Signature members",
-  "Book at least 2 hours ahead",
-  "Admission for one member",
-];
-
-/* ------------------------------------------------------------------ */
-/* Reseñas                                                              */
+/* Reseñas — datos de muestra (sin tabla, ver cabecera del archivo)     */
 /* ------------------------------------------------------------------ */
 
 export interface RatingBreakdownRow {
@@ -177,19 +228,6 @@ export interface LoungeReview {
   visitedOn: string;
   rating: number;
   text: string;
-}
-
-/** Belmont Terrace es el ejemplo de `NoRatings.dc.html`: cero reseñas. */
-const REVIEW_COUNT_OVERRIDES: Record<string, number> = {
-  "the-ainsworth": 128,
-  "belmont-terrace": 0,
-};
-
-export function reviewCountFor(lounge: Lounge): number {
-  const override = REVIEW_COUNT_OVERRIDES[lounge.id];
-  if (override !== undefined) return override;
-
-  return Math.max(1, Math.round(lounge.rating * 20));
 }
 
 const AINSWORTH_BREAKDOWN: RatingBreakdownRow[] = [
@@ -226,10 +264,10 @@ function genericBreakdown(rating: number, total: number): RatingBreakdownRow[] {
   return rows;
 }
 
-export function ratingBreakdownFor(lounge: Lounge): RatingBreakdownRow[] {
+export function ratingBreakdownFor(lounge: LoungeProfile): RatingBreakdownRow[] {
   if (lounge.id === "the-ainsworth") return AINSWORTH_BREAKDOWN;
 
-  return genericBreakdown(lounge.rating, reviewCountFor(lounge));
+  return genericBreakdown(lounge.rating, lounge.reviewCount);
 }
 
 const AINSWORTH_MENTIONS = [
@@ -240,8 +278,8 @@ const AINSWORTH_MENTIONS = [
   { label: "Showers", count: 21 },
 ];
 
-export function mentionsFor(lounge: Lounge): { label: string; count: number }[] {
-  const total = reviewCountFor(lounge);
+export function mentionsFor(lounge: LoungeProfile): { label: string; count: number }[] {
+  const total = lounge.reviewCount;
   if (total === 0) return [];
   if (lounge.id === "the-ainsworth") return AINSWORTH_MENTIONS;
 
@@ -303,53 +341,15 @@ const GENERIC_REVIEWS: LoungeReview[] = [
   },
 ];
 
-export function reviewsFor(lounge: Lounge): LoungeReview[] {
-  if (reviewCountFor(lounge) === 0) return [];
+export function reviewsFor(lounge: LoungeProfile): LoungeReview[] {
+  if (lounge.reviewCount === 0) return [];
   if (lounge.id === "the-ainsworth") return AINSWORTH_REVIEWS;
 
   return GENERIC_REVIEWS;
 }
 
 /* ------------------------------------------------------------------ */
-/* Cierres por festivo                                                  */
-/* ------------------------------------------------------------------ */
-
-export interface Closure {
-  startIso: string;
-  endIso: string;
-  reason: string;
-  reopensLabel: string;
-  postedOn: string;
-}
-
-/** Solo The Ainsworth declara un cierre — el que dibuja `Closure.dc.html`. */
-const CLOSURES: Record<string, Closure[]> = {
-  "the-ainsworth": [
-    {
-      startIso: "2025-11-27",
-      endIso: "2025-11-28",
-      reason: "Thanksgiving",
-      reopensLabel: "Sat Nov 29 at 10:00 AM",
-      postedOn: "Oct 30",
-    },
-  ],
-};
-
-export function closuresFor(lounge: Lounge): Closure[] {
-  return CLOSURES[lounge.id] ?? [];
-}
-
-export function closureCovering(
-  lounge: Lounge,
-  dateIso: string,
-): Closure | undefined {
-  return closuresFor(lounge).find(
-    (closure) => dateIso >= closure.startIso && dateIso <= closure.endIso,
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Calendario semanal de disponibilidad                                */
+/* Disponibilidad semanal y cierres (Story 3.2)                        */
 /* ------------------------------------------------------------------ */
 
 export const WEEK_BANDS = [
@@ -388,6 +388,258 @@ export interface AvailabilityCell {
   status: CellStatus;
   seatsLeft: number | null;
   closureReason?: string;
+}
+
+export interface Closure {
+  startIso: string;
+  endIso: string;
+  reason: string;
+  reopensLabel: string;
+}
+
+interface AvailabilityTableRow {
+  date: string;
+  band: WeekBandId;
+  seats_left: number;
+}
+
+interface ClosureTableRow {
+  starts_on: string;
+  ends_on: string;
+  reason: string;
+  reopens_label: string;
+}
+
+type LoungeAvailabilitySource = Pick<LoungeProfile, "id" | "bands" | "closedWeekdays">;
+
+export async function fetchWeeklyAvailability(
+  supabase: SupabaseClient,
+  lounge: LoungeAvailabilitySource,
+  weekStartIso: string,
+): Promise<AvailabilityCell[]> {
+  const weekEndIso = addDays(weekStartIso, 6);
+
+  const [availabilityResult, closuresResult] = await Promise.all([
+    supabase
+      .from("lounge_availability")
+      .select("date, band, seats_left")
+      .eq("lounge_id", lounge.id)
+      .gte("date", weekStartIso)
+      .lte("date", weekEndIso),
+    supabase
+      .from("lounge_closures")
+      .select("starts_on, ends_on, reason, reopens_label")
+      .eq("lounge_id", lounge.id)
+      .lte("starts_on", weekEndIso)
+      .gte("ends_on", weekStartIso),
+  ]);
+
+  if (availabilityResult.error) throw availabilityResult.error;
+  if (closuresResult.error) throw closuresResult.error;
+
+  const seatsByKey = new Map<string, number>();
+  for (const row of availabilityResult.data as AvailabilityTableRow[]) {
+    seatsByKey.set(`${row.date}|${row.band}`, row.seats_left);
+  }
+
+  const closures = closuresResult.data as ClosureTableRow[];
+  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStartIso, i));
+  const cells: AvailabilityCell[] = [];
+
+  for (const dateIso of days) {
+    const weekday = weekdayOf(dateIso);
+
+    for (const [bandIndex, band] of WEEK_BANDS.entries()) {
+      const closure = closures.find(
+        (c) => dateIso >= c.starts_on && dateIso <= c.ends_on,
+      );
+      const bandSupported = lounge.bands.includes(SUPPORTING_BAND[band.id]);
+
+      if (closure) {
+        cells.push({
+          dateIso,
+          band: band.id,
+          status: "closed",
+          seatsLeft: null,
+          closureReason: closure.reason,
+        });
+        continue;
+      }
+
+      if (!bandSupported || lounge.closedWeekdays?.includes(weekday)) {
+        cells.push({ dateIso, band: band.id, seatsLeft: null, status: "closed" });
+        continue;
+      }
+
+      if (
+        isPast(dateIso) ||
+        (dateIso === TODAY && bandIndex < CURRENT_BAND_INDEX)
+      ) {
+        cells.push({ dateIso, band: band.id, seatsLeft: null, status: "past" });
+        continue;
+      }
+
+      const seats = seatsByKey.get(`${dateIso}|${band.id}`) ?? 0;
+
+      cells.push({
+        dateIso,
+        band: band.id,
+        status: seats === 0 ? "full" : "available",
+        seatsLeft: seats,
+      });
+    }
+  }
+
+  return cells;
+}
+
+/** Cierres vigentes que tocan la semana de `weekStartIso` — para `ClosureBanner`. */
+export async function fetchClosuresForWeek(
+  supabase: SupabaseClient,
+  loungeId: string,
+  weekStartIso: string,
+): Promise<Closure[]> {
+  const weekEndIso = addDays(weekStartIso, 6);
+
+  const { data, error } = await supabase
+    .from("lounge_closures")
+    .select("starts_on, ends_on, reason, reopens_label")
+    .eq("lounge_id", loungeId)
+    .lte("starts_on", weekEndIso)
+    .gte("ends_on", weekStartIso);
+
+  if (error) throw error;
+
+  return (data as ClosureTableRow[]).map((row) => ({
+    startIso: row.starts_on,
+    endIso: row.ends_on,
+    reason: row.reason,
+    reopensLabel: row.reopens_label,
+  }));
+}
+
+/** El primer hueco libre desde hoy — usado por la card de "Not available". */
+export async function fetchNextAvailableSlot(
+  supabase: SupabaseClient,
+  lounge: LoungeAvailabilitySource,
+): Promise<{ dateIso: string; band: WeekBandId; seatsLeft: number } | undefined> {
+  for (let week = 0; week < 3; week++) {
+    const weekStart = addDays(mondayOf(TODAY), week * 7);
+    const cells = await fetchWeeklyAvailability(supabase, lounge, weekStart);
+    const found = cells.find(
+      (cell) =>
+        cell.status === "available" &&
+        (cell.dateIso > TODAY ||
+          (cell.dateIso === TODAY &&
+            WEEK_BANDS.findIndex((b) => b.id === cell.band) >=
+              CURRENT_BAND_INDEX)),
+    );
+
+    if (found) {
+      return { dateIso: found.dateIso, band: found.band, seatsLeft: found.seatsLeft! };
+    }
+  }
+
+  return undefined;
+}
+
+/** "Sun, Sep 14" — reutilizado por la sub-vista de disponibilidad. */
+export function formatWeekdayDate(dateIso: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(parseDate(dateIso));
+}
+
+/* ------------------------------------------------------------------ */
+/* Legacy — Epic 4-9 (mockup, `lib/lounges.ts`), hasta que se conecten  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * `booking.ts` y las pantallas de `/lounges/[id]/book/*` (Epic 4, sin
+ * conectar) siguen derivando contacto/disponibilidad del catálogo mock con
+ * la misma fórmula de hash de antes de Epic 3 — no se tocan hasta que esas
+ * historias se conecten a Supabase a su vez (ver CLAUDE.md §Alcance).
+ */
+
+export interface LoungeContact {
+  address: string;
+  phone: string;
+  email: string;
+  website: string;
+  receptionNote: string;
+}
+
+const AREA_CODE_BY_CITY: Record<string, string> = {
+  "new-york": "212",
+  newark: "973",
+  "new-rochelle": "914",
+  miami: "305",
+};
+
+const STATE_BY_CITY: Record<string, string> = {
+  "new-york": "NY",
+  newark: "NJ",
+  "new-rochelle": "NY",
+  miami: "FL",
+};
+
+const CONTACT_OVERRIDES: Record<string, LoungeContact> = {
+  "the-ainsworth": {
+    address: "122 E 45th St, New York, NY 10017",
+    phone: "+1 (212) 555-0184",
+    email: "reception@ainsworth.example",
+    website: "ainsworth.example",
+    receptionNote:
+      "Reception is on Level 2. Show your booking confirmation on arrival.",
+  },
+};
+
+export function contactFor(lounge: Lounge): LoungeContact {
+  const override = CONTACT_OVERRIDES[lounge.id];
+  if (override) return override;
+
+  const hash = hashOf(lounge.id);
+  const areaCode = AREA_CODE_BY_CITY[lounge.cityId] ?? "212";
+  const state = STATE_BY_CITY[lounge.cityId] ?? "NY";
+  const streetNumber = 100 + (hash % 800);
+  const phoneDigits = String(1000 + (hash % 9000)).padStart(4, "0");
+  const zip = String(10001 + (hash % 900));
+
+  return {
+    address: `${streetNumber} ${lounge.neighborhood} Ave, ${lounge.city}, ${state} ${zip}`,
+    phone: `+1 (${areaCode}) 555-${phoneDigits}`,
+    email: `reception@${lounge.id}.example`,
+    website: `${lounge.id}.example`,
+    receptionNote: "Show your booking confirmation at reception on arrival.",
+  };
+}
+
+/** Solo The Ainsworth declara un cierre — el que dibuja `Closure.dc.html`. */
+const CLOSURES: Record<string, Closure[]> = {
+  "the-ainsworth": [
+    {
+      startIso: "2025-11-27",
+      endIso: "2025-11-28",
+      reason: "Thanksgiving",
+      reopensLabel: "Sat Nov 29 at 10:00 AM",
+    },
+  ],
+};
+
+export function closuresFor(lounge: Lounge): Closure[] {
+  return CLOSURES[lounge.id] ?? [];
+}
+
+export function closureCovering(
+  lounge: Lounge,
+  dateIso: string,
+): Closure | undefined {
+  return closuresFor(lounge).find(
+    (closure) => dateIso >= closure.startIso && dateIso <= closure.endIso,
+  );
 }
 
 export function weeklyAvailability(
@@ -440,38 +692,4 @@ export function weeklyAvailability(
   }
 
   return cells;
-}
-
-/** El primer hueco libre desde hoy — usado por la card de "Not available". */
-export function nextAvailableSlot(
-  lounge: Lounge,
-): { dateIso: string; band: WeekBandId; seatsLeft: number } | undefined {
-  for (let week = 0; week < 3; week++) {
-    const weekStart = addDays(mondayOf(TODAY), week * 7);
-    const cells = weeklyAvailability(lounge, weekStart);
-    const found = cells.find(
-      (cell) =>
-        cell.status === "available" &&
-        (cell.dateIso > TODAY ||
-          (cell.dateIso === TODAY &&
-            WEEK_BANDS.findIndex((b) => b.id === cell.band) >=
-              CURRENT_BAND_INDEX)),
-    );
-
-    if (found) {
-      return { dateIso: found.dateIso, band: found.band, seatsLeft: found.seatsLeft! };
-    }
-  }
-
-  return undefined;
-}
-
-/** "Sun, Sep 14" — reutilizado por la sub-vista de disponibilidad. */
-export function formatWeekdayDate(dateIso: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  }).format(parseDate(dateIso));
 }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound, useParams, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
+import { RequireSession } from "@/components/onboarding/require-session";
 import { BookingRestrictions } from "@/components/lounges/booking-restrictions";
 import { ClosureBanner } from "@/components/lounges/closure-banner";
 import { LoungeSubviewHeader } from "@/components/lounges/lounge-subview-header";
@@ -19,23 +20,30 @@ import { Eyebrow } from "@/components/ui/eyebrow";
 import { StatusChip } from "@/components/ui/status-chip";
 import { TODAY, addDays, parseDate } from "@/lib/availability";
 import {
-  closureCovering,
-  contactFor,
+  fetchClosuresForWeek,
+  fetchLoungeProfile,
+  fetchNextAvailableSlot,
+  fetchWeeklyAvailability,
   formatWeekdayDate,
   mondayOf,
-  nextAvailableSlot,
-  weeklyAvailability,
   WEEK_BANDS,
   type AvailabilityCell,
+  type Closure,
+  type LoungeProfile,
 } from "@/lib/lounge-profile";
-import { LOUNGES } from "@/lib/lounges";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 /**
  * Story 3.2 — Availability. Sub-vista de lounge (DESIGN-SYSTEM.md §5 patrón
  * 8). Artboards: `Availability.dc.html` (con plazas) y `Closure.dc.html`
  * (cierre por festivo) — ambos son la misma pantalla en distinta semana.
+ * Backend real: `fetchWeeklyAvailability`/`fetchClosuresForWeek` (Supabase),
+ * con refresco cada 5 min (ver `docs/design/COMPONENT-MAP.md` "Backend real
+ * — Epic 3").
  */
+const REFRESH_INTERVAL_MS = 5 * 60_000;
+
 function firstAvailable(cells: AvailabilityCell[]): SelectedCell | null {
   const cell = cells.find((c) => c.status === "available");
   return cell ? { dateIso: cell.dateIso, band: cell.band } : null;
@@ -62,45 +70,111 @@ function bandLabelOf(id: string): string {
 }
 
 export default function AvailabilityPage() {
+  return (
+    <RequireSession>
+      <AvailabilityScreen />
+    </RequireSession>
+  );
+}
+
+function AvailabilityScreen() {
   const { id } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
 
-  const lounge = LOUNGES.find((candidate) => candidate.id === id);
+  const [lounge, setLounge] = React.useState<LoungeProfile | null | undefined>(
+    undefined,
+  );
+  const loungeRef = React.useRef<LoungeProfile | null>(null);
 
   const [weekStart, setWeekStart] = React.useState(() =>
     mondayOf(searchParams.get("week") ?? TODAY),
   );
+  /** `weekStart` de arriba es la semana *pedida*; esta es la última semana
+   * *cargada* — la vista se pinta siempre desde esta, para no mostrar nunca
+   * un encabezado ya en la semana nueva junto a celdas todavía de la vieja. */
+  const [weekData, setWeekData] = React.useState<{
+    weekStart: string;
+    cells: AvailabilityCell[];
+    closures: Closure[];
+    lastUpdatedAt: string;
+    next?: { dateIso: string; band: (typeof WEEK_BANDS)[number]["id"]; seatsLeft: number };
+  } | null>(null);
 
-  const cells = React.useMemo(
-    () => (lounge ? weeklyAvailability(lounge, weekStart) : []),
-    [lounge, weekStart],
+  const [selected, setSelected] = React.useState<SelectedCell | null>(null);
+
+  React.useEffect(() => {
+    const supabase = createClient();
+    let active = true;
+
+    fetchLoungeProfile(supabase, id).then((profile) => {
+      if (!active) return;
+      setLounge(profile);
+      loungeRef.current = profile;
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  const loadWeek = React.useCallback(
+    async (loungeProfile: LoungeProfile, week: string, resetSelection: boolean) => {
+      const supabase = createClient();
+      const [weekCells, weekClosures] = await Promise.all([
+        fetchWeeklyAvailability(supabase, loungeProfile, week),
+        fetchClosuresForWeek(supabase, loungeProfile.id, week),
+      ]);
+
+      const next = firstAvailable(weekCells)
+        ? undefined
+        : await fetchNextAvailableSlot(supabase, loungeProfile);
+
+      setWeekData({
+        weekStart: week,
+        cells: weekCells,
+        closures: weekClosures,
+        lastUpdatedAt: new Date().toISOString(),
+        next,
+      });
+      setSelected((current) =>
+        resetSelection || !current ? firstAvailable(weekCells) : current,
+      );
+    },
+    [],
   );
 
-  const [selected, setSelected] = React.useState<SelectedCell | null>(() =>
-    firstAvailable(cells),
-  );
-  const [selectedWeekStart, setSelectedWeekStart] = React.useState(weekStart);
+  React.useEffect(() => {
+    if (!lounge) return;
+    /** Navegar de semana pide un hueco por defecto nuevo; el refresco
+     * periódico (otro efecto) conserva la selección del miembro.
+     * `Promise.resolve().then(...)` (no llamar `loadWeek` directo) porque
+     * sus `setState` solo corren tras el `await` interno, nunca síncronos
+     * dentro de este efecto. */
+    Promise.resolve().then(() => loadWeek(lounge, weekStart, true));
+  }, [lounge, weekStart, loadWeek]);
 
-  /** Reelige el hueco por defecto al cambiar de semana — ajuste de estado
-   * durante el render, no un efecto: no hay nada externo que sincronizar. */
-  if (weekStart !== selectedWeekStart) {
-    setSelectedWeekStart(weekStart);
-    setSelected(firstAvailable(cells));
-  }
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      if (loungeRef.current) loadWeek(loungeRef.current, weekStart, false);
+    }, REFRESH_INTERVAL_MS);
 
-  if (!lounge) {
+    return () => clearInterval(interval);
+  }, [weekStart, loadWeek]);
+
+  if (lounge === null) {
     notFound();
     return null;
   }
 
-  const contact = contactFor(lounge);
+  if (!lounge || !weekData) {
+    return <AppShell padded={false}>{null}</AppShell>;
+  }
+
+  const { cells, closures, lastUpdatedAt, next } = weekData;
   const selectedCell = selected
     ? cells.find((cell) => cell.dateIso === selected.dateIso && cell.band === selected.band)
     : undefined;
-  const closure = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i))
-    .map((dateIso) => closureCovering(lounge, dateIso))
-    .find((found) => found !== undefined);
-  const next = !selectedCell ? nextAvailableSlot(lounge) : undefined;
+  const closure = closures[0];
 
   return (
     <AppShell padded={false}>
@@ -109,7 +183,8 @@ export default function AvailabilityPage() {
           lounge={lounge}
           backHref={`/lounges/${lounge.id}`}
           backLabel="Back to profile"
-          address={`${lounge.neighborhood} · ${lounge.city} · ${contact.address}`}
+          address={`${lounge.neighborhood} · ${lounge.city} · ${lounge.address}`}
+          lastUpdatedAt={lastUpdatedAt}
         />
 
         <div className="flex flex-1 gap-7 overflow-y-auto px-8 pb-7 pt-6">
@@ -121,7 +196,7 @@ export default function AvailabilityPage() {
                 <div>
                   <Eyebrow>Weekly availability</Eyebrow>
                   <h2 className="mt-1.5 text-[22px] text-fg">
-                    {weekRangeLabel(weekStart)}
+                    {weekRangeLabel(weekData.weekStart)}
                   </h2>
                 </div>
                 <div className="flex items-center gap-2">
@@ -152,8 +227,8 @@ export default function AvailabilityPage() {
               </div>
 
               <WeeklyCalendar
-                lounge={lounge}
-                weekStart={weekStart}
+                weekStart={weekData.weekStart}
+                cells={cells}
                 selected={selected}
                 onSelect={(cell) => setSelected({ dateIso: cell.dateIso, band: cell.band })}
               />
@@ -215,7 +290,7 @@ export default function AvailabilityPage() {
 
             <Card variant="content" className="border border-line p-5.5">
               <Eyebrow className="mb-3">Booking restrictions</Eyebrow>
-              <BookingRestrictions />
+              <BookingRestrictions restrictions={lounge.bookingRestrictions} />
             </Card>
           </div>
         </div>

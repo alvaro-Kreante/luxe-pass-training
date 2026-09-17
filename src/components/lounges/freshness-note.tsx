@@ -7,22 +7,38 @@ import { cn } from "@/lib/utils";
 
 /**
  * Story 3.2 — "Last updated timestamp" + "Automatic refresh every 5
- * minutes". No hay red que consultar, así que el refresco es un contador
- * local: sube de minuto en minuto y vuelve a "just now" al llegar a 5,
- * simulando el disparador que en producción vendría del servidor.
+ * minutes". `lastUpdatedAt` es el instante real en que la página trajo la
+ * disponibilidad de Supabase (ver `/lounges/[id]` y `/lounges/[id]/availability`,
+ * que refetchean cada 5 min) — este componente solo recalcula el texto
+ * "hace N min" cada 15s para que no se quede fijo entre refrescos.
  */
-const REFRESH_EVERY_MINUTES = 5;
+export const REFRESH_EVERY_MINUTES = 5;
 
-export function FreshnessNote({ className }: { className?: string }) {
+export function FreshnessNote({
+  lastUpdatedAt,
+  className,
+}: {
+  lastUpdatedAt: string;
+  className?: string;
+}) {
+  /** `Date.now()` es impuro: se calcula en el efecto (fase de commit), nunca
+   * durante el render. */
   const [minutesAgo, setMinutesAgo] = React.useState(0);
 
   React.useEffect(() => {
-    const id = setInterval(() => {
-      setMinutesAgo((minutes) => (minutes + 1) % REFRESH_EVERY_MINUTES);
-    }, 60_000);
+    function tick() {
+      setMinutesAgo(
+        Math.max(
+          0,
+          Math.floor((Date.now() - new Date(lastUpdatedAt).getTime()) / 60_000),
+        ),
+      );
+    }
 
+    tick();
+    const id = setInterval(tick, 15_000);
     return () => clearInterval(id);
-  }, []);
+  }, [lastUpdatedAt]);
 
   return (
     <span

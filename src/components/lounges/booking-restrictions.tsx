@@ -1,14 +1,12 @@
 import { Clock, Sparkle, UserRound, type LucideIcon } from "lucide-react";
 
-import { BOOKING_RESTRICTIONS } from "@/lib/lounge-profile";
-
 /** Story 3.2 — "Booking restrictions display (member tier, advance notice)". */
 const ICONS: LucideIcon[] = [Sparkle, Clock, UserRound];
 
-export function BookingRestrictions() {
+export function BookingRestrictions({ restrictions }: { restrictions: string[] }) {
   return (
     <div className="flex flex-col gap-2">
-      {BOOKING_RESTRICTIONS.map((restriction, index) => {
+      {restrictions.map((restriction, index) => {
         const Icon = ICONS[index % ICONS.length];
 
         return (
