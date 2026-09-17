@@ -26,17 +26,27 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
 - `login_attempts` (dueño) — bloqueo tras 5 intentos.
 - Función `email_exists`, bucket de storage `profile-photos`.
 
-### Epic 2 — Location & Discovery
+### Epic 2 — Location & Discovery *(implementado — Supabase local, sept 2026)*
 
-- `lounges` (**nace aquí**) — nombre, ubicación, branding. Story 2.1 (mapa) es
-  la primera que la necesita.
-- Amenities (WiFi, Spa, Co-working…): lista fija y corta, candidata a
-  `enum`/array dentro de `lounges` en vez de tabla propia — decidir al
-  implementar.
-- Sin tabla propia: 2.1 (el cache offline del mapa es client-side), 2.2
-  (filtros sobre `lounges` + disponibilidad), 2.3 (vista de lista alternativa).
-- Cruce: el filtro "by availability" de 2.2 lee `lounge_availability`, que
-  nace en Epic 3.
+- `lounges` (**nace aquí**, implementada) — `id, name, neighborhood, city,
+  city_id, lat, lng, amenities, rating, open_now, slots_today, hours, bands,
+  closed_weekdays, featured`. RLS de solo lectura `to authenticated`; sin
+  policies de escritura (se siembra por migración). Ver
+  `supabase/schemas/lounges.sql` y `docs/design/COMPONENT-MAP.md` §Backend
+  real — Epic 2.
+- Amenities (WiFi, Spa, Co-working…): resuelto como `text[]` dentro de
+  `lounges`, sin tabla propia — como ya anticipaba esta fila.
+- `rating`/`open_now`/`slots_today`/`bands`/`closed_weekdays` son columnas
+  reales pero **estáticas** (sembradas 1:1 del mock, no agregadas ni en
+  vivo): rating madura con Epic 3 (reseñas reales), disponibilidad con
+  Epic 3/4 (`lounge_availability`, `bookings`).
+- Sin tabla propia: 2.1 (el mapa dibujado sigue siendo cliente — proveedor
+  real fuera de alcance, ver `docs/PENDIENTES.md` §2.3), 2.3 (vista de lista,
+  paginada en cliente sobre el catálogo ya traído).
+- Cruce todavía abierto: el filtro "by availability" de 2.2 sigue siendo una
+  aproximación por `bands`/`closed_weekdays` de `lounges`, no la agenda real
+  de `lounge_availability`, que sigue naciendo en Epic 3 (aún no
+  implementado).
 
 ### Epic 3 — Lounge Profiles & Details
 

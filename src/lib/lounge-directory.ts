@@ -1,0 +1,99 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import type { AmenityId } from "./amenities";
+import type { TimeBand } from "./availability";
+import { haversineMiles, type Coordinates } from "./distance";
+
+/**
+ * Story 2.1 — catálogo real de lounges (tabla `public.lounges`). Sustituye a
+ * `LOUNGES`/`loungesIn` de `lib/lounges.ts` (que sigue siendo el mock de
+ * Epic 3-9) solo para /explore. Ver `supabase/schemas/lounges.sql`.
+ */
+export interface LoungeRow {
+  id: string;
+  name: string;
+  neighborhood: string;
+  city: string;
+  cityId: string;
+  lat: number;
+  lng: number;
+  amenities: AmenityId[];
+  rating: number;
+  /** Instantánea sembrada por migración, no en vivo — ver COMPONENT-MAP.md. */
+  openNow: boolean;
+  slotsToday: number;
+  hours: string;
+  bands: TimeBand[];
+  closedWeekdays: number[];
+  featured: boolean;
+}
+
+export interface LoungeWithDistance extends LoungeRow {
+  distanceMiles: number;
+}
+
+interface LoungeTableRow {
+  id: string;
+  name: string;
+  neighborhood: string;
+  city: string;
+  city_id: string;
+  lat: number;
+  lng: number;
+  amenities: string[];
+  rating: number;
+  open_now: boolean;
+  slots_today: number;
+  hours: string;
+  bands: string[];
+  closed_weekdays: number[];
+  featured: boolean;
+}
+
+function fromRow(row: LoungeTableRow): LoungeRow {
+  return {
+    id: row.id,
+    name: row.name,
+    neighborhood: row.neighborhood,
+    city: row.city,
+    cityId: row.city_id,
+    lat: row.lat,
+    lng: row.lng,
+    amenities: row.amenities as AmenityId[],
+    rating: row.rating,
+    openNow: row.open_now,
+    slotsToday: row.slots_today,
+    hours: row.hours,
+    bands: row.bands as TimeBand[],
+    closedWeekdays: row.closed_weekdays,
+    featured: row.featured,
+  };
+}
+
+/**
+ * El catálogo completo (17 lounges hoy): con este tamaño, filtrar por ciudad
+ * o amenities en TS en vez de en la query no cuesta nada, y evita repetir la
+ * petición cada vez que cambian los filtros.
+ */
+export async function fetchLounges(
+  supabase: SupabaseClient,
+): Promise<LoungeRow[]> {
+  const { data, error } = await supabase.from("lounges").select("*");
+
+  if (error) throw error;
+
+  return (data as LoungeTableRow[]).map(fromRow);
+}
+
+/** Añade la distancia real desde `origin` y ordena de más cerca a más lejos. */
+export function withDistance(
+  lounges: LoungeRow[],
+  origin: Coordinates,
+): LoungeWithDistance[] {
+  return lounges
+    .map((lounge) => ({
+      ...lounge,
+      distanceMiles: haversineMiles(origin, { lat: lounge.lat, lng: lounge.lng }),
+    }))
+    .sort((a, b) => a.distanceMiles - b.distanceMiles);
+}

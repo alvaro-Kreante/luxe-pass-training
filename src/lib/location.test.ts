@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import { CITIES, loungeCountIn, searchCities } from "./location";
-import { LOUNGES } from "./lounges";
 
 /**
  * Story 2.1 — "Fallback to manual location entry if GPS unavailable".
@@ -38,18 +37,28 @@ describe("búsqueda de ubicación manual", () => {
   });
 });
 
-describe("cuántos lounges hay en cada ciudad", () => {
-  it("cuenta los lounges del catálogo, no una cifra escrita a mano", () => {
+describe("cada ciudad trae su centroide (Story 2.1 — origen para el fallback manual)", () => {
+  it("tiene lat/lng numéricos", () => {
     for (const city of CITIES) {
-      const counted = LOUNGES.filter(
-        (lounge) => lounge.cityId === city.id,
-      ).length;
-
-      expect(loungeCountIn(city.id)).toBe(counted);
+      expect(typeof city.lat).toBe("number");
+      expect(typeof city.lng).toBe("number");
     }
   });
+});
 
-  it("da a Nueva York los doce lounges que anuncia el panel de resultados", () => {
-    expect(loungeCountIn("new-york")).toBe(12);
+describe("cuántos lounges hay en cada ciudad", () => {
+  const lounges = [
+    { cityId: "new-york" },
+    { cityId: "new-york" },
+    { cityId: "newark" },
+  ];
+
+  it("cuenta los lounges del catálogo recibido, no una cifra escrita a mano", () => {
+    expect(loungeCountIn(lounges, "new-york")).toBe(2);
+    expect(loungeCountIn(lounges, "newark")).toBe(1);
+  });
+
+  it("da cero para una ciudad sin lounges en el catálogo", () => {
+    expect(loungeCountIn(lounges, "miami")).toBe(0);
   });
 });

@@ -30,3 +30,33 @@ export function formatDistanceBand(miles: number, unit: DistanceUnit): string {
 export function walkingMinutes(miles: number): number {
   return Math.max(1, Math.round(miles * MINUTES_PER_MILE));
 }
+
+/**
+ * Story 2.1 — distancia real entre el miembro y un lounge, ahora que ambos
+ * tienen lat/lng reales en Supabase (antes era `distanceMiles`, un número
+ * fijo del catálogo de muestra).
+ */
+export interface Coordinates {
+  lat: number;
+  lng: number;
+}
+
+const EARTH_RADIUS_MILES = 3958.8;
+
+function toRadians(degrees: number): number {
+  return (degrees * Math.PI) / 180;
+}
+
+export function haversineMiles(a: Coordinates, b: Coordinates): number {
+  const dLat = toRadians(b.lat - a.lat);
+  const dLng = toRadians(b.lng - a.lng);
+
+  const sinLat = Math.sin(dLat / 2);
+  const sinLng = Math.sin(dLng / 2);
+
+  const h =
+    sinLat * sinLat +
+    Math.cos(toRadians(a.lat)) * Math.cos(toRadians(b.lat)) * sinLng * sinLng;
+
+  return 2 * EARTH_RADIUS_MILES * Math.asin(Math.sqrt(h));
+}

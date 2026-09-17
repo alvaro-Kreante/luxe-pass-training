@@ -64,10 +64,13 @@ export function ManualLocationDialog({
   open,
   onConfirm,
   onRetryGps,
+  lounges,
 }: {
   open: boolean;
   onConfirm: (cityId: string) => void;
   onRetryGps: () => void;
+  /** Catálogo ya traído de Supabase — ver `lib/lounge-directory.ts`. */
+  lounges: { cityId: string }[];
 }) {
   const [query, setQuery] = React.useState("");
   const [chosen, setChosen] = React.useState<string | null>(null);
@@ -132,6 +135,7 @@ export function ManualLocationDialog({
               city={city}
               selected={chosen === city.id}
               onSelect={() => setChosen(city.id)}
+              count={loungeCountIn(lounges, city.id)}
             />
           ))}
         </ul>
@@ -152,6 +156,7 @@ export function ManualLocationDialog({
             onSelect={() => setChosen(recent.id)}
             icon={Clock}
             showCount={false}
+            count={loungeCountIn(lounges, recent.id)}
           />
         </ul>
       </div>
@@ -165,15 +170,15 @@ function CityOption({
   onSelect,
   icon: Icon = MapPin,
   showCount = true,
+  count,
 }: {
   city: City;
   selected: boolean;
   onSelect: () => void;
   icon?: typeof MapPin;
   showCount?: boolean;
+  count: number;
 }) {
-  const count = loungeCountIn(city.id);
-
   return (
     <li>
       <button

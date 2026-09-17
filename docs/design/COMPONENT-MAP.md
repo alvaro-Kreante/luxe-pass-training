@@ -236,7 +236,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `lib/member.ts` | El miembro de muestra que pinta el App shell |
 | `lounges/featured-lounge-card.tsx` | Card de lounge destacado del Home |
 | `lounges/lounge-thumb.tsx` | Miniatura de lounge; el tono sale del id, igual en todas las vistas |
-| `explore/city-map.tsx` · `city-map-base.tsx` · `sun-mark.tsx` | Story 2.1 — el plano dibujado, sus markers y el zoom/pan |
+| `explore/city-map.tsx` · `sun-mark.tsx` · `use-map-load-status.ts` | Story 2.1 — Google Maps real (`@vis.gl/react-google-maps`), sus markers, zoom/pan y el timeout de carga |
 | `explore/location-dialogs.tsx` | Story 2.1 — permiso de ubicación y entrada manual |
 | `explore/result-card.tsx` · `lounge-callout.tsx` · `amenity-icon.tsx` | Story 2.1 — la lista del panel y el detalle sobre el mapa |
 | `explore/filter-drawer.tsx` · `availability-calendar.tsx` | Story 2.2 — amenities, distancia, calendario y franja |
@@ -376,6 +376,43 @@ Desviaciones conscientes de esta parte (no son bugs, son decisiones tomadas con 
 
 ---
 
+## Backend real (Supabase local) — Epic 2 (Stories 2.1, 2.2, 2.3)
+
+Segundo epic con backend real. `src/lib/lounges.ts` (el array `LOUNGES` y el
+tipo `Lounge`) **no se tocó**: lo siguen usando Home y Epic 3-9 (mockup
+todavía), y además pasa a ser la fuente literal del seed de abajo. Toda la
+lógica de red nueva vive en módulos propios que solo usa `/explore`.
+
+| Módulo | Qué resuelve |
+|---|---|
+| `supabase/schemas/lounges.sql` | Tabla `public.lounges` (nace en Epic 2, ver `docs/DATA-MODEL-MAP.md`), RLS de solo lectura `to authenticated` |
+| `supabase/migrations/..._seed_lounges_story_2_1.sql` | Seed de los 17 lounges, escrito a mano (el seed de datos no es DDL, `db diff`/`declarative sync` no lo genera) — copiado literal de `LOUNGES`, con lat/lng añadidos |
+| `lib/lounge-directory.ts` | `fetchLounges` (trae el catálogo completo — 17 filas, no compensa paginar en la query) y `withDistance` (adjunta `distanceMiles` real vía Haversine y ordena) |
+| `lib/distance.ts` | `haversineMiles`/`Coordinates` — distancia real entre dos puntos, sin PostGIS/RPC: el catálogo es pequeño y no hace falta |
+| `lib/geolocation.ts` | `getCurrentPosition`, envoltorio de `navigator.geolocation` en `Promise<LocationResult>` (`granted`/`denied`/`unavailable`/`timeout`) |
+| `lib/location.ts` | `CITIES` gana `lat`/`lng` (centroide, origen del fallback manual); `loungeCountIn` pasa a ser puro (cuenta sobre el catálogo que se le pasa, no sobre un mock global) |
+| `lib/online-status.ts` | `useOnlineStatus`: `navigator.onLine` real + eventos `online`/`offline`, sustituye el query param `?offline=1` |
+| `app/explore/page.tsx` | `RequireSession` (mismo patrón que `/onboarding`: sin sesión, redirige a `/login`); geolocalización real con fallback manual; fetch real del catálogo |
+
+`/explore` exige sesión real ahora (`RequireSession`), decisión tomada con el
+usuario: el catálogo es de un miembro autenticado (RLS `to authenticated`),
+no un directorio público, así que la pantalla se comporta como el resto de la
+app real lo haría en `app.luxepass.co`, aunque Epic 3-9 (el resto del área de
+miembro) siga sin exigirla mientras sigan siendo mockup.
+
+Desviaciones conscientes de esta parte (no son bugs, son decisiones tomadas con el usuario):
+
+- **El proveedor de mapa es Google Maps real** (`@vis.gl/react-google-maps` + `@googlemaps/markerclusterer`), decisión tomada con el usuario — ver `docs/PENDIENTES.md` §2.3 (resuelto). El callout del lounge seleccionado se ancla siempre encima o debajo de su pin según haya espacio (`useLayoutEffect` mide su posición real y voltea a `top-full` si `bottom-full` lo recortaría contra el borde del mapa) — reemplaza el flip izquierda/derecha del mock, atado al viewBox del SVG que ya no existe.
+- **Clustering y el flip del callout se verificaron y corrigieron con Google Maps real, no con el stub de jsdom.** El clustering tenía dos problemas invisibles en tests (rango de zoom demasiado estrecho para alcanzarlo, y un bug real de timing entre el montaje asíncrono de `AdvancedMarker` y el efecto que alimentaba a `MarkerClusterer`, que dejaba el clustering en cero marcadores siempre) — ambos corregidos y con test de regresión (`city-map.test.tsx`). El callout ahora voltea a `top-full` cuando su posición real (medida con `getBoundingClientRect`, vía el atributo `data-map-surface`) se recortaría contra el borde superior del mapa — con test de regresión (`lounge-callout.test.tsx`).
+- **El filtro de disponibilidad de 2.2 ("Calendar view") es una aproximación, no la agenda real de Epic 3.** `filters.date`/`filters.band` siguen filtrando por `bands`/`closed_weekdays` — ahora columnas reales de `lounges`, ya no del mock — pero esas columnas son una instantánea sembrada por migración, no el calendario semanal con capacidad y cierres especiales que traerá `lounge_availability` (Epic 3, sigue sin construirse). Se sustituye cuando esa tabla exista.
+- **`rating`/`open_now`/`slots_today` son columnas reales pero estáticas**, sembradas 1:1 desde el mock — no agregadas (rating) ni en vivo (disponibilidad). Maduran cuando Epic 3/4 aporten su propio modelo (rating agregado de reseñas, disponibilidad real de bookings).
+- **Mini-mapa embebido en el perfil de lounge (Story 3.1) queda fuera de esta historia**: `/lounges/[id]` sigue en `lib/lounges.ts` (mock de Epic 3-9, sin lat/lng reales) y no tiene artboard con un hueco de mapa — ver `docs/PENDIENTES.md` nueva entrada §2.9.
+- **Solo lectura**: sin policies de insert/update/delete — el catálogo se siembra por migración hasta que Epic 8.3 diseñe su propio flujo de admin sobre `lounges` (ya anticipado en `docs/DATA-MODEL-MAP.md`).
+- **`explore/page.test.tsx` ya no cubre el instante exacto de "cargando" de la lista** (antes `?list=loading`, retirado: la carga ya es real). Ese estado tiene su propio test determinista en `components/explore/lounge-list.test.tsx`, sobre el componente directamente — una petición de red real no se puede fijar en un instante concreto desde un test.
+- **El botón "Recentre the map" pana a la ubicación GPS real capturada al conceder el permiso, no a una nueva lectura en cada clic.** `origin` (pasado a `CityMap` desde `page.tsx`) es la coordenada real de `getCurrentPosition()` obtenida en `handleAllow` — ya no el punto fijo `{x:267,y:339}` que tenía el mock —, pero el botón no vuelve a pedir el GPS por clic: eso añadiría manejo de permiso denegado/timeout para un control secundario, desproporcionado para esta historia. Se sustituye si una historia futura pide una relectura de ubicación en vivo.
+
+---
+
 ## Pendiente de implementar
 
 Lo que el design system especifica y **todavía no existe en código**. Antes de escribirlo,
@@ -466,9 +503,9 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 | El día 14 de septiembre de 2025 es domingo, y el artboard lo llama "Sat" | La rejilla del propio artboard pone el 1 en lunes y el 14 en la columna del domingo, así que el calendario y el chip son coherentes entre sí aunque no con esa palabra |
 | Los conteos de las sugerencias de `NoResults` se calculan, no se copian | El artboard promete "9 / 6 / 4 lounges would match". Con el catálogo de muestra salen otras cifras, pero cada una es cierta: la sugerencia que se ofrece devuelve exactamente los que anuncia |
 | El calendario del drawer marca los días sin mirar el resto de filtros | Si dependiera de ellos, el día que deja la búsqueda a cero quedaría deshabilitado y el estado "sin resultados" sería inalcanzable — justo el que el artboard dibuja |
-| El mapa es el SVG del artboard, no un proveedor de tiles | §6 (Fase 3) previó sustituirlo "por el proveedor real", pero este repo no llama a servicios externos ni gestiona claves. El zoom y el pan son reales sobre ese dibujo |
-| Los markers se posicionan en % del plano, no en los píxeles del artboard | El artboard es 1440×900 fijo. En % el marker sigue al dibujo a cualquier tamaño; el `.map-canvas` mantiene la proporción 820×760 |
-| El callout salta al otro lado del marker pasado el 55% del ancho | El artboard solo dibuja el caso de un marker centrado. Anclado siempre a la derecha, se salía del mapa |
+| ~~El mapa es el SVG del artboard, no un proveedor de tiles~~ | **Resuelto**: sustituido por Google Maps real (`@vis.gl/react-google-maps`) — ver "Backend real — Epic 2" |
+| ~~Los markers se posicionan en % del plano, no en los píxeles del artboard~~ | **Resuelto**: los markers (`AdvancedMarker`) usan lat/lng reales, no un porcentaje sobre el dibujo; `.map-canvas` queda como CSS sin uso (solo definida en `globals.css`, sin referencias en `src/components/explore/*.tsx`) — ver "Backend real — Epic 2" |
+| ~~El callout salta al otro lado del marker pasado el 55% del ancho~~ | **Resuelto**: el flip ahora es vertical (encima/debajo del pin según espacio real, medido con `useLayoutEffect`), no izquierda/derecha por porcentaje del viewBox del SVG — ver "Backend real — Epic 2" |
 | La card de resultado calcula su "+N" de amenities | El artboard escribe "+2" con cuatro amenities listadas en `ListView`. Se muestran tres iconos y el resto se cuenta |
 | En el App shell, la sidebar de 248px pasa a barra de navegación inferior por debajo de `lg` | Es una PWA: en móvil la nav vive abajo. Los artboards son desktop 1440×900 |
 | "View details" lleva `aria-label="View details for ‹lounge›"` | Tres enlaces con el mismo texto visible son indistinguibles para un lector de pantalla. El texto en pantalla no cambia |
@@ -489,7 +526,7 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 | El chequeo final de disponibilidad y el rechazo de pago son disparadores de muestra, no aleatorios | `isAtRiskOfWaitlist` ofrece la waitlist cuando el slot elegido tiene ≤2 plazas; `paymentWillDecline` falla solo con la tarjeta de muestra Mastercard·8801. Ambos son deterministas para que el estado se pueda alcanzar y probar, igual que el email duplicado de la Story 1.1 |
 | Las tres alternativas de `Waitlist.dc.html` no navegan a nada al elegirlas | El criterio de la Story 4.1 es "ofrecer" la waitlist, no definir qué pasa al escoger cada alternativa (el flow tampoco lo especifica). Se muestran como opciones seleccionables; los botones fijos del pie ("Change date" / "Join waitlist") son los que actúan |
 | La tercera alternativa de la waitlist ("The Vestry · 1.8 mi") es texto literal del artboard, no un lounge real ni un cálculo de cercanía | No existe en el catálogo ni hay lógica de "lounge más cercano a otro lounge" en ningún epic (Story 2.1 calcula distancia a la ubicación buscada, no lounge-a-lounge). Inventar ese modelo de datos está fuera del alcance de esta historia |
-| `?covered=1` en `/lounges/[id]/book` alcanza la variante "la visita está cubierta por la membresía" (`MembershipCovered.dc.html`) | Igual que `/explore?map=error`: no hay backend de membresía que decida cuándo aplica, así que el estado se alcanza por query param y se documenta aquí en vez de inventar un botón que no está en ningún artboard |
+| `?covered=1` en `/lounges/[id]/book` alcanza la variante "la visita está cubierta por la membresía" (`MembershipCovered.dc.html`) | Igual que `?state=` en `/my-pass/[reference]`: no hay backend de membresía que decida cuándo aplica, así que el estado se alcanza por query param y se documenta aquí en vez de inventar un botón que no está en ningún artboard |
 | `SAMPLE_MEMBER` gana un campo `email` (`lib/member.ts`) | Los artboards de la Fase 5 citan el correo de Alexandra Rivas en tres pantallas distintas (Confirmed, Payment, Receipt); antes solo vivía como texto literal repetido |
 | `/lounges/[id]/book/confirmed` añade el enlace "view the email receipt" | Ningún artboard de la Fase 5 enlaza `Confirmed.dc.html` con `Receipt.dc.html`, pero sin él la pantalla del recibo (criterio de la Story 4.2) quedaría implementada y sin ruta para llegar a ella navegando |
 | El recibo por email (`/lounges/[id]/book/receipt`) es la pantalla del estado, no un envío real | "Payment confirmation email receipt" (Story 4.2) exige backend real (SMTP). Se implementa visualmente la pantalla del email tal como llegaría, con los mismos datos de la reserva — la desviación que ya fija la cabecera de este documento |
