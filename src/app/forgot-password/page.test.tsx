@@ -12,17 +12,10 @@ import ForgotPasswordPage from "./page";
  * `resetPasswordForEmail` es anti-enumeración por diseño (igual que
  * `signUp`), así que la copy "If an account exists for…" ya es la correcta
  * exista o no la cuenta — no hace falta el RPC-excepción de `email_exists`.
+ * El envío real va vía Brevo (Auth Hook `send_email`, ver CLAUDE.md §Envío
+ * de email transaccional): no hay Mailpit/Inbucket que inspeccionar aquí,
+ * el acuse de "Check your inbox" es lo único observable desde el test.
  */
-
-const MAILPIT_URL = "http://127.0.0.1:54334";
-
-async function findRecoveryEmail(email: string) {
-  const listRes = await fetch(
-    `${MAILPIT_URL}/api/v1/search?query=to:${encodeURIComponent(email)}`,
-  );
-  const list = await listRes.json();
-  return list.messages?.[0] as { Subject: string } | undefined;
-}
 
 describe("forgot-password", () => {
   it("exige un email con forma válida antes de pedir el reset", async () => {
@@ -35,7 +28,7 @@ describe("forgot-password", () => {
     expect(screen.getByText("Enter a valid email address.")).toBeVisible();
   });
 
-  it("pide el reset de verdad (llega a Mailpit) y muestra el acuse de envío", async () => {
+  it("pide el reset de verdad contra Supabase y muestra el acuse de envío", async () => {
     const user = userEvent.setup({ delay: null });
     const email = `reset-${Date.now()}@ensoleil-test.com`;
     const supabase = createClient();
@@ -49,11 +42,6 @@ describe("forgot-password", () => {
 
     await waitFor(() => expect(screen.getByText(email)).toBeVisible());
     expect(screen.getByText("Check your inbox")).toBeVisible();
-
-    await waitFor(async () => {
-      const message = await findRecoveryEmail(email);
-      expect(message?.Subject).toBe("Reset your LuxePass password");
-    });
   });
 
   it("funciona igual para un email que no tiene cuenta (anti-enumeración)", async () => {

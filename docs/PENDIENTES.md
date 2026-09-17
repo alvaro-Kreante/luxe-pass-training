@@ -162,24 +162,6 @@ pantalla.
 (mucho más grande que "añadir un mapa"), y que una historia futura diseñe
 ese hueco en el artboard.
 
-### 2.10 `forgot-password/page.test.tsx` sigue esperando Mailpit, no Brevo
-
-El segundo test de esa historia (`page.test.tsx:38`) busca el email de
-recovery en Mailpit (`MAILPIT_URL`) — correcto antes de la migración a
-Brevo (13 sept), obsoleto desde que el hook `send_email` intercepta y
-manda el correo real por la API de Brevo (ver `CLAUDE.md` §Envío de email
-transaccional). Con el hook activo de verdad (local dev normal, `staging`,
-`main`), ese test falla: el correo nunca llega a Mailpit. Solo pasa hoy en
-CI porque `ci.yml` desactiva el hook en su copia efímera del checkout
-(ver `docs/ci-cd/RESUMEN.md`, bug 6) — un byproduct de evitar mandar
-emails reales por Brevo en cada corrida, no un arreglo del test en sí.
-
-**Se resuelve:** reescribiendo el test para no depender de un inbox real
-(verificar solo el acuse en pantalla, como ya hace el tercer test de ese
-mismo archivo) o, si se quiere seguir verificando el contenido del email,
-contra un doble de Brevo — ninguna de las dos se hizo aquí para no
-mezclar ese cambio con el trabajo de Epic 2/CI de esta rama.
-
 ---
 
 ## 3. Criterios de aceptación cubiertos solo de forma declarativa
@@ -437,3 +419,4 @@ de la tarifa de no-show.
 | Signup/login en `luxepass-prod` daban `Invalid API key` ("might be owned by another Supabase project") | 13 sept 2026 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` en el proyecto de Vercel `luxepass-prod` estaba desactualizada (no relacionado al trabajo de Brevo, ya estaba mal desde antes). Diagnosticado comparando el bundle JS de producción contra `supabase projects api-keys --project-ref` (de solo lectura). Corregida la env var en Vercel + redeploy manual (`gh workflow run deploy.yml --ref main`, necesario porque `NEXT_PUBLIC_*` se hornea en build time) |
 | Migrar `/explore` a Google Maps real: el clustering de markers no aparecía nunca, a ningún zoom, y el callout de un pin cerca del borde superior del mapa se recortaba contra el contenedor — ninguno de los dos lo detectaban los tests sobre jsdom | 16 sept 2026 | Verificación con Playwright contra el SDK real de Google Maps (`scripts/playwright/`), no cubierto por el stub de jsdom. Clustering: `MIN_ZOOM` de `city-map.tsx` estaba en 12 (rango de zoom donde nunca se alcanzaba el umbral de agrupado) y un bug real de timing — los refs de `AdvancedMarker` resuelven de forma asíncrona, después de que el efecto que alimenta a `MarkerClusterer` ya había corrido — dejaba el clustering en cero marcadores siempre; se bajó `MIN_ZOOM` a 10 y se añadió un contador `markerRegistrations` para re-sincronizar el clusterer cuando los markers montan de verdad. Callout: `lounge-callout.tsx` ahora mide su posición real con `useLayoutEffect` (vía el atributo `data-map-surface` del contenedor del mapa) y voltea a `top-full` en vez de `bottom-full` cuando el borde superior lo recortaría. Ambos con test de regresión (`city-map.test.tsx`, `lounge-callout.test.tsx`) |
 | El job `test` de `ci.yml` fallaba en `supabase start` con `Invalid hook config: ... secrets must be formatted as v1,whsec_...`, en todos los PR desde el 13 sept | 16 sept 2026 | El fix de `SEND_EMAIL_HOOK_SECRET_DEV`/`_PROD` de esa fecha solo tocó `deploy.yml`; `ci.yml` nunca recibió su propio secret. Añadirle uno con formato válido no bastaba — este runner no tiene `supabase/functions/.env` con Brevo real, y Auth corta `signUp`/`resetPasswordForEmail` entero si el hook falla. Decisión con el usuario: no mandar emails reales por Brevo en CI (riesgo de bounces); `ci.yml` desactiva el hook (`enabled = false`) solo en la copia efímera del checkout vía un `awk` antes de `supabase start` — Auth cae a Mailpit, que es lo que `forgot-password/page.test.tsx` ya esperaba. Detalle y verificación local en `docs/ci-cd/RESUMEN.md` |
+| 5 tests fallando en local (signup, login, registration, forgot-password) con "Service currently unavailable due to hook" | 17 sept 2026 | Causa 1 (4 tests): el contenedor `supabase_edge_runtime_<project_id>` se había caído solo (exit code 255, sin error en logs) — el Auth Hook `send_email` depende de él para cualquier signup/reset con el hook activo (dev local normal). `docker start supabase_edge_runtime_Luxe_Pass` los revive; no es un bug de la app, revisar el contenedor si vuelve a pasar. Causa 2 (el 5º test, forgot-password): cierra §2.10 de arriba — el test seguía buscando el correo de recovery en Mailpit, obsoleto en local/staging/main (donde el hook está activo de verdad) desde la migración a Brevo del 13 sept; solo "pasaba" en CI porque ahí el hook está desactivado. Se quitó esa aserción, dejando el acuse en pantalla como verificación. Corregido en `fix/forgot-password-mailpit-test` |
