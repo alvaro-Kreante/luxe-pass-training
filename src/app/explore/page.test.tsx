@@ -147,6 +147,47 @@ describe("permiso de ubicación", () => {
 
     expect(screen.getByText("You are here")).toBeInTheDocument();
   });
+
+  /**
+   * Regresión: el diálogo se quedaba abierto varios segundos tras aceptar,
+   * porque `handleAllow` esperaba (`await`) a que el navegador resolviera un
+   * fix de posición real antes de cerrar el paso "asking" — un fix real
+   * puede tardar bastante incluso ya concedido el permiso. El cierre debe
+   * ser inmediato al aceptar; la posición real llega después y solo corrige
+   * el origen ya con el mapa a la vista.
+   */
+  it("cierra el diálogo de permiso sin esperar a que el navegador resuelva la posición real", async () => {
+    let resolvePosition: PositionCallback | null = null;
+    Object.defineProperty(navigator, "geolocation", {
+      configurable: true,
+      value: {
+        getCurrentPosition: vi.fn((onSuccess: PositionCallback) => {
+          resolvePosition = onSuccess;
+        }),
+      },
+    });
+
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+
+    const button = await screen.findByRole("button", {
+      name: "Allow location access",
+    });
+    await waitForDialogReady(button);
+    await user.click(button);
+
+    expect(
+      screen.queryByRole("heading", { name: "Let LuxePass use your location" }),
+    ).toBeNull();
+
+    await act(async () => {
+      resolvePosition!({ coords: NY_ORIGIN } as GeolocationPosition);
+    });
+
+    expect(
+      await within(resultsPanel()).findByText("The Ainsworth"),
+    ).toBeInTheDocument();
+  });
 });
 
 describe("entrada manual de ubicación", () => {
