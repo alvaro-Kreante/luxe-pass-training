@@ -12,11 +12,11 @@ Repositorio integral del proyecto **LuxePass** (plataforma de membresía de lujo
 
 ## ⚠️ Alcance: mockup navegable + backend real parcial (Supabase)
 
-**Este repo empezó como un mockup navegable sin backend — eso ya no es así del todo.** Desde sept 2026, algunas historias tienen lógica real conectada a Supabase: Epic 1 completo (Story 1.1 User Registration, Story 1.2 Login & Authentication) y Epic 2 completo (Story 2.1 Map-Based Lounge Discovery, Story 2.2 Lounge Filtering & Search, Story 2.3 List View Alternative — catálogo real en `public.lounges`, ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 2). El resto de epics sigue el patrón de mockup visual descrito abajo, historia por historia, hasta que se conecten a su vez.
+**Este repo empezó como un mockup navegable sin backend — eso ya no es así del todo.** Desde sept 2026, varias historias tienen lógica real conectada a Supabase: Epic 1 completo (Story 1.1 User Registration, Story 1.2 Login & Authentication), Epic 2 completo (Story 2.1 Map-Based Lounge Discovery, Story 2.2 Lounge Filtering & Search, Story 2.3 List View Alternative — catálogo real en `public.lounges`) y Epic 3 completo (Story 3.1 Lounge Profile Details, Story 3.2 Availability Calendar — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 2 / Epic 3). Epic 4 (Booking System) está completo: Story 4.1 (Seamless Booking Flow), Story 4.2 (Payment Processing, **Stripe real** en modo test) y Story 4.3 (Calendar Integration, ya real desde el mockup) — tablas `bookings`/`payments`, RPC `confirm_booking`/`join_waitlist`, y el email real de recibo de reserva (ver más abajo "Email de recibo de reserva real") — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 4. El resto de epics sigue el patrón de mockup visual descrito abajo, historia por historia, hasta que se conecten a su vez.
 
 La app en producción de En Soleil vive en `app.luxepass.co`; si este repo la reemplaza o sigue siendo un proyecto aparte no está resuelto en este documento — no asumir ninguna de las dos sin confirmar.
 
-**Infraestructura real ya montada:** 2 proyectos Supabase remotos (`luxepass-dev`, `luxepass-prod`) con sus migraciones aplicadas vía CI/CD (`.github/workflows/deploy.yml`). Detalle completo, incluyendo qué falta (Vercel, protección de ramas), en `docs/ci-cd/RESUMEN.md`.
+**Infraestructura real ya montada:** 2 proyectos Supabase remotos (`luxepass-dev`, `luxepass-prod`) con sus migraciones aplicadas vía CI/CD (`.github/workflows/deploy.yml`), y 2 proyectos Vercel (`luxepass-dev`/`luxepass-prod`, deploy real probado de punta a punta). Detalle completo, incluyendo qué falta (env vars de Google Maps/Stripe en Vercel y en `deploy.yml`, protección de ramas), en `docs/ci-cd/RESUMEN.md`.
 
 **No hacer, salvo que se pida explícitamente:**
 
@@ -43,6 +43,10 @@ La app en producción de En Soleil vive en `app.luxepass.co`; si este repo la re
 Ejemplo ya hecho de patrón mockup (epics aún no conectados): datos de muestra en constantes de componente para simular estados de red/servidor. Ejemplo ya hecho de patrón backend real: Story 1.1/1.2 contra Supabase local/remoto (ver `src/lib/supabase/`, `src/lib/authentication.ts`, `src/lib/registration.ts`). **La regla para una historia sin backend es que la pantalla llegue a mostrar el estado, no que el estado sea real; para una historia conectada a Supabase, el estado sí es real.**
 
 **Envío de email real (Story 1.1/1.2):** desde sept 2026, el email de confirmación/recovery ya no es un SMTP simulado — va vía Brevo, disparado por un Supabase Auth Hook (`send_email`) que invoca la Edge Function `supabase/functions/send-email`. Es la excepción viva a la regla "❌ Server Actions o fetch a servicios externos" de arriba: aplica porque Epic 1 **sí** está conectado a Supabase. Detalle completo en "Supabase Local Development" §Envío de email transaccional.
+
+**Procesamiento de pagos real (Story 4.2):** desde el 17 sept 2026, la decisión de "Stripe fuera de alcance" que traía `docs/DATA-MODEL-MAP.md` (válida solo durante el periodo de mockup) se revierte — ahora que Epic 4 se implementa, el pago va vía **Stripe real, en modo test**, no simulado. Es la segunda excepción viva a la regla "❌ Server Actions o fetch a servicios externos" de arriba: aplica porque Epic 4 **sí** está conectado a Supabase. Misma arquitectura que Brevo — sin route handlers de Next.js, Supabase Edge Functions — y el webhook de Stripe, no el cliente, es quien decide el `status` real del pago. Apple Pay/Google Pay quedan fuera de esta conexión real (dominio no verificado, no viable en `localhost`). Detalle completo en "Supabase Local Development" §Procesamiento de pagos (Stripe).
+
+**Email de recibo de reserva real (Story 4.2/5.1):** desde el 18 sept 2026, el recibo de reserva (`Receipt.dc.html`, alcanzable desde `/book/confirmed`) también se envía de verdad, para toda reserva `confirmed` (con o sin pago — cubre de paso "Email with booking info" de la Story 5.1). Es la tercera excepción viva a la regla "❌ Server Actions o fetch a servicios externos" de arriba. A diferencia de Brevo/Stripe (ambos disparados por un hook nativo de Supabase — Auth Hook y Stripe webhook respectivamente), este es un evento de negocio puro ("se confirmó una reserva"), sin hook nativo que lo cubra: usa un **Database Webhook** (trigger `AFTER INSERT` en `bookings`, ver `supabase/schemas/booking_receipts.sql`) sobre `pg_net`, que llama a la Edge Function `send-booking-receipt`. Detalle completo en "Supabase Local Development" §Email de recibo de reserva.
 
 ---
 
@@ -88,9 +92,12 @@ en vez de `design/screens`.
 **Infraestructura de `staging`/`main`:** 2 proyectos Supabase remotos
 (`luxepass-dev`, `luxepass-prod`) — uno por rama — con las migraciones
 aplicadas automáticamente por CI, nunca a mano (ver "Supabase Local
-Development" §Excepción de CI). Vercel (2 proyectos, mismo esquema
-dev/prod) está planeado pero todavía no montado. Detalle completo y estado
-en `docs/ci-cd/RESUMEN.md`.
+Development" §Excepción de CI). Vercel (2 proyectos, mismo esquema dev/prod)
+**ya está montado y probado de punta a punta** (deploy real vía
+`deploy.yml`, confirmado 10-13 sept 2026) — lo que falta no es Vercel en sí,
+sino dar de alta ahí las env vars más nuevas (Google Maps, Stripe) que
+todavía no existían cuando se montó. Detalle completo y estado en
+`docs/ci-cd/RESUMEN.md`.
 
 Para trabajo puntual que no es una historia entera, se sale de `design/screens` con
 un prefijo y se vuelve a ella:
@@ -328,6 +335,7 @@ Estos tokens están replicados en el código como **CSS custom properties** en `
 - **@vis.gl/react-google-maps + @googlemaps/markerclusterer** — Google Maps real, proveedor único de mapa de la app desde la migración de Epic 2 (`/explore`, `components/explore/city-map.tsx`). Cualquier mapa nuevo (mini-mapa de lounge profile, u otro futuro) lo reutiliza — nunca SVG propio ni otro proveedor de tiles
 - **@ducanh2912/next-pwa** — service worker
 - **Brevo** — envío de email transaccional real (confirmación, recovery de Story 1.1/1.2), vía Supabase Auth Hook `send_email` + Edge Function `supabase/functions/send-email`. Detalle en "Supabase Local Development" §Envío de email transaccional
+- **Stripe** (`@stripe/stripe-js` + `@stripe/react-stripe-js`) — procesamiento de pagos real (Story 4.2), modo test en desarrollo. Checkout Sessions con `ui_mode: 'elements'` + Payment Element (no PaymentIntent crudo, no Checkout hospedado — el formulario vive embebido en la propia pantalla, como pide `Payment.dc.html`). Sin route handlers de Next.js: Supabase Edge Functions para crear la Checkout Session y para el webhook, que es la única fuente de verdad del estado del pago. Datos de tarjeta solo tocan Stripe.js/Elements en el cliente, nunca nuestro servidor (PCI DSS SAQ A). Detalle en "Supabase Local Development" §Procesamiento de pagos (Stripe)
 - **Vitest + Testing Library** — tests sobre jsdom, con `next/navigation` mockeado
 - **Playwright** — navegador automatizado para verificación visual (uso puntual, no suite e2e masiva)
 
@@ -548,3 +556,137 @@ simulado de Supabase (Inbucket/Mailpit) — Auth llama al Hook `send_email`
   resend) fallan en silencio: nada en los logs de la function, el hook ni
   se invoca. Súbelo junto con el registro del hook, antes de dar por
   probado un ambiente nuevo.
+
+### Procesamiento de pagos (Stripe)
+
+Decisión de alcance (17 sept 2026, revierte la nota original de
+`docs/DATA-MODEL-MAP.md` que era válida solo durante el periodo de mockup):
+Story 4.2 se implementa contra **Stripe real, en modo test** durante
+desarrollo — no se simula. Motivo completo en "Alcance" §Procesamiento de
+pagos real (Story 4.2).
+
+**Cuenta:** una sandbox de Stripe propia de este proyecto (no el test mode
+compartido de una cuenta), creada el 17 sept 2026 con
+`stripe sandbox create --from-git` — `account_id` `acct_1UGUm6IBtxcBzVZb`.
+**Expira el 24 sept 2026 si no se reclama** (`stripe sandbox claim` o el
+`claim_url` que imprimió el comando) — reclamarla antes de esa fecha o se
+pierde junto con sus claves. Claves guardadas en `.env.local`
+(`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`) y `supabase/functions/.env`
+(`STRIPE_SECRET_KEY`, ya con prefijo `rk`/restringida, no `sk_`) — ninguno de
+los dos archivos se comitea. **Vercel ya está montado** (staging/prod, ver
+"Infraestructura real ya montada" más arriba) — lo pendiente es dar de alta
+ahí `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (puede ser esta misma sandbox
+reclamada, o una independiente por ambiente — decisión de producto, no
+técnica) **y** ampliar `deploy.yml` para que despliegue las Edge Functions
+de Stripe/recibo de reserva y sus secrets — hoy solo despliega `send-email`.
+Ver `docs/PENDIENTES.md` §4.6.
+
+Lo ya decidido, a seguir al implementar Story 4.2:
+
+- **Checkout Sessions con `ui_mode: 'elements'` + Payment Element** — no un
+  `PaymentIntent` crudo ni el Checkout hospedado/embebido de Stripe: el
+  formulario de tarjeta vive dentro de la propia pantalla del design system
+  (`Payment.dc.html`), con la sesión de Checkout gestionando el estado detrás.
+- **Nunca pasar `payment_method_types`** a `checkout.sessions.create` — se
+  omite para activar *dynamic payment methods* (Stripe decide qué métodos
+  mostrar); Apple Pay/Google Pay simplemente no aparecerán sin dominio
+  verificado (ver más abajo), no hace falta excluirlos a mano.
+- **Sin route handlers de Next.js.** Mismo patrón que `send-email`: la
+  lógica de servidor (crear la Checkout Session, verificar la firma del
+  webhook) vive en Supabase Edge Functions, no en `src/app/api/`.
+- **El webhook es la única fuente de verdad del `status` de `payments`.**
+  El cliente nunca marca un pago como exitoso tras el submit. El handler
+  escucha `checkout.session.completed` y `checkout.session.async_payment_succeeded`
+  (fulfilment solo si `payment_status` no es `unpaid`) y
+  `checkout.session.async_payment_failed` para el fallo — igual que Auth
+  decide el resultado real del signup, no el formulario.
+- **Instanciar `StripeClient`** (`new Stripe(secretKey)` vía SDK de Node en
+  la Edge Function, import `npm:stripe` en Deno) y llamar sobre esa
+  instancia — nunca el patrón global/deprecado (`stripe.api_key = …`).
+- **Secrets de las functions** (mismo patrón que `BREVO_*`):
+  `STRIPE_SECRET_KEY` (restringida, prefijo `rk`) y `STRIPE_WEBHOOK_SECRET`.
+  La clave publicable (`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`) es la única que
+  sí llega al cliente, para `@stripe/stripe-js`/`@stripe/react-stripe-js`.
+- **Modo test en local y en `staging`**; cambiar a claves live en `main`
+  solo con confirmación explícita — no asumirlo como parte de la historia.
+- **Prueba local del webhook**: Stripe CLI (`stripe listen --forward-to`)
+  apuntando a la Edge Function servida localmente (`supabase functions
+  serve`), igual que Brevo se prueba contra Supabase local antes de tocar
+  remoto.
+- **Apple Pay / Google Pay quedan fuera de esta conexión real.** El Payment
+  Element de Stripe los ofrece automáticamente, pero exigen un dominio
+  verificado ante Stripe/Apple que no funciona en `localhost` ni sin el
+  rollout de Vercel (ver `docs/PENDIENTES.md` §4.4, mismo tipo de gap de
+  infraestructura). Los botones pueden quedar visualmente presentes pero
+  inertes hasta ese rollout — anotarlo como desviación en
+  `COMPONENT-MAP.md` al implementar, no como criterio simulado de la
+  historia.
+- **Tabla `payments`** (dueño Epic 4, ver `docs/DATA-MODEL-MAP.md`):
+  columnas exactas, RLS y su relación con `bookings` se deciden con TDD al
+  implementar Story 4.2 — este archivo no lista columnas (ver "Schema
+  management" arriba).
+
+### Email de recibo de reserva (Database Webhook)
+
+Story 4.2/5.1 — desde el 18 sept 2026, el recibo de reserva (`Receipt.dc.html`)
+se envía de verdad para toda reserva `confirmed`, con o sin pago. Motivo
+completo en "Alcance" §Email de recibo de reserva real.
+
+**Por qué no es un Auth Hook como `send-email`.** Los Auth Hooks de Supabase
+solo cubren eventos de Auth (signup, recovery) — "se confirmó una reserva" es
+un evento de negocio sobre una tabla cualquiera, sin hook nativo. El
+mecanismo equivalente es un **Database Webhook**: un trigger `AFTER INSERT`
+en `bookings` que, solo cuando `status = 'confirmed'`, llama de forma
+asíncrona (extensión `pg_net`) a la Edge Function `send-booking-receipt` —
+primer uso de este mecanismo en el proyecto, ver
+`supabase/schemas/booking_receipts.sql`.
+
+**Autenticación: secreto compartido en Supabase Vault, no un JWT.** Postgres
+no tiene sesión de usuario que pasarle a la function, así que no hay
+`verify_jwt` que aplicar (`[functions.send-booking-receipt]` en
+`config.toml` lo desactiva, igual que `stripe-webhook`). El trigger lee la
+URL de la function y un secreto compartido desde
+`vault.decrypted_secrets` (nunca hardcodeados en el schema versionado — la
+URL cambia por ambiente y el secreto no debe comitearse) y los manda en la
+cabecera `x-webhook-secret`, que la function verifica contra su propio
+secret `BOOKING_RECEIPT_WEBHOOK_SECRET`. Alta de los dos secretos, **una vez
+por proyecto** (local/dev/prod), igual que el resto de secretos de este
+epic — nunca vía `supabase config push`:
+```sql
+select vault.create_secret(
+  'http://host.docker.internal:54331/functions/v1/send-booking-receipt', -- local; staging/prod: la URL pública del proyecto
+  'booking_receipt_webhook_url', 'URL de la Edge Function send-booking-receipt'
+);
+select vault.create_secret(
+  '<mismo valor que BOOKING_RECEIPT_WEBHOOK_SECRET en supabase/functions/.env>',
+  'booking_receipt_webhook_secret', 'Secreto compartido del Database Webhook de bookings'
+);
+```
+**Sin los dos secretos dados de alta, el trigger no hace nada** (guard
+explícito en la función, `if v_url is null or v_secret is null then return
+new`) — nunca falla el insert de la reserva por esto, y **no hace falta
+desactivarlo a mano en CI** como sí exige el Auth Hook de Epic 1
+(`ci.yml` nunca crea estos secretos de Vault, así que el trigger es un
+no-op ahí sin tocar nada).
+
+**Networking local: `host.docker.internal`, no `127.0.0.1`.** Postgres
+corre en su propio contenedor Docker — `127.0.0.1` ahí apunta al contenedor
+mismo, no al host. Verificado con `net.http_get`/`net.http_post` directo
+contra el gateway (`supabase_kong_<project_id>`, puerto 54331) antes de dar
+por buena la URL.
+
+**Pago todavía `pending` al confirmar la reserva.** Con tarjeta nueva, el
+`status` de `payments` pasa a `succeeded` cuando el webhook de Stripe lo
+confirma — asíncrono, sin garantía de haber llegado ya cuando
+`confirm_booking` inserta la reserva (el cliente llama a ambos casi
+seguidos). `send-booking-receipt` reintenta unos segundos
+(`findSettledPayment`, 3 intentos con 1s de espera) antes de componer el
+email con el estado que tenga — por eso el trigger usa un timeout de 15s en
+`net.http_post`, no los 5s por defecto (un timeout corto cortaba la llamada
+a mitad de esa espera — bug real encontrado verificando con Playwright el
+flujo completo, no con curl/psql sueltos).
+
+**Brevo compartido con `send-email`.** El envío real (misma cuenta Brevo,
+mismos secrets `BREVO_*`) se factorizó a `supabase/functions/_shared/brevo.ts`,
+del que ahora dependen las dos functions — antes cada una llamaba a la API
+de Brevo por su cuenta.

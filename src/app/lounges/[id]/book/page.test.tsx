@@ -1,11 +1,13 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BookingProvider } from "@/components/booking/booking-context";
-import { monthCalendar, startOfMonth } from "@/lib/booking";
-import { TODAY } from "@/lib/availability";
+import type { LoungeProfile } from "@/lib/lounge-profile";
 import { LOUNGES } from "@/lib/lounges";
+import { createClient } from "@/lib/supabase/client";
+import { signUpConfirmedAndSignIn } from "@/lib/testing/confirmed-user";
+import { fetchAinsworthProfile, findPredictedSlot } from "@/lib/testing/lounge-fixture";
 
 import BookPage from "./page";
 
@@ -26,10 +28,19 @@ beforeEach(() => {
   params.mockReturnValue({ id: "the-ainsworth" });
 });
 
-const ainsworth = LOUNGES.find((lounge) => lounge.id === "the-ainsworth")!;
-const futureDate = monthCalendar(ainsworth, startOfMonth(TODAY)).find(
-  (day) => day.status === "open" && day.dateIso > TODAY,
-)!.dateIso;
+const ainsworthMock = LOUNGES.find((lounge) => lounge.id === "the-ainsworth")!;
+const futureDate = findPredictedSlot(ainsworthMock, "available").dateIso;
+let ainsworth: LoungeProfile;
+
+beforeAll(async () => {
+  const supabase = createClient();
+  await signUpConfirmedAndSignIn(
+    supabase,
+    `book-page-${Date.now()}@ensoleil-test.com`,
+    "EnSoleil!2026",
+  );
+  ainsworth = await fetchAinsworthProfile(supabase);
+});
 
 function renderPage(covered = false) {
   return render(
@@ -55,11 +66,18 @@ describe("paso 1 · visit details", () => {
       screen.getByRole("button", { name: "Choose payment method" }),
     ).toBeDisabled();
 
-    await user.click(screen.getByRole("button", { name: String(Number(futureDate.slice(-2))) }));
-    const openSlot = screen
-      .getAllByRole("button")
-      .find((button) => /^\d{1,2}:\d{2} (AM|PM) ·/.test(button.getAttribute("aria-label") ?? ""));
-    await user.click(openSlot!);
+    const dayButton = await screen.findByRole("button", {
+      name: String(Number(futureDate.slice(-2))),
+    });
+    await user.click(dayButton);
+    const openSlot = await vi.waitFor(() => {
+      const slot = screen
+        .getAllByRole("button")
+        .find((button) => /^\d{1,2}:\d{2} (AM|PM) ·/.test(button.getAttribute("aria-label") ?? ""));
+      if (!slot) throw new Error("no open slot rendered yet");
+      return slot;
+    });
+    await user.click(openSlot);
 
     expect(
       screen.getByRole("link", { name: "Choose payment method" }),

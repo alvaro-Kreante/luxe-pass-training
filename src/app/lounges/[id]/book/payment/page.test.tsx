@@ -1,8 +1,11 @@
 import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BookingProvider } from "@/components/booking/booking-context";
-import { LOUNGES } from "@/lib/lounges";
+import type { LoungeProfile } from "@/lib/lounge-profile";
+import { createClient } from "@/lib/supabase/client";
+import { signUpConfirmedAndSignIn } from "@/lib/testing/confirmed-user";
+import { fetchAinsworthProfile } from "@/lib/testing/lounge-fixture";
 
 import PaymentPage from "./page";
 
@@ -21,7 +24,17 @@ beforeEach(() => {
   replace.mockClear();
 });
 
-const ainsworth = LOUNGES.find((lounge) => lounge.id === "the-ainsworth")!;
+let ainsworth: LoungeProfile;
+
+beforeAll(async () => {
+  const supabase = createClient();
+  await signUpConfirmedAndSignIn(
+    supabase,
+    `book-payment-${Date.now()}@ensoleil-test.com`,
+    "EnSoleil!2026",
+  );
+  ainsworth = await fetchAinsworthProfile(supabase);
+});
 
 describe("guardia de entrada", () => {
   it("vuelve al paso 1 si no hay fecha ni hora elegidas", () => {

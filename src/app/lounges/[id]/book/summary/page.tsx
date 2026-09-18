@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
+import { useCheckoutElements } from "@stripe/react-stripe-js/checkout";
 
 import { useBooking } from "@/components/booking/booking-context";
 import { BookingSummaryCard } from "@/components/booking/booking-summary-card";
@@ -15,30 +16,41 @@ import { AppShell } from "@/components/patterns/app-shell";
 import { StepFlowRail } from "@/components/patterns/step-flow-rail";
 import {
   NEW_CARD_OPTION_ID,
-  SAMPLE_PAYMENT_METHODS,
+  bookingReferenceFromId,
+  confirmBooking,
   errorReference,
-  isAtRiskOfWaitlist,
-  paymentWillDecline,
+  joinWaitlist,
+  type BookingRequest,
 } from "@/lib/booking";
 import { formatWeekdayDate } from "@/lib/lounge-profile";
+import { chargeSavedPaymentMethod } from "@/lib/stripe-payments";
+import { createClient } from "@/lib/supabase/client";
 
 /**
- * Story 4.1 — Seamless Booking Flow. Paso 3 de 3 "Review and confirm"
- * (`Summary.dc.html`). El chequeo final de disponibilidad decide entre
- * confirmar, ofrecer la waitlist (`Waitlist.dc.html`) o mostrar el error de
- * pago (`PaymentError.dc.html`) — ver flow-complete-booking-journey.md.
+ * Story 4.1/4.2 — paso 3 "Review and confirm" (`Summary.dc.html`). El
+ * artboard es explícito: "One tap confirms your visit and charges your
+ * card. Availability is checked again at this moment" — el cargo real
+ * (Stripe) y el chequeo final de disponibilidad (`confirm_booking`) ocurren
+ * en el mismo tap, el cargo primero. Tres caminos según cómo se paga:
+ *
+ *   - Cubierta por membresía: sin pago, directo a `confirm_booking`.
+ *   - Tarjeta guardada: `chargeSavedPaymentMethod` (Edge Function,
+ *     servidor a servidor, sin `<PaymentElement>`).
+ *   - Tarjeta nueva: `checkout.confirm()` de Stripe sobre el
+ *     `<CheckoutElementsProvider>` que vive en `BookLayout` — montado en el
+ *     paso 2, sigue disponible aquí porque es el mismo layout, no una
+ *     página nueva.
+ *
+ * El pago (si lo hay) se confirma *antes* de `confirm_booking`: así una
+ * tarjeta rechazada nunca deja una reserva real con su plaza ya consumida.
  */
-function cardLabelFor(paymentMethodId: string | null): string {
-  if (paymentMethodId === NEW_CARD_OPTION_ID) return "new card";
-  const method = SAMPLE_PAYMENT_METHODS.find((m) => m.id === paymentMethodId);
-  return method ? `${method.brand === "visa" ? "Visa" : "Mastercard"} ending in ${method.last4}` : "card";
-}
+type PaymentOutcome =
+  | { ok: true; paymentId: string | null }
+  | { ok: false; message: string; paymentId: string | null };
 
 export default function SummaryPage() {
   const router = useRouter();
-  const { lounge, covered, draft, holdSecondsLeft } = useBooking();
-  const [waitlistOpen, setWaitlistOpen] = React.useState(false);
-  const [paymentErrorOpen, setPaymentErrorOpen] = React.useState(false);
+  const { lounge, draft } = useBooking();
 
   React.useEffect(() => {
     if (!draft.dateIso || !draft.time) {
@@ -46,29 +58,138 @@ export default function SummaryPage() {
     }
   }, [draft.dateIso, draft.time, lounge.id, router]);
 
-  if (!draft.dateIso || !draft.time) return null;
+  if (!draft.dateIso || !draft.time || !draft.band) return null;
 
-  function handleConfirm() {
-    if (isAtRiskOfWaitlist(draft.seatsLeft)) {
+  return draft.paymentMethodId === NEW_CARD_OPTION_ID ? (
+    <SummaryScreenNewCard />
+  ) : (
+    <SummaryScreenOtherPayment />
+  );
+}
+
+/** Tarjeta nueva — la única rama que puede llamar a `useCheckoutElements()` (exige un `<CheckoutElementsProvider>` montado). */
+function SummaryScreenNewCard() {
+  const { checkoutSession } = useBooking();
+  const checkoutResult = useCheckoutElements();
+
+  const chargePayment = React.useCallback(async (): Promise<PaymentOutcome> => {
+    const paymentId = checkoutSession?.paymentId ?? null;
+
+    if (checkoutResult.type !== "success") {
+      return {
+        ok: false,
+        message:
+          checkoutResult.type === "error"
+            ? checkoutResult.error.message
+            : "The payment form is still loading.",
+        paymentId,
+      };
+    }
+
+    const result = await checkoutResult.checkout.confirm({ redirect: "if_required" });
+
+    if (result.type === "success") return { ok: true, paymentId };
+    return { ok: false, message: result.error.message, paymentId };
+  }, [checkoutResult, checkoutSession]);
+
+  return <SummaryScreenBody chargePayment={chargePayment} />;
+}
+
+/** Cubierta por membresía o tarjeta guardada — ninguna necesita `<PaymentElement>`. */
+function SummaryScreenOtherPayment() {
+  const { lounge, covered, draft } = useBooking();
+
+  const chargePayment = React.useCallback(async (): Promise<PaymentOutcome> => {
+    if (covered) return { ok: true, paymentId: null };
+
+    const result = await chargeSavedPaymentMethod(createClient(), {
+      loungeId: lounge.id,
+      dateIso: draft.dateIso!,
+      band: draft.band!,
+      slotTime: draft.time!,
+      specialRequests: draft.specialRequests,
+      paymentMethodId: draft.paymentMethodId!,
+    });
+
+    if (result.status === "succeeded") return { ok: true, paymentId: result.paymentId };
+    return {
+      ok: false,
+      message: result.error ?? "Your card was declined.",
+      paymentId: result.paymentId,
+    };
+  }, [covered, lounge.id, draft.dateIso, draft.band, draft.time, draft.specialRequests, draft.paymentMethodId]);
+
+  return <SummaryScreenBody chargePayment={chargePayment} />;
+}
+
+function SummaryScreenBody({
+  chargePayment,
+}: {
+  chargePayment: () => Promise<PaymentOutcome>;
+}) {
+  const router = useRouter();
+  const { lounge, draft, update, holdSecondsLeft } = useBooking();
+  const [waitlistOpen, setWaitlistOpen] = React.useState(false);
+  const [paymentError, setPaymentError] = React.useState<{ message: string; reference: string } | null>(
+    null,
+  );
+
+  const bookingRequest: BookingRequest = {
+    loungeId: lounge.id,
+    dateIso: draft.dateIso!,
+    band: draft.band!,
+    time: draft.time!,
+    specialRequests: draft.specialRequests,
+  };
+
+  async function handleConfirm() {
+    let outcome: PaymentOutcome;
+    try {
+      outcome = await chargePayment();
+    } catch (error) {
+      console.error("chargePayment failed", error);
+      // AC "Error handling: network issues, ... system unavailability" — un
+      // fallo inesperado (no un rechazo de tarjeta) se trata igual: nunca
+      // se llega a `confirm_booking` sin saber si de verdad se cobró.
+      outcome = {
+        ok: false,
+        message: "Something went wrong processing your payment.",
+        paymentId: null,
+      };
+    }
+
+    if (!outcome.ok) {
+      const reference = outcome.paymentId
+        ? bookingReferenceFromId(outcome.paymentId)
+        : errorReference(lounge.id, draft.dateIso!, draft.time!);
+      setPaymentError({ message: outcome.message, reference });
+      return;
+    }
+
+    const booking = await confirmBooking(createClient(), bookingRequest, outcome.paymentId);
+
+    if (!booking) {
       setWaitlistOpen(true);
       return;
     }
 
-    if (!covered && paymentWillDecline(draft.paymentMethodId)) {
-      setPaymentErrorOpen(true);
-      return;
-    }
-
+    update({ bookingId: booking.id, bookingStatus: booking.status });
     router.push(`/lounges/${lounge.id}/book/confirmed`);
   }
 
+  async function handleJoinWaitlist() {
+    const booking = await joinWaitlist(createClient(), bookingRequest);
+    update({ bookingId: booking.id, bookingStatus: booking.status });
+    setWaitlistOpen(false);
+  }
+
   return (
-    <AppShell padded={false} blurred={waitlistOpen || paymentErrorOpen}>
+    <AppShell padded={false} blurred={waitlistOpen || paymentError !== null}>
       <StepFlowRail
         lounge={lounge}
         backHref={`/lounges/${lounge.id}/book/payment`}
         backLabel="Back to payment"
-        address={`${formatWeekdayDate(draft.dateIso)} · ${draft.time} · Admission for one`}
+        address={`${formatWeekdayDate(draft.dateIso!)} · ${draft.time} · Admission for one`}
         trailingBadge={<SlotHoldBadge secondsLeft={holdSecondsLeft} />}
         hideFreshness
         topbarRight={
@@ -90,24 +211,27 @@ export default function SummaryPage() {
         open={waitlistOpen}
         onOpenChange={setWaitlistOpen}
         lounge={lounge}
-        dateIso={draft.dateIso}
-        time={draft.time}
+        dateIso={draft.dateIso!}
+        time={draft.time!}
         onChangeDate={() => {
           setWaitlistOpen(false);
           router.push(`/lounges/${lounge.id}/book`);
         }}
-        onJoinWaitlist={() => setWaitlistOpen(false)}
+        onJoinWaitlist={handleJoinWaitlist}
       />
 
       <PaymentErrorModal
-        open={paymentErrorOpen}
-        onOpenChange={setPaymentErrorOpen}
-        time={draft.time}
-        cardLabel={cardLabelFor(draft.paymentMethodId)}
-        reference={errorReference(lounge.id, draft.dateIso, draft.time)}
+        open={paymentError !== null}
+        onOpenChange={(open) => {
+          if (!open) setPaymentError(null);
+        }}
+        time={draft.time!}
+        cardLabel={draft.paymentMethodId === NEW_CARD_OPTION_ID ? "new card" : "saved card"}
+        message={paymentError?.message ?? ""}
+        reference={paymentError?.reference ?? ""}
         secondsLeft={holdSecondsLeft}
-        onTryAgain={() => setPaymentErrorOpen(false)}
-        onContactSupport={() => setPaymentErrorOpen(false)}
+        onTryAgain={() => setPaymentError(null)}
+        onContactSupport={() => setPaymentError(null)}
       />
     </AppShell>
   );

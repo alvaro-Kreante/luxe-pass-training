@@ -13,8 +13,7 @@ import {
   downloadIcsFile,
   type CalendarEventInput,
 } from "@/lib/calendar-export";
-import { formatWeekdayDate } from "@/lib/lounge-profile";
-import type { Lounge } from "@/lib/lounges";
+import { formatWeekdayDate, type LoungeProfile } from "@/lib/lounge-profile";
 import { cn } from "@/lib/utils";
 
 /**
@@ -36,7 +35,7 @@ export function AddToCalendarModal({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  lounge: Lounge;
+  lounge: LoungeProfile;
   address: string;
   dateIso: string;
   time: string;

@@ -2,7 +2,7 @@ import * as React from "react";
 
 import { LoungeSubviewHeader } from "@/components/lounges/lounge-subview-header";
 import { StepProgress } from "@/components/ui/step-progress";
-import type { Lounge } from "@/lib/lounges";
+import type { LoungeProfile } from "@/lib/lounge-profile";
 
 /**
  * DESIGN-SYSTEM.md §5 patrón 9 — Flujo por pasos con rail de resumen.
@@ -12,7 +12,7 @@ import type { Lounge } from "@/lib/lounges";
  * reserva (Main / Payment / Summary).
  */
 export interface StepFlowRailProps {
-  lounge: Lounge;
+  lounge: LoungeProfile;
   backHref: string;
   backLabel: string;
   address: string;

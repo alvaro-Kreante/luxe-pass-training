@@ -171,6 +171,16 @@ use en local.
       `luxepass-prod`: signup, confirmación y forgot-password, los tres
       funcionando (13 sept 2026). PRs #12, #13, #14 (`staging`) y #15
       (`staging` → `main`).
+- [ ] **Epic 4 (Stripe + recibo de reserva, 18 sept 2026) sin desplegar.**
+      Completo y verificado en local, pero `deploy.yml` no se amplió
+      todavía — sigue desplegando solo `send-email`. Faltan las 5 Edge
+      Functions nuevas (`stripe-create-checkout-session`,
+      `stripe-charge-saved-method`, `stripe-payment-methods`,
+      `stripe-webhook`, `send-booking-receipt`), sus secrets de GitHub, los
+      2 secretos de Vault por proyecto remoto (`booking_receipt_webhook_url`/
+      `_secret`, sin equivalente a `config push`) y
+      `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` en Vercel. Checklist completo en
+      `docs/PENDIENTES.md` §4.6.
 
 #### Secrets de GitHub a añadir para `send-email` (13 sept 2026)
 

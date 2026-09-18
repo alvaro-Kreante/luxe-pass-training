@@ -1,6 +1,12 @@
 -- Story 1.1 — perfil de miembro creado en los 3 pasos de /onboarding.
 -- Campos requeridos por el AC ("name*, phone*, ... location*, Industry*"):
 -- full_name, phone, city, industry. El resto es opcional.
+--
+-- `stripe_customer_id` (Story 4.2, Epic 4) es la excepción: Epic 4 no es
+-- dueño de `profiles`, pero un Customer de Stripe es 1:1 con el miembro, no
+-- con una reserva — vive aquí en vez de en `payments` para no crear uno por
+-- cada intento de pago. Se rellena de forma perezosa (la primera vez que el
+-- miembro paga algo con Stripe), nunca en el alta de la Story 1.1.
 create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   full_name text not null,
@@ -15,6 +21,7 @@ create table if not exists public.profiles (
   industry text not null,
   company text,
   terms_accepted_at timestamptz not null,
+  stripe_customer_id text unique,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

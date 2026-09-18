@@ -1,9 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AddToCalendarModal } from "./add-to-calendar-modal";
-import { LOUNGES } from "@/lib/lounges";
+import type { LoungeProfile } from "@/lib/lounge-profile";
+import { createClient } from "@/lib/supabase/client";
+import { signUpConfirmedAndSignIn } from "@/lib/testing/confirmed-user";
+import { fetchAinsworthProfile } from "@/lib/testing/lounge-fixture";
 
 /**
  * Story 4.3 — Calendar Integration (`Calendar.dc.html`). A diferencia del
@@ -19,15 +22,27 @@ vi.mock("@/lib/calendar-export", () => ({
 
 import { buildGoogleCalendarUrl, downloadIcsFile } from "@/lib/calendar-export";
 
-const ainsworth = LOUNGES.find((lounge) => lounge.id === "the-ainsworth")!;
+let ainsworth: LoungeProfile;
 
-const props = {
-  lounge: ainsworth,
-  address: "122 E 45th St, New York, NY 10017",
-  dateIso: "2025-09-14",
-  time: "3:30 PM",
-  bookingReference: "LP-842193",
-};
+beforeAll(async () => {
+  const supabase = createClient();
+  await signUpConfirmedAndSignIn(
+    supabase,
+    `add-to-calendar-modal-${Date.now()}@ensoleil-test.com`,
+    "EnSoleil!2026",
+  );
+  ainsworth = await fetchAinsworthProfile(supabase);
+});
+
+function props() {
+  return {
+    lounge: ainsworth,
+    address: "122 E 45th St, New York, NY 10017",
+    dateIso: "2025-09-14",
+    time: "3:30 PM",
+    bookingReference: "LP-842193",
+  };
+}
 
 let windowOpenSpy: ReturnType<typeof vi.spyOn>;
 
@@ -42,7 +57,7 @@ afterEach(() => {
 
 describe("Calendar.dc.html", () => {
   it("muestra el evento pre-poblado con dirección y referencia", () => {
-    render(<AddToCalendarModal open onOpenChange={vi.fn()} {...props} />);
+    render(<AddToCalendarModal open onOpenChange={vi.fn()} {...props()} />);
 
     expect(screen.getByText("Add to your calendar")).toBeInTheDocument();
     expect(screen.getByText(/122 E 45th St/)).toBeInTheDocument();
@@ -52,7 +67,7 @@ describe("Calendar.dc.html", () => {
 
   it("iOS Calendar está preseleccionado y 'Add event' descarga el .ics", async () => {
     const user = userEvent.setup({ delay: null });
-    render(<AddToCalendarModal open onOpenChange={vi.fn()} {...props} />);
+    render(<AddToCalendarModal open onOpenChange={vi.fn()} {...props()} />);
 
     await user.click(screen.getByRole("button", { name: "Add event" }));
 
@@ -62,7 +77,7 @@ describe("Calendar.dc.html", () => {
 
   it("elegir Google Calendar y 'Add event' abre la URL de Google Calendar", async () => {
     const user = userEvent.setup({ delay: null });
-    render(<AddToCalendarModal open onOpenChange={vi.fn()} {...props} />);
+    render(<AddToCalendarModal open onOpenChange={vi.fn()} {...props()} />);
 
     await user.click(screen.getByRole("radio", { name: /Google Calendar/ }));
     await user.click(screen.getByRole("button", { name: "Add event" }));
@@ -77,7 +92,7 @@ describe("Calendar.dc.html", () => {
 
   it("elegir Outlook y 'Add event' también descarga el .ics", async () => {
     const user = userEvent.setup({ delay: null });
-    render(<AddToCalendarModal open onOpenChange={vi.fn()} {...props} />);
+    render(<AddToCalendarModal open onOpenChange={vi.fn()} {...props()} />);
 
     await user.click(screen.getByRole("radio", { name: /Outlook/ }));
     await user.click(screen.getByRole("button", { name: "Add event" }));
@@ -88,7 +103,7 @@ describe("Calendar.dc.html", () => {
   it("'Not now' cierra el modal sin descargar nada", async () => {
     const user = userEvent.setup({ delay: null });
     const onOpenChange = vi.fn();
-    render(<AddToCalendarModal open onOpenChange={onOpenChange} {...props} />);
+    render(<AddToCalendarModal open onOpenChange={onOpenChange} {...props()} />);
 
     await user.click(screen.getByRole("button", { name: "Not now" }));
 

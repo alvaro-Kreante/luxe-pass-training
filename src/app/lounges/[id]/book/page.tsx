@@ -8,7 +8,6 @@ import { VisitSummaryRail } from "@/components/booking/visit-summary-rail";
 import { AppShell } from "@/components/patterns/app-shell";
 import { StepFlowRail } from "@/components/patterns/step-flow-rail";
 import { StatusChip } from "@/components/ui/status-chip";
-import { contactFor } from "@/lib/lounge-profile";
 
 /**
  * Story 4.1 — Seamless Booking Flow. Paso 1 de 3 "Visit details"
@@ -16,7 +15,6 @@ import { contactFor } from "@/lib/lounge-profile";
  */
 export default function BookPage() {
   const { lounge } = useBooking();
-  const contact = contactFor(lounge);
 
   return (
     <AppShell padded={false}>
@@ -24,11 +22,11 @@ export default function BookPage() {
         lounge={lounge}
         backHref={`/lounges/${lounge.id}`}
         backLabel={`Back to ${lounge.name}`}
-        address={`${lounge.neighborhood} · ${lounge.city} · ${contact.address}`}
+        address={`${lounge.neighborhood} · ${lounge.city} · ${lounge.address}`}
         headerBadge={<StatusChip available>Accepting bookings</StatusChip>}
         topbarRight={
           <a
-            href={`tel:${contact.phone.replace(/[^\d+]/g, "")}`}
+            href={`tel:${lounge.phone.replace(/[^\d+]/g, "")}`}
             className="flex items-center gap-2 text-[12.5px] font-bold tracking-[0.04em] text-accent-strong"
           >
             <Phone size={16} strokeWidth={1.8} aria-hidden />

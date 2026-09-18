@@ -6,17 +6,23 @@ import { UserRound } from "lucide-react";
 import { useBooking } from "./booking-context";
 import { MonthCalendar } from "@/components/ui/date-picker";
 import { TimeSlotGrid } from "@/components/ui/time-slot";
-import { TODAY } from "@/lib/availability";
+import { TODAY, addDays } from "@/lib/availability";
 import {
   ADMISSION_COUNT,
   SPECIAL_REQUEST_MAX_LENGTH,
   addMonths,
+  daysInMonth,
   monthCalendar,
   slotsFor,
   startOfMonth,
   type BookingSlot,
 } from "@/lib/booking";
-import { formatWeekdayDate } from "@/lib/lounge-profile";
+import {
+  fetchAvailability,
+  formatWeekdayDate,
+  type AvailabilityCell,
+} from "@/lib/lounge-profile";
+import { createClient } from "@/lib/supabase/client";
 
 const MONTH_LABEL_FORMAT = new Intl.DateTimeFormat("en-US", {
   month: "long",
@@ -27,15 +33,38 @@ const MONTH_LABEL_FORMAT = new Intl.DateTimeFormat("en-US", {
  * Story 4.1 — Paso 1 "Visit details" (`Main.dc.html`). Date picker mensual
  * que arranca en hoy, slots de llegada, admisión fija para un miembro y
  * peticiones especiales con contador de 100 caracteres.
+ *
+ * Backend real: `fetchAvailability` (Epic 3) trae las celdas del mes
+ * completo de una vez — `monthCalendar`/`slotsFor` (Epic 4) ya no calculan
+ * nada, solo agregan esas celdas.
  */
 export function VisitDetailsForm() {
   const { lounge, draft, update } = useBooking();
   const [monthIso, setMonthIso] = React.useState(() => startOfMonth(TODAY));
+  const [cells, setCells] = React.useState<AvailabilityCell[]>([]);
 
-  const days = React.useMemo(() => monthCalendar(lounge, monthIso), [lounge, monthIso]);
+  React.useEffect(() => {
+    const supabase = createClient();
+    let active = true;
+    const start = startOfMonth(monthIso);
+    const end = addDays(start, daysInMonth(start) - 1);
+
+    fetchAvailability(supabase, lounge, start, end).then((monthCells) => {
+      if (active) setCells(monthCells);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [lounge, monthIso]);
+
+  const days = React.useMemo(() => monthCalendar(monthIso, cells), [monthIso, cells]);
   const slots = React.useMemo(
-    () => (draft.dateIso ? slotsFor(lounge, draft.dateIso) : []),
-    [lounge, draft.dateIso],
+    () =>
+      draft.dateIso
+        ? slotsFor(cells.filter((cell) => cell.dateIso === draft.dateIso))
+        : [],
+    [cells, draft.dateIso],
   );
 
   function selectDate(dateIso: string) {

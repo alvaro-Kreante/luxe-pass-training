@@ -1,9 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BookingProvider } from "@/components/booking/booking-context";
-import { LOUNGES } from "@/lib/lounges";
+import type { LoungeProfile } from "@/lib/lounge-profile";
+import { createClient } from "@/lib/supabase/client";
+import { signUpConfirmedAndSignIn } from "@/lib/testing/confirmed-user";
+import { fetchAinsworthProfile } from "@/lib/testing/lounge-fixture";
 
 import ConfirmedPage from "./page";
 
@@ -28,7 +31,17 @@ beforeEach(() => {
   replace.mockClear();
 });
 
-const ainsworth = LOUNGES.find((lounge) => lounge.id === "the-ainsworth")!;
+let ainsworth: LoungeProfile;
+
+beforeAll(async () => {
+  const supabase = createClient();
+  await signUpConfirmedAndSignIn(
+    supabase,
+    `book-confirmed-${Date.now()}@ensoleil-test.com`,
+    "EnSoleil!2026",
+  );
+  ainsworth = await fetchAinsworthProfile(supabase);
+});
 
 describe("guardia de entrada", () => {
   it("vuelve al paso 1 si no hay una reserva confirmada en el borrador", () => {
@@ -48,7 +61,12 @@ describe("con una reserva confirmada", () => {
       <BookingProvider
         lounge={ainsworth}
         covered={false}
-        initialDraft={{ dateIso: "2025-09-14", time: "3:30 PM" }}
+        initialDraft={{
+          dateIso: "2025-09-14",
+          time: "3:30 PM",
+          bookingId: "11111111-1111-1111-1111-111111111111",
+          bookingStatus: "confirmed",
+        }}
       >
         <ConfirmedPage />
       </BookingProvider>,

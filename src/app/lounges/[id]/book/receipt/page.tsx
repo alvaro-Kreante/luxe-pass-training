@@ -5,33 +5,37 @@ import { useRouter } from "next/navigation";
 
 import { useBooking } from "@/components/booking/booking-context";
 import { buttonVariants } from "@/components/ui/button";
-import { TAX_RATE, bookingReference, formatCurrency, pricingFor } from "@/lib/booking";
-import { contactFor, formatWeekdayDate } from "@/lib/lounge-profile";
+import { TAX_RATE, bookingReferenceFromId, formatCurrency, pricingFor } from "@/lib/booking";
+import { formatWeekdayDate } from "@/lib/lounge-profile";
 import { SAMPLE_MEMBER } from "@/lib/member";
 import { cn } from "@/lib/utils";
 
 /**
- * Story 4.2 — "Payment confirmation email receipt" (`Receipt.dc.html`).
- * DESIGN-SYSTEM.md §5 patrón 20 — email de marca, sin App shell. Sin
- * backend real, este criterio se cubre visualmente: la pantalla del email
- * tal como llegaría, alcanzable desde `/book/confirmed`.
+ * Story 4.2/5.1 — "Payment confirmation email receipt" (`Receipt.dc.html`).
+ * DESIGN-SYSTEM.md §5 patrón 20 — email de marca, sin App shell. El email
+ * real ya se envía de verdad (Database Webhook -> Edge Function
+ * `send-booking-receipt` -> Brevo, ver `supabase/schemas/booking_receipts.sql`
+ * y CLAUDE.md §Email de recibo de reserva); esta pantalla es su espejo
+ * dentro de la app, alcanzable desde `/book/confirmed`. `SAMPLE_MEMBER` es
+ * el nombre/email de muestra que sigue usando el resto del shell de la app
+ * (identidad del miembro sin conectar en todo el proyecto, no solo aquí) —
+ * el email real, en cambio, sí usa el nombre/email reales del firmante.
  */
 export default function ReceiptPage() {
   const router = useRouter();
   const { lounge, covered, draft } = useBooking();
 
   React.useEffect(() => {
-    if (!draft.dateIso || !draft.time) {
+    if (!draft.dateIso || !draft.time || !draft.bookingId) {
       router.replace(`/lounges/${lounge.id}/book`);
     }
-  }, [draft.dateIso, draft.time, lounge.id, router]);
+  }, [draft.dateIso, draft.time, draft.bookingId, lounge.id, router]);
 
-  if (!draft.dateIso || !draft.time) return null;
+  if (!draft.dateIso || !draft.time || !draft.bookingId) return null;
 
-  const contact = contactFor(lounge);
-  const reference = bookingReference(lounge.id, draft.dateIso, draft.time);
+  const reference = bookingReferenceFromId(draft.bookingId);
   const pricing = pricingFor(covered);
-  const mapsHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(contact.address)}`;
+  const mapsHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lounge.address)}`;
 
   return (
     <div className="surface-blush flex min-h-screen items-start justify-center px-6 py-8">
@@ -78,7 +82,7 @@ export default function ReceiptPage() {
             <ReceiptField
               label="Lounge"
               value={lounge.name}
-              detail={`${contact.address} · Level 2`}
+              detail={`${lounge.address} · Level 2`}
             />
             <ReceiptField
               label="When"

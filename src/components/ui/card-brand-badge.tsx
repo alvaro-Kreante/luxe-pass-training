@@ -4,16 +4,19 @@ import { cn } from "@/lib/utils";
  * DESIGN-SYSTEM.md §4 — Marca de tarjeta.
  * Rectángulo 44×30, radius 7px, texto 10.5px/800.
  */
-const BRAND_LABEL = {
+const BRAND_LABEL: Record<string, string> = {
   visa: "VISA",
   mastercard: "MC",
-} as const;
+  amex: "AMEX",
+  discover: "DISC",
+};
 
+/** Story 4.2 — marcas reales de Stripe (`payment_method.card.brand`), no solo las dos del mock. */
 export function CardBrandBadge({
   brand,
   className,
 }: {
-  brand: keyof typeof BRAND_LABEL;
+  brand: string;
   className?: string;
 }) {
   return (
@@ -25,7 +28,7 @@ export function CardBrandBadge({
         className,
       )}
     >
-      {BRAND_LABEL[brand]}
+      {BRAND_LABEL[brand] ?? brand.slice(0, 4).toUpperCase()}
     </span>
   );
 }

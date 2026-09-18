@@ -20,6 +20,7 @@ export function PaymentErrorModal({
   onOpenChange,
   time,
   cardLabel,
+  message,
   reference,
   secondsLeft,
   onTryAgain,
@@ -29,6 +30,8 @@ export function PaymentErrorModal({
   onOpenChange: (open: boolean) => void;
   time: string;
   cardLabel: string;
+  /** Story 4.2 — motivo real que devuelve Stripe (`error.message`), en vez de una frase fija. */
+  message: string;
   reference: string;
   secondsLeft: number;
   onTryAgain: () => void;
@@ -41,7 +44,7 @@ export function PaymentErrorModal({
       open={open}
       onOpenChange={onOpenChange}
       title="We could not take the payment"
-      description={`Your bank declined the charge to the ${cardLabel}. Nothing was charged and the booking was not created.`}
+      description={`${message} Nothing was charged to your ${cardLabel}, and the booking was not created.`}
       media={
         <span className="mb-4 flex size-14 items-center justify-center rounded-full bg-accent-soft">
           <TriangleAlert size={26} strokeWidth={1.8} className="text-accent-strong" aria-hidden />
@@ -96,7 +99,7 @@ export function PaymentErrorModal({
             </span>
           }
           title="Use another payment method"
-          subtitle="Mastercard ending in 8801, a new card, Apple Pay or Google Pay."
+          subtitle="Another saved card, a new card, Apple Pay or Google Pay."
         />
         <PaymentOptionRow
           selected={selected === "different-time"}

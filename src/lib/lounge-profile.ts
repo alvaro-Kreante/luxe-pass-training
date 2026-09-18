@@ -412,26 +412,30 @@ interface ClosureTableRow {
 
 type LoungeAvailabilitySource = Pick<LoungeProfile, "id" | "bands" | "closedWeekdays">;
 
-export async function fetchWeeklyAvailability(
+/**
+ * Rango arbitrario de días (Story 4.1 — calendario mensual del booking flow
+ * pide un mes entero, no una semana). `fetchWeeklyAvailability` de abajo es
+ * el caso particular de 7 días que ya usaba la Story 3.2.
+ */
+export async function fetchAvailability(
   supabase: SupabaseClient,
   lounge: LoungeAvailabilitySource,
-  weekStartIso: string,
+  startIso: string,
+  endIso: string,
 ): Promise<AvailabilityCell[]> {
-  const weekEndIso = addDays(weekStartIso, 6);
-
   const [availabilityResult, closuresResult] = await Promise.all([
     supabase
       .from("lounge_availability")
       .select("date, band, seats_left")
       .eq("lounge_id", lounge.id)
-      .gte("date", weekStartIso)
-      .lte("date", weekEndIso),
+      .gte("date", startIso)
+      .lte("date", endIso),
     supabase
       .from("lounge_closures")
       .select("starts_on, ends_on, reason, reopens_label")
       .eq("lounge_id", lounge.id)
-      .lte("starts_on", weekEndIso)
-      .gte("ends_on", weekStartIso),
+      .lte("starts_on", endIso)
+      .gte("ends_on", startIso),
   ]);
 
   if (availabilityResult.error) throw availabilityResult.error;
@@ -443,7 +447,10 @@ export async function fetchWeeklyAvailability(
   }
 
   const closures = closuresResult.data as ClosureTableRow[];
-  const days = Array.from({ length: 7 }, (_, i) => addDays(weekStartIso, i));
+  const dayCount = Math.round(
+    (parseDate(endIso).getTime() - parseDate(startIso).getTime()) / 86_400_000,
+  ) + 1;
+  const days = Array.from({ length: dayCount }, (_, i) => addDays(startIso, i));
   const cells: AvailabilityCell[] = [];
 
   for (const dateIso of days) {
@@ -491,6 +498,15 @@ export async function fetchWeeklyAvailability(
   }
 
   return cells;
+}
+
+/** Semana concreta (Story 3.2) — caso particular de `fetchAvailability`. */
+export async function fetchWeeklyAvailability(
+  supabase: SupabaseClient,
+  lounge: LoungeAvailabilitySource,
+  weekStartIso: string,
+): Promise<AvailabilityCell[]> {
+  return fetchAvailability(supabase, lounge, weekStartIso, addDays(weekStartIso, 6));
 }
 
 /** Cierres vigentes que tocan la semana de `weekStartIso` — para `ClosureBanner`. */
@@ -554,68 +570,20 @@ export function formatWeekdayDate(dateIso: string): string {
 }
 
 /* ------------------------------------------------------------------ */
-/* Legacy — Epic 4-9 (mockup, `lib/lounges.ts`), hasta que se conecten  */
+/* Legacy — mock de disponibilidad, vivo a propósito para Epic 3       */
 /* ------------------------------------------------------------------ */
 
 /**
- * `booking.ts` y las pantallas de `/lounges/[id]/book/*` (Epic 4, sin
- * conectar) siguen derivando contacto/disponibilidad del catálogo mock con
- * la misma fórmula de hash de antes de Epic 3 — no se tocan hasta que esas
- * historias se conecten a Supabase a su vez (ver CLAUDE.md §Alcance).
+ * `contactFor`/`LoungeContact` (contacto derivado del catálogo mock) se
+ * retiraron al conectar Epic 4 — las pantallas de `/lounges/[id]/book/*`
+ * leen `lounge.address`/`phone`/etc. reales de `LoungeProfile` en su lugar.
+ *
+ * `weeklyAvailability`/`closureCovering`/`closuresFor`/`CLOSURES` siguen
+ * vivas: no las usa ningún epic sin conectar, pero
+ * `app/lounges/[id]/availability/page.test.tsx` (Story 3.2, backend real)
+ * las usa como predictor offline de la fórmula determinista que la semilla
+ * de `lounge_availability` reprodujo — no se tocan.
  */
-
-export interface LoungeContact {
-  address: string;
-  phone: string;
-  email: string;
-  website: string;
-  receptionNote: string;
-}
-
-const AREA_CODE_BY_CITY: Record<string, string> = {
-  "new-york": "212",
-  newark: "973",
-  "new-rochelle": "914",
-  miami: "305",
-};
-
-const STATE_BY_CITY: Record<string, string> = {
-  "new-york": "NY",
-  newark: "NJ",
-  "new-rochelle": "NY",
-  miami: "FL",
-};
-
-const CONTACT_OVERRIDES: Record<string, LoungeContact> = {
-  "the-ainsworth": {
-    address: "122 E 45th St, New York, NY 10017",
-    phone: "+1 (212) 555-0184",
-    email: "reception@ainsworth.example",
-    website: "ainsworth.example",
-    receptionNote:
-      "Reception is on Level 2. Show your booking confirmation on arrival.",
-  },
-};
-
-export function contactFor(lounge: Lounge): LoungeContact {
-  const override = CONTACT_OVERRIDES[lounge.id];
-  if (override) return override;
-
-  const hash = hashOf(lounge.id);
-  const areaCode = AREA_CODE_BY_CITY[lounge.cityId] ?? "212";
-  const state = STATE_BY_CITY[lounge.cityId] ?? "NY";
-  const streetNumber = 100 + (hash % 800);
-  const phoneDigits = String(1000 + (hash % 9000)).padStart(4, "0");
-  const zip = String(10001 + (hash % 900));
-
-  return {
-    address: `${streetNumber} ${lounge.neighborhood} Ave, ${lounge.city}, ${state} ${zip}`,
-    phone: `+1 (${areaCode}) 555-${phoneDigits}`,
-    email: `reception@${lounge.id}.example`,
-    website: `${lounge.id}.example`,
-    receptionNote: "Show your booking confirmation at reception on arrival.",
-  };
-}
 
 /** Solo The Ainsworth declara un cierre — el que dibuja `Closure.dc.html`. */
 const CLOSURES: Record<string, Closure[]> = {

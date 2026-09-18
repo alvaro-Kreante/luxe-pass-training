@@ -32,3 +32,34 @@ export async function signUpConfirmedAndSignIn(
   });
   if (signInError) throw signInError;
 }
+
+/**
+ * Como `signUpConfirmedAndSignIn`, más una fila de `profiles` mínima (los
+ * campos requeridos por la Story 1.1). Para tests que dependen de que el
+ * miembro ya haya completado /onboarding — p. ej. Story 4.2, cuyo
+ * `ensureStripeCustomer` lee/escribe `profiles.stripe_customer_id`.
+ */
+export async function signUpConfirmedMemberAndSignIn(
+  supabase: SupabaseClient,
+  email: string,
+  password: string,
+) {
+  await signUpConfirmedAndSignIn(supabase, email, password);
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("signUpConfirmedAndSignIn did not leave a session");
+
+  const { error } = await supabase.from("profiles").insert({
+    id: user.id,
+    full_name: "Test Member",
+    phone: "+15555550100",
+    city: "New York",
+    industry: "Testing",
+    terms_accepted_at: new Date().toISOString(),
+  });
+  if (error) throw error;
+
+  return user;
+}

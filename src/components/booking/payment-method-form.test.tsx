@@ -1,20 +1,50 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { BookingProvider, useBooking } from "./booking-context";
 import { PaymentMethodForm } from "./payment-method-form";
 import { NEW_CARD_OPTION_ID, SAMPLE_PAYMENT_METHODS } from "@/lib/booking";
-import { LOUNGES } from "@/lib/lounges";
+import type { LoungeProfile } from "@/lib/lounge-profile";
+import { createClient } from "@/lib/supabase/client";
+import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
+import { fetchAinsworthProfile } from "@/lib/testing/lounge-fixture";
+import { attachTestCard, setDefaultPaymentMethod } from "@/lib/testing/stripe-fixture";
 
 /**
- * Story 4.2 — Payment Processing.
- * Criterios: Stripe integration, credit/debit cards, Apple Pay/Google Pay,
- * payment method storage, subscription pricing when the visit is covered.
+ * Story 4.2 — Payment Processing, conectada a Stripe real. Requiere
+ * `supabase functions serve --env-file supabase/functions/.env` corriendo
+ * (ver `src/lib/stripe-payments.test.ts`) — las tarjetas guardadas salen de
+ * un Customer de Stripe real, sembrado aquí con `pm_card_visa` (tarjeta de
+ * prueba real, no un mock).
  */
-const ainsworth = LOUNGES.find((lounge) => lounge.id === "the-ainsworth")!;
-const defaultMethod = SAMPLE_PAYMENT_METHODS.find((method) => method.isDefault)!;
-const otherMethod = SAMPLE_PAYMENT_METHODS.find((method) => !method.isDefault)!;
+let ainsworth: LoungeProfile;
+let otherCardId: string;
+
+beforeAll(async () => {
+  const supabase = createClient();
+  const user = await signUpConfirmedMemberAndSignIn(
+    supabase,
+    `payment-method-form-${Date.now()}@ensoleil-test.com`,
+    "EnSoleil!2026",
+  );
+  ainsworth = await fetchAinsworthProfile(supabase);
+
+  // `listSavedPaymentMethods` crea el Customer de Stripe de forma perezosa
+  // (ver `ensureStripeCustomer`) — se llama una vez para tener su id.
+  const { listSavedPaymentMethods } = await import("@/lib/stripe-payments");
+  await listSavedPaymentMethods(supabase);
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("stripe_customer_id")
+    .eq("id", user.id)
+    .single();
+  const customerId = profile!.stripe_customer_id as string;
+
+  const defaultCardId = await attachTestCard(customerId);
+  await setDefaultPaymentMethod(customerId, defaultCardId);
+  otherCardId = await attachTestCard(customerId);
+});
 
 function DraftInspector() {
   const { draft } = useBooking();
@@ -23,7 +53,11 @@ function DraftInspector() {
 
 function renderForm(covered = false) {
   return render(
-    <BookingProvider lounge={ainsworth} covered={covered}>
+    <BookingProvider
+      lounge={ainsworth}
+      covered={covered}
+      initialDraft={{ dateIso: "2025-09-01", time: "1:00 PM", band: "afternoon" }}
+    >
       <PaymentMethodForm />
       <DraftInspector />
     </BookingProvider>,
@@ -31,21 +65,27 @@ function renderForm(covered = false) {
 }
 
 describe("camino por defecto — day pass", () => {
-  it("preselecciona el método de pago marcado por defecto", () => {
+  it("preselecciona el método de pago marcado por defecto", async () => {
     renderForm();
 
-    expect(screen.getByTestId("draft")).toHaveTextContent(defaultMethod.id);
+    await waitFor(() =>
+      expect(screen.getByTestId("draft")).not.toHaveTextContent("none"),
+    );
+    expect(screen.getByText("Default")).toBeInTheDocument();
   });
 
   it("elegir otro método guardado actualiza el borrador", async () => {
     const user = userEvent.setup({ delay: null });
     renderForm();
 
-    await user.click(
-      screen.getByRole("radio", { name: new RegExp(`ending in ${otherMethod.last4}`) }),
-    );
+    const removableCard = await screen.findByRole("radio", {
+      name: (name) => /ending in \d{4}/.test(name) && !name.includes("Default"),
+    });
+    await user.click(removableCard);
 
-    expect(screen.getByTestId("draft")).toHaveTextContent(otherMethod.id);
+    await waitFor(() =>
+      expect(screen.getByTestId("draft")).toHaveTextContent(otherCardId),
+    );
   });
 
   it("elegir 'Use a new card' selecciona la opción de tarjeta nueva", async () => {
@@ -68,15 +108,18 @@ describe("camino por defecto — day pass", () => {
     const user = userEvent.setup({ delay: null });
     renderForm();
 
-    await user.click(screen.getByRole("link", { name: "Remove" }));
+    const removeLinks = await screen.findAllByRole("link", { name: "Remove" });
+    await user.click(removeLinks[0]);
 
-    expect(
-      screen.queryByText(new RegExp(`ending in ${otherMethod.last4}`)),
-    ).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getAllByRole("radio", { name: /ending in/ })).toHaveLength(1);
+    });
   });
 });
 
 describe("visita cubierta por la membresía", () => {
+  const defaultMethod = SAMPLE_PAYMENT_METHODS.find((method) => method.isDefault)!;
+
   it("no exige método de pago y explica que no se cobra nada", () => {
     renderForm(true);
 

@@ -427,6 +427,18 @@ deno_version = 2
 [functions.send-email]
 verify_jwt = false
 
+# Story 4.2 — Stripe llama a este webhook sin ningún JWT de Supabase, solo
+# con la cabecera `stripe-signature` (que la function verifica ella misma
+# con `STRIPE_WEBHOOK_SECRET`, igual que `send-email` con standardwebhooks).
+[functions.stripe-webhook]
+verify_jwt = false
+
+# Story 4.2/5.1 — el Database Webhook de `bookings` llama a esta function
+# desde Postgres (pg_net), sin ningún JWT de Supabase — la propia function
+# verifica la cabecera `x-webhook-secret` contra `BOOKING_RECEIPT_WEBHOOK_SECRET`.
+[functions.send-booking-receipt]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54337

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import {
   ADMISSION_COUNT,
@@ -7,30 +7,51 @@ import {
   NEW_CARD_OPTION_ID,
   SAMPLE_PAYMENT_METHODS,
   SPECIAL_REQUEST_MAX_LENGTH,
-  WAITLIST_THRESHOLD_SEATS,
   addMinutesToTime,
-  bookingReference,
+  bookingReferenceFromId,
+  confirmBooking,
   errorReference,
   formatCountdown,
   formatWholeCurrency,
-  isAtRiskOfWaitlist,
+  joinWaitlist,
   monthCalendar,
+  monthDayStatus,
   paymentWillDecline,
   pricingFor,
   slotsFor,
+  type BookingRequest,
 } from "./booking";
 import { TODAY, addDays } from "./availability";
 import { LOUNGES } from "./lounges";
+import {
+  fetchAvailability,
+  type AvailabilityCell,
+  type LoungeProfile,
+} from "./lounge-profile";
+import { createClient } from "./supabase/client";
+import { signUpConfirmedAndSignIn } from "./testing/confirmed-user";
+import { fetchAinsworthProfile, findPredictedSlot } from "./testing/lounge-fixture";
 
 /**
  * Story 4.1 (Seamless Booking Flow) y Story 4.2 (Payment Processing).
  * Criterios en docs/specs/epic-4-booking-system/story-4.1-*.md y story-4.2-*.md
+ *
+ * `monthCalendar`/`monthDayStatus`/`slotsFor` son puras (reciben celdas ya
+ * resueltas); `confirmBooking`/`joinWaitlist` corren contra Supabase local
+ * real (RPC `confirm_booking`/`join_waitlist`), como exige la metodología de
+ * test del proyecto.
  */
 
 const ainsworth = LOUNGES.find((lounge) => lounge.id === "the-ainsworth")!;
-const closedOnSundays = LOUNGES.find((lounge) =>
-  lounge.closedWeekdays?.includes(0),
-)!;
+
+function cell(
+  dateIso: string,
+  band: AvailabilityCell["band"],
+  status: AvailabilityCell["status"],
+  seatsLeft: number | null,
+): AvailabilityCell {
+  return { dateIso, band, status, seatsLeft };
+}
 
 describe("admisión y peticiones especiales", () => {
   it("la admisión es siempre de un solo miembro", () => {
@@ -42,47 +63,86 @@ describe("admisión y peticiones especiales", () => {
   });
 });
 
-describe("monthCalendar — date picker mensual", () => {
-  it("marca como pasados los días anteriores a hoy", () => {
-    const days = monthCalendar(ainsworth, TODAY.slice(0, 7) + "-01");
-    const yesterday = days.find((day) => day.dateIso < TODAY);
+describe("monthDayStatus — a partir de celdas reales", () => {
+  it("marca como pasados los días anteriores a hoy, sin mirar las celdas", () => {
+    const yesterday = addDays(TODAY, -1);
 
-    expect(yesterday?.status).toBe("past");
+    expect(monthDayStatus(yesterday, [])).toBe("past");
   });
 
-  it("marca hoy con su propio estado, distinto de 'open'", () => {
-    const days = monthCalendar(ainsworth, TODAY.slice(0, 7) + "-01");
-    const today = days.find((day) => day.dateIso === TODAY);
+  it("marca hoy con su propio estado, aunque todas sus celdas estén 'past'", () => {
+    const cells = [cell(TODAY, "morning", "past", null)];
 
-    expect(today?.status).toBe("today");
+    expect(monthDayStatus(TODAY, cells)).toBe("today");
   });
 
   it("cierra los días fuera de la ventana de reserva de 60 días", () => {
-    const farMonth = addDays(TODAY, BOOKING_WINDOW_DAYS + 40).slice(0, 7) + "-01";
-    const days = monthCalendar(ainsworth, farMonth);
-    const beyondWindow = days.find(
-      (day) => day.dateIso > addDays(TODAY, BOOKING_WINDOW_DAYS),
-    );
+    const farDate = addDays(TODAY, BOOKING_WINDOW_DAYS + 5);
 
-    expect(beyondWindow?.status).toBe("closed");
+    expect(monthDayStatus(farDate, [])).toBe("closed");
   });
 
-  it("cierra los días de la semana que el lounge no admite", () => {
-    const days = monthCalendar(
-      closedOnSundays,
-      TODAY.slice(0, 7) + "-01",
-    );
-    const sunday = days.find(
-      (day) => new Date(`${day.dateIso}T00:00:00Z`).getUTCDay() === 0 && day.dateIso > TODAY,
-    );
+  it("cierra un día sin ninguna celda abierta", () => {
+    const date = addDays(TODAY, 5);
+    const cells = [
+      cell(date, "morning", "closed", null),
+      cell(date, "afternoon", "closed", null),
+    ];
 
-    expect(sunday?.status).toBe("closed");
+    expect(monthDayStatus(date, cells)).toBe("closed");
+  });
+
+  it("abre un día con al menos una celda disponible", () => {
+    const date = addDays(TODAY, 5);
+    const cells = [
+      cell(date, "morning", "full", 0),
+      cell(date, "afternoon", "available", 4),
+    ];
+
+    expect(monthDayStatus(date, cells)).toBe("open");
+  });
+
+  it("marca 'full' un día con celdas abiertas pero ninguna disponible", () => {
+    const date = addDays(TODAY, 5);
+    const cells = [cell(date, "morning", "full", 0)];
+
+    expect(monthDayStatus(date, cells)).toBe("full");
+  });
+});
+
+describe("monthCalendar — date picker mensual", () => {
+  it("agrega el estado de cada día a partir de sus celdas", () => {
+    const monthIso = TODAY.slice(0, 7) + "-01";
+    const futureOpenDate = addDays(TODAY, 3);
+    const cells = [cell(futureOpenDate, "morning", "available", 5)];
+
+    const days = monthCalendar(monthIso, cells);
+    const found = days.find((day) => day.dateIso === futureOpenDate);
+
+    expect(found?.status).toBe("open");
+  });
+
+  it("un día sin celdas (fuera del rango consultado) cierra", () => {
+    const monthIso = TODAY.slice(0, 7) + "-01";
+    const days = monthCalendar(monthIso, []);
+    const futureDay = days.find((day) => day.dateIso > TODAY);
+
+    expect(futureDay?.status).toBe("closed");
   });
 });
 
 describe("slotsFor — slots de llegada", () => {
+  const dateIso = addDays(TODAY, 5);
+
   it("devuelve los cinco horarios fijos del artboard", () => {
-    const slots = slotsFor(ainsworth, addDays(TODAY, 5));
+    const cells = [
+      cell(dateIso, "morning", "available", 6),
+      cell(dateIso, "afternoon", "available", 4),
+      cell(dateIso, "evening", "available", 3),
+      cell(dateIso, "late", "closed", null),
+    ];
+
+    const slots = slotsFor(cells);
 
     expect(slots.map((slot) => slot.time)).toEqual([
       "8:00 AM",
@@ -93,36 +153,47 @@ describe("slotsFor — slots de llegada", () => {
     ]);
   });
 
-  it("cierra todos los slots en un día que el lounge no admite", () => {
-    const nextSunday = Array.from({ length: 7 }, (_, i) => addDays(TODAY, i + 1)).find(
-      (dateIso) => new Date(`${dateIso}T00:00:00Z`).getUTCDay() === 0,
-    )!;
-    const slots = slotsFor(closedOnSundays, nextSunday);
+  it("cierra todos los slots de una franja cerrada", () => {
+    const cells = [
+      cell(dateIso, "morning", "closed", null),
+      cell(dateIso, "afternoon", "closed", null),
+      cell(dateIso, "evening", "closed", null),
+      cell(dateIso, "late", "closed", null),
+    ];
 
-    for (const slot of slots) {
+    for (const slot of slotsFor(cells)) {
       expect(slot.status).toBe("closed");
       expect(slot.seatsLeft).toBeNull();
     }
   });
 
   it("reparte las plazas de una franja entre sus slots sin superar el total", () => {
-    const dateIso = addDays(TODAY, 5);
-    const slots = slotsFor(ainsworth, dateIso);
-    const morningSlots = slots.filter((slot) => slot.band === "morning");
+    const cells = [
+      cell(dateIso, "morning", "available", 5),
+      cell(dateIso, "afternoon", "available", 2),
+      cell(dateIso, "evening", "available", 1),
+      cell(dateIso, "late", "closed", null),
+    ];
+
+    const morningSlots = slotsFor(cells).filter((slot) => slot.band === "morning");
     const total = morningSlots.reduce((sum, slot) => sum + (slot.seatsLeft ?? 0), 0);
 
     expect(morningSlots).toHaveLength(2);
-    expect(total).toBeGreaterThanOrEqual(0);
+    expect(total).toBe(5);
   });
 
-  it("un slot con 0 plazas queda completo", () => {
-    // Buscamos una fecha donde alguna franja del catálogo salga a 0 (sample determinista).
-    const dates = Array.from({ length: 30 }, (_, i) => addDays(TODAY, i));
-    const someFull = dates
-      .flatMap((dateIso) => slotsFor(ainsworth, dateIso))
-      .find((slot) => slot.seatsLeft === 0 && slot.status !== "closed" && slot.status !== "past");
+  it("un slot de una franja con 0 plazas queda completo", () => {
+    const cells = [
+      cell(dateIso, "morning", "full", 0),
+      cell(dateIso, "afternoon", "available", 2),
+      cell(dateIso, "evening", "available", 1),
+      cell(dateIso, "late", "closed", null),
+    ];
 
-    expect(someFull?.status).toBe("full");
+    for (const slot of slotsFor(cells).filter((slot) => slot.band === "morning")) {
+      expect(slot.status).toBe("full");
+      expect(slot.seatsLeft).toBe(0);
+    }
   });
 });
 
@@ -145,13 +216,7 @@ describe("pricingFor — Story 4.2", () => {
   });
 });
 
-describe("waitlist y pago — disparadores de muestra", () => {
-  it("un slot con pocas plazas se considera en riesgo de completarse", () => {
-    expect(isAtRiskOfWaitlist(WAITLIST_THRESHOLD_SEATS)).toBe(true);
-    expect(isAtRiskOfWaitlist(WAITLIST_THRESHOLD_SEATS + 1)).toBe(false);
-    expect(isAtRiskOfWaitlist(null)).toBe(false);
-  });
-
+describe("pago — disparador de muestra (Story 4.2, sin conectar)", () => {
   it("la tarjeta de muestra marcada como declinada falla el pago", () => {
     const declining = SAMPLE_PAYMENT_METHODS.find((method) => method.simulatesDecline)!;
     const succeeding = SAMPLE_PAYMENT_METHODS.find((method) => !method.simulatesDecline)!;
@@ -163,21 +228,21 @@ describe("waitlist y pago — disparadores de muestra", () => {
 });
 
 describe("referencias de reserva", () => {
-  it("genera una referencia estable con el formato LP-######", () => {
-    const reference = bookingReference("the-ainsworth", "2025-09-14", "3:30 PM");
+  it("bookingReferenceFromId genera una referencia estable con el formato LP-######", () => {
+    const reference = bookingReferenceFromId("11111111-1111-1111-1111-111111111111");
 
     expect(reference).toMatch(/^LP-\d{6}$/);
-    expect(bookingReference("the-ainsworth", "2025-09-14", "3:30 PM")).toBe(reference);
+    expect(bookingReferenceFromId("11111111-1111-1111-1111-111111111111")).toBe(reference);
   });
 
   it("dos reservas distintas producen referencias distintas", () => {
-    const a = bookingReference("the-ainsworth", "2025-09-14", "3:30 PM");
-    const b = bookingReference("the-ainsworth", "2025-09-15", "3:30 PM");
+    const a = bookingReferenceFromId("11111111-1111-1111-1111-111111111111");
+    const b = bookingReferenceFromId("22222222-2222-2222-2222-222222222222");
 
     expect(a).not.toBe(b);
   });
 
-  it("la referencia de error sigue el formato LP-ERR-####", () => {
+  it("la referencia de error sigue el formato LP-ERR-######", () => {
     const reference = errorReference("the-ainsworth", "2025-09-14", "3:30 PM");
 
     expect(reference).toMatch(/^LP-ERR-\d{6}$/);
@@ -213,5 +278,65 @@ describe("formatCountdown — Slot held for M:SS", () => {
     expect(formatCountdown(581)).toBe("9:41");
     expect(formatCountdown(60)).toBe("1:00");
     expect(formatCountdown(5)).toBe("0:05");
+  });
+});
+
+describe("confirmBooking / joinWaitlist — chequeo final de disponibilidad (Supabase real)", () => {
+  const supabase = createClient();
+  let ainsworthProfile: LoungeProfile;
+
+  beforeAll(async () => {
+    await signUpConfirmedAndSignIn(
+      supabase,
+      `booking-actions-${Date.now()}@ensoleil-test.com`,
+      "EnSoleil!2026",
+    );
+    ainsworthProfile = await fetchAinsworthProfile(supabase);
+  });
+
+  function requestFor(target: { dateIso: string; band: AvailabilityCell["band"]; time: string }): BookingRequest {
+    return {
+      loungeId: ainsworth.id,
+      dateIso: target.dateIso,
+      band: target.band,
+      time: target.time,
+      specialRequests: "",
+    };
+  }
+
+  it("confirma la reserva y decrementa las plazas reales cuando hay hueco", async () => {
+    // occurrence 1: distinta de las que usa summary/page.test.tsx (2 y 3)
+    // para que dos archivos de test no confirmen la misma plaza real.
+    const target = findPredictedSlot(ainsworth, "available", 1);
+    const before = await fetchAvailability(supabase, ainsworthProfile, target.dateIso, target.dateIso);
+    const beforeSeats = before.find((c) => c.band === target.band)!.seatsLeft!;
+
+    const booking = await confirmBooking(supabase, requestFor(target));
+
+    expect(booking?.status).toBe("confirmed");
+    expect(booking?.dateIso).toBe(target.dateIso);
+    expect(booking?.band).toBe(target.band);
+
+    const after = await fetchAvailability(supabase, ainsworthProfile, target.dateIso, target.dateIso);
+    const afterSeats = after.find((c) => c.band === target.band)!.seatsLeft!;
+
+    expect(afterSeats).toBe(beforeSeats - 1);
+  });
+
+  it("no confirma (devuelve null) cuando el slot ya está lleno", async () => {
+    const target = findPredictedSlot(ainsworth, "full", 1);
+
+    const booking = await confirmBooking(supabase, requestFor(target));
+
+    expect(booking).toBeNull();
+  });
+
+  it("join_waitlist crea la reserva como 'waitlisted' sin tocar las plazas", async () => {
+    const target = findPredictedSlot(ainsworth, "full", 1);
+
+    const booking = await joinWaitlist(supabase, requestFor(target));
+
+    expect(booking.status).toBe("waitlisted");
+    expect(booking.dateIso).toBe(target.dateIso);
   });
 });

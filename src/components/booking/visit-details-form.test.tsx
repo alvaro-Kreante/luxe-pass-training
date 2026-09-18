@@ -1,24 +1,48 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { BookingProvider, useBooking } from "./booking-context";
 import { VisitDetailsForm } from "./visit-details-form";
-import { TODAY } from "@/lib/availability";
-import { monthCalendar, startOfMonth } from "@/lib/booking";
+import { TODAY, addDays } from "@/lib/availability";
+import { mondayOf, weeklyAvailability, type LoungeProfile } from "@/lib/lounge-profile";
 import { LOUNGES } from "@/lib/lounges";
+import { createClient } from "@/lib/supabase/client";
+import { fetchAinsworthProfile } from "@/lib/testing/lounge-fixture";
+import { signUpConfirmedAndSignIn } from "@/lib/testing/confirmed-user";
 
 /**
  * Story 4.1 — Seamless Booking Flow.
  * Criterios: date picker starting from today, admission for one only,
  * special requests field with 100 char limit.
+ *
+ * Backend real: `VisitDetailsForm` trae la disponibilidad del mes con
+ * `fetchAvailability` contra Supabase local — estos tests corren con sesión
+ * real, no con el catálogo mock (ver CLAUDE.md §Metodología de test).
  */
-const ainsworth = LOUNGES.find((lounge) => lounge.id === "the-ainsworth")!;
+const ainsworthMock = LOUNGES.find((lounge) => lounge.id === "the-ainsworth")!;
 
-/** Un día futuro abierto de verdad — evita el domingo, que el lounge no admite. */
-const futureDate = monthCalendar(ainsworth, startOfMonth(TODAY)).find(
-  (day) => day.status === "open" && day.dateIso > TODAY,
-)!.dateIso;
+/** Día futuro abierto de verdad (predicho con la misma fórmula que la semilla). */
+const futureDate = Array.from({ length: 30 }, (_, i) => addDays(TODAY, i + 1))
+  .map((dateIso) => ({
+    dateIso,
+    cells: weeklyAvailability(ainsworthMock, mondayOf(dateIso)).filter(
+      (cell) => cell.dateIso === dateIso,
+    ),
+  }))
+  .find(({ cells }) => cells.some((cell) => cell.status === "available"))!.dateIso;
+
+let ainsworth: LoungeProfile;
+
+beforeAll(async () => {
+  const supabase = createClient();
+  await signUpConfirmedAndSignIn(
+    supabase,
+    `visit-details-${Date.now()}@ensoleil-test.com`,
+    "EnSoleil!2026",
+  );
+  ainsworth = await fetchAinsworthProfile(supabase);
+});
 
 function DraftInspector() {
   const { draft } = useBooking();
@@ -49,7 +73,10 @@ describe("date picker — arranca en hoy", () => {
     const user = userEvent.setup({ delay: null });
     renderForm();
 
-    await user.click(screen.getByRole("button", { name: String(Number(TODAY.slice(-2))) }));
+    const todayButton = await screen.findByRole("button", {
+      name: String(Number(TODAY.slice(-2))),
+    });
+    await user.click(todayButton);
 
     expect(screen.getByTestId("draft").textContent).toContain(TODAY);
   });
@@ -69,7 +96,10 @@ describe("selección de hora tras elegir fecha", () => {
     const user = userEvent.setup({ delay: null });
     renderForm();
 
-    await user.click(screen.getByRole("button", { name: String(Number(futureDate.slice(-2))) }));
+    const dayButton = await screen.findByRole("button", {
+      name: String(Number(futureDate.slice(-2))),
+    });
+    await user.click(dayButton);
 
     expect(screen.getByText(/Arrival time/)).toBeInTheDocument();
   });
@@ -78,12 +108,20 @@ describe("selección de hora tras elegir fecha", () => {
     const user = userEvent.setup({ delay: null });
     renderForm();
 
-    await user.click(screen.getByRole("button", { name: String(Number(futureDate.slice(-2))) }));
-    const openSlot = screen
-      .getAllByRole("button")
-      .find((button) => /^\d{1,2}:\d{2} (AM|PM) ·/.test(button.getAttribute("aria-label") ?? ""));
+    const dayButton = await screen.findByRole("button", {
+      name: String(Number(futureDate.slice(-2))),
+    });
+    await user.click(dayButton);
 
-    await user.click(openSlot!);
+    const openSlot = await waitFor(() => {
+      const slot = screen
+        .getAllByRole("button")
+        .find((button) => /^\d{1,2}:\d{2} (AM|PM) ·/.test(button.getAttribute("aria-label") ?? ""));
+      if (!slot) throw new Error("no open slot rendered yet");
+      return slot;
+    });
+
+    await user.click(openSlot);
 
     expect(screen.getByTestId("draft").textContent).not.toContain("· none ·");
   });

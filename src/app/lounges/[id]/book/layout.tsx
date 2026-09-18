@@ -4,7 +4,11 @@ import * as React from "react";
 import { notFound, useParams, useSearchParams } from "next/navigation";
 
 import { BookingProvider } from "@/components/booking/booking-context";
-import { LOUNGES } from "@/lib/lounges";
+import { StripeCheckoutBridge } from "@/components/booking/stripe-checkout-bridge";
+import { RequireSession } from "@/components/onboarding/require-session";
+import { AppShell } from "@/components/patterns/app-shell";
+import { fetchLoungeProfile, type LoungeProfile } from "@/lib/lounge-profile";
+import { createClient } from "@/lib/supabase/client";
 
 /**
  * Story 4.1/4.2 — el borrador de reserva es compartido por los tres pasos
@@ -17,25 +21,56 @@ import { LOUNGES } from "@/lib/lounges";
  * los enlaces internos del flujo (`/book` → `/book/payment` → `/book/summary`)
  * no repiten el query string, y si se releyera en cada navegación la variante
  * "cubierto por membresía" se perdería a mitad de flujo.
+ *
+ * Backend real (Epic 4): el lounge ya no sale de `LOUNGES` (catálogo mock) —
+ * `fetchLoungeProfile` contra Supabase, mismo patrón que `/lounges/[id]` y
+ * `/lounges/[id]/availability` (Epic 3).
  */
 export default function BookLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  return (
+    <RequireSession>
+      <BookLayoutContent>{children}</BookLayoutContent>
+    </RequireSession>
+  );
+}
+
+function BookLayoutContent({ children }: { children: React.ReactNode }) {
   const { id } = useParams<{ id: string }>();
   const searchParams = useSearchParams();
-  const lounge = LOUNGES.find((candidate) => candidate.id === id);
+  const [lounge, setLounge] = React.useState<LoungeProfile | null | undefined>(
+    undefined,
+  );
   const [covered] = React.useState(() => searchParams.get("covered") === "1");
 
-  if (!lounge) {
+  React.useEffect(() => {
+    const supabase = createClient();
+    let active = true;
+
+    fetchLoungeProfile(supabase, id).then((profile) => {
+      if (active) setLounge(profile);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  if (lounge === null) {
     notFound();
     return null;
   }
 
+  if (!lounge) {
+    return <AppShell padded={false}>{null}</AppShell>;
+  }
+
   return (
     <BookingProvider lounge={lounge} covered={covered}>
-      {children}
+      <StripeCheckoutBridge>{children}</StripeCheckoutBridge>
     </BookingProvider>
   );
 }

@@ -1,16 +1,31 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BookingProvider } from "@/components/booking/booking-context";
-import { WAITLIST_THRESHOLD_SEATS } from "@/lib/booking";
+import type { LoungeProfile } from "@/lib/lounge-profile";
 import { LOUNGES } from "@/lib/lounges";
+import { createClient } from "@/lib/supabase/client";
+import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
+import { fetchAinsworthProfile, findPredictedSlot } from "@/lib/testing/lounge-fixture";
+import { attachTestCard } from "@/lib/testing/stripe-fixture";
 
 import SummaryPage from "./page";
 
 /**
  * Story 4.1 — paso 3 "Review and confirm" (`Summary.dc.html`), con las
  * ramas de `Waitlist.dc.html` y `PaymentError.dc.html` del chequeo final.
+ *
+ * Backend real: "confirma"/"waitlist"/"pago rechazado" corren contra el RPC
+ * y Stripe reales (tarjeta guardada — `pm_card_visa` para el cargo que
+ * funciona, `pm_card_visa_chargeDeclined` para el que declina). Requiere
+ * `supabase functions serve --env-file supabase/functions/.env` corriendo
+ * (ver `src/lib/stripe-payments.test.ts`).
+ *
+ * El camino de "tarjeta nueva" (`<PaymentElement>` real) no se prueba aquí:
+ * Stripe.js no se puede montar en jsdom — se verifica con Playwright, igual
+ * que el mapa real de Epic 2 (ver `docs/design/COMPONENT-MAP.md` "Backend
+ * real — Epic 2").
  */
 const push = vi.fn();
 const replace = vi.fn();
@@ -25,7 +40,28 @@ beforeEach(() => {
   replace.mockClear();
 });
 
-const ainsworth = LOUNGES.find((lounge) => lounge.id === "the-ainsworth")!;
+const ainsworthMock = LOUNGES.find((lounge) => lounge.id === "the-ainsworth")!;
+let ainsworth: LoungeProfile;
+let workingCardId: string;
+
+beforeAll(async () => {
+  const supabase = createClient();
+  const user = await signUpConfirmedMemberAndSignIn(
+    supabase,
+    `book-summary-${Date.now()}@ensoleil-test.com`,
+    "EnSoleil!2026",
+  );
+  ainsworth = await fetchAinsworthProfile(supabase);
+
+  const { listSavedPaymentMethods } = await import("@/lib/stripe-payments");
+  await listSavedPaymentMethods(supabase);
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("stripe_customer_id")
+    .eq("id", user.id)
+    .single();
+  workingCardId = await attachTestCard(profile!.stripe_customer_id as string);
+});
 
 async function acceptTermsAndConfirm() {
   const user = userEvent.setup({ delay: null });
@@ -48,17 +84,19 @@ describe("guardia de entrada", () => {
   });
 });
 
-describe("camino feliz", () => {
+describe("camino feliz — tarjeta guardada real", () => {
   it("confirma y navega a la pantalla de confirmación", async () => {
+    const slot = findPredictedSlot(ainsworthMock, "available");
+
     render(
       <BookingProvider
         lounge={ainsworth}
         covered={false}
         initialDraft={{
-          dateIso: "2025-09-14",
-          time: "3:30 PM",
-          seatsLeft: WAITLIST_THRESHOLD_SEATS + 5,
-          paymentMethodId: "pm_visa_4242",
+          dateIso: slot.dateIso,
+          time: slot.time,
+          band: slot.band,
+          paymentMethodId: workingCardId,
         }}
       >
         <SummaryPage />
@@ -67,21 +105,26 @@ describe("camino feliz", () => {
 
     await acceptTermsAndConfirm();
 
-    expect(push).toHaveBeenCalledWith(`/lounges/${ainsworth.id}/book/confirmed`);
-  });
+    await vi.waitFor(
+      () => expect(push).toHaveBeenCalledWith(`/lounges/${ainsworth.id}/book/confirmed`),
+      { timeout: 10_000 },
+    );
+  }, 15_000);
 });
 
 describe("chequeo final — slot completo", () => {
   it("abre la waitlist en vez de confirmar", async () => {
+    const slot = findPredictedSlot(ainsworthMock, "full");
+
     render(
       <BookingProvider
         lounge={ainsworth}
         covered={false}
         initialDraft={{
-          dateIso: "2025-09-14",
-          time: "3:30 PM",
-          seatsLeft: WAITLIST_THRESHOLD_SEATS,
-          paymentMethodId: "pm_visa_4242",
+          dateIso: slot.dateIso,
+          time: slot.time,
+          band: slot.band,
+          paymentMethodId: workingCardId,
         }}
       >
         <SummaryPage />
@@ -90,22 +133,24 @@ describe("chequeo final — slot completo", () => {
 
     await acceptTermsAndConfirm();
 
-    expect(screen.getByText("That slot just filled up")).toBeInTheDocument();
+    await screen.findByText("That slot just filled up", {}, { timeout: 10_000 });
     expect(push).not.toHaveBeenCalled();
-  });
+  }, 15_000);
 });
 
-describe("chequeo final — pago rechazado", () => {
+describe("chequeo final — pago rechazado (Stripe real)", () => {
   it("abre el error de pago en vez de confirmar", async () => {
+    const slot = findPredictedSlot(ainsworthMock, "available");
+
     render(
       <BookingProvider
         lounge={ainsworth}
         covered={false}
         initialDraft={{
-          dateIso: "2025-09-14",
-          time: "3:30 PM",
-          seatsLeft: WAITLIST_THRESHOLD_SEATS + 5,
-          paymentMethodId: "pm_mc_8801",
+          dateIso: slot.dateIso,
+          time: slot.time,
+          band: slot.band,
+          paymentMethodId: "pm_card_visa_chargeDeclined",
         }}
       >
         <SummaryPage />
@@ -114,21 +159,24 @@ describe("chequeo final — pago rechazado", () => {
 
     await acceptTermsAndConfirm();
 
-    expect(screen.getByText("We could not take the payment")).toBeInTheDocument();
+    await screen.findByText("We could not take the payment", {}, { timeout: 10_000 });
     expect(push).not.toHaveBeenCalled();
-  });
+  }, 15_000);
 });
 
 describe("visita cubierta por la membresía", () => {
   it("confirma sin exigir un método de pago", async () => {
+    // occurrence 2: "camino feliz" ya confirmó de verdad la 1ª — no pisarla.
+    const slot = findPredictedSlot(ainsworthMock, "available", 2);
+
     render(
       <BookingProvider
         lounge={ainsworth}
         covered
         initialDraft={{
-          dateIso: "2025-09-14",
-          time: "3:30 PM",
-          seatsLeft: WAITLIST_THRESHOLD_SEATS + 5,
+          dateIso: slot.dateIso,
+          time: slot.time,
+          band: slot.band,
         }}
       >
         <SummaryPage />
@@ -137,6 +185,9 @@ describe("visita cubierta por la membresía", () => {
 
     await acceptTermsAndConfirm();
 
-    expect(push).toHaveBeenCalledWith(`/lounges/${ainsworth.id}/book/confirmed`);
-  });
+    await vi.waitFor(
+      () => expect(push).toHaveBeenCalledWith(`/lounges/${ainsworth.id}/book/confirmed`),
+      { timeout: 10_000 },
+    );
+  }, 15_000);
 });

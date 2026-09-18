@@ -13,15 +13,16 @@ import { AppShell } from "@/components/patterns/app-shell";
 import { ConfirmationCard } from "@/components/patterns/confirmation-card";
 import { buttonVariants } from "@/components/ui/button";
 import { addDays } from "@/lib/availability";
-import { bookingReference as computeBookingReference } from "@/lib/booking";
-import { contactFor, formatWeekdayDate } from "@/lib/lounge-profile";
+import { bookingReferenceFromId } from "@/lib/booking";
+import { formatWeekdayDate } from "@/lib/lounge-profile";
 import { SAMPLE_MEMBER } from "@/lib/member";
 import { cn } from "@/lib/utils";
 
 /**
  * Story 4.1 — "Immediate booking confirmation screen" (`Confirmed.dc.html`).
  * DESIGN-SYSTEM.md §5 patrón 10 para el rail oscuro; el resto es App shell
- * con miga "My Pass › Upcoming visit".
+ * con miga "My Pass › Upcoming visit". Conectada a Supabase: solo se llega
+ * aquí tras `confirm_booking`, que deja `draft.bookingId` con el id real.
  */
 export default function ConfirmedPage() {
   const router = useRouter();
@@ -30,16 +31,15 @@ export default function ConfirmedPage() {
   const [shareOpen, setShareOpen] = React.useState(false);
 
   React.useEffect(() => {
-    if (!draft.dateIso || !draft.time) {
+    if (!draft.dateIso || !draft.time || !draft.bookingId) {
       router.replace(`/lounges/${lounge.id}/book`);
     }
-  }, [draft.dateIso, draft.time, lounge.id, router]);
+  }, [draft.dateIso, draft.time, draft.bookingId, lounge.id, router]);
 
-  if (!draft.dateIso || !draft.time) return null;
+  if (!draft.dateIso || !draft.time || !draft.bookingId) return null;
 
-  const contact = contactFor(lounge);
-  const reference = computeBookingReference(lounge.id, draft.dateIso, draft.time);
-  const mapsHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(contact.address)}`;
+  const reference = bookingReferenceFromId(draft.bookingId);
+  const mapsHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lounge.address)}`;
   const cancelDeadline = `${draft.time} on ${formatWeekdayDate(addDays(draft.dateIso, -1))}`;
 
   return (
@@ -145,7 +145,7 @@ export default function ConfirmedPage() {
         open={calendarOpen}
         onOpenChange={setCalendarOpen}
         lounge={lounge}
-        address={contact.address}
+        address={lounge.address}
         dateIso={draft.dateIso}
         time={draft.time}
         bookingReference={reference}
