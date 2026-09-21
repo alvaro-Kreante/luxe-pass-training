@@ -171,16 +171,22 @@ use en local.
       `luxepass-prod`: signup, confirmación y forgot-password, los tres
       funcionando (13 sept 2026). PRs #12, #13, #14 (`staging`) y #15
       (`staging` → `main`).
-- [ ] **Epic 4 (Stripe + recibo de reserva, 18 sept 2026) sin desplegar.**
-      Completo y verificado en local, pero `deploy.yml` no se amplió
-      todavía — sigue desplegando solo `send-email`. Faltan las 5 Edge
-      Functions nuevas (`stripe-create-checkout-session`,
-      `stripe-charge-saved-method`, `stripe-payment-methods`,
-      `stripe-webhook`, `send-booking-receipt`), sus secrets de GitHub, los
-      2 secretos de Vault por proyecto remoto (`booking_receipt_webhook_url`/
-      `_secret`, sin equivalente a `config push`) y
-      `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` en Vercel. Checklist completo en
-      `docs/PENDIENTES.md` §4.6.
+- [x] `deploy.yml` ampliado (21 sept 2026) con las 5 Edge Functions de Epic 4
+      (`stripe-create-checkout-session`, `stripe-charge-saved-method`,
+      `stripe-payment-methods`, `stripe-webhook`, `send-booking-receipt`),
+      mismo patrón que `send-email`.
+- [x] Secretos de Vault (`booking_receipt_webhook_url`/`_secret`) dados de
+      alta en `luxepass-dev`. `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` dado de
+      alta en Vercel. Webhook de Stripe registrado (endpoint
+      `stripe-webhook`).
+- [ ] **Epic 4 — faltan 2 secrets de GitHub antes del próximo push a
+      `staging`:** `STRIPE_WEBHOOK_SECRET_DEV` y
+      `BOOKING_RECEIPT_WEBHOOK_SECRET_DEV` (valores ya generados/copiados
+      por el desarrollador, nunca pasaron por el asistente — hay que
+      cargarlos a mano en GitHub). `STRIPE_SECRET_KEY` ya está (repo,
+      compartido con `ci.yml`). Checklist completo en `docs/PENDIENTES.md`
+      §4.6. Reclamar la sandbox de Stripe antes del 24 sept (§4.5) sigue
+      pendiente de confirmar.
 - [x] `ci.yml` ampliado (21 sept 2026) para que el job `test` levante
       `supabase functions serve` en background con `STRIPE_SECRET_KEY` (la
       misma clave de test de la sandbox de Epic 4) antes de `npm test` —

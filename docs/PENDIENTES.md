@@ -375,41 +375,35 @@ con las migraciones de `bookings`/`payments`/`booking_receipts` aplicadas
 pero sin ninguna de sus Edge Functions ni secrets — el booking se rompería
 a mitad de camino (RPC sin nadie que cobre ni que mande el recibo).
 
-**Pendiente, en orden:**
+**Estado (21 sept 2026):**
 
-1. **Reclamar la sandbox de Stripe** (§4.5) o decidir una cuenta Stripe
-   distinta para `luxepass-dev`/`luxepass-prod`.
-2. **Secrets nuevos en GitHub** (mismo patrón que los de Brevo, ver
-   `docs/ci-cd/RESUMEN.md` §Secrets de GitHub a añadir): `STRIPE_SECRET_KEY`,
-   `STRIPE_WEBHOOK_SECRET` (uno por ambiente si se usan cuentas Stripe
-   distintas — o compartido si es la misma sandbox reclamada) y
-   `BOOKING_RECEIPT_WEBHOOK_SECRET_DEV`/`_PROD` (uno por proyecto, se
-   genera al crear el secreto de Vault del paso 4, mismo criterio que
-   `SEND_EMAIL_HOOK_SECRET_DEV`/`_PROD`).
-3. **Ampliar `deploy.yml`** (jobs `migrate-dev`/`migrate-prod`) con
-   `supabase secrets set` + `supabase functions deploy --no-verify-jwt`
-   para las 5 functions nuevas, mismo patrón que el paso ya existente de
-   `send-email` — requiere la skill `ci-cd-and-automation` antes de tocar
-   el workflow.
-4. **Dar de alta los 2 secretos de Vault, una vez por proyecto remoto**
-   (`booking_receipt_webhook_url`/`booking_receipt_webhook_secret`, ver
-   `CLAUDE.md` §Email de recibo de reserva) — la URL en remoto es la
-   pública del proyecto (`https://<project-ref>.supabase.co/functions/v1/send-booking-receipt`),
-   no `host.docker.internal` (eso es solo para local). Se hace a mano,
-   igual que el registro del Auth Hook de Epic 1 — no hay equivalente de
-   `supabase config push` para Vault.
-5. **`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` como env var de cada proyecto
-   Vercel** (`luxepass-dev`/`luxepass-prod`, ya montados — ver corrección
-   de §4.4). Puede ser la misma sandbox reclamada o una independiente por
-   ambiente — decisión de producto, no técnica.
-6. **Registrar el endpoint del webhook de Stripe** en el dashboard de cada
-   proyecto Stripe (Developers → Webhooks), apuntando a
-   `https://<project-ref>.supabase.co/functions/v1/stripe-webhook` — de ahí
-   sale el `STRIPE_WEBHOOK_SECRET` real del paso 2, distinto del que
-   imprime `stripe listen` en local.
+1. ⬜ **Reclamar la sandbox de Stripe** (§4.5) o decidir una cuenta Stripe
+   distinta para `luxepass-dev`/`luxepass-prod` — **expira el 24 sept**,
+   confirmar que se hizo.
+2. 🟡 **Secrets en GitHub** — parcial: `STRIPE_SECRET_KEY` ya dado de alta
+   (repo, compartido — el mismo que ya usa `ci.yml`). Faltan
+   `STRIPE_WEBHOOK_SECRET_DEV` (el `whsec_...` del endpoint de Stripe
+   registrado para `luxepass-dev`) y `BOOKING_RECEIPT_WEBHOOK_SECRET_DEV`
+   (el mismo valor que el secreto de Vault del paso 4) — ninguna de las dos
+   la tiene el asistente (las generó/copió el desarrollador directo en los
+   dashboards, nunca pasaron por el chat) así que hay que darlas de alta a
+   mano en GitHub → Settings → Secrets and variables → Actions. Los
+   `_PROD` correspondientes, cuando se decida el Stripe de producción.
+3. ✅ **`deploy.yml` ampliado** (21 sept 2026, jobs `migrate-dev`/
+   `migrate-prod`): `supabase secrets set` + `supabase functions deploy`
+   para las 5 functions nuevas, mismo patrón que `send-email`.
+4. ✅ **Secretos de Vault dados de alta** en `luxepass-dev`
+   (`booking_receipt_webhook_url`/`booking_receipt_webhook_secret`, hechos
+   a mano por SQL Editor — ver `CLAUDE.md` §Email de recibo de reserva).
+   Falta lo mismo en `luxepass-prod` cuando corresponda.
+5. ✅ **`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` en Vercel** — dado de alta.
+6. ✅ **Webhook de Stripe registrado** apuntando a
+   `https://<project-ref>.supabase.co/functions/v1/stripe-webhook` (de ahí
+   salió el `whsec_...` del paso 2).
 
-**Desbloquea:** los 6 pasos de arriba, en ese orden, antes de mergear esta
-rama a `staging`.
+**Desbloquea:** cargar los 2 secrets de GitHub que faltan en el paso 2, y
+confirmar el paso 1 (reclamo de la sandbox) — con eso, el próximo push a
+`staging` ya despliega Epic 4 completo a `luxepass-dev`.
 
 ---
 
