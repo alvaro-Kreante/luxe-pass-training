@@ -346,57 +346,6 @@ existente (key/Map ID de `luxepass-dev` y de `luxepass-prod` pueden ser el
 mismo par o pares distintos — decisión pendiente, no técnica) antes de
 promover esta rama a `staging`.
 
-### 4.6 Epic 4 (Stripe + recibo de reserva) sin desplegar a `staging` — checklist
-
-Epic 4 está completo y verificado en local (Story 4.1, 4.2, 4.3, más el
-email real de recibo — ver Resueltos más abajo), pero `deploy.yml` **hoy
-solo despliega la Edge Function `send-email`** (Epic 1) — nunca se amplió
-para las 5 functions nuevas de este epic
-(`stripe-create-checkout-session`, `stripe-charge-saved-method`,
-`stripe-payment-methods`, `stripe-webhook`, `send-booking-receipt`).
-Promover esta rama a `staging` sin lo siguiente deja `luxepass-dev`
-con las migraciones de `bookings`/`payments`/`booking_receipts` aplicadas
-pero sin ninguna de sus Edge Functions ni secrets — el booking se rompería
-a mitad de camino (RPC sin nadie que cobre ni que mande el recibo).
-
-**Estado (21 sept 2026):**
-
-1. ✅ **Sandbox de Stripe reclamada** (`stripe sandbox claim` + `stripe
-   login --complete-device`, 21 sept 2026) — asociada a una cuenta real,
-   ya no expira. Misma clave de siempre (`rkcs_test_...`), verificado con
-   una llamada real a la API tras reclamarla: no rotó, no hace falta
-   actualizarla en ningún lado.
-2. ✅ **Secrets en GitHub — los 6, completos** (21 sept 2026). Decisión del
-   usuario: **3 cuentas/sandboxes de Stripe separadas, una por ambiente**
-   (local, `luxepass-dev`, `luxepass-prod`), no solo el webhook secret —
-   `STRIPE_SECRET_KEY_DEV`/`_PROD` en vez de una sola compartida (la de
-   `ci.yml`, sin sufijo, queda aparte: es la de local, solo para la suite
-   automatizada). Cargados: `STRIPE_SECRET_KEY_DEV`/`_PROD`,
-   `STRIPE_WEBHOOK_SECRET_DEV`/`_PROD`,
-   `BOOKING_RECEIPT_WEBHOOK_SECRET_DEV`/`_PROD`.
-3. ✅ **`deploy.yml` ampliado** (21 sept 2026, jobs `migrate-dev`/
-   `migrate-prod`): `supabase secrets set` + `supabase functions deploy`
-   para las 5 functions nuevas, mismo patrón que `send-email`, ya con las
-   claves de Stripe separadas por ambiente.
-4. 🟡 **Secretos de Vault** — dados de alta en `luxepass-dev`
-   (`booking_receipt_webhook_url`/`booking_receipt_webhook_secret`, hechos
-   a mano por SQL Editor — ver `CLAUDE.md` §Email de recibo de reserva).
-   **Confirmar si ya están también en `luxepass-prod`** (misma sandbox
-   nueva de prod) — no hay forma de verificarlo desde fuera del dashboard.
-5. 🟡 **`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` en Vercel** — dado de alta en
-   el proyecto `luxepass-dev`. **Confirmar si también en `luxepass-prod`**
-   (con la publishable key de la sandbox de prod, no la de dev).
-6. 🟡 **Webhook de Stripe registrado** en la sandbox de `luxepass-dev`,
-   apuntando a `https://<project-ref>.supabase.co/functions/v1/stripe-webhook`
-   (de ahí salió `STRIPE_WEBHOOK_SECRET_DEV`). **Confirmar si también se
-   registró el equivalente en la sandbox de prod** (de ahí debería haber
-   salido `STRIPE_WEBHOOK_SECRET_PROD`, que ya está en GitHub).
-
-**Desbloquea:** confirmar los pasos 4-6 en `luxepass-prod` (Vault, Vercel,
-webhook) — dado que los 6 secrets de GitHub y `deploy.yml` ya están listos
-para ambos ambientes, si esos 3 ya se hicieron en prod, la rama está lista
-para promoverse a `staging` y eventualmente a `main`.
-
 ---
 
 ## 5. Decisiones abiertas
@@ -503,3 +452,4 @@ de la tarifa de no-show.
 | Story 4.2 (Payment Processing) simulaba el cobro: los métodos de pago eran `SAMPLE_PAYMENT_METHODS` y el "cargo" una comprobación local sin SDK ni llamada de red — decisión de alcance revertida el 17 sept 2026 (ver `CLAUDE.md` §Procesamiento de pagos real) | 18 sept 2026 | Conectado a Stripe real en modo test: tabla `payments` (nace aquí) + columna `profiles.stripe_customer_id`, y 4 Edge Functions (`stripe-create-checkout-session`, `stripe-charge-saved-method`, `stripe-payment-methods`, `stripe-webhook`) — mismo patrón sin route handlers que `send-email` de Epic 1. Tarjeta nueva: Checkout Session (`ui_mode: 'elements'`) + `<PaymentElement>`; tarjeta guardada: `PaymentIntent` directo servidor-a-servidor. El webhook es la única fuente de verdad del `status` de `payments`, nunca el cliente. `handleConfirm` en `summary/page.tsx` cobra antes de llamar a `confirmBooking`, igual que ya anticipaba la entrada de Story 4.1 de arriba. **Bug real encontrado y arreglado vía Playwright, invisible para jsdom** (mismo tipo que el del callout del mapa de Epic 2): portar `<PaymentElement>` de padre en el DOM entre el paso 2 y el paso 3 (con `createPortal`) recargaba su iframe y borraba la tarjeta ya escrita — `stripe-checkout-bridge.tsx` ahora vive en el layout y el elemento nunca cambia de padre real, solo se reposiciona con `position: fixed` sincronizado por `ResizeObserver`. Apple Pay/Google Pay quedan fuera (dominio no verificado, no viable en `localhost`) — ver fila de la tabla de desviaciones de arriba. Ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 4" |
 | El CI del PR #22 (Epic 4) fallaba en el job `test` con `Invalid API Key provided: undefined` en `src/lib/stripe-payments.test.ts` | 21 sept 2026 | No era un bug del código de Epic 4: `ci.yml` nunca se amplió para servir las Edge Functions — `supabase start` las instala pero no las sirve, hace falta `supabase functions serve` aparte (mismo matiz que ya advertía el comentario de cabecera del propio archivo de test). Arreglo: nuevo paso en el job `test` que levanta `supabase functions serve` en background con un `supabase/functions/.env` armado en el runner desde el secret `STRIPE_SECRET_KEY` (dado de alta en GitHub, misma clave de test de la sandbox de Epic 4 — sin riesgo real, modo test), con una espera activa (hasta 30s) a que las functions respondan antes de `npm test`. No hizo falta darle los demás secrets de `supabase/functions/.env` (Brevo, webhooks): ninguna function que los necesite se invoca en esta suite. Ver `docs/ci-cd/RESUMEN.md`. |
 | La sandbox de Stripe de Epic 4 expiraba el 24 sept 2026 si nadie la reclamaba (§4.5, ya retirada de este archivo) | 21 sept 2026 | Reclamada por el usuario con `stripe sandbox claim` + `stripe login --complete-device`, asociándola a una cuenta Stripe real — ya no expira. La CLI no ofrece forma de posponer el plazo (confirmado en `docs.stripe.com/cli/sandbox`: fijo a 7 días, solo `claim` o dejarla expirar). Verificado con una llamada real a la API tras reclamarla: la clave `rkcs_test_...` sigue siendo exactamente la misma (no rotó), así que no hizo falta tocar `.env.local`, el secret de GitHub, Supabase ni Vercel. |
+| Epic 4 (Stripe + recibo de reserva) no tenía nada desplegado a `staging`/`main` — `deploy.yml` solo desplegaba `send-email` (Epic 1), sin las 5 Edge Functions nuevas ni sus secrets (§4.6, ya retirada de este archivo) | 21 sept 2026 | `deploy.yml` ampliado (jobs `migrate-dev`/`migrate-prod`) con `supabase secrets set` + `supabase functions deploy` para las 5 functions nuevas, mismo patrón que `send-email`. Decisión del usuario durante el despliegue: **3 cuentas/sandboxes de Stripe separadas, una por ambiente** (local, `luxepass-dev`, `luxepass-prod`) — no solo el webhook secret, también `STRIPE_SECRET_KEY_DEV`/`_PROD` en vez de una sola compartida (la de `ci.yml`, sin sufijo, queda aparte: es la de local, solo para tests). Los 6 secrets de ambiente cargados en GitHub (`STRIPE_SECRET_KEY_DEV`/`_PROD`, `STRIPE_WEBHOOK_SECRET_DEV`/`_PROD`, `BOOKING_RECEIPT_WEBHOOK_SECRET_DEV`/`_PROD`), y confirmados los 3 pasos manuales en `luxepass-prod` (secretos de Vault, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` en Vercel, webhook de Stripe registrado) — mismos ya hechos antes en `luxepass-dev`. Epic 4 queda listo para promoverse a `staging` y eventualmente a `main`. |

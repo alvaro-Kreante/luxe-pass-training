@@ -176,17 +176,17 @@ use en local.
       `stripe-payment-methods`, `stripe-webhook`, `send-booking-receipt`),
       mismo patrón que `send-email`.
 - [x] Secretos de Vault (`booking_receipt_webhook_url`/`_secret`) dados de
-      alta en `luxepass-dev`. `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` dado de
-      alta en Vercel. Webhook de Stripe registrado (endpoint
-      `stripe-webhook`).
-- [ ] **Epic 4 — faltan 2 secrets de GitHub antes del próximo push a
-      `staging`:** `STRIPE_WEBHOOK_SECRET_DEV` y
-      `BOOKING_RECEIPT_WEBHOOK_SECRET_DEV` (valores ya generados/copiados
-      por el desarrollador, nunca pasaron por el asistente — hay que
-      cargarlos a mano en GitHub). `STRIPE_SECRET_KEY` ya está (repo,
-      compartido con `ci.yml`). Checklist completo en `docs/PENDIENTES.md`
-      §4.6. Reclamar la sandbox de Stripe antes del 24 sept (§4.5) sigue
-      pendiente de confirmar.
+      alta en `luxepass-dev` **y** `luxepass-prod`. `NEXT_PUBLIC_STRIPE_
+      PUBLISHABLE_KEY` dado de alta en ambos proyectos Vercel. Webhook de
+      Stripe registrado en ambas sandboxes (endpoint `stripe-webhook`).
+- [x] Sandbox de Stripe de Epic 4 reclamada (21 sept 2026, antes del plazo
+      del 24 sept) — ya no expira. Además, **3 cuentas/sandboxes de Stripe
+      separadas por ambiente** (decisión del usuario): la reclamada queda
+      para local/CI, y `luxepass-dev`/`luxepass-prod` tienen cada uno la
+      suya propia — `STRIPE_SECRET_KEY_DEV`/`_PROD`,
+      `STRIPE_WEBHOOK_SECRET_DEV`/`_PROD` y
+      `BOOKING_RECEIPT_WEBHOOK_SECRET_DEV`/`_PROD`, los 6 cargados en
+      GitHub. **Epic 4 queda listo para desplegarse a `staging`.**
 - [x] `ci.yml` ampliado (21 sept 2026) para que el job `test` levante
       `supabase functions serve` en background con `STRIPE_SECRET_KEY` (la
       misma clave de test de la sandbox de Epic 4) antes de `npm test` —
