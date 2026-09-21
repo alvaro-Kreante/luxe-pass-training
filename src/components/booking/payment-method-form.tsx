@@ -18,13 +18,20 @@ import {
   formatWholeCurrency,
   pricingFor,
 } from "@/lib/booking";
-
-const CARD_BRAND_LABEL: Record<string, string> = { visa: "VISA", mastercard: "MASTERCARD" };
+import {
+  createCheckoutSession,
+  listSavedPaymentMethods,
+  removeSavedPaymentMethod,
+  type SavedPaymentMethod,
+} from "@/lib/stripe-payments";
+import { createClient } from "@/lib/supabase/client";
 
 /**
  * Story 4.2 — Paso 2 "Payment method" (`Payment.dc.html`). Cuando la visita
  * está cubierta por la membresía, sustituye la lista de métodos por
- * `MembershipCovered.dc.html` — no hace falta pagar nada.
+ * `MembershipCovered.dc.html` — no hace falta pagar nada. Conectada a
+ * Stripe real: las tarjetas guardadas y el formulario de tarjeta nueva
+ * (`<PaymentElement>`) son reales — ver CLAUDE.md §Procesamiento de pagos.
  */
 export function PaymentMethodForm() {
   const { covered } = useBooking();
@@ -33,20 +40,68 @@ export function PaymentMethodForm() {
 }
 
 function PayableBody() {
-  const { draft, update } = useBooking();
-  const [methods, setMethods] = React.useState(SAMPLE_PAYMENT_METHODS);
+  const {
+    lounge,
+    draft,
+    update,
+    checkoutSession,
+    setCheckoutSession,
+    setPaymentElementHost,
+    paymentElementHeight,
+  } = useBooking();
+  const [methods, setMethods] = React.useState<SavedPaymentMethod[] | null>(null);
 
   React.useEffect(() => {
-    if (draft.paymentMethodId === null) {
-      const defaultMethod = methods.find((method) => method.isDefault);
-      if (defaultMethod) update({ paymentMethodId: defaultMethod.id });
-    }
+    const supabase = createClient();
+    let active = true;
+
+    listSavedPaymentMethods(supabase).then((fetched) => {
+      if (!active) return;
+      setMethods(fetched);
+      if (draft.paymentMethodId === null) {
+        const defaultMethod = fetched.find((method) => method.isDefault) ?? fetched[0];
+        if (defaultMethod) update({ paymentMethodId: defaultMethod.id });
+      }
+    });
+
+    return () => {
+      active = false;
+    };
     // Solo al montar: preselecciona el método por defecto una vez.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  function removeMethod(id: string) {
-    setMethods((prev) => prev.filter((method) => method.id !== id));
+  const wantsNewCard = draft.paymentMethodId === NEW_CARD_OPTION_ID;
+
+  React.useEffect(() => {
+    if (!wantsNewCard || !draft.dateIso || !draft.band || !draft.time) return;
+
+    let active = true;
+
+    const supabase = createClient();
+    createCheckoutSession(supabase, {
+      loungeId: lounge.id,
+      dateIso: draft.dateIso,
+      band: draft.band,
+      slotTime: draft.time,
+      specialRequests: draft.specialRequests,
+      saveCard: draft.saveNewCard,
+    }).then((session) => {
+      if (active) setCheckoutSession(session);
+    });
+
+    return () => {
+      active = false;
+    };
+    // `draft.saveNewCard` recrea la sesión con `setup_future_usage` correcto
+    // si el miembro cambia de opinión sobre guardar la tarjeta.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wantsNewCard, draft.saveNewCard]);
+
+  async function removeMethod(id: string) {
+    const supabase = createClient();
+    await removeSavedPaymentMethod(supabase, id);
+    setMethods((prev) => prev?.filter((method) => method.id !== id) ?? null);
     if (draft.paymentMethodId === id) update({ paymentMethodId: null });
   }
 
@@ -74,7 +129,7 @@ function PayableBody() {
       <div className="mb-2.5 flex items-center justify-between">
         <p className="m-0 text-[15px] font-bold text-fg">Saved cards</p>
         <div className="flex items-center gap-2">
-          {Object.values(CARD_BRAND_LABEL).map((label) => (
+          {["VISA", "MASTERCARD", "AMEX", "DISCOVER"].map((label) => (
             <span
               key={label}
               className="rounded-md border border-line px-2 py-1 text-[10.5px] font-bold tracking-[0.06em] text-fg-subtle"
@@ -86,14 +141,14 @@ function PayableBody() {
       </div>
 
       <div className="flex flex-col gap-2.5" role="radiogroup" aria-label="Payment method">
-        {methods.map((method) => (
+        {(methods ?? []).map((method) => (
           <PaymentOptionRow
             key={method.id}
             selected={draft.paymentMethodId === method.id}
             onSelect={() => update({ paymentMethodId: method.id })}
             leading={<CardBrandBadge brand={method.brand} />}
-            title={`${method.brand === "visa" ? "Visa" : "Mastercard"} ending in ${method.last4}`}
-            subtitle={`${method.holder} · expires ${method.expires}`}
+            title={`${method.brand === "visa" ? "Visa" : method.brand === "mastercard" ? "Mastercard" : method.brand} ending in ${method.last4}`}
+            subtitle={`Expires ${String(method.expMonth).padStart(2, "0")}/${String(method.expYear).slice(-2)}`}
             trailing={
               method.isDefault ? (
                 <span className="shrink-0 rounded-pill bg-accent-soft px-3 py-1.5 text-[11.5px] font-bold text-fg">
@@ -117,7 +172,7 @@ function PayableBody() {
         ))}
 
         <PaymentOptionRow
-          selected={draft.paymentMethodId === NEW_CARD_OPTION_ID}
+          selected={wantsNewCard}
           onSelect={() => update({ paymentMethodId: NEW_CARD_OPTION_ID })}
           leading={
             <span className="flex h-[30px] w-11 shrink-0 items-center justify-center rounded-[7px] bg-blush-1">
@@ -128,6 +183,24 @@ function PayableBody() {
           subtitle="Credit or debit · entered on Stripe's secure form"
         />
       </div>
+
+      {wantsNewCard ? (
+        <div className="mt-4 rounded-2xl border border-line bg-surface p-4">
+          {/* Hueco vacío a propósito: el <PaymentElement> real vive siempre
+              en StripeCheckoutBridge (BookLayout) y se posiciona encima de
+              este div — nunca se renderiza aquí dentro, para no mover el
+              iframe de padre (lo recargaría). Ver su comentario. */}
+          <div
+            ref={setPaymentElementHost}
+            className="min-h-[360px]"
+            style={paymentElementHeight ? { minHeight: paymentElementHeight } : undefined}
+          >
+            {!checkoutSession ? (
+              <p className="m-0 text-[12.5px] text-fg-subtle">Loading Stripe&apos;s secure form…</p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       <div className="mt-4">
         <Checkbox

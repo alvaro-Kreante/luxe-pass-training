@@ -57,6 +57,33 @@ jobs:
             APP_ENV="STAGING"
       - name: Desplegar la Edge Function send-email
         run: supabase functions deploy send-email --no-verify-jwt
+      # Story 4.2/5.1 — mismo patrón que send-email arriba. `APP_URL_DEV`
+      # se reusa (ya existía para send-email): `stripe-create-checkout-
+      # session` arma con ella el `return_url` que le manda a Stripe, que
+      # rechaza la Checkout Session si no es una URL pública real.
+      # `stripe-webhook` y `send-booking-receipt` van con `--no-verify-jwt`
+      # (config.toml ya lo declara así — ninguna de las dos recibe un JWT
+      # de usuario: Stripe firma la suya, Postgres no tiene sesión). Las
+      # otras tres SÍ verifican JWT por defecto — las llama un miembro
+      # autenticado vía `supabase.functions.invoke`.
+      # Cuenta Stripe propia por ambiente (no compartida como Brevo) —
+      # STRIPE_SECRET_KEY_DEV/_PROD, no un solo STRIPE_SECRET_KEY. El de
+      # `ci.yml` (sin sufijo) es aparte: sandbox de solo-test para la
+      # suite automatizada, no un ambiente desplegado.
+      - name: Configurar secrets de las Edge Functions de Stripe/recibo de reserva
+        run: |
+          supabase secrets set \
+            STRIPE_SECRET_KEY="${{ secrets.STRIPE_SECRET_KEY_DEV }}" \
+            STRIPE_WEBHOOK_SECRET="${{ secrets.STRIPE_WEBHOOK_SECRET_DEV }}" \
+            BOOKING_RECEIPT_WEBHOOK_SECRET="${{ secrets.BOOKING_RECEIPT_WEBHOOK_SECRET_DEV }}" \
+            APP_URL="${{ secrets.APP_URL_DEV }}"
+      - name: Desplegar las Edge Functions de Stripe/recibo de reserva
+        run: |
+          supabase functions deploy stripe-create-checkout-session
+          supabase functions deploy stripe-charge-saved-method
+          supabase functions deploy stripe-payment-methods
+          supabase functions deploy stripe-webhook --no-verify-jwt
+          supabase functions deploy send-booking-receipt --no-verify-jwt
       - name: Instalar Vercel CLI
         run: npm install --global vercel@latest
       - name: Descargar configuración del proyecto luxepass-dev
@@ -106,6 +133,20 @@ jobs:
             APP_ENV="PROD"
       - name: Desplegar la Edge Function send-email
         run: supabase functions deploy send-email --no-verify-jwt
+      - name: Configurar secrets de las Edge Functions de Stripe/recibo de reserva
+        run: |
+          supabase secrets set \
+            STRIPE_SECRET_KEY="${{ secrets.STRIPE_SECRET_KEY_PROD }}" \
+            STRIPE_WEBHOOK_SECRET="${{ secrets.STRIPE_WEBHOOK_SECRET_PROD }}" \
+            BOOKING_RECEIPT_WEBHOOK_SECRET="${{ secrets.BOOKING_RECEIPT_WEBHOOK_SECRET_PROD }}" \
+            APP_URL="${{ secrets.APP_URL_PROD }}"
+      - name: Desplegar las Edge Functions de Stripe/recibo de reserva
+        run: |
+          supabase functions deploy stripe-create-checkout-session
+          supabase functions deploy stripe-charge-saved-method
+          supabase functions deploy stripe-payment-methods
+          supabase functions deploy stripe-webhook --no-verify-jwt
+          supabase functions deploy send-booking-receipt --no-verify-jwt
       - name: Instalar Vercel CLI
         run: npm install --global vercel@latest
       - name: Descargar configuración del proyecto luxepass-prod

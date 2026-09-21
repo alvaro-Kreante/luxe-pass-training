@@ -1,0 +1,129 @@
+import { beforeAll, describe, expect, it } from "vitest";
+
+import {
+  chargeSavedPaymentMethod,
+  createCheckoutSession,
+  listSavedPaymentMethods,
+  removeSavedPaymentMethod,
+  type CardChargeRequest,
+} from "./stripe-payments";
+import { createClient } from "./supabase/client";
+import { signUpConfirmedMemberAndSignIn } from "./testing/confirmed-user";
+import { attachTestCard } from "./testing/stripe-fixture";
+
+/**
+ * Story 4.2 — Payment Processing, conectada a Stripe real (modo test).
+ * Corre contra las Edge Functions servidas localmente y la sandbox de
+ * Stripe real — dos precondiciones además de `supabase start`:
+ *
+ *   supabase functions serve --env-file supabase/functions/.env
+ *
+ * Sin eso, `supabase.functions.invoke` falla con "Failed to fetch" (nada
+ * escuchando en /functions/v1/*), no con un error de Stripe.
+ *
+ * `attachTestCard` adjunta una tarjeta de prueba de Stripe (`pm_card_visa`)
+ * directo contra la API de Stripe — no hay forma de montar el
+ * `<PaymentElement>` real en jsdom, así que el camino de "tarjeta guardada"
+ * se prueba sembrando la tarjeta por API, igual que Stripe documenta para
+ * tests automatizados (no es un mock: es una tarjeta de prueba real).
+ */
+
+const request: CardChargeRequest = {
+  loungeId: "the-ainsworth",
+  dateIso: "2025-09-01",
+  band: "afternoon",
+  slotTime: "1:00 PM",
+  specialRequests: "",
+};
+
+async function stripeCustomerIdFor(
+  supabase: ReturnType<typeof createClient>,
+  userId: string,
+): Promise<string> {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("stripe_customer_id")
+    .eq("id", userId)
+    .single();
+  if (error) throw error;
+  return data.stripe_customer_id as string;
+}
+
+describe("createCheckoutSession — tarjeta nueva", () => {
+  const supabase = createClient();
+
+  beforeAll(async () => {
+    await signUpConfirmedMemberAndSignIn(
+      supabase,
+      `stripe-checkout-${Date.now()}@ensoleil-test.com`,
+      "EnSoleil!2026",
+    );
+  });
+
+  it("crea una Checkout Session real y su fila de payments (pending)", async () => {
+    const result = await createCheckoutSession(supabase, { ...request, saveCard: false });
+
+    expect(result.clientSecret).toMatch(/^cs_test_/);
+    expect(result.paymentId).toMatch(/^[0-9a-f-]{36}$/);
+
+    const { data: payment, error } = await supabase
+      .from("payments")
+      .select("status, amount_cents, currency")
+      .eq("id", result.paymentId)
+      .single();
+
+    expect(error).toBeNull();
+    expect(payment?.status).toBe("pending");
+    expect(payment?.amount_cents).toBe(8166); // $75 day pass + 8.875% NY tax
+    expect(payment?.currency).toBe("usd");
+  });
+});
+
+describe("tarjetas guardadas — Customer de Stripe real", () => {
+  const supabase = createClient();
+  let userId: string;
+
+  beforeAll(async () => {
+    const user = await signUpConfirmedMemberAndSignIn(
+      supabase,
+      `stripe-saved-cards-${Date.now()}@ensoleil-test.com`,
+      "EnSoleil!2026",
+    );
+    userId = user.id;
+  });
+
+  it("no hay tarjetas guardadas para un miembro nuevo", async () => {
+    const methods = await listSavedPaymentMethods(supabase);
+
+    expect(methods).toEqual([]);
+  });
+
+  it("crea un Customer de Stripe la primera vez que hace falta", async () => {
+    const customerId = await stripeCustomerIdFor(supabase, userId);
+
+    expect(customerId).toMatch(/^cus_/);
+  });
+
+  it("cobra con una tarjeta guardada y el webhook confirma el pago", async () => {
+    const customerId = await stripeCustomerIdFor(supabase, userId);
+    const paymentMethodId = await attachTestCard(customerId);
+
+    const charge = await chargeSavedPaymentMethod(supabase, { ...request, paymentMethodId });
+
+    expect(charge.status).toBe("succeeded");
+    expect(charge.error).toBeNull();
+
+    const methods = await listSavedPaymentMethods(supabase);
+    expect(methods.some((method) => method.id === paymentMethodId)).toBe(true);
+  });
+
+  it("quitar una tarjeta guardada la retira del listado", async () => {
+    const customerId = await stripeCustomerIdFor(supabase, userId);
+    const paymentMethodId = await attachTestCard(customerId);
+
+    await removeSavedPaymentMethod(supabase, paymentMethodId);
+
+    const methods = await listSavedPaymentMethods(supabase);
+    expect(methods.some((method) => method.id === paymentMethodId)).toBe(false);
+  });
+});

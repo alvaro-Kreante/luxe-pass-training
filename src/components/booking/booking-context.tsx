@@ -3,8 +3,7 @@
 import * as React from "react";
 
 import { SLOT_HOLD_SECONDS } from "@/lib/booking";
-import type { WeekBandId } from "@/lib/lounge-profile";
-import type { Lounge } from "@/lib/lounges";
+import type { LoungeProfile, WeekBandId } from "@/lib/lounge-profile";
 
 /**
  * Story 4.1 / 4.2 — el borrador de reserva vive por encima de los tres pasos
@@ -24,6 +23,10 @@ export interface BookingDraft {
   paymentMethodId: string | null;
   saveNewCard: boolean;
   acceptedTerms: boolean;
+  /** Id real de `bookings`, asignado por `confirm_booking`/`join_waitlist`
+   * (Supabase) tras el chequeo final de disponibilidad. */
+  bookingId: string | null;
+  bookingStatus: "confirmed" | "waitlisted" | null;
 }
 
 export const EMPTY_BOOKING_DRAFT: BookingDraft = {
@@ -35,10 +38,18 @@ export const EMPTY_BOOKING_DRAFT: BookingDraft = {
   paymentMethodId: null,
   saveNewCard: false,
   acceptedTerms: false,
+  bookingId: null,
+  bookingStatus: null,
 };
 
+/** AC "Support for major credit/debit cards" — sesión de Checkout real, solo cuando el miembro elige "Use a new card". */
+export interface CheckoutSessionState {
+  clientSecret: string;
+  paymentId: string;
+}
+
 interface BookingContextValue {
-  lounge: Lounge;
+  lounge: LoungeProfile;
   covered: boolean;
   draft: BookingDraft;
   update: (patch: Partial<BookingDraft>) => void;
@@ -46,6 +57,34 @@ interface BookingContextValue {
   /** "Slot held for M:SS" (`Payment.dc.html`, `Summary.dc.html`) — cuenta
    * atrás única para todo el flujo, no por pantalla. */
   holdSecondsLeft: number;
+  /** `null` salvo cuando `draft.paymentMethodId === NEW_CARD_OPTION_ID` —
+   * el `<CheckoutElementsProvider>` de `BookLayout` solo se monta si esto
+   * tiene valor (ver `stripe-checkout-bridge.tsx`). */
+  checkoutSession: CheckoutSessionState | null;
+  setCheckoutSession: (session: CheckoutSessionState | null) => void;
+  /**
+   * Dónde debe pintarse (por portal) el `<PaymentElement>` real, ver
+   * `stripe-checkout-bridge.tsx`. `stripe.confirm()` exige que el elemento
+   * siga montado — si viviera solo en `/book/payment` (paso 2),
+   * desmontarlo al navegar a `/book/summary` (paso 3, donde de verdad se
+   * confirma el pago) rompe la confirmación con
+   * "Please ensure that the Payment Element is mounted...". El bridge
+   * porta el mismo `<PaymentElement>` a esta ref cuando el paso 2 lo pide,
+   * y a un contenedor oculto propio en cualquier otro paso — nunca se
+   * desmonta de verdad.
+   */
+  paymentElementHost: HTMLDivElement | null;
+  setPaymentElementHost: (host: HTMLDivElement | null) => void;
+  /**
+   * Alto real y medido del `<PaymentElement>` (crece cuando se abre la
+   * pestaña "Card": número, caducidad, CVC, país, ZIP). `stripe-checkout-
+   * bridge.tsx` lo mide con un `ResizeObserver`; `payment-method-form.tsx`
+   * lo aplica como `min-height` de su hueco reservado, para que el layout
+   * normal empuje lo que va debajo (el checkbox "Save this card") en vez de
+   * quedar tapado por el `position: fixed` del bridge.
+   */
+  paymentElementHeight: number | null;
+  setPaymentElementHeight: (height: number | null) => void;
 }
 
 const BookingContext = React.createContext<BookingContextValue | null>(null);
@@ -57,7 +96,7 @@ export function BookingProvider({
   initialDraft,
   children,
 }: {
-  lounge: Lounge;
+  lounge: LoungeProfile;
   covered: boolean;
   initialDraft?: Partial<BookingDraft>;
   children: React.ReactNode;
@@ -67,6 +106,15 @@ export function BookingProvider({
     ...initialDraft,
   }));
   const [holdSecondsLeft, setHoldSecondsLeft] = React.useState(SLOT_HOLD_SECONDS);
+  const [checkoutSession, setCheckoutSession] = React.useState<CheckoutSessionState | null>(
+    null,
+  );
+  const [paymentElementHost, setPaymentElementHost] = React.useState<HTMLDivElement | null>(
+    null,
+  );
+  const [paymentElementHeight, setPaymentElementHeight] = React.useState<number | null>(
+    null,
+  );
 
   const update = React.useCallback((patch: Partial<BookingDraft>) => {
     setDraft((prev) => ({ ...prev, ...patch }));
@@ -83,8 +131,31 @@ export function BookingProvider({
   }, []);
 
   const value = React.useMemo(
-    () => ({ lounge, covered, draft, update, reset, holdSecondsLeft }),
-    [lounge, covered, draft, update, reset, holdSecondsLeft],
+    () => ({
+      lounge,
+      covered,
+      draft,
+      update,
+      reset,
+      holdSecondsLeft,
+      checkoutSession,
+      setCheckoutSession,
+      paymentElementHost,
+      setPaymentElementHost,
+      paymentElementHeight,
+      setPaymentElementHeight,
+    }),
+    [
+      lounge,
+      covered,
+      draft,
+      update,
+      reset,
+      holdSecondsLeft,
+      checkoutSession,
+      paymentElementHost,
+      paymentElementHeight,
+    ],
   );
 
   return (

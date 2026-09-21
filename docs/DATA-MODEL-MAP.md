@@ -77,19 +77,52 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
 
 ### Epic 4 — Booking System
 
-- `bookings` (**nace aquí**, dueño) — fecha, notas, status (confirmed /
-  in_progress / completed / cancelled / waitlisted). Es la tabla más
-  referenciada del proyecto (Epic 5, 6, 7, 8, 9).
-- `waitlist_entries` vs. `status='waitlisted'` en `bookings` — decidir al
-  implementar, no antes.
-- Story 4.2 (pago, Stripe/Apple Pay/Google Pay/PCI-DSS): **fuera de alcance
-  real** — el repo es solo frontend + Supabase local. Recomendado: tabla
-  `payments` mínima (amount, status, method) ligada a `bookings` para que la
-  pantalla muestre sus estados simulando el resultado, igual que ya se hizo
-  con `email_exists` en Epic 1. Anotar como desviación en `COMPONENT-MAP.md`
-  al implementar.
+- `bookings` (**nace aquí, implementada** — 17 sept 2026, Story 4.1) —
+  `member_id`, `lounge_id`, `date`, `band`, `slot_time`, `special_requests`,
+  `status` (confirmed / in_progress / completed / cancelled / waitlisted,
+  dominio completo desde ya aunque 4.1 solo produce los dos primeros). Es la
+  tabla más referenciada del proyecto (Epic 5, 6, 7, 8, 9). RLS: solo
+  `select` de las propias filas — se escribe exclusivamente vía los RPC
+  `confirm_booking`/`join_waitlist` (`SECURITY DEFINER`), nunca insert/update
+  directo. Ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 4".
+- `waitlist_entries` vs. `status='waitlisted'` en `bookings` — **decidido**:
+  `status='waitlisted'` en la misma tabla (sin cola/posición — ninguna AC de
+  4.1 la pide), escrita por `join_waitlist`.
+- `payments` (**nace aquí, implementada** — 18 sept 2026, Story 4.2;
+  decisión de alcance cambiada el 17 sept 2026 — la nota original de este
+  mapa, "Stripe fuera de alcance", era válida solo durante el periodo de
+  mockup) — `member_id`, `booking_id` (nullable: la fila de pago nace antes
+  que la reserva, el cobro se confirma primero), `stripe_checkout_session_id`,
+  `stripe_payment_intent_id`, `amount_cents`, `currency`, `status`
+  (`pending`/`succeeded`/`failed`). RLS: solo `select` de las propias filas
+  — sin policies de insert/update de cliente, la escriben solo las Edge
+  Functions/el webhook (rol de servicio). `profiles.stripe_customer_id`
+  (columna en Epic 1, cruce con Epic 4: el Customer de Stripe es 1:1 con el
+  miembro, no con la reserva). Pago contra **Stripe real (modo test)**, no
+  simulado: Checkout Sessions (`ui_mode: 'elements'`) + `<PaymentElement>`
+  para tarjeta nueva, `PaymentIntent` directo servidor-a-servidor para
+  tarjeta guardada. Su `status` lo escribe el webhook de Stripe (fuente de
+  verdad), nunca el cliente tras el submit — mismo principio que ya usa
+  Brevo con el Auth Hook. Arquitectura: 4 Supabase Edge Functions
+  (`stripe-create-checkout-session`, `stripe-charge-saved-method`,
+  `stripe-payment-methods`, `stripe-webhook`), no route handlers de
+  Next.js, por consistencia con `send-email`. Apple Pay/Google Pay quedan
+  fuera de esta conexión real (exigen dominio verificado ante Stripe/Apple,
+  no viable en `localhost` ni sin el rollout de Vercel) — gap de
+  infraestructura, no simulación de UI de la historia. Detalle completo en
+  `CLAUDE.md` §Procesamiento de pagos (Stripe) y
+  `docs/design/COMPONENT-MAP.md` "Backend real — Epic 4".
 - Story 4.3 (calendario `.ics`): sin tabla propia, se genera al vuelo desde
   `bookings` + `lounges`.
+- Story 4.2/5.1 (email real de recibo de reserva, **implementado** — 18
+  sept 2026): sin tabla propia — un trigger `AFTER INSERT` sobre `bookings`
+  (`supabase/schemas/booking_receipts.sql`, **primer Database Webhook del
+  proyecto**, distinto del Auth Hook de Epic 1) llama de forma asíncrona
+  (`pg_net`) a la Edge Function `send-booking-receipt`, que resuelve
+  `auth.users`/`profiles`/`lounges`/`payments` del `booking_id` recibido y
+  despacha el correo vía Brevo (mismo remitente que Epic 1, factorizado en
+  `supabase/functions/_shared/brevo.ts`). Detalle en `CLAUDE.md` §Email de
+  recibo de reserva.
 
 ### Epic 5 — QR Code & Check-in
 
@@ -188,7 +221,8 @@ toca varios epics de golpe (7, 8, y las policies de 1), así que conviene
 decidirla en cuanto se empiece Epic 7, no dejarla implícita.
 
 **Historias que apuntan a backend fuera del alcance del repo** (se simulan
-visualmente, se anotan como desviación al implementar): 4.2 (Stripe/Apple
-Pay/Google Pay/PCI), 8.1 (refund processing real), 5.3/6.2/7.2/8.2 (envío de
-email/reportes programados — Mailpit sirve para dev local, no hay cron de
-producción).
+visualmente, se anotan como desviación al implementar): 8.1 (refund
+processing real), 5.3/6.2/7.2/8.2 (envío de email/reportes programados —
+Mailpit sirve para dev local, no hay cron de producción). Story 4.2 salió de
+esta lista el 17 sept 2026 — ver su fila arriba (Stripe real, salvo Apple
+Pay/Google Pay, que sí siguen fuera de alcance por dominio no verificado).

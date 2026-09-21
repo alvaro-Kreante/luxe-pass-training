@@ -1,15 +1,19 @@
 import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { BookingProvider } from "@/components/booking/booking-context";
-import { LOUNGES } from "@/lib/lounges";
+import type { LoungeProfile } from "@/lib/lounge-profile";
+import { createClient } from "@/lib/supabase/client";
+import { signUpConfirmedAndSignIn } from "@/lib/testing/confirmed-user";
+import { fetchAinsworthProfile } from "@/lib/testing/lounge-fixture";
 
 import ReceiptPage from "./page";
 
 /**
  * Story 4.2 — "Payment confirmation email receipt" (`Receipt.dc.html`).
- * Sin backend, este criterio se cubre visualmente: la pantalla del email tal
- * como llegaría, con datos de muestra.
+ * Sin backend de pago (Story 4.2, sin conectar), este criterio se cubre
+ * visualmente: la pantalla del email tal como llegaría. La reserva sí es
+ * real (Story 4.1 conectada) — el guard exige `draft.bookingId`.
  */
 const replace = vi.fn();
 
@@ -22,7 +26,17 @@ beforeEach(() => {
   replace.mockClear();
 });
 
-const ainsworth = LOUNGES.find((lounge) => lounge.id === "the-ainsworth")!;
+let ainsworth: LoungeProfile;
+
+beforeAll(async () => {
+  const supabase = createClient();
+  await signUpConfirmedAndSignIn(
+    supabase,
+    `book-receipt-${Date.now()}@ensoleil-test.com`,
+    "EnSoleil!2026",
+  );
+  ainsworth = await fetchAinsworthProfile(supabase);
+});
 
 describe("guardia de entrada", () => {
   it("vuelve al paso 1 si no hay una reserva confirmada", () => {
@@ -46,6 +60,8 @@ describe("con una reserva confirmada", () => {
           dateIso: "2025-09-14",
           time: "3:30 PM",
           specialRequests: "Quiet desk near a window, still water on arrival.",
+          bookingId: "11111111-1111-1111-1111-111111111111",
+          bookingStatus: "confirmed",
         }}
       >
         <ReceiptPage />

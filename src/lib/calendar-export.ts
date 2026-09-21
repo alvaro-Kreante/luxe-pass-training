@@ -1,5 +1,4 @@
 import { STAY_HOURS } from "./booking";
-import type { Lounge } from "./lounges";
 
 /**
  * Story 4.3 (Calendar Integration). A diferencia del resto del Epic 4, esto
@@ -8,7 +7,9 @@ import type { Lounge } from "./lounges";
  */
 
 export interface CalendarEventInput {
-  lounge: Lounge;
+  /** Solo hace falta `name` — estructural a propósito para aceptar tanto el
+   * catálogo mock (epics sin conectar) como `LoungeProfile` (Epic 4). */
+  lounge: { id: string; name: string };
   address: string;
   dateIso: string;
   time: string;

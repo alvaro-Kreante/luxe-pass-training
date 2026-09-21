@@ -3,7 +3,7 @@ import { toneOf } from "@/components/lounges/lounge-thumb";
 import { Card } from "@/components/ui/card";
 import { StatusChip } from "@/components/ui/status-chip";
 import { STAY_HOURS, formatCurrency, pricingFor } from "@/lib/booking";
-import { contactFor, formatWeekdayDate } from "@/lib/lounge-profile";
+import { formatWeekdayDate } from "@/lib/lounge-profile";
 
 /**
  * Story 4.1 — pantalla de confirmación inmediata (`Confirmed.dc.html`).
@@ -12,7 +12,6 @@ import { contactFor, formatWeekdayDate } from "@/lib/lounge-profile";
  */
 export function ConfirmedVisitCard() {
   const { lounge, covered, draft } = useBooking();
-  const contact = contactFor(lounge);
   const pricing = pricingFor(covered);
   const paymentValue = pricing.covered
     ? "Included in your membership"
@@ -29,7 +28,7 @@ export function ConfirmedVisitCard() {
         <div className="flex-1">
           <h2 className="m-0 text-[22px] text-fg">{lounge.name}</h2>
           <p className="m-0 mt-0.5 text-[12.5px] text-fg-subtle">
-            {contact.address} · {contact.receptionNote}
+            {lounge.address} · {lounge.receptionNote}
           </p>
         </div>
         <StatusChip available>Confirmed</StatusChip>

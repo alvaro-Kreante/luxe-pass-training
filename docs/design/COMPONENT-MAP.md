@@ -257,8 +257,8 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `lounges/lounge-subview-header.tsx` | Story 3.1 / 3.2 — cabecera de la sub-vista de lounge (patrón 8) |
 | `lounges/weekly-calendar.tsx` · `closure-banner.tsx` | Story 3.2 — el calendario semanal de franjas (recibe `cells` ya resueltas) y el aviso de cierre por festivo |
 | `lounges/rating-summary.tsx` · `review-card.tsx` | Story 3.1 — el resumen de valoración (rating/recuento reales, desglose y reseñas de muestra) |
-| `lib/booking.ts` | Story 4.1 / 4.2 — date picker mensual, slots de llegada, precio (day pass vs. cubierto por membresía), métodos de pago de muestra, referencias de reserva y la cuenta atrás del slot |
-| `lib/calendar-export.ts` | Story 4.3 — `.ics` real y URL real de Google Calendar; la única lógica del epic que no se simula |
+| `lib/booking.ts` | Story 4.1 / 4.2 — date picker mensual, slots de llegada, precio (day pass vs. cubierto por membresía), wrappers de `confirmBooking`/`joinWaitlist` (RPC reales) y referencias de reserva reales (`bookingReferenceFromId`) |
+| `lib/calendar-export.ts` | Story 4.3 — `.ics` real y URL real de Google Calendar, con dirección y referencia de reserva reales (`LoungeProfile` + `bookingReferenceFromId`) — capacidades del navegador, sin tocar Supabase |
 | `booking/booking-context.tsx` | Borrador de reserva compartido por los 3 pasos y por `/book/confirmed`+`/book/receipt` (Context, sin persistencia); también la cuenta atrás compartida "Slot held for M:SS" |
 | `booking/visit-details-form.tsx` · `visit-summary-rail.tsx` | Story 4.1 — paso 1 "Visit details" (`Main.dc.html`): date picker, slots, admisión fija y peticiones especiales |
 | `booking/payment-method-form.tsx` · `payment-summary-rail.tsx` | Story 4.2 — paso 2 "Payment method" (`Payment.dc.html` / `MembershipCovered.dc.html`) |
@@ -434,7 +434,7 @@ dueño de la tabla) y añade tres tablas propias del Epic 3 — ver
 | `supabase/schemas/lounge_closures.sql` | Tabla `lounge_closures` (nace en Epic 3, no anticipada por nombre en `DATA-MODEL-MAP.md` — se documentó ahí como parte de "disponibilidad") — cierres por festivo con `reopens_label`/`posted_on`, separada de `lounge_availability` porque es un evento por rango de fechas, no una propiedad por celda |
 | `supabase/migrations/..._seed_lounge_profiles_story_3.sql` | Seed escrito a mano, reproduciendo la misma fórmula determinista que ya usaba el mock (`hashOf(id\|date\|band) % 21`) para no inventar números nuevos; ventana de disponibilidad sembrada: `mondayOf(TODAY) - 1 semana` a `TODAY + 16 semanas` |
 | `lib/lounge-profile.ts` | `fetchLoungeProfile`/`fetchLoungeImages`/`fetchWeeklyAvailability`/`fetchClosuresForWeek`/`fetchNextAvailableSlot` (todas contra Supabase); `operatingHoursFor` pasa a recibir `weeklyHours` en vez de leer una constante compartida |
-| `app/lounges/[id]/page.tsx`, `.../availability/page.tsx`, `.../reviews/page.tsx` | Las tres pasan a `RequireSession` (mismo patrón que `/explore`) y a resolver el lounge con `fetchLoungeProfile` en vez de `LOUNGES.find(...)` de `lib/lounges.ts` (ese archivo sigue intacto: lo siguen usando Home y Epic 4-9, sin conectar) |
+| `app/lounges/[id]/page.tsx`, `.../availability/page.tsx`, `.../reviews/page.tsx` | Las tres pasan a `RequireSession` (mismo patrón que `/explore`) y a resolver el lounge con `fetchLoungeProfile` en vez de `LOUNGES.find(...)` de `lib/lounges.ts` (ese archivo sigue intacto: lo siguen usando Home y Epic 5-9, sin conectar — Epic 4 se conectó a su vez, ver más abajo) |
 
 Desviaciones conscientes de esta parte:
 
@@ -444,17 +444,119 @@ Desviaciones conscientes de esta parte:
   "what members mention" (`reviewsFor`/`ratingBreakdownFor`/`mentionsFor`)
   siguen siendo datos de muestra — mismo criterio que Camille Duforest
   (Epic 8) o LP-842193 (Epic 5).
-- **`lib/lounge-profile.ts` es híbrido a propósito.** Conserva, sin tocar,
-  las funciones síncronas que operaban sobre el mock (`contactFor`,
-  `closuresFor`, `closureCovering`, `weeklyAvailability`, el tipo
-  `LoungeContact`) porque `lib/booking.ts` y las pantallas de
-  `/lounges/[id]/book/*` (Epic 4, sin conectar todavía) siguen dependiendo de
-  ellas tal cual. Se retiran cuando Epic 4 se conecte a su vez.
+- **`lib/lounge-profile.ts` sigue siendo parcialmente híbrido, ahora a
+  propósito por una razón distinta.** Al conectar Epic 4 (ver más abajo) se
+  retiraron `contactFor`/`LoungeContact`/`CONTACT_OVERRIDES` (ya no las usa
+  nadie: las pantallas de `/lounges/[id]/book/*` leen `lounge.address`/`phone`
+  reales). `closuresFor`/`closureCovering`/`weeklyAvailability`/`CLOSURES`
+  **sí se quedan** — no por Epic 4, sino porque
+  `app/lounges/[id]/availability/page.test.tsx` (Story 3.2) las usa como
+  predictor offline de la fórmula determinista que sembró la migración.
 - **Horizonte de disponibilidad finito (18 semanas), no infinito como el hash del mock.** Sembrar una tabla real exige un rango — se eligió uno que cubre la navegación semanal, `nextAvailableSlot` (3 semanas) y el cierre de Thanksgiving que ya citan artboards y tests. Navegar mucho más allá de ~4 meses desde TODAY no tiene filas y se trataría como sin datos (no ocurre en ningún flujo de la app hoy).
 - **Se retiró el chip de distancia ("0.3 mi away") del perfil.** No está en los Acceptance Criteria de la Story 3.1, y añadir geolocalización real a esta pantalla (como en `/explore`) para un dato puramente decorativo es desproporcionado — mismo criterio que otras simplificaciones ya aceptadas (p. ej. "Remember me" en Epic 1).
 - **`WeeklyCalendar` pasó de calcular sus celdas internamente a recibirlas por prop (`cells`).** El mock la dejaba recalcular `weeklyAvailability(lounge, weekStart)` por su cuenta (duplicado con el cálculo que ya hacía la página); con datos reales y async eso ya no es posible sin un estado de carga propio dentro del componente — se centralizó en la página, que ya tenía sus propias razones para calcular `cells`.
 - **`FreshnessNote` pasó de simular un contador local a recibir `lastUpdatedAt` real.** El refresco cada 5 minutos (AC de la Story 3.2) vive en la página (`setInterval` + refetch), no en el componente — que solo recalcula el texto "hace N min" cada 15s a partir de ese timestamp.
 - **La 4ª restricción de reserva ("Free cancellation up to 4 hours before") se añadió al sembrar.** El mock solo tenía 3; `Availability.dc.html` dibuja 4 — se cierra el gap al conectar el dato real en vez de arrastrarlo.
+
+---
+
+## Backend real (Supabase local) — Epic 4 (Story 4.1 y 4.2)
+
+Cuarto epic con backend real — Story 4.1 (Seamless Booking Flow) y Story 4.2
+(Payment Processing, Stripe real en modo test, ver `CLAUDE.md`
+§Procesamiento de pagos) ya conectadas; 4.3 (Calendar Integration) ya era
+real desde el mockup (genera `.ics`/URL de Google Calendar de verdad, no
+toca Supabase). Nacen las tablas `bookings` y `payments` — ver
+`docs/DATA-MODEL-MAP.md`.
+
+| Módulo | Qué resuelve |
+|---|---|
+| `supabase/schemas/bookings.sql` | Tabla `bookings` (nace en Epic 4) — `member_id`, `lounge_id`, `date`, `band`, `slot_time`, `special_requests`, `status` (dominio completo `confirmed/in_progress/completed/cancelled/waitlisted` desde ya, aunque 4.1 solo produce los dos primeros). RLS: solo `select` de las propias filas — sin policies de insert/update, la tabla se toca solo vía las dos funciones de abajo |
+| `confirm_booking` (RPC, `SECURITY DEFINER`) | AC "Final availability check before one-tap confirmation". Bloquea la fila de `lounge_availability` con `FOR UPDATE`, decrementa y crea la reserva `'confirmed'` solo si hay plaza real en ese instante; si no, no inserta nada y devuelve cero filas |
+| `join_waitlist` (RPC, `SECURITY DEFINER`) | AC "If full, option to be on the waitlist". Solo se llama cuando el miembro elige explícitamente "Join the waitlist" tras un `confirm_booking` vacío — inserta `'waitlisted'`, no toca `lounge_availability` (la waitlist no reserva inventario real) |
+| `lib/lounge-profile.ts` | `fetchAvailability(supabase, lounge, startIso, endIso)` — generaliza `fetchWeeklyAvailability` (Epic 3, que ahora es el caso particular de 7 días) a un rango arbitrario, para traer un mes completo de una vez |
+| `lib/booking.ts` | `monthCalendar`/`monthDayStatus`/`slotsFor` dejan de calcular sobre el mock (`Lounge` + hash): ahora son puras y agregan `AvailabilityCell[]` ya resueltas por `fetchAvailability`. `confirmBooking`/`joinWaitlist` llaman a los RPC de arriba. `bookingReferenceFromId(id)` sustituye a `bookingReference(loungeId, date, time)` para la pantalla de confirmación (la referencia ahora sale del `id` real de la reserva, no de un hash de lounge/fecha/hora) — `errorReference` se queda como estaba, la usa solo el camino de pago simulado, que no tiene reserva real todavía |
+| `components/booking/booking-context.tsx` | `lounge` pasa de `Lounge` (mock) a `LoungeProfile` (real); `BookingDraft` suma `bookingId`/`bookingStatus`, rellenados tras `confirm_booking`/`join_waitlist` |
+| `app/lounges/[id]/book/layout.tsx` | Pasa a `RequireSession` + `fetchLoungeProfile`, mismo patrón que `/lounges/[id]/availability` (Epic 3), en vez de `LOUNGES.find(...)` |
+| `components/booking/visit-details-form.tsx` | El date picker mensual pasa a pedir `fetchAvailability` para el mes visible en un `useEffect`, en vez de calcular las celdas en el momento |
+| `app/lounges/[id]/book/summary/page.tsx` | `handleConfirm` llama a `confirmBooking` real; una respuesta vacía abre `Waitlist.dc.html`, que ahora llama a `joinWaitlist` de verdad al elegir "Join the waitlist" |
+| `components/patterns/step-flow-rail.tsx`, `components/booking/{add-to-calendar-modal,waitlist-modal}.tsx`, `lib/calendar-export.ts` | Tipo de `lounge` ampliado de `Lounge` a `LoungeProfile` (o a un tipo estructural mínimo `{id, name}` en `calendar-export.ts`, que solo necesita el nombre) |
+| `supabase/schemas/payments.sql` | Tabla `payments` (nace en Epic 4) — `member_id`, `booking_id` (nullable: la fila de pago se crea antes que la reserva), `stripe_checkout_session_id`, `stripe_payment_intent_id`, `amount_cents`, `currency`, `status` (`pending/succeeded/failed`). RLS: solo `select` de las propias filas — sin policies de insert/update de cliente, solo la escriben las Edge Functions/el webhook (rol de servicio) |
+| `supabase/schemas/profiles.sql` | Columna `stripe_customer_id` (Epic 1, cruce con Epic 4: el Customer de Stripe es 1:1 con el miembro, no con la reserva — ver `docs/DATA-MODEL-MAP.md`) |
+| `supabase/functions/stripe-create-checkout-session`, `stripe-charge-saved-method`, `stripe-payment-methods`, `stripe-webhook` | Edge Functions (Deno) — crean la Checkout Session (tarjeta nueva), cobran directo con `PaymentIntent` (tarjeta guardada), listan/eliminan métodos guardados, y procesan el webhook de Stripe (única fuente de verdad del `status` real de `payments`). Ninguna vive en `src/app/api/` — mismo patrón que `send-email` de Epic 1 |
+| `lib/stripe-client.ts`, `lib/stripe-payments.ts` | `getStripe()` (singleton `loadStripe()`), y los wrappers `createCheckoutSession`/`chargeSavedPaymentMethod`/`listSavedPaymentMethods`/`removeSavedPaymentMethod` sobre `supabase.functions.invoke` |
+| `components/booking/stripe-checkout-bridge.tsx` | **Nuevo componente**, vive en `app/lounges/[id]/book/layout.tsx` por encima de los tres pasos — monta `<CheckoutElementsProvider>`/`<PaymentElement>` de Stripe una sola vez para todo el flujo. Ver desviación de abajo sobre por qué no es un simple componente de paso 2 |
+| `components/booking/payment-method-form.tsx` | `PayableBody` trae las tarjetas guardadas reales, dispara `createCheckoutSession` al elegir "Use a new card", y reserva un hueco vacío (`<div ref={setPaymentElementHost}>`) donde el bridge posiciona el `<PaymentElement>` real — no lo renderiza directamente (ver desviación) |
+| `app/lounges/[id]/book/summary/page.tsx` | `handleConfirm` cobra primero (`checkout.confirm()` para tarjeta nueva vía `useCheckoutElements()`, o `chargeSavedPaymentMethod` para tarjeta guardada) y solo si el cobro tiene éxito llama a `confirmBooking` — igual que la Story 4.1 ya hacía con el chequeo simulado, ahora con el cargo real |
+| `components/booking/payment-error-modal.tsx` | El mensaje de error deja de ser copy fijo ("tarjeta rechazada") y pasa a mostrar el `message` real que devuelve Stripe |
+| `components/ui/card-brand-badge.tsx` | `brand` amplía de `"visa"\|"mastercard"` a `string` — una tarjeta de prueba real puede volver con cualquier marca que Stripe reconozca (Amex, Discover…), no solo las dos del mock |
+| `components/booking/stripe-checkout-bridge.tsx`, `booking-context.tsx` | El contenedor `position: fixed` del `<PaymentElement>` ya no fuerza su propia altura a la del hueco (eso desbordaba el formulario real por encima del checkbox "Save this card" cuando la pestaña "Card" muestra más campos de los que caben en 360px) — ahora mide su contenido real con un segundo `ResizeObserver` y publica ese alto en `paymentElementHeight` (contexto), que `payment-method-form.tsx` aplica como `min-height` de su hueco para que el layout normal reserve el espacio real |
+| `supabase/schemas/booking_receipts.sql` | Trigger `AFTER INSERT` en `bookings` (solo `status = 'confirmed'`) — **primer Database Webhook del proyecto**, vía `pg_net`, hacia `send-booking-receipt`. URL y secreto compartido en Supabase Vault (`booking_receipt_webhook_url`/`_secret`), no en el schema — ver `CLAUDE.md` §Email de recibo de reserva |
+| `supabase/functions/send-booking-receipt` | Edge Function — resuelve miembro/lounge/pago del `booking_id` recibido, arma el HTML del recibo (mismo contenido que `Receipt.dc.html`) y lo despacha vía Brevo. Reintenta unos segundos (`findSettledPayment`) si el pago de una tarjeta nueva sigue `pending` (webhook de Stripe asíncrono) |
+| `supabase/functions/_shared/brevo.ts` | Envío por Brevo factorizado — antes solo lo usaba `send-email` (Epic 1), ahora también `send-booking-receipt` |
+
+Desviaciones conscientes de esta parte:
+
+- **El cobro real (Story 4.2) se confirma *antes* de tocar Supabase, no
+  después.** Si `confirm_booking` corriera primero y la tarjeta se
+  rechazara después, quedaría una reserva real confirmada con su plaza ya
+  consumida y ningún cargo real detrás. `handleConfirm` en
+  `summary/page.tsx` cobra primero (Stripe) y solo llama a `confirmBooking`
+  si el cobro tuvo éxito — el diseño que la Story 4.1 ya anticipaba para
+  cuando Stripe se conectara de verdad.
+- **El webhook, no el cliente, decide el `status` real de `payments`.** El
+  cliente nunca marca un pago como exitoso tras el submit — mismo criterio
+  que Auth decide el resultado real del signup en Epic 1. `handleConfirm`
+  solo avanza a `confirm_booking` cuando Stripe confirma el cobro en el
+  propio tap (`checkout.confirm()`/`chargeSavedPaymentMethod` resuelven de
+  forma síncrona para el caso feliz); el webhook es la fuente de verdad
+  para reconciliar pagos asíncronos o casos borde, no para el camino feliz.
+- **Bug real encontrado con Playwright, no detectable con jsdom (mismo tipo
+  que los del mapa de Epic 2): mover el `<PaymentElement>` de padre en el
+  DOM recarga su iframe y borra lo que el miembro ya escribió.** El primer
+  intento montaba `<PaymentElement>` dentro de `payment-method-form.tsx`
+  (paso 2) y lo portaba con `createPortal` a un contenedor del paso 3 al
+  navegar — React no lo desmonta lógicamente, pero el navegador sí recarga
+  el iframe al cambiar su padre real, y `checkout.confirm()` fallaba con
+  "Your card number is incomplete." aunque se hubiera rellenado bien.
+  Arreglo: `stripe-checkout-bridge.tsx` vive en el layout (nunca se
+  desmonta) y el `<PaymentElement>` **nunca cambia de padre en el DOM** —
+  se queda en un contenedor `position: fixed` cuya posición/tamaño se
+  sincroniza (`ResizeObserver` + scroll/resize) con el hueco vacío que
+  `payment-method-form.tsx` reserva en el paso 2. jsdom nunca hubiera
+  detectado esto (no reproduce el reflow del iframe); se confirmó con el
+  script de Playwright `scripts/playwright/scripts/booking/stripe-payment-flow-verification.js`.
+- **Apple Pay/Google Pay quedan fuera de esta conexión real** — el Payment
+  Element los ofrece automáticamente, pero exigen dominio verificado que no
+  funciona en `localhost` ni sin el rollout de Vercel (ver
+  `docs/PENDIENTES.md` §4.4). No es una desviación del artboard: es un gap
+  de infraestructura pendiente, documentado explícitamente en `CLAUDE.md`.
+- **`Waitlist.dc.html` ya no se alcanza por el umbral artificial
+  `WAITLIST_THRESHOLD_SEATS` (retirado).** Se alcanza cuando `confirm_booking`
+  devuelve de verdad cero filas — en la práctica, solo con una condición de
+  carrera real (dos confirmaciones casi simultáneas sobre el último asiento)
+  o eligiendo a propósito una fecha/franja ya agotada. Verificado con un test
+  de integración que fuerza el slot a 0 plazas antes de confirmar.
+- **La referencia de reserva (`LP-######`) ya no depende de lounge/fecha/hora.**
+  `bookingReferenceFromId` deriva del `id` real devuelto por el RPC. La
+  antigua `bookingReference(loungeId, date, time)` se retiró (nada la llama
+  ya); `errorReference` conserva su propia fórmula porque el camino de pago
+  declinado no tiene todavía una reserva real de la que derivar.
+- **No hay pantalla de "reserva en lista de espera" propia.** Ningún artboard
+  la dibuja — tras `joinWaitlist`, el modal simplemente se cierra y el
+  miembro se queda en `/book/summary`, igual que hacía el mock.
+- **`Receipt.dc.html` ya envía un correo real** (Story 4.2/5.1, Database
+  Webhook, ver `CLAUDE.md` §Email de recibo de reserva) — `/book/receipt`
+  sigue siendo su espejo dentro de la app, con `SAMPLE_MEMBER` (el nombre/
+  email de muestra que usa el resto del shell sin conectar, no solo esta
+  pantalla); el correo real, en cambio, sí usa el nombre/email reales del
+  miembro. Dos bugs reales encontrados verificando con Playwright el flujo
+  completo (no con curl/psql sueltos, que no reproducen la carrera de
+  timing): el timeout de `net.http_post` (5s por defecto) cortaba la
+  llamada a mitad de los reintentos por un pago todavía `pending` — subido
+  a 15s; y `.single()` sobre `profiles` fallaba entero si el miembro no
+  tenía perfil (lo destapó un fixture de test) — cambiado a `.maybeSingle()`
+  con el email como nombre de respaldo.
 
 ---
 
@@ -563,7 +665,7 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 | El contacto (dirección, teléfono, email, web) y las reseñas son literales solo para The Ainsworth y Belmont Terrace; el resto del catálogo los deriva de su id | Son los dos únicos lounges que un artboard de la Fase 4 cita por nombre (`Main.dc.html`/`Reviews.dc.html` y `NoRatings.dc.html`). Ver `docs/PENDIENTES.md` §2.4 |
 | El aviso de cierre por festivo se calcula mirando los 7 días de la semana mostrada, no solo el lunes y el domingo | Thanksgiving cae a mitad de semana (jueves-viernes): mirar solo los extremos lo dejaría sin detectar |
 | "Write a review" no lleva a ninguna pantalla | Ninguna historia de los 9 epics cubre redactar una reseña. Ver `docs/PENDIENTES.md` §2.5 |
-| El date picker de `/lounges/[id]/book` es mensual (día a día) y distinto del calendario semanal (franjas) de la Story 3.2 | Son dos widgets del design system con geometría propia (§4 "Date picker mensual" vs. "Calendario de disponibilidad"). Ambos leen la misma fuente, `weeklyAvailability` de `lib/lounge-profile.ts` — no hay dos modelos de disponibilidad, solo dos vistas |
+| El date picker de `/lounges/[id]/book` es mensual (día a día) y distinto del calendario semanal (franjas) de la Story 3.2 | Son dos widgets del design system con geometría propia (§4 "Date picker mensual" vs. "Calendario de disponibilidad"). Ambos leen la misma fuente real, `fetchAvailability` de `lib/lounge-profile.ts` (Epic 4 conectado) — no hay dos modelos de disponibilidad, solo dos vistas |
 | Los cinco slots de llegada (`Main.dc.html`) reparten las plazas de su franja del catálogo, en vez de traer su propio número | El catálogo solo modela franjas (morning/afternoon/evening), no horas sueltas. `slotsFor` en `lib/booking.ts` divide `seatsLeft` de la franja entre sus slots, así que la suma nunca supera lo que ya declara `weeklyAvailability` |
 | El modelo de negocio de precio (8 visitas/mes incluidas, day pass de $75 a partir de la 9.ª) es una decisión de producto asumida, no confirmada | Así lo advierte ya `DESIGN-SYSTEM.md` §6 (Fase 5): es la lectura que cubre a la vez "subscription pricing" e "individual day-pass pricing" de la Story 4.2. Ver `docs/PENDIENTES.md` |
 | El rail del paso 1 (`Main.dc.html`) también desglosa "Day pass: Included" / "Estimated tax: $0.00" cuando `covered=true`, aunque ese artboard no dibuja esa variante | `Main.dc.html` no tiene un par "MembershipCovered" propio — solo `Payment.dc.html` lo tiene. Mostrar $81.66 en el paso 1 y saltar a $0.00 en el paso 2 sería más engañoso que extender la vocabulary visual que `MembershipCovered.dc.html` ya fija un paso después |
@@ -577,7 +679,7 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 | El recibo por email (`/lounges/[id]/book/receipt`) es la pantalla del estado, no un envío real | "Payment confirmation email receipt" (Story 4.2) exige backend real (SMTP). Se implementa visualmente la pantalla del email tal como llegaría, con los mismos datos de la reserva — la desviación que ya fija la cabecera de este documento |
 | El `.ics` y la URL de Google Calendar de `AddToCalendarModal` son reales, no simulados | A diferencia del resto del Epic 4, generar un archivo de calendario y abrir Google Calendar son capacidades del navegador, no llamadas a un servicio de LuxePass — no hay ninguna regla que lo prohíba |
 | `/my-pass/[reference]` alcanza los cuatro estados del pase (`Main`/`ArrivalDay`/`CheckedIn`/`Expired`) por `?state=`, no por el paso del tiempo | Igual que `?covered=1`: no hay reloj real que dispare "hoy llegó" o "la ventana cerró", así que el estado se elige por query param en vez de inventar un timer que nadie pidió |
-| Los datos de "My Pass" (`lib/passes.ts`) son literales, independientes del `booking-context.tsx` de la reserva en vivo | La reserva LP-842193 que citan los artboards de la Fase 6 no es la que produce `bookingReference()` para una fecha/hora elegida en `/lounges/[id]/book` — igual que `lounge-profile.ts` fija literalmente el contacto y las reseñas de The Ainsworth en vez de derivarlos del motor de disponibilidad |
+| Los datos de "My Pass" (`lib/passes.ts`) son literales, independientes del `booking-context.tsx` de la reserva en vivo | La reserva LP-842193 que citan los artboards de la Fase 6 no es la que produce `bookingReferenceFromId()` para una reserva real creada en `/lounges/[id]/book` — igual que `lounge-profile.ts` fija literalmente el contacto y las reseñas de The Ainsworth en vez de derivarlos del motor de disponibilidad |
 | Solo la reserva de The Ainsworth (`LP-842193`) enlaza a un pase completo en `/my-pass` | Es la única con las cuatro pantallas del patrón 11 dibujadas. "View pass" de las demás filas (The Vestry, Bergdorf Lounge) no tiene artboard de destino propio y queda inerte, como "Write a review" en el Epic 3 |
 | `/reception` es una ruta suelta, sin App shell ni pantalla de login | El patrón 12 es "solo el momento del check-in de un invitado" (`DESIGN-SYSTEM.md` §6 Fase 6); la lista diaria de invitados y el acceso del partner son el Epic 7 (`/partner`), una consola aparte. Se llega tecleando la URL, no desde la navegación del miembro ni desde `/partner` |
 | El código QR es el mismo SVG decorativo de 25×25 módulos del artboard, no una librería real | `DESIGN-SYSTEM.md` §6 (Fase 6) ya lo deja como pendiente ("al implementar se genera con una librería real sobre el LP#"); añadir una dependencia de generación de QR no cambia ningún criterio de aceptación, así que se queda para cuando haga falta que el código sea escaneable de verdad |

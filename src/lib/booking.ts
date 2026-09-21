@@ -1,16 +1,15 @@
-import { TODAY, addDays, isPast, weekdayOf } from "./availability";
-import {
-  closureCovering,
-  mondayOf,
-  weeklyAvailability,
-  type WeekBandId,
-} from "./lounge-profile";
-import type { Lounge } from "./lounges";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import { TODAY, addDays, isPast } from "./availability";
+import type { AvailabilityCell, WeekBandId } from "./lounge-profile";
 
 /**
- * Story 4.1 (Seamless Booking Flow) y Story 4.2 (Payment Processing).
- * No hay backend: el chequeo final de disponibilidad, el cargo y el número
- * de reserva se simulan con datos de muestra deterministas, igual que
+ * Story 4.1 (Seamless Booking Flow) — conectada a Supabase real: el
+ * calendario y los slots derivan de `AvailabilityCell[]` ya resueltas
+ * (`fetchAvailability`, Epic 3), y el chequeo final de disponibilidad es el
+ * RPC `confirm_booking`/`join_waitlist` de abajo, no un umbral simulado.
+ * Story 4.2 (Payment Processing) sigue sin conectar: el cargo y los métodos
+ * de pago de muestra siguen siendo deterministas, igual que
  * `registration.ts` consulta una lista fija de emails duplicados.
  */
 
@@ -19,13 +18,6 @@ export const SPECIAL_REQUEST_MAX_LENGTH = 100;
 export const BOOKING_WINDOW_DAYS = 60;
 export const STAY_HOURS = 4;
 export const SLOT_HOLD_SECONDS = 600;
-
-/**
- * Un slot con estas plazas o menos se trata como "a punto de llenarse": al
- * confirmar, el chequeo final de disponibilidad lo da por completo y ofrece
- * la waitlist. Reproduce la condición de carrera de la Story 4.1 sin backend.
- */
-export const WAITLIST_THRESHOLD_SEATS = 2;
 
 /* ------------------------------------------------------------------ */
 /* Date picker mensual                                                  */
@@ -58,44 +50,37 @@ export function daysInMonth(monthIso: string): number {
   return new Date(Date.UTC(year, month, 0)).getUTCDate();
 }
 
-function isBookableBand(lounge: Lounge, dateIso: string): boolean {
-  const cells = weeklyAvailability(lounge, mondayOf(dateIso)).filter(
-    (cell) => cell.dateIso === dateIso,
-  );
-  const relevant = cells.filter(
-    (cell) => cell.status !== "closed" && cell.status !== "past",
-  );
-
-  return relevant.length > 0 && !relevant.every((cell) => cell.status === "full");
-}
-
-function hasAnyOpenBand(lounge: Lounge, dateIso: string): boolean {
-  const cells = weeklyAvailability(lounge, mondayOf(dateIso)).filter(
-    (cell) => cell.dateIso === dateIso,
-  );
-
-  return cells.some((cell) => cell.status !== "closed" && cell.status !== "past");
-}
-
-export function monthDayStatus(lounge: Lounge, dateIso: string): DayStatus {
+/**
+ * Estado de un día del calendario a partir de sus celdas reales (una por
+ * franja, ya resueltas por `fetchAvailability`) — "closed"/"past" a nivel de
+ * celda ya factoriza cierres, días no admitidos y franjas ya pasadas; aquí
+ * solo se agrega a nivel de día y se añaden los dos estados que no existen a
+ * nivel de celda ("past"/"today" priman sobre lo que digan las celdas, igual
+ * que hacía la versión síncrona sobre el mock).
+ */
+export function monthDayStatus(
+  dateIso: string,
+  cellsForDate: AvailabilityCell[],
+): DayStatus {
   if (isPast(dateIso)) return "past";
   if (dateIso === TODAY) return "today";
   if (dateIso > addDays(TODAY, BOOKING_WINDOW_DAYS)) return "closed";
-  if (closureCovering(lounge, dateIso)) return "closed";
-  if (lounge.closedWeekdays?.includes(weekdayOf(dateIso))) return "closed";
-  if (!hasAnyOpenBand(lounge, dateIso)) return "closed";
+  if (cellsForDate.length === 0 || cellsForDate.every((cell) => cell.status === "closed")) {
+    return "closed";
+  }
 
-  return isBookableBand(lounge, dateIso) ? "open" : "full";
+  return cellsForDate.some((cell) => cell.status === "available") ? "open" : "full";
 }
 
-export function monthCalendar(lounge: Lounge, monthIso: string): MonthDay[] {
+export function monthCalendar(monthIso: string, cells: AvailabilityCell[]): MonthDay[] {
   const start = startOfMonth(monthIso);
   const total = daysInMonth(start);
 
   return Array.from({ length: total }, (_, index) => {
     const dateIso = addDays(start, index);
+    const cellsForDate = cells.filter((cell) => cell.dateIso === dateIso);
 
-    return { dateIso, day: index + 1, status: monthDayStatus(lounge, dateIso) };
+    return { dateIso, day: index + 1, status: monthDayStatus(dateIso, cellsForDate) };
   });
 }
 
@@ -129,15 +114,20 @@ function splitSeats(total: number, parts: number, index: number): number {
   return base + (index < remainder ? 1 : 0);
 }
 
-export function slotsFor(lounge: Lounge, dateIso: string): BookingSlot[] {
-  const cells = weeklyAvailability(lounge, mondayOf(dateIso));
+export function slotsFor(cellsForDate: AvailabilityCell[]): BookingSlot[] {
   const cellFor = (band: WeekBandId) =>
-    cells.find((cell) => cell.dateIso === dateIso && cell.band === band)!;
+    cellsForDate.find((cell) => cell.band === band);
 
   const seenPerBand = new Map<WeekBandId, number>();
 
   return SLOT_DEFS.map(({ time, band }) => {
     const cell = cellFor(band);
+
+    /** Sin celda todavía (el fetch del mes no ha resuelto) — se trata como
+     * cerrado hasta que llegue el dato real, en vez de fallar. */
+    if (!cell) {
+      return { time, band, seatsLeft: null, status: "closed" as const };
+    }
 
     if (cell.status === "closed" || cell.status === "past") {
       return { time, band, seatsLeft: null, status: cell.status };
@@ -266,14 +256,6 @@ export function paymentWillDecline(methodId: string | null): boolean {
 }
 
 /* ------------------------------------------------------------------ */
-/* Chequeo final de disponibilidad — waitlist                          */
-/* ------------------------------------------------------------------ */
-
-export function isAtRiskOfWaitlist(seatsLeft: number | null): boolean {
-  return seatsLeft !== null && seatsLeft <= WAITLIST_THRESHOLD_SEATS;
-}
-
-/* ------------------------------------------------------------------ */
 /* Referencias de reserva                                               */
 /* ------------------------------------------------------------------ */
 
@@ -282,23 +264,29 @@ function hashOf(seed: string): number {
   return [...seed].reduce((total, char) => total + char.charCodeAt(0) * 31, 0);
 }
 
-export function bookingReference(
+/**
+ * "LP-######" a partir del `id` real de `bookings` (uuid devuelto por
+ * `confirm_booking`/`join_waitlist`) — sustituye a la referencia derivada de
+ * lounge/fecha/hora ahora que la reserva es real.
+ */
+export function bookingReferenceFromId(bookingId: string): string {
+  const digits = String(100000 + (hashOf(bookingId) % 900000));
+
+  return `LP-${digits}`;
+}
+
+/**
+ * Solo para el camino de pago simulado (Story 4.2, sin conectar): no hay
+ * reserva real todavía cuando `PaymentError.dc.html` se alcanza, así que
+ * sigue derivando de lounge/fecha/hora en vez de un `bookingId`.
+ */
+export function errorReference(
   loungeId: string,
   dateIso: string,
   time: string,
 ): string {
   const hash = hashOf(`${loungeId}|${dateIso}|${time}`);
   const digits = String(100000 + (hash % 900000));
-
-  return `LP-${digits}`;
-}
-
-export function errorReference(
-  loungeId: string,
-  dateIso: string,
-  time: string,
-): string {
-  const digits = bookingReference(loungeId, dateIso, time).slice(3);
 
   return `LP-ERR-${digits}`;
 }
@@ -333,4 +321,92 @@ export function formatCountdown(totalSeconds: number): string {
   const seconds = totalSeconds % 60;
 
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+/* ------------------------------------------------------------------ */
+/* Reserva real — RPC `confirm_booking` / `join_waitlist`               */
+/* ------------------------------------------------------------------ */
+
+export interface BookingRequest {
+  loungeId: string;
+  dateIso: string;
+  band: WeekBandId;
+  time: string;
+  specialRequests: string;
+}
+
+export interface ConfirmedBooking {
+  id: string;
+  status: "confirmed" | "waitlisted";
+  dateIso: string;
+  band: WeekBandId;
+  time: string;
+  specialRequests: string;
+}
+
+interface BookingRpcRow {
+  id: string;
+  status: "confirmed" | "waitlisted";
+  date: string;
+  band: WeekBandId;
+  slot_time: string;
+  special_requests: string;
+}
+
+function fromRpcRow(row: BookingRpcRow): ConfirmedBooking {
+  return {
+    id: row.id,
+    status: row.status,
+    dateIso: row.date,
+    band: row.band,
+    time: row.slot_time,
+    specialRequests: row.special_requests,
+  };
+}
+
+/**
+ * AC "Final availability check before one-tap confirmation". `null` cuando
+ * el slot se llenó justo antes de confirmar — el llamador ofrece la
+ * waitlist (`joinWaitlist`) en vez de tratarlo como un error.
+ */
+export async function confirmBooking(
+  supabase: SupabaseClient,
+  request: BookingRequest,
+  /** Story 4.2 — id de `payments` ya cobrado (real o `null` si la visita está cubierta). */
+  paymentId: string | null = null,
+): Promise<ConfirmedBooking | null> {
+  const { data, error } = await supabase
+    .rpc("confirm_booking", {
+      p_lounge_id: request.loungeId,
+      p_date: request.dateIso,
+      p_band: request.band,
+      p_slot_time: request.time,
+      p_special_requests: request.specialRequests,
+      p_payment_id: paymentId,
+    })
+    .maybeSingle();
+
+  if (error) throw error;
+
+  return data ? fromRpcRow(data as BookingRpcRow) : null;
+}
+
+/** AC "If full, option to be on the waitlist" — solo tras elegir "Join the waitlist". */
+export async function joinWaitlist(
+  supabase: SupabaseClient,
+  request: BookingRequest,
+): Promise<ConfirmedBooking> {
+  const { data, error } = await supabase
+    .rpc("join_waitlist", {
+      p_lounge_id: request.loungeId,
+      p_date: request.dateIso,
+      p_band: request.band,
+      p_slot_time: request.time,
+      p_special_requests: request.specialRequests,
+    })
+    .single();
+
+  if (error) throw error;
+
+  return fromRpcRow(data as BookingRpcRow);
 }

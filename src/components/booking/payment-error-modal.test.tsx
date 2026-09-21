@@ -19,6 +19,7 @@ function renderModal() {
       onOpenChange={onOpenChange}
       time="3:30 PM"
       cardLabel="Visa ending in 4242"
+      message="Your card was declined."
       reference="LP-ERR-4471"
       secondsLeft={408}
       onTryAgain={onTryAgain}
@@ -34,7 +35,7 @@ describe("PaymentError.dc.html", () => {
     renderModal();
 
     expect(screen.getByText("We could not take the payment")).toBeInTheDocument();
-    expect(screen.getByText(/declined the charge to the Visa ending in 4242/)).toBeInTheDocument();
+    expect(screen.getByText(/Your card was declined\..*Visa ending in 4242/)).toBeInTheDocument();
   });
 
   it("muestra la referencia del error y el tiempo restante del slot", () => {

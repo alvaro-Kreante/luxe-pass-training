@@ -1,17 +1,30 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { BookingProvider, useBooking } from "./booking-context";
 import { TermsPolicyCard } from "./terms-policy-card";
 import { CANCELLATION_POLICY } from "@/lib/booking";
-import { LOUNGES } from "@/lib/lounges";
+import type { LoungeProfile } from "@/lib/lounge-profile";
+import { createClient } from "@/lib/supabase/client";
+import { signUpConfirmedAndSignIn } from "@/lib/testing/confirmed-user";
+import { fetchAinsworthProfile } from "@/lib/testing/lounge-fixture";
 
 /**
  * Story 4.1 — "Terms and cancellation policy display: must acknowledge"
  * (`Summary.dc.html`).
  */
-const ainsworth = LOUNGES.find((lounge) => lounge.id === "the-ainsworth")!;
+let ainsworth: LoungeProfile;
+
+beforeAll(async () => {
+  const supabase = createClient();
+  await signUpConfirmedAndSignIn(
+    supabase,
+    `terms-policy-card-${Date.now()}@ensoleil-test.com`,
+    "EnSoleil!2026",
+  );
+  ainsworth = await fetchAinsworthProfile(supabase);
+});
 
 function DraftInspector() {
   const { draft } = useBooking();

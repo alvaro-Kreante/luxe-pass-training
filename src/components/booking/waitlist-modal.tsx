@@ -8,8 +8,7 @@ import { Button } from "@/components/ui/button";
 import { PaymentOptionRow } from "@/components/ui/payment-option-row";
 import { addMinutesToTime } from "@/lib/booking";
 import { addDays } from "@/lib/availability";
-import { formatWeekdayDate } from "@/lib/lounge-profile";
-import type { Lounge } from "@/lib/lounges";
+import { formatWeekdayDate, type LoungeProfile } from "@/lib/lounge-profile";
 
 /**
  * Story 4.1 — "If full option to be on the waitlist" (`Waitlist.dc.html`).
@@ -29,7 +28,7 @@ export function WaitlistModal({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  lounge: Lounge;
+  lounge: LoungeProfile;
   dateIso: string;
   time: string;
   onChangeDate: () => void;
