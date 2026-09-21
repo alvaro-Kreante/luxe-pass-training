@@ -568,9 +568,11 @@ pagos real (Story 4.2).
 **Cuenta:** una sandbox de Stripe propia de este proyecto (no el test mode
 compartido de una cuenta), creada el 17 sept 2026 con
 `stripe sandbox create --from-git` — `account_id` `acct_1UGUm6IBtxcBzVZb`.
-**Expira el 24 sept 2026 si no se reclama** (`stripe sandbox claim` o el
-`claim_url` que imprimió el comando) — reclamarla antes de esa fecha o se
-pierde junto con sus claves. Claves guardadas en `.env.local`
+**Ya reclamada** (21 sept 2026, `stripe sandbox claim` + `stripe login
+--complete-device`), asociada a una cuenta Stripe real — ya no expira. La
+clave restringida no rotó al reclamarla (verificado con una llamada real a
+la API): sigue siendo la misma en todos los lugares donde ya vivía. Claves
+guardadas en `.env.local`
 (`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`) y `supabase/functions/.env`
 (`STRIPE_SECRET_KEY`, ya con prefijo `rk`/restringida, no `sk_`) — ninguno de
 los dos archivos se comitea. **Vercel ya está montado** (staging/prod, ver

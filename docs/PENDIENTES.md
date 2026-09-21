@@ -346,22 +346,6 @@ existente (key/Map ID de `luxepass-dev` y de `luxepass-prod` pueden ser el
 mismo par o pares distintos — decisión pendiente, no técnica) antes de
 promover esta rama a `staging`.
 
-### 4.5 La sandbox de Stripe de Epic 4 expira el 24 sept 2026 si no se reclama
-
-Creada el 17 sept 2026 con `stripe sandbox create --from-git` para Story 4.2
-(ver `CLAUDE.md` §Procesamiento de pagos — Stripe): `account_id`
-`acct_1UGUm6IBtxcBzVZb`, claves de test guardadas en `.env.local` y
-`supabase/functions/.env` (ninguno comiteado). Es una sandbox provisional sin
-cuenta Stripe detrás — Stripe la borra automáticamente si nadie la reclama
-antes de esa fecha, lo que invalidaría ambas claves a mitad de la
-implementación de Epic 4.
-
-**Desbloquea:** correr `stripe sandbox claim` (o abrir el `claim_url` que
-imprimió el comando) antes del 24 sept 2026, asociándola a una cuenta Stripe
-real — la del propio desarrollador o la de En Soleil, según se decida. Ver
-§4.6 para el resto del despliegue a `staging` (env vars + secrets +
-`deploy.yml`).
-
 ### 4.6 Epic 4 (Stripe + recibo de reserva) sin desplegar a `staging` — checklist
 
 Epic 4 está completo y verificado en local (Story 4.1, 4.2, 4.3, más el
@@ -377,9 +361,11 @@ a mitad de camino (RPC sin nadie que cobre ni que mande el recibo).
 
 **Estado (21 sept 2026):**
 
-1. ⬜ **Reclamar la sandbox de Stripe** (§4.5) o decidir una cuenta Stripe
-   distinta para `luxepass-dev`/`luxepass-prod` — **expira el 24 sept**,
-   confirmar que se hizo.
+1. ✅ **Sandbox de Stripe reclamada** (`stripe sandbox claim` + `stripe
+   login --complete-device`, 21 sept 2026) — asociada a una cuenta real,
+   ya no expira. Misma clave de siempre (`rkcs_test_...`), verificado con
+   una llamada real a la API tras reclamarla: no rotó, no hace falta
+   actualizarla en ningún lado.
 2. 🟡 **Secrets en GitHub** — parcial: `STRIPE_SECRET_KEY` ya dado de alta
    (repo, compartido — el mismo que ya usa `ci.yml`). Faltan
    `STRIPE_WEBHOOK_SECRET_DEV` (el `whsec_...` del endpoint de Stripe
@@ -401,9 +387,9 @@ a mitad de camino (RPC sin nadie que cobre ni que mande el recibo).
    `https://<project-ref>.supabase.co/functions/v1/stripe-webhook` (de ahí
    salió el `whsec_...` del paso 2).
 
-**Desbloquea:** cargar los 2 secrets de GitHub que faltan en el paso 2, y
-confirmar el paso 1 (reclamo de la sandbox) — con eso, el próximo push a
-`staging` ya despliega Epic 4 completo a `luxepass-dev`.
+**Desbloquea:** cargar los 2 secrets de GitHub que faltan en el paso 2 — con
+eso, el próximo push a `staging` ya despliega Epic 4 completo a
+`luxepass-dev`.
 
 ---
 
@@ -510,3 +496,4 @@ de la tarifa de no-show.
 | Story 4.1 (Seamless Booking Flow) no tenía backend: el calendario/slots derivaban de un hash sobre el catálogo mock, y el chequeo final de disponibilidad era un umbral artificial (`WAITLIST_THRESHOLD_SEATS`) sin tocar ningún dato real | 17 sept 2026 | Conectado a Supabase local real: tabla `bookings` (nace aquí) + RPC `confirm_booking`/`join_waitlist` (`SECURITY DEFINER`, con `FOR UPDATE` sobre `lounge_availability` para que dos confirmaciones casi simultáneas no decrementen ambas la última plaza). `fetchAvailability` (Epic 3) se generalizó de semana fija a rango arbitrario para traer un mes completo; `monthCalendar`/`slotsFor` pasan de mock+hash a agregar esas celdas reales. `contactFor`/`LoungeContact` (Epic 3, legacy) se retiraron — las pantallas de `/lounges/[id]/book/*` ya leen `lounge.address`/`phone` reales (`weeklyAvailability`/`closureCovering` sí se quedaron, los sigue usando el test de Story 3.2 como predictor de la semilla). La referencia de reserva pasa de un hash de lounge/fecha/hora a `bookingReferenceFromId`, derivada del `id` real. Ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 4" |
 | Story 4.2 (Payment Processing) simulaba el cobro: los métodos de pago eran `SAMPLE_PAYMENT_METHODS` y el "cargo" una comprobación local sin SDK ni llamada de red — decisión de alcance revertida el 17 sept 2026 (ver `CLAUDE.md` §Procesamiento de pagos real) | 18 sept 2026 | Conectado a Stripe real en modo test: tabla `payments` (nace aquí) + columna `profiles.stripe_customer_id`, y 4 Edge Functions (`stripe-create-checkout-session`, `stripe-charge-saved-method`, `stripe-payment-methods`, `stripe-webhook`) — mismo patrón sin route handlers que `send-email` de Epic 1. Tarjeta nueva: Checkout Session (`ui_mode: 'elements'`) + `<PaymentElement>`; tarjeta guardada: `PaymentIntent` directo servidor-a-servidor. El webhook es la única fuente de verdad del `status` de `payments`, nunca el cliente. `handleConfirm` en `summary/page.tsx` cobra antes de llamar a `confirmBooking`, igual que ya anticipaba la entrada de Story 4.1 de arriba. **Bug real encontrado y arreglado vía Playwright, invisible para jsdom** (mismo tipo que el del callout del mapa de Epic 2): portar `<PaymentElement>` de padre en el DOM entre el paso 2 y el paso 3 (con `createPortal`) recargaba su iframe y borraba la tarjeta ya escrita — `stripe-checkout-bridge.tsx` ahora vive en el layout y el elemento nunca cambia de padre real, solo se reposiciona con `position: fixed` sincronizado por `ResizeObserver`. Apple Pay/Google Pay quedan fuera (dominio no verificado, no viable en `localhost`) — ver fila de la tabla de desviaciones de arriba. Ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 4" |
 | El CI del PR #22 (Epic 4) fallaba en el job `test` con `Invalid API Key provided: undefined` en `src/lib/stripe-payments.test.ts` | 21 sept 2026 | No era un bug del código de Epic 4: `ci.yml` nunca se amplió para servir las Edge Functions — `supabase start` las instala pero no las sirve, hace falta `supabase functions serve` aparte (mismo matiz que ya advertía el comentario de cabecera del propio archivo de test). Arreglo: nuevo paso en el job `test` que levanta `supabase functions serve` en background con un `supabase/functions/.env` armado en el runner desde el secret `STRIPE_SECRET_KEY` (dado de alta en GitHub, misma clave de test de la sandbox de Epic 4 — sin riesgo real, modo test), con una espera activa (hasta 30s) a que las functions respondan antes de `npm test`. No hizo falta darle los demás secrets de `supabase/functions/.env` (Brevo, webhooks): ninguna function que los necesite se invoca en esta suite. Ver `docs/ci-cd/RESUMEN.md`. |
+| La sandbox de Stripe de Epic 4 expiraba el 24 sept 2026 si nadie la reclamaba (§4.5, ya retirada de este archivo) | 21 sept 2026 | Reclamada por el usuario con `stripe sandbox claim` + `stripe login --complete-device`, asociándola a una cuenta Stripe real — ya no expira. La CLI no ofrece forma de posponer el plazo (confirmado en `docs.stripe.com/cli/sandbox`: fijo a 7 días, solo `claim` o dejarla expirar). Verificado con una llamada real a la API tras reclamarla: la clave `rkcs_test_...` sigue siendo exactamente la misma (no rotó), así que no hizo falta tocar `.env.local`, el secret de GitHub, Supabase ni Vercel. |
