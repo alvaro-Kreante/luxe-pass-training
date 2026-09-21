@@ -366,30 +366,48 @@ a mitad de camino (RPC sin nadie que cobre ni que mande el recibo).
    ya no expira. Misma clave de siempre (`rkcs_test_...`), verificado con
    una llamada real a la API tras reclamarla: no rotó, no hace falta
    actualizarla en ningún lado.
-2. 🟡 **Secrets en GitHub** — parcial: `STRIPE_SECRET_KEY` ya dado de alta
-   (repo, compartido — el mismo que ya usa `ci.yml`). Faltan
-   `STRIPE_WEBHOOK_SECRET_DEV` (el `whsec_...` del endpoint de Stripe
-   registrado para `luxepass-dev`) y `BOOKING_RECEIPT_WEBHOOK_SECRET_DEV`
-   (el mismo valor que el secreto de Vault del paso 4) — ninguna de las dos
-   la tiene el asistente (las generó/copió el desarrollador directo en los
-   dashboards, nunca pasaron por el chat) así que hay que darlas de alta a
-   mano en GitHub → Settings → Secrets and variables → Actions. Los
-   `_PROD` correspondientes, cuando se decida el Stripe de producción.
+2. 🟡 **Secrets en GitHub** — parcial. Decisión del usuario (21 sept 2026):
+   **cuenta de Stripe separada por ambiente**, no solo el webhook secret —
+   `STRIPE_SECRET_KEY_DEV`/`_PROD` en vez de una sola compartida (la de
+   `ci.yml`, sin sufijo, queda aparte: sandbox de solo-test para la suite
+   automatizada). Estado:
+   - ✅ `STRIPE_SECRET_KEY_DEV` — cargada (misma clave de la sandbox ya
+     reclamada).
+   - ⬜ `STRIPE_WEBHOOK_SECRET_DEV` (el `whsec_...` del endpoint ya
+     registrado para `luxepass-dev`) — falta cargarla en GitHub.
+   - ⬜ `BOOKING_RECEIPT_WEBHOOK_SECRET_DEV` (el mismo valor que el secreto
+     de Vault del paso 4) — falta cargarla en GitHub.
+   - ⬜ `STRIPE_SECRET_KEY_PROD`, `STRIPE_WEBHOOK_SECRET_PROD`,
+     `BOOKING_RECEIPT_WEBHOOK_SECRET_PROD` — necesitan una **segunda
+     cuenta/sandbox de Stripe**, propia de `luxepass-prod`, todavía sin
+     crear (modo test también, per `CLAUDE.md` — pasar a live en `main`
+     exige confirmación explícita aparte).
+
+   Ninguno de los 5 secrets que faltan lo tiene el asistente (los generó/
+   copió el desarrollador directo en los dashboards, nunca pasaron por el
+   chat) — se cargan a mano en GitHub → Settings → Secrets and variables →
+   Actions.
 3. ✅ **`deploy.yml` ampliado** (21 sept 2026, jobs `migrate-dev`/
    `migrate-prod`): `supabase secrets set` + `supabase functions deploy`
-   para las 5 functions nuevas, mismo patrón que `send-email`.
+   para las 5 functions nuevas, mismo patrón que `send-email`, ya con las
+   claves de Stripe separadas por ambiente.
 4. ✅ **Secretos de Vault dados de alta** en `luxepass-dev`
    (`booking_receipt_webhook_url`/`booking_receipt_webhook_secret`, hechos
    a mano por SQL Editor — ver `CLAUDE.md` §Email de recibo de reserva).
    Falta lo mismo en `luxepass-prod` cuando corresponda.
-5. ✅ **`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` en Vercel** — dado de alta.
-6. ✅ **Webhook de Stripe registrado** apuntando a
+5. ✅ **`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` en Vercel** — dado de alta en
+   `luxepass-dev`. Falta en `luxepass-prod` (depende de la sandbox nueva
+   del paso 2).
+6. ✅ **Webhook de Stripe registrado** en `luxepass-dev`, apuntando a
    `https://<project-ref>.supabase.co/functions/v1/stripe-webhook` (de ahí
-   salió el `whsec_...` del paso 2).
+   salió el `whsec_...` de arriba). Falta el equivalente en la sandbox de
+   prod cuando exista.
 
-**Desbloquea:** cargar los 2 secrets de GitHub que faltan en el paso 2 — con
-eso, el próximo push a `staging` ya despliega Epic 4 completo a
-`luxepass-dev`.
+**Desbloquea:** cargar `STRIPE_WEBHOOK_SECRET_DEV` y
+`BOOKING_RECEIPT_WEBHOOK_SECRET_DEV` en GitHub — con eso, el próximo push a
+`staging` ya despliega Epic 4 completo a `luxepass-dev`. Para `main`/
+`luxepass-prod` hace falta además crear la segunda cuenta/sandbox de
+Stripe (paso 2) antes de poder promover esta rama a producción.
 
 ---
 
