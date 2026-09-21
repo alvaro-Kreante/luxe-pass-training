@@ -181,6 +181,13 @@ use en local.
       `_secret`, sin equivalente a `config push`) y
       `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` en Vercel. Checklist completo en
       `docs/PENDIENTES.md` §4.6.
+- [x] `ci.yml` ampliado (21 sept 2026) para que el job `test` levante
+      `supabase functions serve` en background con `STRIPE_SECRET_KEY` (la
+      misma clave de test de la sandbox de Epic 4) antes de `npm test` —
+      sin esto, `src/lib/stripe-payments.test.ts` fallaba en cada PR con
+      `Invalid API Key provided: undefined` (las Edge Functions de Stripe
+      nunca llegaban a servirse en el runner, `supabase start` solo las
+      instala). Secret `STRIPE_SECRET_KEY` dado de alta en GitHub (repo).
 
 #### Secrets de GitHub a añadir para `send-email` (13 sept 2026)
 

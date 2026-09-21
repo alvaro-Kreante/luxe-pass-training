@@ -118,4 +118,40 @@ jobs:
             echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"
           } >> "$GITHUB_ENV"
 
+      # Story 4.2 — `src/lib/stripe-payments.test.ts` corre contra la
+      # sandbox real de Stripe (modo test), igual que en local: necesita
+      # las Edge Functions respondiendo de verdad, no solo `supabase start`
+      # (que las deja instaladas pero sin servir). `supabase/functions/.env`
+      # nunca se comitea (gitignored), así que el runner arma el suyo desde
+      # el secret de GitHub — mismo secreto de test que usa el desarrollador
+      # en local, sin riesgo real (modo test, sin dinero real). El resto de
+      # secrets de `supabase/functions/.env` (Brevo, webhooks) no hace
+      # falta dárselos aquí: ninguna function que los necesite se invoca en
+      # esta suite (el hook de email está desactivado arriba, y el webhook
+      # de recibo de reserva es un no-op sin sus secretos de Vault, que
+      # este runner tampoco crea — ver CLAUDE.md §Email de recibo de reserva).
+      - name: Servir las Edge Functions localmente (Story 4.2 — Stripe)
+        env:
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+        run: |
+          echo "STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY" > supabase/functions/.env
+          nohup supabase functions serve --env-file supabase/functions/.env \
+            > /tmp/functions-serve.log 2>&1 &
+
+          for i in $(seq 1 30); do
+            code="$(curl -s -o /dev/null -w '%{http_code}' \
+              http://127.0.0.1:54331/functions/v1/stripe-payment-methods || echo 000)"
+            if [ "$code" != "000" ]; then
+              echo "Edge Functions respondiendo (HTTP $code) tras ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "Las Edge Functions nunca respondieron — log de supabase functions serve:"
+          cat /tmp/functions-serve.log
+          exit 1
+
       - run: npm test
+        env:
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
