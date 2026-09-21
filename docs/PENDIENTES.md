@@ -366,48 +366,36 @@ a mitad de camino (RPC sin nadie que cobre ni que mande el recibo).
    ya no expira. Misma clave de siempre (`rkcs_test_...`), verificado con
    una llamada real a la API tras reclamarla: no rotó, no hace falta
    actualizarla en ningún lado.
-2. 🟡 **Secrets en GitHub** — parcial. Decisión del usuario (21 sept 2026):
-   **cuenta de Stripe separada por ambiente**, no solo el webhook secret —
+2. ✅ **Secrets en GitHub — los 6, completos** (21 sept 2026). Decisión del
+   usuario: **3 cuentas/sandboxes de Stripe separadas, una por ambiente**
+   (local, `luxepass-dev`, `luxepass-prod`), no solo el webhook secret —
    `STRIPE_SECRET_KEY_DEV`/`_PROD` en vez de una sola compartida (la de
-   `ci.yml`, sin sufijo, queda aparte: sandbox de solo-test para la suite
-   automatizada). Estado:
-   - ✅ `STRIPE_SECRET_KEY_DEV` — cargada (misma clave de la sandbox ya
-     reclamada).
-   - ⬜ `STRIPE_WEBHOOK_SECRET_DEV` (el `whsec_...` del endpoint ya
-     registrado para `luxepass-dev`) — falta cargarla en GitHub.
-   - ⬜ `BOOKING_RECEIPT_WEBHOOK_SECRET_DEV` (el mismo valor que el secreto
-     de Vault del paso 4) — falta cargarla en GitHub.
-   - ⬜ `STRIPE_SECRET_KEY_PROD`, `STRIPE_WEBHOOK_SECRET_PROD`,
-     `BOOKING_RECEIPT_WEBHOOK_SECRET_PROD` — necesitan una **segunda
-     cuenta/sandbox de Stripe**, propia de `luxepass-prod`, todavía sin
-     crear (modo test también, per `CLAUDE.md` — pasar a live en `main`
-     exige confirmación explícita aparte).
-
-   Ninguno de los 5 secrets que faltan lo tiene el asistente (los generó/
-   copió el desarrollador directo en los dashboards, nunca pasaron por el
-   chat) — se cargan a mano en GitHub → Settings → Secrets and variables →
-   Actions.
+   `ci.yml`, sin sufijo, queda aparte: es la de local, solo para la suite
+   automatizada). Cargados: `STRIPE_SECRET_KEY_DEV`/`_PROD`,
+   `STRIPE_WEBHOOK_SECRET_DEV`/`_PROD`,
+   `BOOKING_RECEIPT_WEBHOOK_SECRET_DEV`/`_PROD`.
 3. ✅ **`deploy.yml` ampliado** (21 sept 2026, jobs `migrate-dev`/
    `migrate-prod`): `supabase secrets set` + `supabase functions deploy`
    para las 5 functions nuevas, mismo patrón que `send-email`, ya con las
    claves de Stripe separadas por ambiente.
-4. ✅ **Secretos de Vault dados de alta** en `luxepass-dev`
+4. 🟡 **Secretos de Vault** — dados de alta en `luxepass-dev`
    (`booking_receipt_webhook_url`/`booking_receipt_webhook_secret`, hechos
    a mano por SQL Editor — ver `CLAUDE.md` §Email de recibo de reserva).
-   Falta lo mismo en `luxepass-prod` cuando corresponda.
-5. ✅ **`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` en Vercel** — dado de alta en
-   `luxepass-dev`. Falta en `luxepass-prod` (depende de la sandbox nueva
-   del paso 2).
-6. ✅ **Webhook de Stripe registrado** en `luxepass-dev`, apuntando a
-   `https://<project-ref>.supabase.co/functions/v1/stripe-webhook` (de ahí
-   salió el `whsec_...` de arriba). Falta el equivalente en la sandbox de
-   prod cuando exista.
+   **Confirmar si ya están también en `luxepass-prod`** (misma sandbox
+   nueva de prod) — no hay forma de verificarlo desde fuera del dashboard.
+5. 🟡 **`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` en Vercel** — dado de alta en
+   el proyecto `luxepass-dev`. **Confirmar si también en `luxepass-prod`**
+   (con la publishable key de la sandbox de prod, no la de dev).
+6. 🟡 **Webhook de Stripe registrado** en la sandbox de `luxepass-dev`,
+   apuntando a `https://<project-ref>.supabase.co/functions/v1/stripe-webhook`
+   (de ahí salió `STRIPE_WEBHOOK_SECRET_DEV`). **Confirmar si también se
+   registró el equivalente en la sandbox de prod** (de ahí debería haber
+   salido `STRIPE_WEBHOOK_SECRET_PROD`, que ya está en GitHub).
 
-**Desbloquea:** cargar `STRIPE_WEBHOOK_SECRET_DEV` y
-`BOOKING_RECEIPT_WEBHOOK_SECRET_DEV` en GitHub — con eso, el próximo push a
-`staging` ya despliega Epic 4 completo a `luxepass-dev`. Para `main`/
-`luxepass-prod` hace falta además crear la segunda cuenta/sandbox de
-Stripe (paso 2) antes de poder promover esta rama a producción.
+**Desbloquea:** confirmar los pasos 4-6 en `luxepass-prod` (Vault, Vercel,
+webhook) — dado que los 6 secrets de GitHub y `deploy.yml` ya están listos
+para ambos ambientes, si esos 3 ya se hicieron en prod, la rama está lista
+para promoverse a `staging` y eventualmente a `main`.
 
 ---
 
