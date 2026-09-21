@@ -1,18 +1,28 @@
-import { SAMPLE_MEMBER } from "./member";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import { ADMISSION_COUNT, addMinutesToTime } from "./booking";
+import { TODAY, addDays, formatDateLabel, parseDate } from "./availability";
 
 /**
- * Story 5.1 (Digital Pass Generation), 5.2 (Lounge Check-In Process) y 5.3
- * (Booking Reminder). Sin backend: "My Pass", el pase digital y la consola de
- * recepción son datos de muestra deterministas, independientes del borrador
- * de `booking-context.tsx` — igual que `lounge-profile.ts` fija literalmente
- * el contacto y las reseñas de The Ainsworth en vez de derivarlos del motor
- * de disponibilidad. La referencia LP-842193 de aquí es la misma que citan
- * los artboards de la Fase 6, no la que calcula `bookingReference`.
+ * Story 5.1 (Digital Pass Generation), 5.3 (Booking Reminder) — backend real
+ * sobre `bookings`/`lounges`/`payments` (Supabase local, ver
+ * `supabase/schemas/bookings.sql` "Backend real — Epic 5" en
+ * `docs/design/COMPONENT-MAP.md`). El número de confirmación LP# ya es real
+ * desde la Story 4.2/5.1 (columna generada `confirmation_code`,
+ * `bookingReferenceFromId` en `booking.ts`) — este módulo añade el resto:
+ * leer el pase, la lista de "My Pass" y las reservas pasadas desde
+ * Supabase. La Story 5.2 (consola de recepción) vive en `lib/reception.ts`,
+ * un módulo aparte porque sus RPC son "de kiosco" (sin sesión), muy
+ * distintas de estas consultas con sesión de miembro.
+ *
+ * "Booking expires automatically after booking window" (AC de la Story
+ * 5.1) sigue siendo la única desviación visual de este módulo: no hay
+ * cron que mueva una reserva vencida a completed/no-show (esa
+ * automatización es Epic 6, ver docs/PENDIENTES.md), así que los cuatro
+ * estados del pase se siguen alcanzando por `?state=` en vez de por el
+ * paso del tiempo — la diferencia con antes es que ahora pintan datos
+ * reales, no la reserva de muestra fija.
  */
-
-/* ------------------------------------------------------------------ */
-/* El pase digital — Story 5.1                                         */
-/* ------------------------------------------------------------------ */
 
 export const PASS_LIFECYCLE_STATES = ["upcoming", "today", "checked-in", "expired"] as const;
 
@@ -25,12 +35,53 @@ export function isPassLifecycleState(value: unknown): value is PassLifecycleStat
   );
 }
 
+/** Duración fija de una visita — ninguna historia pide que varíe por lounge o por reserva. */
+export const VISIT_WINDOW_HOURS = 4;
+
+/* ------------------------------------------------------------------ */
+/* Formato compartido                                                  */
+/* ------------------------------------------------------------------ */
+
+function formatFullDate(dateIso: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(parseDate(dateIso));
+}
+
+function formatMonthDay(dateIso: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(parseDate(dateIso));
+}
+
+/** `checked_in_at`/`created_at` son instantes reales (timestamptz) — se muestran como hora, igual que el resto de la app trata sus timestamps (UTC, sin huso real). */
+function formatClockTime(instantIso: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "UTC",
+  }).format(new Date(instantIso));
+}
+
+/* ------------------------------------------------------------------ */
+/* El pase digital — Story 5.1                                         */
+/* ------------------------------------------------------------------ */
+
 export interface DigitalPass {
   reference: string;
+  memberName: string;
+  memberEmail: string;
   loungeName: string;
   address: string;
   receptionNote: string;
   dateLabel: string;
+  /** "Sat, Sep 14" */
   shortDateLabel: string;
   /** "September 14" — pie del QR atenuado en el estado expirado. */
   monthDayLabel: string;
@@ -41,14 +92,120 @@ export interface DigitalPass {
   bookedOnLabel: string;
   amountPaidLabel: string;
   specialRequests: string;
-  directionsMinutes: number;
-  checkedInAt: string;
-  checkedInBy: string;
+  /** Hora formateada, o `null` si todavía no se hizo check-in. */
+  checkedInAt: string | null;
+  status: string;
+  noShow: boolean;
 }
 
-/** El pase que dibujan `Main`, `ArrivalDay`, `CheckedIn` y `Expired.dc.html`. */
+interface LoungeEmbed {
+  name: string;
+  address: string;
+  reception_note: string;
+}
+
+interface PaymentEmbed {
+  amount_cents: number;
+  status: string;
+}
+
+interface BookingRow {
+  id: string;
+  confirmation_code: string;
+  date: string;
+  slot_time: string;
+  special_requests: string;
+  status: string;
+  checked_in_at: string | null;
+  no_show: boolean;
+  created_at: string;
+  lounges: LoungeEmbed | null;
+  payments: PaymentEmbed[] | null;
+}
+
+const BOOKING_SELECT =
+  "id, confirmation_code, date, slot_time, special_requests, status, checked_in_at, no_show, created_at, lounges(name, address, reception_note), payments(amount_cents, status)";
+
+function amountPaidLabel(payments: PaymentEmbed[] | null): string {
+  const succeeded = payments?.find((payment) => payment.status === "succeeded");
+  if (succeeded) return `$${(succeeded.amount_cents / 100).toFixed(2)} paid`;
+
+  const pending = payments?.find((payment) => payment.status === "pending");
+  if (pending) return "Payment processing";
+
+  return "Included in your membership";
+}
+
+async function fetchMemberDisplayName(
+  supabase: SupabaseClient,
+  fallbackEmail: string,
+): Promise<string> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return fallbackEmail.split("@")[0]!;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  return profile?.full_name ?? fallbackEmail.split("@")[0]!;
+}
+
+async function fromBookingRow(supabase: SupabaseClient, row: BookingRow): Promise<DigitalPass> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const memberEmail = user?.email ?? "";
+  const memberName = await fetchMemberDisplayName(supabase, memberEmail);
+
+  return {
+    reference: row.confirmation_code,
+    memberName,
+    memberEmail,
+    loungeName: row.lounges?.name ?? "",
+    address: row.lounges?.address ?? "",
+    receptionNote: row.lounges?.reception_note ?? "",
+    dateLabel: formatFullDate(row.date),
+    shortDateLabel: formatDateLabel(row.date),
+    monthDayLabel: formatMonthDay(row.date),
+    arrivalTime: row.slot_time,
+    windowCloseTime: addMinutesToTime(row.slot_time, VISIT_WINDOW_HOURS * 60),
+    stayHours: VISIT_WINDOW_HOURS,
+    admission: `${ADMISSION_COUNT} member`,
+    bookedOnLabel: formatMonthDay(row.created_at.slice(0, 10)),
+    amountPaidLabel: amountPaidLabel(row.payments),
+    specialRequests: row.special_requests,
+    checkedInAt: row.checked_in_at ? formatClockTime(row.checked_in_at) : null,
+    status: row.status,
+    noShow: row.no_show,
+  };
+}
+
+/** AC "Information available from My Bookings section" — busca por LP#, no por id. RLS ya lo limita a las reservas propias. */
+export async function fetchDigitalPass(
+  supabase: SupabaseClient,
+  reference: string,
+): Promise<DigitalPass | null> {
+  const { data, error } = await supabase
+    .from("bookings")
+    .select(BOOKING_SELECT)
+    .eq("confirmation_code", reference.trim().toUpperCase())
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  return fromBookingRow(supabase, data as unknown as BookingRow);
+}
+
+/** Fixture pura para tests de componente (`digital-pass-card.test.tsx`) — no toca Supabase. */
 export const AINSWORTH_PASS: DigitalPass = {
   reference: "LP-842193",
+  memberName: "Alexandra Rivas",
+  memberEmail: "alexandra.rivas@example.com",
   loungeName: "The Ainsworth",
   address: "122 E 45th St, New York, NY 10017",
   receptionNote: "Reception on Level 2",
@@ -62,17 +219,14 @@ export const AINSWORTH_PASS: DigitalPass = {
   bookedOnLabel: "September 12",
   amountPaidLabel: "$81.66 paid",
   specialRequests: "Quiet desk near a window if possible, and a still water on arrival.",
-  directionsMinutes: 14,
   checkedInAt: "3:34 PM",
-  checkedInBy: "Dana O.",
+  status: "in_progress",
+  noShow: false,
 };
 
 /* ------------------------------------------------------------------ */
 /* My Pass — lista de reservas y su gestión (Story 5.1/5.2, extendida  */
-/* por la Story 6.1 — Booking Management). `Main.dc.html`/`Cancel.dc.html`/ */
-/* `CancelFee.dc.html`/`History.dc.html` de la Fase 7 rediseñan la misma */
-/* pantalla que `MyBookings.dc.html`/`NoShow.dc.html` de la Fase 6: los  */
-/* artboards más nuevos son los vigentes (ver COMPONENT-MAP.md).        */
+/* por la Story 6.1 — Booking Management, sin conectar).                */
 /* ------------------------------------------------------------------ */
 
 /** "flat fee" de la Story 6.1 — tanto para cancelar tarde como para el no-show. */
@@ -94,75 +248,103 @@ export interface UpcomingBooking {
   status: UpcomingBookingStatus;
   dateTimeLabel: string;
   addressLine: string | null;
-  /** Solo el pase de muestra (The Ainsworth) tiene una pantalla de pase completa. */
   passHref: string | null;
   /**
-   * Horas hasta la llegada. `null` cuando cancelar no aplica: "in-progress"
-   * ya hizo el check-in y "waitlisted" no tiene reserva que cancelar (usa
-   * "Leave" en su lugar). Decide qué modal abre "Cancel" — `Cancel.dc.html`
-   * (gratis) o `CancelFee.dc.html` (con la tarifa).
+   * Horas hasta la llegada, en la misma línea de tiempo de mockup que el
+   * resto de la app (`TODAY`, no el reloj real — ver cabecera del
+   * archivo). `null` cuando cancelar no aplica: "in-progress" ya hizo el
+   * check-in y "waitlisted" no tiene reserva que cancelar.
    */
   hoursUntilArrival: number | null;
-  /** "Friday, September 13 at 3:30 PM" — cuándo cierra la cancelación gratuita. */
   freeCancellationDeadlineLabel: string | null;
-  /** "12:00 PM" — solo con tarifa: hasta cuándo se puede llegar tarde en vez de cancelar. */
   lateArrivalWindowLabel: string | null;
 }
 
-export const UPCOMING_BOOKINGS: UpcomingBooking[] = [
-  {
-    id: "LP-851402",
-    reference: "LP-851402",
-    loungeName: "The Vestry",
-    statusLabel: "In progress",
-    status: "in-progress",
-    dateTimeLabel: "Today · checked in at 11:04 AM · your window closes at 3:04 PM",
-    addressLine: "SoHo, 41 Grand St, New York, NY 10013",
-    passHref: null,
-    hoursUntilArrival: null,
-    freeCancellationDeadlineLabel: null,
-    lateArrivalWindowLabel: null,
-  },
-  {
-    id: "LP-850118",
-    reference: "LP-850118",
-    loungeName: "Bergdorf Lounge",
+function upcomingStatusOf(row: BookingRow): UpcomingBookingStatus {
+  if (row.status === "in_progress") return "in-progress";
+  if (row.status === "waitlisted") return "waitlisted";
+  return "confirmed";
+}
+
+function relativeDateLabel(dateIso: string): string {
+  if (dateIso === TODAY) return "Today";
+  if (dateIso === addDays(TODAY, 1)) return "Tomorrow";
+
+  return formatFullDate(dateIso);
+}
+
+function fromUpcomingRow(row: BookingRow): UpcomingBooking {
+  const status = upcomingStatusOf(row);
+  const loungeName = row.lounges?.name ?? "";
+  const reference = row.confirmation_code;
+
+  if (status === "in-progress") {
+    return {
+      id: row.id,
+      reference,
+      loungeName,
+      statusLabel: "In progress",
+      status,
+      dateTimeLabel: `Today · checked in at ${row.checked_in_at ? formatClockTime(row.checked_in_at) : "—"} · your window closes at ${addMinutesToTime(row.slot_time, VISIT_WINDOW_HOURS * 60)}`,
+      addressLine: row.lounges?.address ?? null,
+      passHref: `/my-pass/${reference}`,
+      hoursUntilArrival: null,
+      freeCancellationDeadlineLabel: null,
+      lateArrivalWindowLabel: null,
+    };
+  }
+
+  if (status === "waitlisted") {
+    return {
+      id: row.id,
+      reference: null,
+      loungeName,
+      statusLabel: "Waitlisted",
+      status,
+      dateTimeLabel: `${relativeDateLabel(row.date)} · ${row.slot_time} · no pass yet`,
+      addressLine: null,
+      passHref: null,
+      hoursUntilArrival: null,
+      freeCancellationDeadlineLabel: null,
+      lateArrivalWindowLabel: null,
+    };
+  }
+
+  const daysAhead = Math.round(
+    (parseDate(row.date).getTime() - parseDate(TODAY).getTime()) / (24 * 60 * 60 * 1000),
+  );
+  const hoursUntilArrival = Math.max(daysAhead, 0) * 24;
+
+  const freeCancellationDeadlineLabel = `${formatFullDate(addDays(row.date, -1))} at ${row.slot_time}`;
+  const free = isFreeCancellation(hoursUntilArrival);
+
+  return {
+    id: row.id,
+    reference,
+    loungeName,
     statusLabel: "Confirmed",
-    status: "confirmed",
-    dateTimeLabel: "Tomorrow, September 13 · arrive 10:00 AM",
+    status,
+    dateTimeLabel: `${relativeDateLabel(row.date)}, ${formatFullDate(row.date)} · arrive ${row.slot_time}${free ? ` · free until ${freeCancellationDeadlineLabel}` : ""}`,
     addressLine: null,
-    passHref: null,
-    hoursUntilArrival: 19,
-    freeCancellationDeadlineLabel: "today at 10:00 AM",
-    lateArrivalWindowLabel: "12:00 PM",
-  },
-  {
-    id: AINSWORTH_PASS.reference,
-    reference: AINSWORTH_PASS.reference,
-    loungeName: AINSWORTH_PASS.loungeName,
-    statusLabel: "Confirmed",
-    status: "confirmed",
-    dateTimeLabel: "Saturday, September 14 · arrive 3:30 PM · free until Friday 3:30 PM",
-    addressLine: null,
-    passHref: `/my-pass/${AINSWORTH_PASS.reference}`,
-    hoursUntilArrival: 48,
-    freeCancellationDeadlineLabel: "Friday, September 13 at 3:30 PM",
-    lateArrivalWindowLabel: null,
-  },
-  {
-    id: "waitlist-ainsworth-oct9",
-    reference: null,
-    loungeName: "The Ainsworth",
-    statusLabel: "Waitlisted",
-    status: "waitlisted",
-    dateTimeLabel: "Wednesday, October 9 · 6:00 PM · position 2 on the waitlist · no pass yet",
-    addressLine: null,
-    passHref: null,
-    hoursUntilArrival: null,
-    freeCancellationDeadlineLabel: null,
-    lateArrivalWindowLabel: null,
-  },
-];
+    passHref: `/my-pass/${reference}`,
+    hoursUntilArrival,
+    freeCancellationDeadlineLabel,
+    lateArrivalWindowLabel: free ? null : addMinutesToTime(row.slot_time, 120),
+  };
+}
+
+/** AC "Information available from My Bookings section". RLS ya limita a las reservas propias. */
+export async function fetchUpcomingBookings(supabase: SupabaseClient): Promise<UpcomingBooking[]> {
+  const { data, error } = await supabase
+    .from("bookings")
+    .select(BOOKING_SELECT)
+    .in("status", ["confirmed", "in_progress", "waitlisted"])
+    .order("date", { ascending: true });
+
+  if (error) throw error;
+
+  return (data as unknown as BookingRow[]).map(fromUpcomingRow);
+}
 
 export type PastBookingOutcome = "completed" | "no-show" | "cancelled";
 
@@ -171,44 +353,57 @@ export interface PastBooking {
   loungeName: string;
   dateTimeLabel: string;
   outcome: PastBookingOutcome;
-  /** El no-show explica qué pasó y qué cobró — `NoShow.dc.html` / `History.dc.html`. */
   explanation?: string;
 }
 
-export const PAST_BOOKINGS: PastBooking[] = [
-  {
-    reference: AINSWORTH_PASS.reference,
-    loungeName: AINSWORTH_PASS.loungeName,
-    dateTimeLabel: "Saturday, September 14 · checked in 3:34 PM",
-    outcome: "completed",
-  },
-  {
-    reference: "LP-838204",
-    loungeName: "The Vestry",
-    dateTimeLabel: "Saturday, August 30 · 11:00 AM · stayed 3h 12m",
-    outcome: "completed",
-  },
-  {
-    reference: "LP-822640",
-    loungeName: "Bergdorf Lounge",
-    dateTimeLabel: "Sunday, July 28 · 10:00 AM · never checked in",
-    outcome: "no-show",
-    explanation:
-      "The booking window closed at 11:00 PM without a check-in. The visit still counted toward July, and the day pass was not refunded — that is the cancellation policy you accepted at booking. Cancelling more than 24 hours ahead always avoids this.",
-  },
-  {
-    reference: "LP-810112",
-    loungeName: "The Ainsworth",
-    dateTimeLabel: "Monday, July 15 · 3:30 PM · cancelled 3 days ahead",
-    outcome: "cancelled",
-    explanation: "Cancelled more than 24 hours ahead — no fee, and the visit returned to that month's allowance.",
-  },
-];
+function fromPastRow(row: BookingRow): PastBooking {
+  const loungeName = row.lounges?.name ?? "";
 
-/** "3 of 8" — rail de la pestaña Upcoming (`Main.dc.html`). */
+  if (row.status === "cancelled") {
+    return {
+      reference: row.confirmation_code,
+      loungeName,
+      dateTimeLabel: `${formatFullDate(row.date)} · cancelled`,
+      outcome: "cancelled",
+    };
+  }
+
+  if (row.no_show) {
+    return {
+      reference: row.confirmation_code,
+      loungeName,
+      dateTimeLabel: `${formatFullDate(row.date)} · ${row.slot_time} · never checked in`,
+      outcome: "no-show",
+      explanation:
+        "The booking window closed without a check-in. The visit still counted toward that month, and the day pass was not refunded — that is the cancellation policy you accepted at booking. Cancelling more than 24 hours ahead always avoids this.",
+    };
+  }
+
+  return {
+    reference: row.confirmation_code,
+    loungeName,
+    dateTimeLabel: `${formatFullDate(row.date)} · checked in ${row.checked_in_at ? formatClockTime(row.checked_in_at) : row.slot_time}`,
+    outcome: "completed",
+  };
+}
+
+/** AC "Information available from My Bookings section" (pestaña Past, Story 6.1). */
+export async function fetchPastBookings(supabase: SupabaseClient): Promise<PastBooking[]> {
+  const { data, error } = await supabase
+    .from("bookings")
+    .select(BOOKING_SELECT)
+    .in("status", ["completed", "cancelled"])
+    .order("date", { ascending: false });
+
+  if (error) throw error;
+
+  return (data as unknown as BookingRow[]).map(fromPastRow);
+}
+
+/** "3 of 8" — rail de la pestaña Upcoming (`Main.dc.html`). Story 9.1, sin conectar: dato de muestra. */
 export const VISITS_THIS_MONTH = { used: 3, included: 8 };
 
-/** Rail "Your record" de la pestaña Past (`History.dc.html`). */
+/** Rail "Your record" de la pestaña Past (`History.dc.html`). Story 6.1, sin conectar: dato de muestra. */
 export const BOOKING_RECORD_SUMMARY = {
   totalVisits: 14,
   completed: 11,
@@ -217,70 +412,9 @@ export const BOOKING_RECORD_SUMMARY = {
   feesCharged: LATE_CANCELLATION_FEE_LABEL,
 };
 
-/* ------------------------------------------------------------------ */
-/* Consola de recepción — Story 5.2 (`Reception.dc.html` / `CheckInError.dc.html`) */
-/* ------------------------------------------------------------------ */
-
-export interface ReceptionBooking {
-  reference: string;
-  memberName: string;
-  memberInitials: string;
-  memberSince: string;
-  visitCount: number;
-  email: string;
-  bookedArrival: string;
-  bookedAgo: string;
-  /** "3:34 PM" — cuándo se escaneó o buscó el código (`Reception.dc.html`). */
-  scannedAt: string;
-  windowCloseTime: string;
-  admission: string;
-  specialRequests: string;
-  emergencyContact: string;
-}
-
-const RECEPTION_VALID_BOOKING: ReceptionBooking = {
-  reference: AINSWORTH_PASS.reference,
-  memberName: SAMPLE_MEMBER.name,
-  memberInitials: SAMPLE_MEMBER.initials,
-  memberSince: "March 2024",
-  visitCount: 27,
-  email: SAMPLE_MEMBER.email,
-  bookedArrival: AINSWORTH_PASS.arrivalTime,
-  bookedAgo: "4 min ago",
-  scannedAt: AINSWORTH_PASS.checkedInAt,
-  windowCloseTime: AINSWORTH_PASS.windowCloseTime,
-  admission: "1 member · no guests",
-  specialRequests: AINSWORTH_PASS.specialRequests,
-  emergencyContact: "Miriam Rivas · sister · +1 (555) 402-7788",
-};
-
-export function findReceptionBooking(code: string): ReceptionBooking | undefined {
-  const normalized = code.trim().toUpperCase();
-
-  return normalized === RECEPTION_VALID_BOOKING.reference ? RECEPTION_VALID_BOOKING : undefined;
-}
-
-export interface ReceptionCloseMatch {
-  reference: string;
-  memberName: string;
-  memberInitials: string;
-  note: string;
-}
-
-/** "Close matches for today" de `CheckInError.dc.html`. */
-export const RECEPTION_CLOSE_MATCHES: ReceptionCloseMatch[] = [
-  {
-    reference: "LP-842197",
-    memberName: "Marcus Vidal",
-    memberInitials: "MV",
-    note: "Arrival 4:00 PM · not arrived yet",
-  },
-  {
-    reference: RECEPTION_VALID_BOOKING.reference,
-    memberName: RECEPTION_VALID_BOOKING.memberName,
-    memberInitials: RECEPTION_VALID_BOOKING.memberInitials,
-    note: "Checked in at 3:34 PM · in the lounge",
-  },
-];
-
-export const RECEPTION_TODAY_SUMMARY = { expected: 14, checkedIn: 9 };
+/**
+ * `DeleteAccountModal` (Story 6.3, sin conectar) — cuántas reservas futuras
+ * declara que cancelaría. No se deriva de `fetchUpcomingBookings` porque esa
+ * pantalla entera sigue siendo de muestra.
+ */
+export const SAMPLE_UPCOMING_BOOKINGS_COUNT = 4;

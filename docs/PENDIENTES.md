@@ -136,8 +136,18 @@ dashboard — son artboards distintos (un kiosco de check-in vs. un back-office)
 — así que se deja como estaba, documentado como desviación consciente en
 `docs/design/COMPONENT-MAP.md`.
 
+Al conectar Epic 5 a Supabase (21 sept 2026, decisión tomada con el usuario)
+esta misma falta de login se trasladó **a propósito** al backend: las
+funciones `reception_*` (`supabase/schemas/bookings.sql`) son RPC "de
+kiosco" concedidas a `anon`, autorizadas solo por LP# + lounge + fecha — no
+se esperó a que Epic 7 resolviera el rol de staff, tal como
+`docs/DATA-MODEL-MAP.md` ya anticipaba que esa decisión era "al empezar
+Epic 7, no antes".
+
 **Se resuelve:** si una historia futura pide explícitamente que la recepción
-viva detrás del login de partner (p. ej. `/partner/reception`), no antes.
+viva detrás del login de partner (p. ej. `/partner/reception`), no antes —
+ese mismo momento es el que debería endurecer las RPC de kiosco a exigir
+sesión de staff en vez de `anon`.
 
 ### 2.8 "Settings" del Partner Dashboard no tiene pantalla propia
 
@@ -186,6 +196,13 @@ sus propios días, resolver esto — o el rediseño de arriba, o esperar a que
 Epic 4 (`bookings`) exista y derivar de ahí las plazas en vivo (ver
 `docs/DATA-MODEL-MAP.md` §Epic 7).
 
+Misma ventana fija explica por qué el cron de recordatorios de la Story 5.3
+(`dispatch_booking_reminders()`, ver `docs/design/COMPONENT-MAP.md`
+"Backend real — Epic 5") no se puede ejercitar de punta a punta en este
+entorno: usa el reloj real (`now()`) para "24 horas antes", pero ninguna
+reserva real posible hoy cae en esa ventana mientras `lounge_availability`
+siga anclada a 2025-09-09. Resolver esto también desbloquea eso.
+
 ---
 
 ## 3. Criterios de aceptación cubiertos solo de forma declarativa
@@ -204,12 +221,9 @@ nada los hace cumplir.
 | 3.1 | Call and Directions quick action buttons (google maps url) | Enlaces reales (`tel:` y Google Maps con la dirección de muestra); no hay verificación de que el teléfono o la dirección existan |
 | 3.1 | Share lounge option via social/messaging apps | Los destinos (Messages, WhatsApp, Instagram…) son botones sin integración; solo "Copy" usa una API real del navegador (`navigator.clipboard`) |
 | 4.2 | Apple Pay and Google Pay integration | El Payment Element de Stripe los ofrece automáticamente, pero exigen dominio verificado que no funciona en `localhost` ni sin el rollout de Vercel (`docs/PENDIENTES.md` §4.4) — pueden quedar visualmente presentes pero inertes hasta ese rollout, no es una simulación sino un gap de infraestructura |
-| 5.1 | Booking expires automatically after booking window | No hay reloj real: los cuatro estados del pase (próximo/del día/check-in/expirado) se eligen por `?state=` en `/my-pass/[reference]`, no los dispara el paso del tiempo |
-| 5.2 | Instant verification of booking validity | `findReceptionBooking` en `src/lib/passes.ts` compara contra una única reserva de muestra, no contra un sistema de reservas real |
-| 5.2 | Check-in confirmation to member's app | No hay canal entre `/reception` y `/my-pass`: cada uno muestra su propio estado de check-in por separado, no uno que actualice al otro en vivo |
-| 5.2 | Emergency contact information accessible to staff | Contacto de muestra fijo en `RECEPTION_VALID_BOOKING`; el aviso de "cada acceso queda registrado" es solo texto, no hay registro real |
-| 5.3 | Reminder email 24 hrs before booking | Pantalla `/my-pass/[reference]/reminder` con el email tal como llegaría, igual que `Receipt.dc.html`; no se envía ningún correo ni se programa nada a las 24 h |
-| 6.1 | 24-hour advance notice requirement for cancellation | `isFreeCancellation` compara contra `hoursUntilArrival`, un número de muestra fijo por reserva en `UPCOMING_BOOKINGS` — no hay reloj real que lo recalcule |
+| 5.1 | Booking expires automatically after booking window | **Sigue igual tras conectar Epic 5 (21 sept 2026).** No hay cron que mueva una reserva vencida a completed/no-show por el paso del tiempo (Epic 6, sin construir): los cuatro estados del pase se siguen eligiendo por `?state=` en `/my-pass/[reference]`, ahora sobre datos reales, ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 5" |
+| 5.2 | Emergency contact information accessible to staff | **El mecanismo de acceso ya es real** (`reception_lookup_booking` lee `profiles.emergency_contact_*`) — lo que sigue sin ser real es el registro de "cada acceso queda registrado" (solo texto) y la propia captura del dato (editarlo desde `/profile/privacy` sigue siendo Story 6.3, sin conectar, así que casi ningún miembro de prueba lo tiene relleno) |
+| 6.1 | 24-hour advance notice requirement for cancellation | El umbral (`isFreeCancellation`) ya compara contra `hoursUntilArrival` calculado de verdad (fecha real de la reserva vs. `TODAY`, ver `fromUpcomingRow` en `lib/passes.ts`) desde que Epic 5 conectó `/my-pass` — lo que sigue sin ser real es la propia cancelación: `CancelBookingModal` solo quita la fila del estado local, no escribe en Supabase (Story 6.1 no está conectada) |
 | 6.1 | No show policy enforcement - flat fee | El cargo de $35.00 en `CancelBookingModal` es visual: no hay tarjeta ni pasarela que cobre nada |
 | 6.1 | Email for each booking with a confirmation number | El número de confirmación ya vive en cada reserva de muestra; "Email receipt" en el historial no envía ningún correo |
 | 6.1 | Support contact for booking issues - Admin | Las filas "Something wrong with a booking?" / "Disagree with a fee or a no-show?" no abren ninguna conversación — la consola de soporte es el Epic 8 |
@@ -453,3 +467,5 @@ de la tarifa de no-show.
 | El CI del PR #22 (Epic 4) fallaba en el job `test` con `Invalid API Key provided: undefined` en `src/lib/stripe-payments.test.ts` | 21 sept 2026 | No era un bug del código de Epic 4: `ci.yml` nunca se amplió para servir las Edge Functions — `supabase start` las instala pero no las sirve, hace falta `supabase functions serve` aparte (mismo matiz que ya advertía el comentario de cabecera del propio archivo de test). Arreglo: nuevo paso en el job `test` que levanta `supabase functions serve` en background con un `supabase/functions/.env` armado en el runner desde el secret `STRIPE_SECRET_KEY` (dado de alta en GitHub, misma clave de test de la sandbox de Epic 4 — sin riesgo real, modo test), con una espera activa (hasta 30s) a que las functions respondan antes de `npm test`. No hizo falta darle los demás secrets de `supabase/functions/.env` (Brevo, webhooks): ninguna function que los necesite se invoca en esta suite. Ver `docs/ci-cd/RESUMEN.md`. |
 | La sandbox de Stripe de Epic 4 expiraba el 24 sept 2026 si nadie la reclamaba (§4.5, ya retirada de este archivo) | 21 sept 2026 | Reclamada por el usuario con `stripe sandbox claim` + `stripe login --complete-device`, asociándola a una cuenta Stripe real — ya no expira. La CLI no ofrece forma de posponer el plazo (confirmado en `docs.stripe.com/cli/sandbox`: fijo a 7 días, solo `claim` o dejarla expirar). Verificado con una llamada real a la API tras reclamarla: la clave `rkcs_test_...` sigue siendo exactamente la misma (no rotó), así que no hizo falta tocar `.env.local`, el secret de GitHub, Supabase ni Vercel. |
 | Epic 4 (Stripe + recibo de reserva) no tenía nada desplegado a `staging`/`main` — `deploy.yml` solo desplegaba `send-email` (Epic 1), sin las 5 Edge Functions nuevas ni sus secrets (§4.6, ya retirada de este archivo) | 21 sept 2026 | `deploy.yml` ampliado (jobs `migrate-dev`/`migrate-prod`) con `supabase secrets set` + `supabase functions deploy` para las 5 functions nuevas, mismo patrón que `send-email`. Decisión del usuario durante el despliegue: **3 cuentas/sandboxes de Stripe separadas, una por ambiente** (local, `luxepass-dev`, `luxepass-prod`) — no solo el webhook secret, también `STRIPE_SECRET_KEY_DEV`/`_PROD` en vez de una sola compartida (la de `ci.yml`, sin sufijo, queda aparte: es la de local, solo para tests). Los 6 secrets de ambiente cargados en GitHub (`STRIPE_SECRET_KEY_DEV`/`_PROD`, `STRIPE_WEBHOOK_SECRET_DEV`/`_PROD`, `BOOKING_RECEIPT_WEBHOOK_SECRET_DEV`/`_PROD`), y confirmados los 3 pasos manuales en `luxepass-prod` (secretos de Vault, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` en Vercel, webhook de Stripe registrado) — mismos ya hechos antes en `luxepass-dev`. Epic 4 queda listo para promoverse a `staging` y eventualmente a `main`. |
+| Epic 5 (QR Code & Check-in) no tenía backend: My Pass, el pase digital y la consola de recepción eran datos de muestra fijos (`AINSWORTH_PASS`, `RECEPTION_VALID_BOOKING`) | 21 sept 2026 | Conectado a Supabase local real, decisiones tomadas con el usuario antes de implementar: Story 5.2 vía RPC "de kiosco" (`reception_*`, `SECURITY DEFINER`, concedidas a `anon` — sin esperar al login de staff de Epic 7) y Story 5.3 vía `pg_cron` real (primer job programado del proyecto) en vez de quedarse mockup. `bookings` gana `confirmation_code` (columna generada), `checked_in_at`, `no_show`, `reminder_sent_at`; `profiles` gana `emergency_contact_*`. **Bug real encontrado y corregido corriendo la suite localmente**: el hash de `bookingReferenceFromId` (Story 4.2/5.1, `31 * suma de códigos ASCII`) es conmutativo — dos UUID que son anagramas entre sí colisionan en el mismo LP#, invisible mientras era solo copy de un recibo, pero un bug funcional real en cuanto Epic 5 lo usa como clave de búsqueda (`reception_checkin_booking` fallaba con "query returned more than one row"). Corregido a un hash posicional en las tres implementaciones (TS, Deno, SQL) a la vez. Ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 5" y `docs/DATA-MODEL-MAP.md` §Epic 5. |
+| `supabase db diff --local -f <nombre>` (el comando que documenta `CLAUDE.md` §Supabase Local Development) ya no lee `supabase/schemas/*.sql` — CLI v2.116.0 lo cambió a comparar solo migraciones contra la base, con un aviso a mitad de la salida fácil de pasar por alto | 21 sept 2026 | El comando declarativo correcto en esta versión del CLI es `supabase db schema declarative sync --apply -f <nombre>` (o `--no-apply` para generar sin aplicar, como pedía el paso 4 de la receta de `CLAUDE.md` antes de aplicar). Mismo flujo de ahí en adelante (revisar el SQL generado, `supabase db advisors`). `CLAUDE.md` queda desactualizado en este punto — actualizarlo la próxima vez que se toque esa sección, no se corrigió en esta rama para no mezclarlo con el trabajo de Epic 5. |

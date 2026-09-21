@@ -85,9 +85,7 @@ export function DigitalPassCard({
               <CircleCheck size={44} strokeWidth={1.7} className="text-accent" aria-hidden />
             </span>
             <h2 className="mt-4.5 font-display text-[30px] text-fg">Checked in</h2>
-            <p className="mt-2 text-[12.5px] text-fg-subtle">
-              {pass.checkedInAt} · welcomed by {pass.checkedInBy}
-            </p>
+            <p className="mt-2 text-[12.5px] text-fg-subtle">{pass.checkedInAt}</p>
           </div>
         ) : today ? (
           <div className="relative mt-4.5">
@@ -130,26 +128,30 @@ export function DigitalPassCard({
           {checkedIn ? (
             <>
               <Row label="Reference" value={pass.reference} muted={expired} />
-              <Row label="Member" value="Alexandra Rivas" muted={expired} />
+              <Row label="Member" value={pass.memberName} muted={expired} />
               <Row label="Lounge" value={pass.loungeName} muted={expired} />
               <Row label="Stay until" value={pass.windowCloseTime} muted={expired} />
             </>
           ) : expired ? (
             <>
-              <Row label="Member" value="Alexandra Rivas" muted />
+              <Row label="Member" value={pass.memberName} muted />
               <Row label="Lounge" value={pass.loungeName} muted />
-              <Row label="Visited" value={`${pass.shortDateLabel} · ${pass.checkedInAt}`} muted />
-              <Row label="Outcome" value="Attended" muted />
+              <Row
+                label="Visited"
+                value={pass.checkedInAt ? `${pass.shortDateLabel} · ${pass.checkedInAt}` : pass.shortDateLabel}
+                muted
+              />
+              <Row label="Outcome" value={pass.noShow ? "No-show" : "Attended"} muted />
             </>
           ) : today ? (
             <>
-              <Row label="Member" value="Alexandra Rivas" />
+              <Row label="Member" value={pass.memberName} />
               <Row label="Today" value={`${pass.arrivalTime} · up to ${pass.stayHours} hours`} />
               <Row label="Admits" value={pass.admission} />
             </>
           ) : (
             <>
-              <Row label="Member" value="Alexandra Rivas" />
+              <Row label="Member" value={pass.memberName} />
               <Row label="Lounge" value={pass.loungeName} />
               <Row label="Date" value={pass.shortDateLabel} />
               <Row

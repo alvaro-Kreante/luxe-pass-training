@@ -35,9 +35,7 @@ describe("estado con check-in hecho", () => {
 
     expect(screen.queryByRole("img", { name: /qr code/i })).not.toBeInTheDocument();
     expect(screen.getByText("Checked in")).toBeInTheDocument();
-    expect(
-      screen.getByText(`${AINSWORTH_PASS.checkedInAt} · welcomed by ${AINSWORTH_PASS.checkedInBy}`),
-    ).toBeInTheDocument();
+    expect(screen.getByText(AINSWORTH_PASS.checkedInAt!)).toBeInTheDocument();
   });
 });
 

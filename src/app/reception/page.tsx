@@ -5,13 +5,17 @@ import Image from "next/image";
 import { CircleAlert, CircleCheck, ScanLine, Search, ShieldAlert } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
+import { TODAY } from "@/lib/availability";
 import {
-  AINSWORTH_PASS,
   RECEPTION_CLOSE_MATCHES,
-  RECEPTION_TODAY_SUMMARY,
-  findReceptionBooking,
+  checkInReceptionBooking,
+  fetchReceptionTodaySummary,
+  lookupReceptionBooking,
+  reportReceptionNoShow,
   type ReceptionBooking,
-} from "@/lib/passes";
+  type ReceptionTodaySummary,
+} from "@/lib/reception";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 /**
@@ -20,21 +24,53 @@ import { cn } from "@/lib/utils";
  * `CheckInError.dc.html` (número no encontrado) son la misma pantalla:
  * escanear o teclear un LP# y mirar el resultado.
  *
+ * Backend real (Supabase local): RPC "de kiosco" (`src/lib/reception.ts`,
+ * sin login de personal ni de miembro — ver `supabase/schemas/bookings.sql`
+ * y `docs/design/COMPONENT-MAP.md` "Backend real — Epic 5"). `THE_AINSWORTH`
+ * sigue fijo como el lounge de esta consola, igual que el resto del
+ * proyecto fija literalmente The Ainsworth donde no hay todavía un login de
+ * partner que lo resuelva (Story 7.1).
+ *
  * Costura declarada en pantalla (Fase 6): la lista diaria de invitados y las
  * notificaciones en tiempo real son la Story 7.1 del Partner Dashboard.
  */
+const THE_AINSWORTH = "the-ainsworth";
+
 export default function ReceptionPage() {
-  const [code, setCode] = React.useState(AINSWORTH_PASS.reference);
-  const [lookedUp, setLookedUp] = React.useState(AINSWORTH_PASS.reference);
-  const [checkedIn, setCheckedIn] = React.useState(false);
-  const [noShow, setNoShow] = React.useState(false);
+  const [code, setCode] = React.useState("");
+  const [booking, setBooking] = React.useState<ReceptionBooking | null>(null);
+  const [lookedUpCode, setLookedUpCode] = React.useState<string | null>(null);
+  const [summary, setSummary] = React.useState<ReceptionTodaySummary>({ expected: 0, checkedIn: 0 });
+  const supabase = React.useMemo(() => createClient(), []);
 
-  const booking = findReceptionBooking(lookedUp);
+  const refreshSummary = React.useCallback(() => {
+    fetchReceptionTodaySummary(supabase, THE_AINSWORTH, TODAY).then(setSummary);
+  }, [supabase]);
 
-  function lookUp() {
-    setLookedUp(code);
-    setCheckedIn(false);
-    setNoShow(false);
+  React.useEffect(() => {
+    refreshSummary();
+  }, [refreshSummary]);
+
+  async function lookUp() {
+    const found = await lookupReceptionBooking(supabase, THE_AINSWORTH, TODAY, code);
+    setBooking(found);
+    setLookedUpCode(code);
+  }
+
+  async function handleCheckIn() {
+    if (!booking) return;
+    await checkInReceptionBooking(supabase, THE_AINSWORTH, TODAY, booking.reference);
+    const refreshed = await lookupReceptionBooking(supabase, THE_AINSWORTH, TODAY, booking.reference);
+    setBooking(refreshed);
+    refreshSummary();
+  }
+
+  async function handleNoShow() {
+    if (!booking) return;
+    await reportReceptionNoShow(supabase, THE_AINSWORTH, TODAY, booking.reference);
+    const refreshed = await lookupReceptionBooking(supabase, THE_AINSWORTH, TODAY, booking.reference);
+    setBooking(refreshed);
+    refreshSummary();
   }
 
   return (
@@ -44,14 +80,12 @@ export default function ReceptionPage() {
         <span aria-hidden className="h-6.5 w-px bg-line" />
         <div>
           <h2 className="m-0 text-lg text-fg">The Ainsworth · Reception</h2>
-          <p className="m-0 mt-0.5 text-[11.5px] text-fg-subtle">Saturday, September 14 · 3:34 PM</p>
         </div>
         <div className="flex-1" />
         <span className="inline-flex items-center gap-2 rounded-pill border border-line px-3.5 py-2">
           <span aria-hidden className="size-1.5 rounded-full bg-accent" />
           <span className="text-xs font-bold text-fg-muted">
-            {RECEPTION_TODAY_SUMMARY.expected} expected today ·{" "}
-            {RECEPTION_TODAY_SUMMARY.checkedIn + (checkedIn ? 1 : 0)} checked in
+            {summary.expected} expected today · {summary.checkedIn} checked in
           </span>
         </span>
       </div>
@@ -82,7 +116,7 @@ export default function ReceptionPage() {
                 placeholder="LP-000000"
               />
               {booking ? (
-                <span className="shrink-0 text-[11.5px] text-fg-subtle">Scanned {booking.scannedAt}</span>
+                <span className="shrink-0 text-[11.5px] text-fg-subtle">Arrival {booking.arrivalTime}</span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 rounded-pill border border-fg-subtle px-3 py-1.5">
                   <span aria-hidden className="size-1.5 rounded-full bg-fg-subtle" />
@@ -103,15 +137,9 @@ export default function ReceptionPage() {
           </p>
 
           {booking ? (
-            <ValidResult
-              booking={booking}
-              checkedIn={checkedIn}
-              noShow={noShow}
-              onCheckIn={() => setCheckedIn(true)}
-              onNoShow={() => setNoShow(true)}
-            />
+            <ValidResult booking={booking} onCheckIn={handleCheckIn} onNoShow={handleNoShow} />
           ) : (
-            <ErrorResult code={lookedUp} />
+            lookedUpCode !== null && <ErrorResult code={lookedUpCode} />
           )}
 
           <p className="m-0 mt-4.5 flex items-center gap-2.5 text-xs text-fg-subtle">
@@ -125,32 +153,37 @@ export default function ReceptionPage() {
   );
 }
 
+function initialsOf(name: string): string {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((part) => part[0]!.toUpperCase())
+    .slice(0, 2)
+    .join("");
+}
+
 function ValidResult({
   booking,
-  checkedIn,
-  noShow,
   onCheckIn,
   onNoShow,
 }: {
   booking: ReceptionBooking;
-  checkedIn: boolean;
-  noShow: boolean;
   onCheckIn: () => void;
   onNoShow: () => void;
 }) {
   const firstName = booking.memberName.split(" ")[0];
+  const checkedIn = booking.status === "in_progress" || booking.status === "completed";
+  const reportedNoShow = booking.noShow;
 
   return (
     <div className="mt-5.5 rounded-[20px] border border-line bg-dark-card p-6.5">
       <div className="flex items-center gap-4 border-b border-line pb-5">
         <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-accent font-display text-xl font-bold text-on-accent">
-          {booking.memberInitials}
+          {initialsOf(booking.memberName)}
         </span>
         <div className="flex-1">
           <h2 className="m-0 text-2xl text-fg">{booking.memberName}</h2>
-          <p className="m-0 mt-1.5 text-[12.5px] text-fg-subtle">
-            Annual member since {booking.memberSince} · {booking.visitCount} visits · {booking.email}
-          </p>
+          <p className="m-0 mt-1.5 text-[12.5px] text-fg-subtle">{booking.memberEmail}</p>
         </div>
         <span className="inline-flex items-center gap-2 rounded-pill border border-accent bg-[rgba(201,168,118,0.18)] px-4 py-2.5">
           <CircleCheck size={16} strokeWidth={2} className="text-accent" aria-hidden />
@@ -160,9 +193,9 @@ function ValidResult({
 
       <div className="grid grid-cols-4 gap-4.5 py-5">
         <ReceptionField label="Reference" value={booking.reference} />
-        <ReceptionField label="Booked arrival" value={`${booking.bookedArrival} · ${booking.bookedAgo}`} />
-        <ReceptionField label="Window" value={`Until ${booking.windowCloseTime}`} />
-        <ReceptionField label="Admits" value={booking.admission} />
+        <ReceptionField label="Arrival" value={booking.arrivalTime} />
+        <ReceptionField label="Status" value={checkedIn ? "Checked in" : reportedNoShow ? "No-show" : "Confirmed"} />
+        {booking.checkedInAt && <ReceptionField label="Checked in at" value={booking.checkedInAt} />}
       </div>
 
       <div className="flex gap-3.5">
@@ -170,7 +203,9 @@ function ValidResult({
           <p className="m-0 text-[11px] font-bold uppercase tracking-[0.08em] text-fg-subtle">
             Special requests
           </p>
-          <p className="m-0 mt-2 text-[13px] leading-normal text-fg-muted">{booking.specialRequests}</p>
+          <p className="m-0 mt-2 text-[13px] leading-normal text-fg-muted">
+            {booking.specialRequests || "None"}
+          </p>
         </div>
         <div className="flex-1 rounded-[14px] border border-dashed border-gold-600 bg-panel-black p-4">
           <div className="flex items-center gap-2">
@@ -179,7 +214,9 @@ function ValidResult({
               Emergency contact
             </p>
           </div>
-          <p className="m-0 mt-2 text-[13px] font-bold text-fg">{booking.emergencyContact}</p>
+          <p className="m-0 mt-2 text-[13px] font-bold text-fg">
+            {booking.emergencyContact ?? "Not on file"}
+          </p>
           <p className="m-0 mt-1 text-[11.5px] leading-normal text-fg-subtle">
             Shown to reception during the visit only. Every access is logged.
           </p>
@@ -189,7 +226,7 @@ function ValidResult({
       <div className="mt-5 flex gap-3">
         <button
           type="button"
-          disabled={checkedIn}
+          disabled={checkedIn || reportedNoShow}
           onClick={onCheckIn}
           className={cn(buttonVariants({ size: "lg" }), "flex-1 disabled:opacity-70")}
         >
@@ -197,11 +234,11 @@ function ValidResult({
         </button>
         <button
           type="button"
-          disabled={noShow}
+          disabled={checkedIn || reportedNoShow}
           onClick={onNoShow}
           className={cn(buttonVariants({ variant: "ghost", size: "lg" }), "w-[200px]")}
         >
-          {noShow ? "Marked no-show" : "Mark no-show"}
+          {reportedNoShow ? "Marked no-show" : "Mark no-show"}
         </button>
         <button type="button" className={cn(buttonVariants({ variant: "ghost", size: "lg" }), "w-[190px]")}>
           Report issue

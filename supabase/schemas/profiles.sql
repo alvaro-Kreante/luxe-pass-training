@@ -22,6 +22,15 @@ create table if not exists public.profiles (
   company text,
   terms_accepted_at timestamptz not null,
   stripe_customer_id text unique,
+  -- Story 5.2 (Epic 5) — "Emergency contact information accessible to
+  -- staff". Gap anticipado en docs/DATA-MODEL-MAP.md: la Story 1.1 no lo
+  -- pide en el alta, así que nace nullable aquí. La captura real (editar
+  -- este dato desde `/profile/privacy`) sigue siendo Story 6.3, sin
+  -- conectar — `reception_lookup_booking` (Epic 5) es quien primero lo lee
+  -- de verdad.
+  emergency_contact_name text,
+  emergency_contact_relation text,
+  emergency_contact_phone text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

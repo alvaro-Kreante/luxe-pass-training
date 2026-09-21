@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Check, CircleAlert, Clock, Download, Mail, PhoneCall, Plus, X } from "lucide-react";
 
 import { NotificationBellMenu } from "@/components/account/notification-bell-menu";
+import { RequireSession } from "@/components/onboarding/require-session";
 import { toneOf } from "@/components/lounges/lounge-thumb";
 import { CancelBookingModal } from "@/components/passes/cancel-booking-modal";
 import { StatusChip } from "@/components/ui/status-chip";
@@ -13,13 +14,15 @@ import { AppShell } from "@/components/patterns/app-shell";
 import { buttonVariants } from "@/components/ui/button";
 import {
   BOOKING_RECORD_SUMMARY,
-  PAST_BOOKINGS,
-  UPCOMING_BOOKINGS,
   VISITS_THIS_MONTH,
+  fetchPastBookings,
+  fetchUpcomingBookings,
+  type PastBooking,
   type PastBookingOutcome,
   type UpcomingBooking,
 } from "@/lib/passes";
 import { MEMBERSHIP_SUMMARY } from "@/lib/profile";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 /**
@@ -41,9 +44,35 @@ const ROW_BUTTON = cn(buttonVariants({ variant: "secondary", size: "md" }), "nor
 type Tab = "upcoming" | "past";
 
 export default function MyPassPage() {
+  return (
+    <RequireSession>
+      <MyPassScreen />
+    </RequireSession>
+  );
+}
+
+function MyPassScreen() {
   const [tab, setTab] = React.useState<Tab>("upcoming");
-  const [upcoming, setUpcoming] = React.useState<UpcomingBooking[]>(UPCOMING_BOOKINGS);
+  const [upcoming, setUpcoming] = React.useState<UpcomingBooking[]>([]);
+  const [past, setPast] = React.useState<PastBooking[]>([]);
   const [cancelTarget, setCancelTarget] = React.useState<UpcomingBooking | null>(null);
+
+  React.useEffect(() => {
+    let active = true;
+    const supabase = createClient();
+
+    Promise.all([fetchUpcomingBookings(supabase), fetchPastBookings(supabase)]).then(
+      ([upcomingBookings, pastBookings]) => {
+        if (!active) return;
+        setUpcoming(upcomingBookings);
+        setPast(pastBookings);
+      },
+    );
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   function removeUpcoming(id: string) {
     setUpcoming((current) => current.filter((booking) => booking.id !== id));
@@ -78,7 +107,7 @@ export default function MyPassPage() {
               />
               <TabButton
                 label="Past"
-                count={PAST_BOOKINGS.length}
+                count={past.length}
                 active={tab === "past"}
                 onClick={() => setTab("past")}
               />
@@ -91,7 +120,7 @@ export default function MyPassPage() {
                 onLeaveWaitlist={removeUpcoming}
               />
             ) : (
-              <PastList />
+              <PastList bookings={past} />
             )}
           </div>
 
@@ -231,15 +260,15 @@ const PAST_FILTERS: { value: PastBookingOutcome | "all"; label: string }[] = [
   { value: "no-show", label: "No-show" },
 ];
 
-function PastList() {
+function PastList({ bookings }: { bookings: PastBooking[] }) {
   const [filter, setFilter] = React.useState<PastBookingOutcome | "all">("all");
-  const visible = PAST_BOOKINGS.filter((booking) => filter === "all" || booking.outcome === filter);
+  const visible = bookings.filter((booking) => filter === "all" || booking.outcome === filter);
 
   return (
     <>
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {PAST_FILTERS.map(({ value, label }) => {
-          const count = value === "all" ? PAST_BOOKINGS.length : PAST_BOOKINGS.filter((b) => b.outcome === value).length;
+          const count = value === "all" ? bookings.length : bookings.filter((b) => b.outcome === value).length;
           return (
             <button
               key={value}

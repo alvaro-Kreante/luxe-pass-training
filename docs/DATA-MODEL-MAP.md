@@ -124,15 +124,34 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
   `supabase/functions/_shared/brevo.ts`). Detalle en `CLAUDE.md` §Email de
   recibo de reserva.
 
-### Epic 5 — QR Code & Check-in
+### Epic 5 — QR Code & Check-in *(implementado — Supabase local, sept 2026)*
 
-- No crea tabla nueva de fondo: extiende `bookings` con `confirmation_code`
-  (LP#), `checked_in_at`, `no_show`.
-- Story 5.2 menciona "emergency contact information accessible to staff" —
-  `profiles` (Epic 1) hoy no tiene ese campo. **Gap a señalar** si se
-  implementa: columna nueva en `profiles`, no tabla nueva.
-- Story 5.3 (reminder 24h antes) depende de `notifications`, que nace en
-  Epic 6 → cruce Epic 5→6.
+- No crea tabla nueva de fondo: extiende `bookings` (Epic 4) con
+  `confirmation_code` (LP#, **columna generada**, no insertada aparte —
+  replica en SQL el mismo hash que `bookingReferenceFromId`, ver
+  `docs/design/COMPONENT-MAP.md` "Backend real — Epic 5"), `checked_in_at`,
+  `no_show`, `reminder_sent_at` (guarda contra reenvíos del cron de 5.3).
+- Story 5.2 ("emergency contact information accessible to staff") —
+  **gap resuelto**: `profiles.emergency_contact_name`/`_relation`/`_phone`
+  (nullable — la Story 1.1 no lo pide en el alta). La captura real de ese
+  dato (editarlo desde `/profile/privacy`) sigue siendo Story 6.3, sin
+  conectar.
+- Story 5.2, RPC "de kiosco" (`reception_lookup_booking`/
+  `reception_checkin_booking`/`reception_report_no_show`/
+  `reception_today_summary`, `SECURITY DEFINER`, concedidas a `anon`):
+  decisión tomada con el usuario para no bloquear en la decisión de rol
+  staff/partner que esta misma tabla deja abierta más abajo para Epic 7 —
+  autorizadas solo por LP# + lounge + fecha (`TODAY` de mockup, no
+  `current_date`), sin login de personal.
+- Story 5.3 (reminder 24h antes) — **decisión revertida el 21 sept 2026**:
+  ya no depende de `notifications` (Epic 6). Se conecta con **`pg_cron`
+  real** (primer job programado del proyecto, `dispatch_booking_reminders()`
+  en `supabase/schemas/booking_reminders.sql`) + Edge Function
+  `send-booking-reminder`, mismo patrón de Database Webhook por `pg_net`
+  que `booking_receipts.sql` (Story 4.2/5.1) pero disparado por el paso del
+  tiempo en vez de un insert. Sin poder ejercitarse de punta a punta en este
+  entorno todavía — ver desviación en `docs/design/COMPONENT-MAP.md` y
+  `docs/PENDIENTES.md`.
 
 ### Epic 6 — Member Experience & Notifications
 
@@ -222,7 +241,11 @@ decidirla en cuanto se empiece Epic 7, no dejarla implícita.
 
 **Historias que apuntan a backend fuera del alcance del repo** (se simulan
 visualmente, se anotan como desviación al implementar): 8.1 (refund
-processing real), 5.3/6.2/7.2/8.2 (envío de email/reportes programados —
-Mailpit sirve para dev local, no hay cron de producción). Story 4.2 salió de
-esta lista el 17 sept 2026 — ver su fila arriba (Stripe real, salvo Apple
+processing real), 6.2/7.2/8.2 (envío de email/reportes programados — Mailpit
+sirve para dev local, no hay cron de producción). Story 4.2 salió de esta
+lista el 17 sept 2026 — ver su fila arriba (Stripe real, salvo Apple
 Pay/Google Pay, que sí siguen fuera de alcance por dominio no verificado).
+Story 5.3 salió el 21 sept 2026 — primer job real con `pg_cron` del
+proyecto (ver su fila en "Epic 5" arriba), aunque sin poder ejercitarse de
+punta a punta en local/CI hasta que el seed de `lounge_availability` deje
+de estar anclado a una fecha fija (ver `docs/PENDIENTES.md`).
