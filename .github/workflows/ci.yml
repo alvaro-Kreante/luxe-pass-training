@@ -124,17 +124,29 @@ jobs:
       # (que las deja instaladas pero sin servir). `supabase/functions/.env`
       # nunca se comitea (gitignored), así que el runner arma el suyo desde
       # el secret de GitHub — mismo secreto de test que usa el desarrollador
-      # en local, sin riesgo real (modo test, sin dinero real). El resto de
-      # secrets de `supabase/functions/.env` (Brevo, webhooks) no hace
-      # falta dárselos aquí: ninguna function que los necesite se invoca en
-      # esta suite (el hook de email está desactivado arriba, y el webhook
-      # de recibo de reserva es un no-op sin sus secretos de Vault, que
-      # este runner tampoco crea — ver CLAUDE.md §Email de recibo de reserva).
+      # en local, sin riesgo real (modo test, sin dinero real). `APP_URL`
+      # también hace falta (sin servir nada real — no hay `npm run dev` en
+      # este job): `stripe-create-checkout-session` la usa para armar el
+      # `return_url` que le manda a Stripe, que rechaza la sesión si no es
+      # una URL absoluta válida. El resto de secrets de
+      # `supabase/functions/.env` (Brevo, webhooks) no hace falta dárselos
+      # aquí: ninguna function que los necesite se invoca en esta suite (el
+      # hook de email está desactivado arriba, y el webhook de recibo de
+      # reserva es un no-op sin sus secretos de Vault, que este runner
+      # tampoco crea — ver CLAUDE.md §Email de recibo de reserva).
       - name: Servir las Edge Functions localmente (Story 4.2 — Stripe)
         env:
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
         run: |
-          echo "STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY" > supabase/functions/.env
+          {
+            echo "STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY"
+            # No sirve nada de verdad en este runner (no hay npm run dev) —
+            # stripe-create-checkout-session solo necesita que sea una URL
+            # absoluta válida para el `return_url` que le manda a Stripe.
+            # Sin esto, `${Deno.env.get("APP_URL")}/...` queda literal
+            # "undefined/..." y Stripe rechaza la Checkout Session con 500.
+            echo "APP_URL=http://127.0.0.1:3000"
+          } > supabase/functions/.env
           nohup supabase functions serve --env-file supabase/functions/.env \
             > /tmp/functions-serve.log 2>&1 &
 
