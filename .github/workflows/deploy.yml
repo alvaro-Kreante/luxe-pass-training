@@ -66,10 +66,14 @@ jobs:
       # de usuario: Stripe firma la suya, Postgres no tiene sesión). Las
       # otras tres SÍ verifican JWT por defecto — las llama un miembro
       # autenticado vía `supabase.functions.invoke`.
+      # Cuenta Stripe propia por ambiente (no compartida como Brevo) —
+      # STRIPE_SECRET_KEY_DEV/_PROD, no un solo STRIPE_SECRET_KEY. El de
+      # `ci.yml` (sin sufijo) es aparte: sandbox de solo-test para la
+      # suite automatizada, no un ambiente desplegado.
       - name: Configurar secrets de las Edge Functions de Stripe/recibo de reserva
         run: |
           supabase secrets set \
-            STRIPE_SECRET_KEY="${{ secrets.STRIPE_SECRET_KEY }}" \
+            STRIPE_SECRET_KEY="${{ secrets.STRIPE_SECRET_KEY_DEV }}" \
             STRIPE_WEBHOOK_SECRET="${{ secrets.STRIPE_WEBHOOK_SECRET_DEV }}" \
             BOOKING_RECEIPT_WEBHOOK_SECRET="${{ secrets.BOOKING_RECEIPT_WEBHOOK_SECRET_DEV }}" \
             APP_URL="${{ secrets.APP_URL_DEV }}"
@@ -132,7 +136,7 @@ jobs:
       - name: Configurar secrets de las Edge Functions de Stripe/recibo de reserva
         run: |
           supabase secrets set \
-            STRIPE_SECRET_KEY="${{ secrets.STRIPE_SECRET_KEY }}" \
+            STRIPE_SECRET_KEY="${{ secrets.STRIPE_SECRET_KEY_PROD }}" \
             STRIPE_WEBHOOK_SECRET="${{ secrets.STRIPE_WEBHOOK_SECRET_PROD }}" \
             BOOKING_RECEIPT_WEBHOOK_SECRET="${{ secrets.BOOKING_RECEIPT_WEBHOOK_SECRET_PROD }}" \
             APP_URL="${{ secrets.APP_URL_PROD }}"
