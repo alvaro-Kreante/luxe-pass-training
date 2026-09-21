@@ -360,6 +360,26 @@ existente (key/Map ID de `luxepass-dev` y de `luxepass-prod` pueden ser el
 mismo par o pares distintos — decisión pendiente, no técnica) antes de
 promover esta rama a `staging`.
 
+### 4.5 Epic 5 no tiene nada desplegado a `staging`/`main` todavía
+
+Igual que le pasó a Epic 4 (§4.6, ya resuelta y retirada de este archivo):
+`deploy.yml` solo despliega las 5 Edge Functions de Epic 4
+(`send-email`, `stripe-*`, `send-booking-receipt`) — no incluye
+`send-booking-reminder` (Story 5.3, nueva en esta rama). Las columnas/RPC
+de `bookings`/`profiles` y el job `pg_cron` sí se aplican solos vía
+migraciones (`supabase db push` ya corre en `migrate-dev`/`migrate-prod`),
+pero sin la function desplegada y sus secrets dados de alta, el cron de
+`luxepass-dev`/`luxepass-prod` correría en no-op (mismo guard que en
+local — ver "Supabase Local Development" §Recordatorio de reserva en
+`CLAUDE.md`).
+
+**Desbloquea:** antes de promover esta rama a `staging`, ampliar
+`deploy.yml` con `send-booking-reminder` (mismo patrón que las 5
+functions de Epic 4) y dar de alta a mano, una vez por proyecto remoto,
+los dos secretos de Vault (`booking_reminder_webhook_url`/`_secret`) y
+`BOOKING_REMINDER_WEBHOOK_SECRET` en `supabase secrets set` — igual que ya
+se hizo para `booking_receipt_webhook_*` con Epic 4.
+
 ---
 
 ## 5. Decisiones abiertas

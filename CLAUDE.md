@@ -12,7 +12,7 @@ Repositorio integral del proyecto **LuxePass** (plataforma de membresía de lujo
 
 ## ⚠️ Alcance: mockup navegable + backend real parcial (Supabase)
 
-**Este repo empezó como un mockup navegable sin backend — eso ya no es así del todo.** Desde sept 2026, varias historias tienen lógica real conectada a Supabase: Epic 1 completo (Story 1.1 User Registration, Story 1.2 Login & Authentication), Epic 2 completo (Story 2.1 Map-Based Lounge Discovery, Story 2.2 Lounge Filtering & Search, Story 2.3 List View Alternative — catálogo real en `public.lounges`) y Epic 3 completo (Story 3.1 Lounge Profile Details, Story 3.2 Availability Calendar — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 2 / Epic 3). Epic 4 (Booking System) está completo: Story 4.1 (Seamless Booking Flow), Story 4.2 (Payment Processing, **Stripe real** en modo test) y Story 4.3 (Calendar Integration, ya real desde el mockup) — tablas `bookings`/`payments`, RPC `confirm_booking`/`join_waitlist`, y el email real de recibo de reserva (ver más abajo "Email de recibo de reserva real") — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 4. El resto de epics sigue el patrón de mockup visual descrito abajo, historia por historia, hasta que se conecten a su vez.
+**Este repo empezó como un mockup navegable sin backend — eso ya no es así del todo.** Desde sept 2026, varias historias tienen lógica real conectada a Supabase: Epic 1 completo (Story 1.1 User Registration, Story 1.2 Login & Authentication), Epic 2 completo (Story 2.1 Map-Based Lounge Discovery, Story 2.2 Lounge Filtering & Search, Story 2.3 List View Alternative — catálogo real en `public.lounges`) y Epic 3 completo (Story 3.1 Lounge Profile Details, Story 3.2 Availability Calendar — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 2 / Epic 3). Epic 4 (Booking System) está completo: Story 4.1 (Seamless Booking Flow), Story 4.2 (Payment Processing, **Stripe real** en modo test) y Story 4.3 (Calendar Integration, ya real desde el mockup) — tablas `bookings`/`payments`, RPC `confirm_booking`/`join_waitlist`, y el email real de recibo de reserva (ver más abajo "Email de recibo de reserva real") — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 4. Epic 5 (QR Code & Check-in) está completo: Story 5.1 (Digital Pass Generation), Story 5.2 (Lounge Check-In Process, RPC "de kiosco" sin login de personal) y Story 5.3 (Booking Reminder, **pg_cron real**) — `bookings` gana `confirmation_code`/`checked_in_at`/`no_show`, `profiles` gana `emergency_contact_*` (ver más abajo "Check-in de recepción real" y "Recordatorio de reserva real") — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 5. El resto de epics sigue el patrón de mockup visual descrito abajo, historia por historia, hasta que se conecten a su vez.
 
 La app en producción de En Soleil vive en `app.luxepass.co`; si este repo la reemplaza o sigue siendo un proyecto aparte no está resuelto en este documento — no asumir ninguna de las dos sin confirmar.
 
@@ -47,6 +47,10 @@ Ejemplo ya hecho de patrón mockup (epics aún no conectados): datos de muestra 
 **Procesamiento de pagos real (Story 4.2):** desde el 17 sept 2026, la decisión de "Stripe fuera de alcance" que traía `docs/DATA-MODEL-MAP.md` (válida solo durante el periodo de mockup) se revierte — ahora que Epic 4 se implementa, el pago va vía **Stripe real, en modo test**, no simulado. Es la segunda excepción viva a la regla "❌ Server Actions o fetch a servicios externos" de arriba: aplica porque Epic 4 **sí** está conectado a Supabase. Misma arquitectura que Brevo — sin route handlers de Next.js, Supabase Edge Functions — y el webhook de Stripe, no el cliente, es quien decide el `status` real del pago. Apple Pay/Google Pay quedan fuera de esta conexión real (dominio no verificado, no viable en `localhost`). Detalle completo en "Supabase Local Development" §Procesamiento de pagos (Stripe).
 
 **Email de recibo de reserva real (Story 4.2/5.1):** desde el 18 sept 2026, el recibo de reserva (`Receipt.dc.html`, alcanzable desde `/book/confirmed`) también se envía de verdad, para toda reserva `confirmed` (con o sin pago — cubre de paso "Email with booking info" de la Story 5.1). Es la tercera excepción viva a la regla "❌ Server Actions o fetch a servicios externos" de arriba. A diferencia de Brevo/Stripe (ambos disparados por un hook nativo de Supabase — Auth Hook y Stripe webhook respectivamente), este es un evento de negocio puro ("se confirmó una reserva"), sin hook nativo que lo cubra: usa un **Database Webhook** (trigger `AFTER INSERT` en `bookings`, ver `supabase/schemas/booking_receipts.sql`) sobre `pg_net`, que llama a la Edge Function `send-booking-receipt`. Detalle completo en "Supabase Local Development" §Email de recibo de reserva.
+
+**Check-in de recepción real (Story 5.2):** desde el 21 sept 2026, `/reception` verifica y actualiza reservas de verdad contra `bookings` — decisión tomada con el usuario para no bloquear en la decisión de rol staff/partner que `docs/DATA-MODEL-MAP.md` deja explícitamente para cuando arranque Epic 7 (no antes): las cuatro funciones `reception_*` (`supabase/schemas/bookings.sql`) son RPC `SECURITY DEFINER` concedidas a `anon`, autorizadas solo por LP# + lounge + fecha, igual que un lector físico de QR en el mostrador — `/reception` sigue sin login de personal, ahora también a nivel de base de datos, no solo de UI. Detalle completo en `docs/design/COMPONENT-MAP.md` §Backend real — Epic 5 y `docs/PENDIENTES.md` §2.7.
+
+**Recordatorio de reserva real (Story 5.3):** desde el 21 sept 2026, "receive an email 24 hrs before the booking time" ya no se simula — es la cuarta excepción viva a la regla "❌ Server Actions o fetch a servicios externos" de arriba, y la primera disparada por el **paso del tiempo**, no por un evento: **`pg_cron`** (primer job programado del proyecto) corre `dispatch_booking_reminders()` cada 30 min, que llama (`pg_net`, mismo mecanismo que el recibo de reserva) a la Edge Function `send-booking-reminder` por cada reserva `confirmed` cuya llegada cae en la ventana "ahora + 24h". Detalle completo, incluida la limitación conocida de este entorno (no se puede ejercitar de punta a punta mientras `lounge_availability` siga sembrada en una ventana fija anclada a 2025-09-09), en "Supabase Local Development" §Recordatorio de reserva (pg_cron).
 
 ---
 
@@ -336,6 +340,7 @@ Estos tokens están replicados en el código como **CSS custom properties** en `
 - **@ducanh2912/next-pwa** — service worker
 - **Brevo** — envío de email transaccional real (confirmación, recovery de Story 1.1/1.2), vía Supabase Auth Hook `send_email` + Edge Function `supabase/functions/send-email`. Detalle en "Supabase Local Development" §Envío de email transaccional
 - **Stripe** (`@stripe/stripe-js` + `@stripe/react-stripe-js`) — procesamiento de pagos real (Story 4.2), modo test en desarrollo. Checkout Sessions con `ui_mode: 'elements'` + Payment Element (no PaymentIntent crudo, no Checkout hospedado — el formulario vive embebido en la propia pantalla, como pide `Payment.dc.html`). Sin route handlers de Next.js: Supabase Edge Functions para crear la Checkout Session y para el webhook, que es la única fuente de verdad del estado del pago. Datos de tarjeta solo tocan Stripe.js/Elements en el cliente, nunca nuestro servidor (PCI DSS SAQ A). Detalle en "Supabase Local Development" §Procesamiento de pagos (Stripe)
+- **pg_cron** — job programado real (Story 5.3), primero del proyecto: `dispatch_booking_reminders()` corre cada 30 min y despacha el recordatorio de 24h vía `pg_net` + Edge Function `send-booking-reminder`, mismo mecanismo de Database Webhook que el recibo de reserva pero disparado por tiempo, no por evento. Detalle en "Supabase Local Development" §Recordatorio de reserva (pg_cron)
 - **Vitest + Testing Library** — tests sobre jsdom, con `next/navigation` mockeado
 - **Playwright** — navegador automatizado para verificación visual (uso puntual, no suite e2e masiva)
 
@@ -454,13 +459,13 @@ create policy "select own data" on public.members
   using ( (select auth.uid()) = id );
 ```
 
-**3. Generar la migración** comparando los schema files contra las migraciones existentes:
+**3. Generar la migración** comparando los schema files contra las migraciones existentes. ⚠️ **`supabase db diff --local -f <nombre>` ya no sirve para esto** (CLI v2.116+): ese comando dejó de leer `supabase/schemas/*.sql` y ahora solo compara migraciones contra la base (avisa de esto en un WARNING fácil de pasar por alto). El comando declarativo correcto es:
 
 ```bash
-supabase db diff --local -f add_members_table
+supabase db schema declarative sync --no-apply -f add_members_table
 ```
 
-Esto escribe un archivo nuevo en `supabase/migrations/` — nunca crear ni editar ese archivo a mano.
+`--no-apply` genera el archivo sin tocar el Docker local todavía, para poder revisarlo primero (paso 4). Esto escribe un archivo nuevo en `supabase/migrations/` — nunca crear ni editar ese archivo a mano.
 
 **4. Revisar el archivo generado** antes de aplicar nada:
 - ✅ No hay `DROP`/`ALTER` destructivos inesperados
@@ -471,6 +476,8 @@ Esto escribe un archivo nuevo en `supabase/migrations/` — nunca crear ni edita
 
 ```bash
 supabase migration up      # aplica solo las migraciones pendientes
+# o, en un solo paso (genera Y aplica, sin el review intermedio del paso 4):
+# supabase db schema declarative sync --apply -f add_members_table
 # o, si se necesita repartir desde cero (borra datos):
 # supabase db reset
 ```
@@ -489,7 +496,7 @@ Comitear tanto el/los archivo(s) de `supabase/schemas/` como la migración gener
 | `supabase start` | Levanta Supabase local en Docker |
 | `supabase stop` | Para los contenedores locales |
 | `supabase status` | Estado y URLs/puertos (API 54331, DB 54332, Studio 54333) |
-| `supabase db diff --local -f <nombre>` | Genera migración comparando `supabase/schemas/` contra migraciones existentes |
+| `supabase db schema declarative sync --no-apply -f <nombre>` | Genera migración comparando `supabase/schemas/` contra migraciones existentes, sin aplicarla (`--apply` genera y aplica en un paso). **No usar `supabase db diff` para esto** — desde CLI v2.116 ya no lee `supabase/schemas/`, ver paso 3 arriba |
 | `supabase migration up` | Aplica migraciones pendientes al Docker local |
 | `supabase db reset` | Recrea el Docker local desde cero: migraciones + `seed.sql` (borra datos) |
 | `supabase migration list --local` | Lista migraciones aplicadas localmente |
@@ -692,3 +699,82 @@ flujo completo, no con curl/psql sueltos).
 mismos secrets `BREVO_*`) se factorizó a `supabase/functions/_shared/brevo.ts`,
 del que ahora dependen las dos functions — antes cada una llamaba a la API
 de Brevo por su cuenta.
+
+### Check-in de recepción (RPC de kiosco)
+
+Story 5.2 — desde el 21 sept 2026, `/reception` verifica y actualiza
+reservas de verdad. Motivo completo en "Alcance" §Check-in de recepción
+real.
+
+**Por qué RPC de kiosco y no un login de staff.** `docs/DATA-MODEL-MAP.md`
+deja la decisión de rol (member/partner/admin) sobre `auth.users`
+explícitamente para "en cuanto se empiece Epic 7, no antes" — construir un
+login de personal solo para desbloquear Epic 5 habría adelantado esa
+decisión fuera de tiempo. En su lugar, `reception_lookup_booking`/
+`reception_checkin_booking`/`reception_report_no_show`/
+`reception_today_summary` (`supabase/schemas/bookings.sql`) son funciones
+`SECURITY DEFINER` concedidas a `anon` — autorizadas solo por conocer el
+LP# de hoy en el lounge correcto, igual que un lector físico de QR en el
+mostrador. `/reception` sigue sin sesión de miembro ni de personal, como ya
+fijaba `docs/PENDIENTES.md` §2.7 antes de conectar este módulo.
+
+**`p_date`, no `current_date`.** Todo el proyecto trabaja sobre el "hoy" de
+mockup fijo (`TODAY` en `src/lib/availability.ts`, `2025-09-09`) — las
+cuatro funciones reciben la fecha como parámetro explícito (que el cliente
+manda como `TODAY`) en vez de asumir el reloj real de Postgres, mismo
+criterio que `confirm_booking` recibe `p_date` en vez de asumirlo.
+
+**Cuando llegue el login de staff de Epic 7**, ese es el momento de
+endurecer estas RPC a exigir sesión en vez de `anon` — no antes, ver
+`docs/PENDIENTES.md` §2.7.
+
+### Recordatorio de reserva (pg_cron)
+
+Story 5.3 — desde el 21 sept 2026, "receive an email 24 hrs before the
+booking time" se envía de verdad. Motivo completo en "Alcance" §Recordatorio
+de reserva real.
+
+**Primer job programado del proyecto.** A diferencia de los Database
+Webhooks de arriba (evento: un insert dispara la llamada), aquí no hay
+ninguna escritura que lo dispare — el disparador es el propio paso del
+tiempo. `pg_cron` (`supabase/schemas/booking_reminders.sql`) corre
+`dispatch_booking_reminders()` cada 30 minutos, que a su vez llama
+(`pg_net`, mismo mecanismo que `booking_receipts.sql`) a la Edge Function
+`send-booking-reminder` por cada reserva `confirmed` cuya llegada
+(`booking_arrival_at(date, slot_time)`) cae en la ventana "ahora + 24h" y
+sin recordatorio ya mandado (`bookings.reminder_sent_at`, la guarda contra
+reenvíos si el cron vuelve a correr dentro de esa misma ventana).
+
+**Aquí `now()` sí es el reloj real, a propósito** — a diferencia de las
+funciones de recepción de arriba: "24 horas antes de la reserva" es un
+intervalo de verdad, no el "hoy" de mockup de la app.
+
+**Autenticación y alta de secretos: mismo patrón que el recibo de
+reserva** (Supabase Vault, no JWT — Postgres no tiene sesión de usuario;
+`[functions.send-booking-reminder]` en `config.toml` desactiva
+`verify_jwt`). Alta de los dos secretos, una vez por proyecto:
+```sql
+select vault.create_secret(
+  'http://host.docker.internal:54331/functions/v1/send-booking-reminder', -- local; staging/prod: la URL pública del proyecto
+  'booking_reminder_webhook_url', 'URL de la Edge Function send-booking-reminder'
+);
+select vault.create_secret(
+  '<mismo valor que BOOKING_REMINDER_WEBHOOK_SECRET en supabase/functions/.env>',
+  'booking_reminder_webhook_secret', 'Secreto compartido del cron de recordatorios hacia send-booking-reminder'
+);
+```
+Sin los dos secretos dados de alta, `dispatch_booking_reminders()` no hace
+nada (mismo guard que `notify_booking_confirmed`) — el cron corre igual,
+simplemente no manda nada.
+
+**Limitación conocida de este entorno: no se puede ejercitar de punta a
+punta en local/CI.** `lounge_availability` está sembrada en una ventana
+fija de 18 semanas desde `2025-09-09` (`docs/DATA-MODEL-MAP.md`), así que
+ninguna reserva real posible hoy cae dentro de "ahora + 24h" del reloj
+real. El mecanismo es correcto — mismo patrón ya probado que
+`booking_receipts.sql` — pero queda sin poder probarse de punta a punta
+hasta que ese seed se vuelva a anclar al `current_date` real (fuera de
+alcance de Epic 5, ver `docs/PENDIENTES.md` §2.10).
+
+**Brevo compartido con `send-email`/`send-booking-receipt`** — misma
+factorización en `supabase/functions/_shared/brevo.ts`.
