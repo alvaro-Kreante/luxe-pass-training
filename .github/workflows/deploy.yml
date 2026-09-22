@@ -84,6 +84,18 @@ jobs:
           supabase functions deploy stripe-payment-methods
           supabase functions deploy stripe-webhook --no-verify-jwt
           supabase functions deploy send-booking-receipt --no-verify-jwt
+      # Story 5.3 — mismo patrón que send-booking-receipt arriba: Postgres
+      # llama a esta function vía pg_net (pg_cron, no un insert), sin JWT de
+      # usuario, así que verify_jwt va desactivado en config.toml. El
+      # secreto compartido debe coincidir con el que se dé de alta en
+      # Supabase Vault (`booking_reminder_webhook_secret`) de este mismo
+      # proyecto — paso manual, ver CLAUDE.md §Recordatorio de reserva (pg_cron).
+      - name: Configurar secret de la Edge Function send-booking-reminder
+        run: |
+          supabase secrets set \
+            BOOKING_REMINDER_WEBHOOK_SECRET="${{ secrets.BOOKING_REMINDER_WEBHOOK_SECRET_DEV }}"
+      - name: Desplegar la Edge Function send-booking-reminder
+        run: supabase functions deploy send-booking-reminder --no-verify-jwt
       - name: Instalar Vercel CLI
         run: npm install --global vercel@latest
       - name: Descargar configuración del proyecto luxepass-dev
@@ -147,6 +159,12 @@ jobs:
           supabase functions deploy stripe-payment-methods
           supabase functions deploy stripe-webhook --no-verify-jwt
           supabase functions deploy send-booking-receipt --no-verify-jwt
+      - name: Configurar secret de la Edge Function send-booking-reminder
+        run: |
+          supabase secrets set \
+            BOOKING_REMINDER_WEBHOOK_SECRET="${{ secrets.BOOKING_REMINDER_WEBHOOK_SECRET_PROD }}"
+      - name: Desplegar la Edge Function send-booking-reminder
+        run: supabase functions deploy send-booking-reminder --no-verify-jwt
       - name: Instalar Vercel CLI
         run: npm install --global vercel@latest
       - name: Descargar configuración del proyecto luxepass-prod

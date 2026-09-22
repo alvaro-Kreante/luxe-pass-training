@@ -360,25 +360,36 @@ existente (key/Map ID de `luxepass-dev` y de `luxepass-prod` pueden ser el
 mismo par o pares distintos — decisión pendiente, no técnica) antes de
 promover esta rama a `staging`.
 
-### 4.5 Epic 5 no tiene nada desplegado a `staging`/`main` todavía
+### 4.5 Epic 5 — falta dar de alta los secretos de Vault en `luxepass-dev`/`luxepass-prod`
 
 Igual que le pasó a Epic 4 (§4.6, ya resuelta y retirada de este archivo):
-`deploy.yml` solo despliega las 5 Edge Functions de Epic 4
-(`send-email`, `stripe-*`, `send-booking-receipt`) — no incluye
-`send-booking-reminder` (Story 5.3, nueva en esta rama). Las columnas/RPC
-de `bookings`/`profiles` y el job `pg_cron` sí se aplican solos vía
-migraciones (`supabase db push` ya corre en `migrate-dev`/`migrate-prod`),
-pero sin la function desplegada y sus secrets dados de alta, el cron de
-`luxepass-dev`/`luxepass-prod` correría en no-op (mismo guard que en
-local — ver "Supabase Local Development" §Recordatorio de reserva en
-`CLAUDE.md`).
+`deploy.yml` no incluía `send-booking-reminder` (Story 5.3). **Resuelto el
+22 sept 2026** en la parte de CI: `deploy.yml` ampliado (mismo patrón que
+las 5 functions de Epic 4) para desplegar `send-booking-reminder` y pasarle
+`BOOKING_REMINDER_WEBHOOK_SECRET`, y los dos secrets de GitHub
+(`BOOKING_REMINDER_WEBHOOK_SECRET_DEV`/`_PROD`) ya están dados de alta.
 
-**Desbloquea:** antes de promover esta rama a `staging`, ampliar
-`deploy.yml` con `send-booking-reminder` (mismo patrón que las 5
-functions de Epic 4) y dar de alta a mano, una vez por proyecto remoto,
-los dos secretos de Vault (`booking_reminder_webhook_url`/`_secret`) y
-`BOOKING_REMINDER_WEBHOOK_SECRET` en `supabase secrets set` — igual que ya
-se hizo para `booking_receipt_webhook_*` con Epic 4.
+**Sigue pendiente, a mano, una vez por proyecto remoto** (no lo hace CI —
+mismo motivo que `booking_receipt_webhook_*`: `CLAUDE.md` §"REGLA CRÍTICA"
+prohíbe enlazar un proyecto remoto desde una máquina de desarrollo, y este
+paso no puede vivir en el pipeline sin hacerlo): dar de alta en Supabase
+Vault (Studio → SQL Editor) de `luxepass-dev` y de `luxepass-prod`:
+```sql
+select vault.create_secret(
+  'https://<ref-del-proyecto>.supabase.co/functions/v1/send-booking-reminder',
+  'booking_reminder_webhook_url', 'URL de la Edge Function send-booking-reminder'
+);
+select vault.create_secret(
+  '<mismo valor que BOOKING_REMINDER_WEBHOOK_SECRET_DEV o _PROD en GitHub Secrets>',
+  'booking_reminder_webhook_secret', 'Secreto compartido del cron de recordatorios hacia send-booking-reminder'
+);
+```
+Sin este paso, el cron corre en no-op en ese ambiente (mismo guard que en
+local) — no bloquea el deploy, pero el recordatorio no se manda.
+
+**Desbloquea:** antes de promover esta rama a `staging`, correr los dos
+`vault.create_secret` de arriba contra `luxepass-dev`; antes de promover
+`staging` → `main`, lo mismo contra `luxepass-prod`.
 
 ---
 
