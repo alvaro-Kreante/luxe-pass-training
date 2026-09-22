@@ -360,37 +360,6 @@ existente (key/Map ID de `luxepass-dev` y de `luxepass-prod` pueden ser el
 mismo par o pares distintos — decisión pendiente, no técnica) antes de
 promover esta rama a `staging`.
 
-### 4.5 Epic 5 — falta dar de alta los secretos de Vault en `luxepass-dev`/`luxepass-prod`
-
-Igual que le pasó a Epic 4 (§4.6, ya resuelta y retirada de este archivo):
-`deploy.yml` no incluía `send-booking-reminder` (Story 5.3). **Resuelto el
-22 sept 2026** en la parte de CI: `deploy.yml` ampliado (mismo patrón que
-las 5 functions de Epic 4) para desplegar `send-booking-reminder` y pasarle
-`BOOKING_REMINDER_WEBHOOK_SECRET`, y los dos secrets de GitHub
-(`BOOKING_REMINDER_WEBHOOK_SECRET_DEV`/`_PROD`) ya están dados de alta.
-
-**Sigue pendiente, a mano, una vez por proyecto remoto** (no lo hace CI —
-mismo motivo que `booking_receipt_webhook_*`: `CLAUDE.md` §"REGLA CRÍTICA"
-prohíbe enlazar un proyecto remoto desde una máquina de desarrollo, y este
-paso no puede vivir en el pipeline sin hacerlo): dar de alta en Supabase
-Vault (Studio → SQL Editor) de `luxepass-dev` y de `luxepass-prod`:
-```sql
-select vault.create_secret(
-  'https://<ref-del-proyecto>.supabase.co/functions/v1/send-booking-reminder',
-  'booking_reminder_webhook_url', 'URL de la Edge Function send-booking-reminder'
-);
-select vault.create_secret(
-  '<mismo valor que BOOKING_REMINDER_WEBHOOK_SECRET_DEV o _PROD en GitHub Secrets>',
-  'booking_reminder_webhook_secret', 'Secreto compartido del cron de recordatorios hacia send-booking-reminder'
-);
-```
-Sin este paso, el cron corre en no-op en ese ambiente (mismo guard que en
-local) — no bloquea el deploy, pero el recordatorio no se manda.
-
-**Desbloquea:** antes de promover esta rama a `staging`, correr los dos
-`vault.create_secret` de arriba contra `luxepass-dev`; antes de promover
-`staging` → `main`, lo mismo contra `luxepass-prod`.
-
 ---
 
 ## 5. Decisiones abiertas
@@ -500,3 +469,4 @@ de la tarifa de no-show.
 | Epic 4 (Stripe + recibo de reserva) no tenía nada desplegado a `staging`/`main` — `deploy.yml` solo desplegaba `send-email` (Epic 1), sin las 5 Edge Functions nuevas ni sus secrets (§4.6, ya retirada de este archivo) | 21 sept 2026 | `deploy.yml` ampliado (jobs `migrate-dev`/`migrate-prod`) con `supabase secrets set` + `supabase functions deploy` para las 5 functions nuevas, mismo patrón que `send-email`. Decisión del usuario durante el despliegue: **3 cuentas/sandboxes de Stripe separadas, una por ambiente** (local, `luxepass-dev`, `luxepass-prod`) — no solo el webhook secret, también `STRIPE_SECRET_KEY_DEV`/`_PROD` en vez de una sola compartida (la de `ci.yml`, sin sufijo, queda aparte: es la de local, solo para tests). Los 6 secrets de ambiente cargados en GitHub (`STRIPE_SECRET_KEY_DEV`/`_PROD`, `STRIPE_WEBHOOK_SECRET_DEV`/`_PROD`, `BOOKING_RECEIPT_WEBHOOK_SECRET_DEV`/`_PROD`), y confirmados los 3 pasos manuales en `luxepass-prod` (secretos de Vault, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` en Vercel, webhook de Stripe registrado) — mismos ya hechos antes en `luxepass-dev`. Epic 4 queda listo para promoverse a `staging` y eventualmente a `main`. |
 | Epic 5 (QR Code & Check-in) no tenía backend: My Pass, el pase digital y la consola de recepción eran datos de muestra fijos (`AINSWORTH_PASS`, `RECEPTION_VALID_BOOKING`) | 21 sept 2026 | Conectado a Supabase local real, decisiones tomadas con el usuario antes de implementar: Story 5.2 vía RPC "de kiosco" (`reception_*`, `SECURITY DEFINER`, concedidas a `anon` — sin esperar al login de staff de Epic 7) y Story 5.3 vía `pg_cron` real (primer job programado del proyecto) en vez de quedarse mockup. `bookings` gana `confirmation_code` (columna generada), `checked_in_at`, `no_show`, `reminder_sent_at`; `profiles` gana `emergency_contact_*`. **Bug real encontrado y corregido corriendo la suite localmente**: el hash de `bookingReferenceFromId` (Story 4.2/5.1, `31 * suma de códigos ASCII`) es conmutativo — dos UUID que son anagramas entre sí colisionan en el mismo LP#, invisible mientras era solo copy de un recibo, pero un bug funcional real en cuanto Epic 5 lo usa como clave de búsqueda (`reception_checkin_booking` fallaba con "query returned more than one row"). Corregido a un hash posicional en las tres implementaciones (TS, Deno, SQL) a la vez. Ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 5" y `docs/DATA-MODEL-MAP.md` §Epic 5. |
 | `supabase db diff --local -f <nombre>` (el comando que documenta `CLAUDE.md` §Supabase Local Development) ya no lee `supabase/schemas/*.sql` — CLI v2.116.0 lo cambió a comparar solo migraciones contra la base, con un aviso a mitad de la salida fácil de pasar por alto | 21 sept 2026 | El comando declarativo correcto en esta versión del CLI es `supabase db schema declarative sync --apply -f <nombre>` (o `--no-apply` para generar sin aplicar, como pedía el paso 4 de la receta de `CLAUDE.md` antes de aplicar). Mismo flujo de ahí en adelante (revisar el SQL generado, `supabase db advisors`). `CLAUDE.md` queda desactualizado en este punto — actualizarlo la próxima vez que se toque esa sección, no se corrigió en esta rama para no mezclarlo con el trabajo de Epic 5. |
+| Epic 5 (recordatorio de reserva, Story 5.3) no tenía nada desplegado a `staging`/`main` — `deploy.yml` solo desplegaba las 5 Edge Functions de Epic 4, sin `send-booking-reminder` ni sus secrets (§4.5, ya retirada de este archivo) | 22 sept 2026 | `deploy.yml` ampliado (mismo patrón que Epic 4) con `supabase secrets set BOOKING_REMINDER_WEBHOOK_SECRET` + `supabase functions deploy send-booking-reminder --no-verify-jwt` en `migrate-dev`/`migrate-prod`. Los 2 secrets de GitHub (`BOOKING_REMINDER_WEBHOOK_SECRET_DEV`/`_PROD`) dados de alta, y el usuario confirmó haber creado los 2 secretos de Vault (`booking_reminder_webhook_url`/`_secret`) en `luxepass-dev` y `luxepass-prod` a mano vía Studio. Epic 5 queda listo para promoverse a `staging` y eventualmente a `main`. |
