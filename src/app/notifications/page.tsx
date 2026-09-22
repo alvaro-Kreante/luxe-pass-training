@@ -70,11 +70,16 @@ function NotificationsScreen() {
   const supabase = React.useMemo(() => createClient(), []);
   const [items, setItems] = React.useState<NotificationItem[]>([]);
   const [filter, setFilter] = React.useState<NotificationCategory | "all">("all");
+  /** El fetch inicial puede resolver DESPUÉS de un "mark (all) as read" bien
+   * temprano — sin esta guarda, esa resolución tardía pisaría el marcado
+   * optimista con el estado sin leer que traía del servidor. Mismo patrón
+   * que el toggle de favorito en `/lounges/[id]`. */
+  const mutatedRef = React.useRef(false);
 
   React.useEffect(() => {
     let active = true;
     fetchNotifications(supabase).then((fetched) => {
-      if (active) setItems(fetched);
+      if (active && !mutatedRef.current) setItems(fetched);
     });
     return () => {
       active = false;
@@ -84,11 +89,13 @@ function NotificationsScreen() {
   const visible = items.filter((item) => filter === "all" || item.category === filter);
 
   function markRead(id: string) {
+    mutatedRef.current = true;
     setItems((current) => current.map((item) => (item.id === id ? { ...item, read: true } : item)));
     markNotificationRead(supabase, id).catch(() => {});
   }
 
   function markAllRead() {
+    mutatedRef.current = true;
     setItems((current) => current.map((item) => ({ ...item, read: true })));
     markAllNotificationsRead(supabase).catch(() => {});
   }

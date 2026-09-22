@@ -43,11 +43,16 @@ export function NotificationBellMenu({ extraItems = [] }: { extraItems?: Notific
   const supabase = React.useMemo(() => createClient(), []);
   const [items, setItems] = React.useState<NotificationItem[]>([]);
   const [open, setOpen] = React.useState(false);
+  /** El fetch inicial puede resolver DESPUÉS de un "mark all as read" bien
+   * temprano — sin esta guarda, esa resolución tardía pisaría el marcado
+   * optimista con el estado sin leer que traía del servidor. Mismo patrón
+   * que el toggle de favorito en `/lounges/[id]`. */
+  const mutatedRef = React.useRef(false);
 
   React.useEffect(() => {
     let active = true;
     fetchNotifications(supabase).then((fetched) => {
-      if (active) setItems(fetched);
+      if (active && !mutatedRef.current) setItems(fetched);
     });
     return () => {
       active = false;
@@ -58,6 +63,7 @@ export function NotificationBellMenu({ extraItems = [] }: { extraItems?: Notific
   const unread = unreadNotificationCount(combined);
 
   async function markAllRead() {
+    mutatedRef.current = true;
     setItems((current) => current.map((item) => ({ ...item, read: true })));
     await markAllNotificationsRead(supabase);
   }

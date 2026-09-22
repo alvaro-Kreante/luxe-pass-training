@@ -46,7 +46,7 @@ describe("campana de notificaciones", () => {
     await waitFor(() => expect(screen.getByRole("button", { name: /notifications/i })).toBeInTheDocument());
     await user.click(screen.getByRole("button", { name: /notifications/i }));
 
-    expect(screen.getByText(seeded[0]!.title)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(seeded[0]!.title)).toBeInTheDocument());
     expect(screen.getByRole("link", { name: /see all notifications/i })).toHaveAttribute(
       "href",
       "/notifications",
