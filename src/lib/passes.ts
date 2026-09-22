@@ -231,6 +231,8 @@ export const AINSWORTH_PASS: DigitalPass = {
 
 /** "flat fee" de la Story 6.1 — tanto para cancelar tarde como para el no-show. */
 export const LATE_CANCELLATION_FEE_LABEL = "$35.00";
+/** Debe coincidir con el `3500` de `cancel_booking`/`reception_report_no_show` en `supabase/schemas/bookings.sql` — SQL no puede importar TS del proyecto Next.js. */
+export const LATE_CANCELLATION_FEE_CENTS = 3500;
 export const CANCELLATION_WINDOW_HOURS = 24;
 
 export function isFreeCancellation(hoursUntilArrival: number): boolean {
@@ -400,6 +402,42 @@ export async function fetchPastBookings(supabase: SupabaseClient): Promise<PastB
   return (data as unknown as BookingRow[]).map(fromPastRow);
 }
 
+/** Resultado de `cancel_booking` (`supabase/schemas/bookings.sql`). */
+export interface CancelledBooking {
+  id: string;
+  status: "cancelled";
+  /** `null` cuando la cancelación fue gratis (24h+ de antelación). */
+  cancellationFeeCents: number | null;
+}
+
+interface CancelBookingRpcRow {
+  id: string;
+  status: string;
+  cancellation_fee_cents: number | null;
+}
+
+/**
+ * AC "Modification options: Cancel", "24-hour advance notice requirement for
+ * cancellation", "No show policy enforcement - flat fee". `today` es
+ * `TODAY` (`src/lib/availability.ts`), no el reloj real — mismo criterio que
+ * `confirm_booking`/las RPC de recepción, para que la decisión de fee
+ * servidor/cliente coincida siempre con `isFreeCancellation` de arriba.
+ */
+export async function cancelBooking(
+  supabase: SupabaseClient,
+  bookingId: string,
+  today: string,
+): Promise<CancelledBooking> {
+  const { data, error } = await supabase
+    .rpc("cancel_booking", { p_booking_id: bookingId, p_today: today })
+    .single();
+
+  if (error) throw error;
+
+  const row = data as CancelBookingRpcRow;
+  return { id: row.id, status: "cancelled", cancellationFeeCents: row.cancellation_fee_cents };
+}
+
 /** "3 of 8" — rail de la pestaña Upcoming (`Main.dc.html`). Story 9.1, sin conectar: dato de muestra. */
 export const VISITS_THIS_MONTH = { used: 3, included: 8 };
 
@@ -411,10 +449,3 @@ export const BOOKING_RECORD_SUMMARY = {
   noShows: 1,
   feesCharged: LATE_CANCELLATION_FEE_LABEL,
 };
-
-/**
- * `DeleteAccountModal` (Story 6.3, sin conectar) — cuántas reservas futuras
- * declara que cancelaría. No se deriva de `fetchUpcomingBookings` porque esa
- * pantalla entera sigue siendo de muestra.
- */
-export const SAMPLE_UPCOMING_BOOKINGS_COUNT = 4;

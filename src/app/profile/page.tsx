@@ -4,23 +4,80 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Camera, Check } from "lucide-react";
 
+import { RequireSession } from "@/components/onboarding/require-session";
 import { AccountShell } from "@/components/patterns/account-shell";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { RemovableChip, AddChip } from "@/components/ui/chip";
 import { ReferralCode } from "@/components/ui/referral-code";
-import { MEMBERSHIP_SUMMARY, REFERRAL_CODE, SAMPLE_PROFILE, type ProfileDraft } from "@/lib/profile";
+import {
+  MEMBERSHIP_SUMMARY,
+  fetchMembershipStatus,
+  fetchProfile,
+  referralCodeFor,
+  updateProfile,
+  type MembershipStatus,
+  type ProfileDraft,
+} from "@/lib/profile";
+import { createClient } from "@/lib/supabase/client";
+
+const EMPTY_DRAFT: ProfileDraft = {
+  fullName: "",
+  email: "",
+  emailVerified: false,
+  phone: "",
+  phoneVerified: false,
+  dateOfBirth: "",
+  city: "",
+  industry: "",
+  jobTitle: "",
+  company: "",
+  travelCities: [],
+  photoUrl: null,
+};
 
 /**
  * Story 6.3 — "Edit profile all fields input before" y "Referral code
- * sharing functionality". `Profile.dc.html`.
+ * sharing functionality". `Profile.dc.html`, backend real.
  */
 export default function ProfilePage() {
+  return (
+    <RequireSession>
+      <ProfileScreen />
+    </RequireSession>
+  );
+}
+
+function ProfileScreen() {
   const router = useRouter();
-  const [draft, setDraft] = React.useState<ProfileDraft>(SAMPLE_PROFILE);
-  const [photoUrl, setPhotoUrl] = React.useState<string | null>(null);
+  const supabase = React.useMemo(() => createClient(), []);
+  const [draft, setDraft] = React.useState<ProfileDraft>(EMPTY_DRAFT);
+  const [memberId, setMemberId] = React.useState<string | null>(null);
+  const [membershipStatus, setMembershipStatus] = React.useState<MembershipStatus>("active");
+  const [photoFile, setPhotoFile] = React.useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = React.useState<string | null>(null);
+  const [saving, setSaving] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  React.useEffect(() => {
+    let active = true;
+
+    Promise.all([
+      supabase.auth.getUser(),
+      fetchProfile(supabase),
+      fetchMembershipStatus(supabase),
+    ]).then(([{ data: { user } }, profile, status]) => {
+      if (!active) return;
+      if (user) setMemberId(user.id);
+      setDraft(profile);
+      setMembershipStatus(status);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [supabase]);
 
   function set<K extends keyof ProfileDraft>(key: K, value: ProfileDraft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -29,10 +86,37 @@ export default function ProfilePage() {
   function handlePhotoChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
+    setPhotoFile(file);
     const reader = new FileReader();
-    reader.onload = () => setPhotoUrl(reader.result as string);
+    reader.onload = () => setPhotoPreview(reader.result as string);
     reader.readAsDataURL(file);
   }
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      let photoUrl: string | null | undefined;
+      if (photoFile && memberId) {
+        const extension = photoFile.name.split(".").pop() ?? "jpg";
+        const path = `${memberId}/avatar.${extension}`;
+        const { error: uploadError } = await supabase.storage
+          .from("profile-photos")
+          .upload(path, photoFile, { upsert: true });
+        if (!uploadError) {
+          photoUrl = supabase.storage.from("profile-photos").getPublicUrl(path).data.publicUrl;
+        }
+      }
+
+      await updateProfile(supabase, { ...draft, photoUrl });
+      if (photoUrl) set("photoUrl", photoUrl);
+      setPhotoFile(null);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const avatarSrc = photoPreview ?? draft.photoUrl;
+  const referralCode = memberId ? referralCodeFor(draft.fullName, memberId) : "";
 
   return (
     <AccountShell
@@ -40,7 +124,7 @@ export default function ProfilePage() {
       breadcrumb="Profile details"
       actionAfterBell
       topbarRight={
-        <Button size="md" onClick={() => {}}>
+        <Button size="md" onClick={handleSave} disabled={saving}>
           Save changes
         </Button>
       }
@@ -54,11 +138,11 @@ export default function ProfilePage() {
 
           <div className="mt-5.5 flex items-center gap-4">
             <span className="flex size-18 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent font-display text-[26px] font-bold text-on-accent">
-              {photoUrl ? (
-                /* eslint-disable-next-line @next/next/no-img-element -- vista previa local, nunca sale del navegador */
-                <img src={photoUrl} alt={draft.fullName} className="size-full object-cover" />
+              {avatarSrc ? (
+                /* eslint-disable-next-line @next/next/no-img-element -- vista previa local o URL pública del bucket, no un <Image> con loader remoto */
+                <img src={avatarSrc} alt={draft.fullName} className="size-full object-cover" />
               ) : (
-                "AR"
+                initialsOf(draft.fullName)
               )}
             </span>
             <div className="min-w-0 flex-1">
@@ -131,7 +215,7 @@ export default function ProfilePage() {
               <p className="m-0 text-xs font-bold uppercase tracking-[0.1em] text-gold-600">Membership</p>
               <span className="inline-flex items-center gap-1.5 rounded-pill bg-accent-soft px-3 py-1 text-[11.5px] font-bold text-fg">
                 <span aria-hidden className="size-1.5 rounded-full bg-accent" />
-                {MEMBERSHIP_SUMMARY.status}
+                {membershipStatus === "active" ? "Active" : "Inactive"}
               </span>
             </div>
             <h2 className="mt-2.5 font-display text-[27px] text-fg">{MEMBERSHIP_SUMMARY.plan}</h2>
@@ -161,7 +245,7 @@ export default function ProfilePage() {
             <p className="m-0 mt-2 text-[12.5px] leading-[1.55] text-fg-muted">
               Share your code. You each get a complimentary day pass when they join.
             </p>
-            <ReferralCode code={REFERRAL_CODE} className="mt-3.5" />
+            <ReferralCode code={referralCode} className="mt-3.5" />
             <Button block className="mt-3" type="button">
               Share your code
             </Button>
@@ -169,6 +253,17 @@ export default function ProfilePage() {
         </div>
       </div>
     </AccountShell>
+  );
+}
+
+function initialsOf(fullName: string): string {
+  return (
+    fullName
+      .trim()
+      .split(/\s+/)
+      .map((word) => word[0]?.toUpperCase() ?? "")
+      .join("")
+      .slice(0, 2) || "—"
   );
 }
 

@@ -17,6 +17,7 @@ import {
   REMEMBER_ME_DAYS,
 } from "@/lib/authentication";
 import { isEmailShapeValid } from "@/lib/registration";
+import { reactivateAccountIfDeleted } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/client";
 
 /**
@@ -80,6 +81,10 @@ export default function LoginPage() {
 
       if (!error) {
         await supabase.rpc("reset_login_attempts", { p_email: trimmedEmail });
+        // Story 6.3 — "sign in before then and everything comes back"
+        // (`DeleteAccount.dc.html`): deshace el soft-delete si la cuenta
+        // seguía en su periodo de gracia de 30 días.
+        await reactivateAccountIfDeleted(supabase);
         router.push("/");
         return;
       }

@@ -243,3 +243,24 @@ describe("carga", () => {
     expect(screen.queryByRole("heading", { name: "The Ainsworth" })).toBeNull();
   });
 });
+
+describe("botón de favorito (Story 6.3)", () => {
+  it("AC 'Favorite lounges list' — guardar y quitar de favoritos escribe de verdad en Supabase", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<LoungeProfilePage />);
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /^Save$/ })).toBeInTheDocument(),
+    );
+
+    await user.click(screen.getByRole("button", { name: /^Save$/ }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Saved" })).toHaveAttribute("aria-pressed", "true"),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Saved" }));
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: /^Save$/ })).toHaveAttribute("aria-pressed", "false"),
+    );
+  });
+});

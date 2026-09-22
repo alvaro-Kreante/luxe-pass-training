@@ -21,8 +21,9 @@ import MyPassPage from "./page";
  * Backend real (Supabase local): cada escenario (in-progress, confirmada a
  * más/menos de 24h, waitlisted, no-show) se construye con una reserva real
  * antes de renderizar — ver `docs/design/COMPONENT-MAP.md` "Backend real —
- * Epic 5". Cancelar sigue sin escribir en Supabase (Story 6.1 no está
- * conectada): la quita de la lista es solo local, como ya era antes.
+ * Epic 5". Cancelar ya escribe en Supabase de verdad (RPC `cancel_booking`,
+ * Story 6.1 conectada) — los escenarios que confirman la cancelación usan su
+ * propia reserva, nunca una que otro test de este archivo siga necesitando.
  */
 vi.mock("next/navigation", () => ({
   usePathname: () => "/my-pass",
@@ -140,16 +141,28 @@ describe("cancelar una reserva con más de 24 horas de antelación", () => {
 
     await user.click(screen.getByRole("button", { name: "Cancel booking" }));
 
-    expect(screen.queryByRole("heading", { name: "Aurelia House", level: 2 })).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole("heading", { name: "Aurelia House", level: 2 })).not.toBeInTheDocument(),
+    );
   });
 });
 
 describe("cancelar una reserva dentro de las 24 horas", () => {
   it("abre el diálogo con la tarifa plana y, al confirmar, cobra la tarifa y la quita de Upcoming", async () => {
+    const supabase = createClient();
+    const paid = await confirmBooking(supabase, {
+      loungeId: "rue-lafayette-club",
+      dateIso: TODAY,
+      band: "morning",
+      time: "10:30 AM",
+      specialRequests: "",
+    });
+    if (!paid) throw new Error("No se pudo confirmar la reserva 'Rue Lafayette Club' de prueba");
+
     const user = userEvent.setup({ delay: null });
     render(<MyPassPage />);
 
-    const heading = await screen.findByRole("heading", { name: "Belmont Terrace", level: 2 });
+    const heading = await screen.findByRole("heading", { name: "Rue Lafayette Club", level: 2 });
     const row = heading.closest("li") as HTMLElement;
     await user.click(within(row).getByRole("button", { name: "Cancel" }));
 
@@ -158,7 +171,9 @@ describe("cancelar una reserva dentro de las 24 horas", () => {
 
     await user.click(screen.getByRole("button", { name: `Cancel and pay ${LATE_CANCELLATION_FEE_LABEL}` }));
 
-    expect(screen.queryByRole("heading", { name: "Belmont Terrace", level: 2 })).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByRole("heading", { name: "Rue Lafayette Club", level: 2 })).not.toBeInTheDocument(),
+    );
   });
 
   it("mantiene la reserva si el miembro decide no cancelar", async () => {
@@ -171,6 +186,21 @@ describe("cancelar una reserva dentro de las 24 horas", () => {
     await user.click(screen.getByRole("button", { name: "Keep booking" }));
 
     expect(screen.getByRole("heading", { name: "Belmont Terrace", level: 2 })).toBeInTheDocument();
+  });
+});
+
+describe("dejar la lista de espera", () => {
+  it("AC 'Modification options: Cancel' — 'Leave' cancela la reserva en waitlist de verdad", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<MyPassPage />);
+
+    const heading = await screen.findByRole("heading", { name: "The Winslow Club", level: 2 });
+    const row = heading.closest("li") as HTMLElement;
+    await user.click(within(row).getByRole("button", { name: "Leave" }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole("heading", { name: "The Winslow Club", level: 2 })).not.toBeInTheDocument(),
+    );
   });
 });
 

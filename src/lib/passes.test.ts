@@ -6,7 +6,9 @@ import { LOUNGES } from "./lounges";
 import {
   AINSWORTH_PASS,
   CANCELLATION_WINDOW_HOURS,
+  LATE_CANCELLATION_FEE_CENTS,
   PASS_LIFECYCLE_STATES,
+  cancelBooking,
   fetchDigitalPass,
   fetchPastBookings,
   fetchUpcomingBookings,
@@ -152,5 +154,53 @@ describe("fetchPastBookings", () => {
     expect(past).toHaveLength(1);
     expect(past[0]?.reference).toBe(reference);
     expect(past[0]?.outcome).toBe("no-show");
+  });
+});
+
+describe("cancelBooking (Story 6.1)", () => {
+  it("AC '24-hour advance notice requirement for cancellation' — cancela sin fee con más de 24h de antelación", async () => {
+    const futureDate = addDays(TODAY, 3);
+    const { supabase, booking } = await bookAndSignIn("cancel-1", futureDate, "afternoon", "3:30 PM");
+
+    const cancelled = await cancelBooking(supabase, booking.id, TODAY);
+
+    expect(cancelled.status).toBe("cancelled");
+    expect(cancelled.cancellationFeeCents).toBeNull();
+  });
+
+  it("AC 'No show policy enforcement - flat fee' — cobra el fee plano si quedan menos de 24h", async () => {
+    const { supabase, booking } = await bookAndSignIn("cancel-2", TODAY, "morning", "8:00 AM");
+
+    const cancelled = await cancelBooking(supabase, booking.id, TODAY);
+
+    expect(cancelled.cancellationFeeCents).toBe(LATE_CANCELLATION_FEE_CENTS);
+  });
+
+  it("una reserva cancelada desaparece de fetchUpcomingBookings y aparece en fetchPastBookings", async () => {
+    const futureDate = addDays(TODAY, 3);
+    const { supabase, booking, reference } = await bookAndSignIn("cancel-3", futureDate, "afternoon", "3:30 PM");
+
+    await cancelBooking(supabase, booking.id, TODAY);
+
+    const upcoming = await fetchUpcomingBookings(supabase);
+    const past = await fetchPastBookings(supabase);
+
+    expect(upcoming).toHaveLength(0);
+    expect(past).toHaveLength(1);
+    expect(past[0]?.reference).toBe(reference);
+    expect(past[0]?.outcome).toBe("cancelled");
+  });
+
+  it("no permite cancelar la reserva de otro miembro (RLS)", async () => {
+    const futureDate = addDays(TODAY, 3);
+    const { booking } = await bookAndSignIn("cancel-4", futureDate, "afternoon", "3:30 PM");
+    const otherMember = createClient();
+    await signUpConfirmedMemberAndSignIn(
+      otherMember,
+      `passes-${Date.now()}-cancel-4-other@ensoleil-test.com`,
+      "EnSoleil!2026",
+    );
+
+    await expect(cancelBooking(otherMember, booking.id, TODAY)).rejects.toThrow();
   });
 });

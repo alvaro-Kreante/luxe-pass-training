@@ -12,7 +12,7 @@ Repositorio integral del proyecto **LuxePass** (plataforma de membresía de lujo
 
 ## ⚠️ Alcance: mockup navegable + backend real parcial (Supabase)
 
-**Este repo empezó como un mockup navegable sin backend — eso ya no es así del todo.** Desde sept 2026, varias historias tienen lógica real conectada a Supabase: Epic 1 completo (Story 1.1 User Registration, Story 1.2 Login & Authentication), Epic 2 completo (Story 2.1 Map-Based Lounge Discovery, Story 2.2 Lounge Filtering & Search, Story 2.3 List View Alternative — catálogo real en `public.lounges`) y Epic 3 completo (Story 3.1 Lounge Profile Details, Story 3.2 Availability Calendar — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 2 / Epic 3). Epic 4 (Booking System) está completo: Story 4.1 (Seamless Booking Flow), Story 4.2 (Payment Processing, **Stripe real** en modo test) y Story 4.3 (Calendar Integration, ya real desde el mockup) — tablas `bookings`/`payments`, RPC `confirm_booking`/`join_waitlist`, y el email real de recibo de reserva (ver más abajo "Email de recibo de reserva real") — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 4. Epic 5 (QR Code & Check-in) está completo: Story 5.1 (Digital Pass Generation), Story 5.2 (Lounge Check-In Process, RPC "de kiosco" sin login de personal) y Story 5.3 (Booking Reminder, **pg_cron real**) — `bookings` gana `confirmation_code`/`checked_in_at`/`no_show`, `profiles` gana `emergency_contact_*` (ver más abajo "Check-in de recepción real" y "Recordatorio de reserva real") — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 5. El resto de epics sigue el patrón de mockup visual descrito abajo, historia por historia, hasta que se conecten a su vez.
+**Este repo empezó como un mockup navegable sin backend — eso ya no es así del todo.** Desde sept 2026, varias historias tienen lógica real conectada a Supabase: Epic 1 completo (Story 1.1 User Registration, Story 1.2 Login & Authentication), Epic 2 completo (Story 2.1 Map-Based Lounge Discovery, Story 2.2 Lounge Filtering & Search, Story 2.3 List View Alternative — catálogo real en `public.lounges`) y Epic 3 completo (Story 3.1 Lounge Profile Details, Story 3.2 Availability Calendar — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 2 / Epic 3). Epic 4 (Booking System) está completo: Story 4.1 (Seamless Booking Flow), Story 4.2 (Payment Processing, **Stripe real** en modo test) y Story 4.3 (Calendar Integration, ya real desde el mockup) — tablas `bookings`/`payments`, RPC `confirm_booking`/`join_waitlist`, y el email real de recibo de reserva (ver más abajo "Email de recibo de reserva real") — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 4. Epic 5 (QR Code & Check-in) está completo: Story 5.1 (Digital Pass Generation), Story 5.2 (Lounge Check-In Process, RPC "de kiosco" sin login de personal) y Story 5.3 (Booking Reminder, **pg_cron real**) — `bookings` gana `confirmation_code`/`checked_in_at`/`no_show`, `profiles` gana `emergency_contact_*` (ver más abajo "Check-in de recepción real" y "Recordatorio de reserva real") — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 5. Epic 6 (Member Experience & Notifications) está completo: Story 6.1 (Booking Management — RPC `cancel_booking`), Story 6.2 (In-app Notifications — tabla `notifications`, **nace aquí**, con dos de los seis tipos disparados de verdad: confirmación de reserva por trigger y aviso de las 6 AM por **pg_cron**; los otros cuatro se siembran como muestra real al crear el perfil) y Story 6.3 (Member Profile & Preferences — perfil/favoritos/preferencias/privacidad reales, borrado de cuenta como soft-delete reversible con **pg_cron** para el borrado físico a los 30 días) — ver más abajo "Notificaciones en la app reales" y "Borrado de cuenta real" — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 6. El resto de epics sigue el patrón de mockup visual descrito abajo, historia por historia, hasta que se conecten a su vez.
 
 La app en producción de En Soleil vive en `app.luxepass.co`; si este repo la reemplaza o sigue siendo un proyecto aparte no está resuelto en este documento — no asumir ninguna de las dos sin confirmar.
 
@@ -51,6 +51,10 @@ Ejemplo ya hecho de patrón mockup (epics aún no conectados): datos de muestra 
 **Check-in de recepción real (Story 5.2):** desde el 21 sept 2026, `/reception` verifica y actualiza reservas de verdad contra `bookings` — decisión tomada con el usuario para no bloquear en la decisión de rol staff/partner que `docs/DATA-MODEL-MAP.md` deja explícitamente para cuando arranque Epic 7 (no antes): las cuatro funciones `reception_*` (`supabase/schemas/bookings.sql`) son RPC `SECURITY DEFINER` concedidas a `anon`, autorizadas solo por LP# + lounge + fecha, igual que un lector físico de QR en el mostrador — `/reception` sigue sin login de personal, ahora también a nivel de base de datos, no solo de UI. Detalle completo en `docs/design/COMPONENT-MAP.md` §Backend real — Epic 5 y `docs/PENDIENTES.md` §2.7.
 
 **Recordatorio de reserva real (Story 5.3):** desde el 21 sept 2026, "receive an email 24 hrs before the booking time" ya no se simula — es la cuarta excepción viva a la regla "❌ Server Actions o fetch a servicios externos" de arriba, y la primera disparada por el **paso del tiempo**, no por un evento: **`pg_cron`** (primer job programado del proyecto) corre `dispatch_booking_reminders()` cada 30 min, que llama (`pg_net`, mismo mecanismo que el recibo de reserva) a la Edge Function `send-booking-reminder` por cada reserva `confirmed` cuya llegada cae en la ventana "ahora + 24h". Detalle completo, incluida la limitación conocida de este entorno (no se puede ejercitar de punta a punta mientras `lounge_availability` siga sembrada en una ventana fija anclada a 2025-09-09), en "Supabase Local Development" §Recordatorio de reserva (pg_cron).
+
+**Notificaciones en la app reales (Story 6.2):** desde el 21 sept 2026, la tabla `notifications` (nace en Epic 6) es real. De los seis tipos que pide el AC, solo dos tienen un evento real detrás en este repo: "Booking confirmation" (un trigger `AFTER INSERT` en `bookings` que inserta directo en `notifications` — sin `pg_net`, es la misma base) y el aviso de las 6 AM (segundo uso de `pg_cron` en el proyecto, `dispatch_morning_notifications()` cada 15 min, mismo `booking_arrival_at` que Story 5.3 y su mismo gap: no ejercitable de punta a punta mientras `lounge_availability` siga anclada a 2025-09-09). Los otros cuatro (nuevo lounge partner, renovación de membresía, ofertas, cumpleaños) dependen de datos que Epic 7/9 todavía no modelan de verdad — se siembran como notificaciones de muestra reales (filas de verdad, no sintéticas del cliente) al crear el perfil (`seed_sample_notifications()`, trigger `AFTER INSERT` en `profiles`). Detalle completo en `docs/design/COMPONENT-MAP.md` §Backend real — Epic 6.
+
+**Borrado de cuenta real (Story 6.3):** desde el 21 sept 2026, "Account deletion option with confirmation" conecta contra Supabase — pero no borra nada al instante: `DeleteAccount.dc.html` promete un periodo de gracia reversible ("erased after 30 days... sign in before then and everything comes back"), así que confirmar el modal solo marca `profiles.deleted_at` y cancela las reservas futuras (RPC `request_account_deletion`), fiel a esa promesa. El borrado físico real es la quinta excepción viva a la regla "❌ Server Actions o fetch a servicios externos", y la segunda disparada por el paso del tiempo: `pg_cron` corre `dispatch_account_deletions()` una vez al día y, pasados los 30 días, llama (`pg_net`, mismo mecanismo que el recibo/recordatorio) a la Edge Function `delete-account` — primer uso del proyecto de `auth.admin.deleteUser`. El login (`reactivateAccountIfDeleted`) deshace el soft-delete si el miembro vuelve a entrar antes de esos 30 días. Mismo gap conocido que Story 5.3: no ejercitable de punta a punta en 30 días reales en este entorno. Detalle completo en `docs/design/COMPONENT-MAP.md` §Backend real — Epic 6.
 
 ---
 
@@ -778,3 +782,83 @@ alcance de Epic 5, ver `docs/PENDIENTES.md` §2.10).
 
 **Brevo compartido con `send-email`/`send-booking-receipt`** — misma
 factorización en `supabase/functions/_shared/brevo.ts`.
+
+### Notificaciones en la app (trigger + pg_cron)
+
+Story 6.2 — desde el 21 sept 2026, la tabla `notifications`
+(`supabase/schemas/notifications.sql`, nace en Epic 6) es real. Motivo
+completo en "Alcance" §Notificaciones en la app reales.
+
+**"Booking confirmation" es un INSERT directo, no un Database Webhook.**
+`notify_booking_confirmed_in_app()` (trigger `AFTER INSERT` en `bookings`,
+igual disparador que `notify_booking_confirmed` de `booking_receipts.sql`)
+inserta la notificación en la misma base — sin `pg_net`, sin Vault, sin
+Edge Function: no hay servicio externo que llamar para escribir en una
+tabla de la misma base de datos.
+
+**El aviso de las 6 AM sí es `pg_cron`, segundo uso del proyecto** (después
+de `dispatch_booking_reminders`, Story 5.3) — pero tampoco llama a ninguna
+Edge Function: `dispatch_morning_notifications()`
+(`supabase/schemas/notifications.sql`) corre cada 15 minutos e inserta
+directo en `notifications` para cada reserva `confirmed` cuya fecha es hoy
+(reloj real, `now() at time zone 'UTC'`) y cuya hora cae en la ventana
+05:45–06:15 UTC, sin aviso ya mandado (`bookings.morning_notification_sent_at`).
+Mismo gap conocido que Story 5.3: `lounge_availability` sigue sembrada en
+una ventana fija desde `2025-09-09`, así que ninguna reserva real posible
+hoy cae en el `current_date` real que este cron usa a propósito — no
+ejercitable de punta a punta en local/CI.
+
+**Los otros cuatro tipos se siembran al crear el perfil.** "New lounge
+partner announcements", "Membership renewal reminders", "Special offers and
+promotions" y "Birthday month promotion" dependen de datos que Epic 7/9
+todavía no modelan de verdad (nuevos partners, renovación de membresía real)
+— `seed_sample_notifications()` (trigger `AFTER INSERT` en `profiles`)
+inserta las cuatro como notificaciones de muestra reales (contenido fijo,
+filas de verdad) la primera vez que el miembro completa /onboarding.
+
+### Borrado de cuenta (pg_cron)
+
+Story 6.3 — desde el 21 sept 2026, "Account deletion option with
+confirmation" conecta contra Supabase como un soft-delete reversible.
+Motivo completo en "Alcance" §Borrado de cuenta real.
+
+**Confirmar el modal no borra nada.** `request_account_deletion()`
+(`supabase/schemas/account_deletion.sql`, RPC `SECURITY DEFINER`) marca
+`profiles.deleted_at = now()` y cancela las reservas futuras del miembro
+(mismo cálculo de fee que `cancel_booking`) — fiel a lo que
+`DeleteAccountModal` ya declaraba ("upcoming bookings are cancelled...
+charged the fee"). Reactivar es tan simple como `deleted_at = null`: el
+login (`reactivateAccountIfDeleted`, `src/lib/profile.ts`) lo hace solo tras
+un signInWithPassword exitoso, sin RPC propia — RLS "update own profile" ya
+lo permite sobre la fila propia.
+
+**El borrado físico real (30 días cumplidos) es `pg_cron`, tercer uso del
+proyecto** — mismo patrón de Database Webhook por secreto compartido que
+`booking_receipts.sql`/`booking_reminders.sql`, pero corriendo una vez al
+día en vez de cada 15–30 min: `dispatch_account_deletions()`
+(`supabase/schemas/account_deletion.sql`) busca `profiles` con
+`deleted_at <= now() - interval '30 days'` y llama (`pg_net`) a la Edge
+Function `delete-account`, primer uso del proyecto de
+`auth.admin.deleteUser` — `on delete cascade` en `profiles`/`bookings`/
+`payments`/`notifications`/`member_favorite_lounges` limpia el resto solo.
+Alta de los dos secretos, una vez por proyecto:
+```sql
+select vault.create_secret(
+  'http://host.docker.internal:54331/functions/v1/delete-account', -- local; staging/prod: la URL pública del proyecto
+  'account_deletion_webhook_url', 'URL de la Edge Function delete-account'
+);
+select vault.create_secret(
+  '<mismo valor que ACCOUNT_DELETION_WEBHOOK_SECRET en supabase/functions/.env>',
+  'account_deletion_webhook_secret', 'Secreto compartido del cron de borrado de cuenta hacia delete-account'
+);
+```
+Sin los dos secretos dados de alta, `dispatch_account_deletions()` no hace
+nada (mismo guard que el resto de este patrón). La Edge Function además
+re-verifica los 30 días por su cuenta (defensa en profundidad) antes de
+llamar a `auth.admin.deleteUser` — no confía solo en el filtro SQL que la
+invocó.
+
+**Limitación conocida de este entorno: no se puede ejercitar de punta a
+punta en 30 días reales aquí** — mismo tipo de gap que el recordatorio de
+Story 5.3, esta vez por la duración de la ventana (30 días) en vez de por
+el seed de disponibilidad.

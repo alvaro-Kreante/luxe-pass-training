@@ -446,6 +446,13 @@ verify_jwt = false
 [functions.send-booking-reminder]
 verify_jwt = false
 
+# Story 6.3 — el cron `dispatch_account_deletions` (pg_net, ver
+# supabase/schemas/account_deletion.sql) llama a esta function desde
+# Postgres, mismo motivo/mecanismo que send-booking-reminder: pasados los 30
+# días de gracia del borrado de cuenta.
+[functions.delete-account]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54337

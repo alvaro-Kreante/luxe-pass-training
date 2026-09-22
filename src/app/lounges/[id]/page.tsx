@@ -6,6 +6,7 @@ import { notFound, useParams, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
   ChevronRight,
+  Heart,
   MapPin,
   Navigation2,
   Phone,
@@ -35,7 +36,9 @@ import {
   type WeekBandId,
 } from "@/lib/lounge-profile";
 import { TODAY } from "@/lib/availability";
+import { addFavoriteLounge, isFavoriteLounge, removeFavoriteLounge } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/client";
+import { cn } from "@/lib/utils";
 
 /**
  * Story 3.1 (Detailed Lounge Information) + estado "Not available" de la
@@ -50,6 +53,13 @@ import { createClient } from "@/lib/supabase/client";
  * "Backend real — Epic 3". El chip de distancia del mock se retiró: no está
  * en los Acceptance Criteria y añadir geolocalización aquí, como en
  * `/explore`, es desproporcionado para esta historia.
+ *
+ * El botón de favorito (Story 6.3 — "Tap the heart on any lounge profile to
+ * save it here", `Preferences.dc.html`) no tiene artboard propio en esta
+ * pantalla (`Main.dc.html` de la Fase 4 nunca lo dibujó, gap ya anotado en
+ * COMPONENT-MAP): se compone reutilizando el mismo botón de acción rápida
+ * que Call/Directions/Share, sin CSS nuevo — desviación consciente,
+ * documentada en COMPONENT-MAP.
  */
 const QUICK_ACTION_CLASS =
   "flex h-10 items-center gap-2 rounded-[11px] border-[1.5px] border-line bg-surface px-4 text-[12.5px] font-bold tracking-[0.06em] text-fg-muted transition-colors duration-150 hover:bg-accent-soft";
@@ -111,9 +121,17 @@ function LoungeProfileScreen() {
   const [galleryOpen, setGalleryOpen] = React.useState(false);
   const [galleryIndex, setGalleryIndex] = React.useState(0);
   const [shareOpen, setShareOpen] = React.useState(false);
+  const [favorite, setFavorite] = React.useState(false);
+  const supabaseRef = React.useRef<ReturnType<typeof createClient> | null>(null);
+  /** El fetch inicial de favorito y el click del miembro compiten (el primero
+   * es lento — va en el mismo `Promise.all` que fotos/disponibilidad — y
+   * puede resolver DESPUÉS de un click bien temprano). Sin esta guarda, esa
+   * resolución tardía pisaría el toggle optimista con el valor previo. */
+  const favoriteOverriddenRef = React.useRef(false);
 
   React.useEffect(() => {
     const supabase = createClient();
+    supabaseRef.current = supabase;
     let active = true;
 
     fetchLoungeProfile(supabase, id).then(async (profile) => {
@@ -122,13 +140,15 @@ function LoungeProfileScreen() {
       loungeRef.current = profile;
       if (!profile) return;
 
-      const [loungeImages, availability] = await Promise.all([
+      const [loungeImages, availability, isFavorite] = await Promise.all([
         fetchLoungeImages(supabase, id),
         fetchTodayAvailability(supabase, profile),
+        isFavoriteLounge(supabase, id),
       ]);
       if (!active) return;
       setImages(loungeImages);
       setToday(availability);
+      if (!favoriteOverriddenRef.current) setFavorite(isFavorite);
     });
 
     const interval = setInterval(async () => {
@@ -149,6 +169,16 @@ function LoungeProfileScreen() {
   }
 
   const loading = forceLoading || lounge === undefined || today === null;
+
+  async function toggleFavorite() {
+    const supabase = supabaseRef.current;
+    if (!supabase) return;
+    favoriteOverriddenRef.current = true;
+    const next = !favorite;
+    setFavorite(next);
+    if (next) await addFavoriteLounge(supabase, id);
+    else await removeFavoriteLounge(supabase, id);
+  }
 
   return (
     <AppShell padded={false}>
@@ -191,6 +221,20 @@ function LoungeProfileScreen() {
               >
                 <Share2 size={16} strokeWidth={1.8} className="text-gold-600" aria-hidden />
                 Share
+              </button>
+              <button
+                type="button"
+                onClick={toggleFavorite}
+                aria-pressed={favorite}
+                className={cn(QUICK_ACTION_CLASS, favorite && "border-accent bg-accent-soft text-accent-strong")}
+              >
+                <Heart
+                  size={16}
+                  strokeWidth={1.8}
+                  className={favorite ? "fill-accent-strong text-accent-strong" : "text-gold-600"}
+                  aria-hidden
+                />
+                {favorite ? "Saved" : "Save"}
               </button>
             </div>
           ) : null}
