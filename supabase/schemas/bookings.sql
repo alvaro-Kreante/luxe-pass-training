@@ -33,6 +33,9 @@ create table if not exists public.bookings (
   -- (`notifications.sql`) reenvíe el aviso si vuelve a correr dentro de la
   -- misma ventana.
   morning_notification_sent_at timestamptz,
+  -- Story 7.1 — "No-show reporting functionality" (`NoShow.dc.html`, "What
+  -- happened?"). Solo lo escribe `partner_report_no_show` de más abajo.
+  no_show_reason text check (no_show_reason in ('never-arrived', 'arrived-after-window', 'something-else')),
   -- Story 6.1 — "No show policy enforcement - flat fee" / "24-hour advance
   -- notice requirement for cancellation". Decisión consciente (ver
   -- CLAUDE.md): el fee se REGISTRA, nunca se cobra de verdad — no hay
@@ -83,10 +86,20 @@ create index if not exists bookings_confirmation_code_idx on public.bookings (co
 
 alter table public.bookings enable row level security;
 
-create policy "select own bookings"
+-- Una sola policy (no dos OR'd por Postgres) para evitar el warning de
+-- "multiple permissive policies" de `supabase db advisors`: el miembro
+-- dueño de la reserva, o (Story 7.1) el partner que gestiona ese lounge
+-- (`partner_lounge_ids()` en `partners.sql`) — esto último también hace
+-- falta para que la suscripción de Realtime del cliente (`postgres_changes`
+-- respeta RLS) reciba los inserts/updates de su propio lounge, sin depender
+-- solo de la RPC de más abajo.
+create policy "select own or managed bookings"
 on public.bookings for select
 to authenticated
-using ( (select auth.uid()) = member_id );
+using (
+  (select auth.uid()) = member_id
+  or lounge_id in (select public.partner_lounge_ids())
+);
 
 -- Sin policies de insert/update/delete: la tabla solo se toca vía las dos
 -- funciones de abajo (SECURITY DEFINER), igual que `login_attempts` en la
@@ -452,3 +465,165 @@ end;
 $$;
 
 grant execute on function public.cancel_booking(uuid, date) to authenticated;
+
+-- Story 7.1 — Daily Guest Management. A diferencia de las RPC "de kiosco" de
+-- recepción (arriba, `anon`/`authenticated` sin sesión real), el partner sí
+-- tiene una sesión real (`auth.uid()`) — SECURITY DEFINER hace falta de
+-- verdad para leer `profiles`/`auth.users` de otros miembros, pero la
+-- autorización se verifica explícitamente contra `partner_lounge_ids()`
+-- (`partners.sql`) al principio del cuerpo, no se delega solo a RLS.
+--
+-- `member_email`/`member_phone`/`emergency_contact` vuelven `null` cuando la
+-- reserva está cancelada — "Contact details are shown while the booking is
+-- open" (`GuestDetail.dc.html`), decisión de producto de DESIGN-SYSTEM.md §6
+-- Fase 2.
+--
+-- `is_day_pass`: no hay un campo de "tipo de visita" en `profiles`/`bookings`
+-- (Epic 9, planes de membresía, sigue sin conectar) — se deriva de si la
+-- reserva tiene un pago real cobrado de verdad (Epic 4): con pago
+-- `succeeded` es una visita de day pass; sin pago ligado, la cubre la
+-- membresía. Documentado como decisión consciente en
+-- docs/design/COMPONENT-MAP.md "Backend real — Epic 7".
+--
+-- `visit_number`: recuento de visitas del mismo miembro en este lounge
+-- (nunca global) hasta esta reserva inclusive — "niveles de lealtad
+-- contados solo por local" (DESIGN-SYSTEM.md §6 Fase 2).
+create or replace function public.partner_guest_list(p_lounge_id text, p_date date)
+returns table (
+  id uuid,
+  confirmation_code text,
+  member_name text,
+  member_email text,
+  member_phone text,
+  band text,
+  slot_time text,
+  status text,
+  checked_in_at timestamptz,
+  no_show boolean,
+  no_show_reason text,
+  special_requests text,
+  created_at timestamptz,
+  is_day_pass boolean,
+  visit_number integer,
+  emergency_contact text
+)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if p_lounge_id not in (select public.partner_lounge_ids()) then
+    raise exception 'Not authorized for lounge %', p_lounge_id;
+  end if;
+
+  return query
+    select
+      b.id,
+      b.confirmation_code,
+      coalesce(p.full_name, split_part(u.email::text, '@', 1)),
+      case when b.status <> 'cancelled' then u.email::text end,
+      case when b.status <> 'cancelled' then p.phone end,
+      b.band,
+      b.slot_time,
+      b.status,
+      b.checked_in_at,
+      b.no_show,
+      b.no_show_reason,
+      b.special_requests,
+      b.created_at,
+      exists (
+        select 1 from public.payments pm
+        where pm.booking_id = b.id and pm.status = 'succeeded'
+      ),
+      (
+        select count(*)::int from public.bookings b2
+        where b2.member_id = b.member_id
+          and b2.lounge_id = b.lounge_id
+          and b2.status <> 'cancelled'
+          and b2.date <= b.date
+      ),
+      case
+        when b.status <> 'cancelled' and p.emergency_contact_name is not null and p.emergency_contact_phone is not null
+          then p.emergency_contact_name
+            || coalesce(' · ' || nullif(p.emergency_contact_relation, ''), '')
+            || ' · ' || p.emergency_contact_phone
+        else null
+      end
+    from public.bookings b
+    join auth.users u on u.id = b.member_id
+    left join public.profiles p on p.id = b.member_id
+    where b.lounge_id = p_lounge_id and b.date = p_date
+    order by b.slot_time, b.created_at;
+end;
+$$;
+
+grant execute on function public.partner_guest_list(text, date) to authenticated;
+
+-- Story 7.1 — "Check-in status tracking for each guest" (la casilla de
+-- asistencia). Equivalente autenticado de `reception_checkin_booking`, pero
+-- por `id` de reserva (el partner ya la ve en su propia lista, no necesita
+-- buscar por LP#) y autorizado contra `partner_lounge_ids()` en vez de
+-- LP#+lounge+fecha.
+create or replace function public.partner_checkin_booking(p_booking_id uuid)
+returns public.bookings
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_booking public.bookings;
+begin
+  update public.bookings b
+    set checked_in_at = now(), status = 'in_progress', updated_at = now()
+    where b.id = p_booking_id
+      and b.lounge_id in (select public.partner_lounge_ids())
+      and b.status = 'confirmed'
+      and b.checked_in_at is null
+    returning b.* into v_booking;
+
+  if v_booking.id is null then
+    raise exception 'Booking not found, not confirmed, already checked in, or not authorized';
+  end if;
+
+  return v_booking;
+end;
+$$;
+
+grant execute on function public.partner_checkin_booking(uuid) to authenticated;
+
+-- Story 7.1 — "No-show reporting functionality" (`NoShow.dc.html`, "What
+-- happened?"). Mismo fee plano de $35.00 que `reception_report_no_show`/
+-- Story 6.1 (registrado, nunca cobrado de verdad) — la parte del partner en
+-- ese fee ($17.50) no se guarda aquí, se calcula en la analítica (Story 7.3,
+-- `NO_SHOW_PARTNER_SHARE` en `src/lib/partner.ts`) a partir del recuento de
+-- no-shows.
+create or replace function public.partner_report_no_show(p_booking_id uuid, p_reason text)
+returns public.bookings
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_booking public.bookings;
+begin
+  if p_reason not in ('never-arrived', 'arrived-after-window', 'something-else') then
+    raise exception 'Invalid no-show reason %', p_reason;
+  end if;
+
+  update public.bookings b
+    set no_show = true, no_show_reason = p_reason, status = 'completed', cancellation_fee_cents = 3500, updated_at = now()
+    where b.id = p_booking_id
+      and b.lounge_id in (select public.partner_lounge_ids())
+      and b.status = 'confirmed'
+      and b.checked_in_at is null
+    returning b.* into v_booking;
+
+  if v_booking.id is null then
+    raise exception 'Booking not found, not confirmed, already checked in, or not authorized';
+  end if;
+
+  return v_booking;
+end;
+$$;
+
+grant execute on function public.partner_report_no_show(uuid, text) to authenticated;

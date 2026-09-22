@@ -453,6 +453,18 @@ verify_jwt = false
 [functions.delete-account]
 verify_jwt = false
 
+# Story 7.2 — los dos triggers de `bookings` (nueva reserva/cancelación,
+# supabase/schemas/partner_notifications.sql) llaman aquí desde Postgres,
+# mismo motivo/mecanismo que send-booking-receipt.
+[functions.send-partner-booking-event]
+verify_jwt = false
+
+# Story 7.2 — el cron `dispatch_partner_morning_digest` (pg_net, ver
+# supabase/schemas/partner_notifications.sql) llama a esta function desde
+# Postgres, mismo motivo/mecanismo que send-booking-reminder.
+[functions.send-partner-digest]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54337

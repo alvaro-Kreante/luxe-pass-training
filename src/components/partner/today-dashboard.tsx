@@ -11,89 +11,189 @@ import { GuestListTable } from "@/components/partner/guest-list-table";
 import { ExportGuestListPopover } from "@/components/partner/export-guest-list-popover";
 import { NoShowModal } from "@/components/partner/no-show-modal";
 import { Toast } from "@/components/ui/toast";
+import { createClient } from "@/lib/supabase/client";
+import { TODAY } from "@/lib/availability";
 import {
-  CANCELLATION_ACTIVITY,
-  PARTNER_ACTIVITY,
-  PARTNER_GUESTS,
-  PARTNER_VENUE,
-  WAITLIST_PROMOTION_ACTIVITY,
-  LIVE_BOOKING,
-  LIVE_BOOKING_ACTIVITY,
-  applyCancellationAndPromotion,
-  applyLiveBooking,
   findPartnerGuest,
+  formatLongWeekdayDate,
   guestCounts,
-  markArrived,
+  mapGuestRow,
   matchesGuestQuery,
-  reportNoShow,
   type NoShowReason,
   type PartnerActivityItem,
-  type PartnerGuest,
+  type PartnerGuestRow,
 } from "@/lib/partner";
 
 /**
  * Story 7.1 — Daily Guest Management (`Main.dc.html`). Story 7.2 —
- * "real-time updates" y sus alertas (`LiveUpdate.dc.html`,
- * `EmailNewBooking.dc.html`, `EmailCancellation.dc.html`). Sin backend, la
- * llegada de una reserva nueva y la cancelación+promoción de la waitlist son
- * temporizadores deterministas, no eventos aleatorios — mismo criterio que
- * el chequeo de disponibilidad del Epic 4.
+ * "real-time updates" (`LiveUpdate.dc.html`) y "cancellation notifications"
+ * (`EmailCancellation.dc.html`). Backend real (22 sept 2026, ver CLAUDE.md
+ * §Alcance): `partner_guest_list`/`partner_checkin_booking`/
+ * `partner_report_no_show` (`supabase/schemas/bookings.sql`) + una
+ * suscripción de Supabase Realtime sobre `bookings` reemplazan los
+ * temporizadores deterministas que simulaban la reserva/cancelación en vivo.
+ *
+ * El panel de actividad (`ActivityPanel`) es puramente de sesión — no hay
+ * tabla `partner_activity` persistida — arranca vacío y se llena con lo que
+ * ocurre real de verdad mientras esta pantalla está abierta (nueva reserva
+ * por Realtime, cancelación por Realtime, check-in/no-show hechos desde
+ * aquí). Documentado como decisión consciente en
+ * docs/design/COMPONENT-MAP.md "Backend real — Epic 7".
  *
  * Vive fuera de `app/partner/page.tsx` porque un archivo de ruta del App
- * Router solo puede exportar `default` (y unos pocos nombres reservados como
- * `metadata`) — cualquier otro named export, como `TodayDashboard` para los
- * tests, rompe el chequeo de tipos de rutas de `next build`.
+ * Router solo puede exportar `default`.
  */
-export const DEFAULT_LIVE_BOOKING_DELAY_MS = 6000;
-export const DEFAULT_CANCELLATION_DELAY_MS = 8000;
+const REFRESH_INTERVAL_MS = 30000;
+/** Cuánto dura resaltada + con el chip "New booking" una fila recién llegada por Realtime. */
+const NEW_BOOKING_HIGHLIGHT_MS = 15000;
 
 type ToastState = { title: string; body: string } | null;
 
-/**
- * Los tiempos de espera son props (con los valores por defecto de arriba)
- * para que la suite de tests pueda acortarlos y esperar con temporizadores
- * reales — mezclar fake timers con el scheduler de React bajo jsdom se
- * cuelga, porque jsdom implementa `requestAnimationFrame` sobre `setTimeout`.
- */
-export function TodayDashboard({
-  liveBookingDelayMs = DEFAULT_LIVE_BOOKING_DELAY_MS,
-  cancellationDelayMs = DEFAULT_CANCELLATION_DELAY_MS,
-}: {
-  liveBookingDelayMs?: number;
-  cancellationDelayMs?: number;
-}) {
-  const [guests, setGuests] = React.useState<PartnerGuest[]>(PARTNER_GUESTS);
-  const [activity, setActivity] = React.useState<PartnerActivityItem[]>(PARTNER_ACTIVITY);
+function nowLabel(): string {
+  return new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+}
+
+export function TodayDashboard() {
+  const supabase = React.useMemo(() => createClient(), []);
+  const [loungeId, setLoungeId] = React.useState<string | null>(null);
+  const [rows, setRows] = React.useState<PartnerGuestRow[]>([]);
+  const [activity, setActivity] = React.useState<PartnerActivityItem[]>([]);
   const [query, setQuery] = React.useState("");
-  const [clockLabel, setClockLabel] = React.useState("3:38 PM");
   const [detailGuestId, setDetailGuestId] = React.useState<string | null>(null);
   const [noShowGuestId, setNoShowGuestId] = React.useState<string | null>(null);
   const [highlightedId, setHighlightedId] = React.useState<string | null>(null);
+  const [newlyBookedIds, setNewlyBookedIds] = React.useState<ReadonlySet<string>>(new Set());
   const [toast, setToast] = React.useState<ToastState>(null);
 
-  React.useEffect(() => {
-    const liveBookingTimer = setTimeout(() => {
-      setGuests((current) => applyLiveBooking(current));
-      setActivity((current) => [LIVE_BOOKING_ACTIVITY, ...current]);
-      setHighlightedId(LIVE_BOOKING.id);
-      setClockLabel("3:41 PM");
-      setToast({
-        title: "New booking just came in",
-        body: `${LIVE_BOOKING.name} · ${LIVE_BOOKING.arrivalTime} tonight · ${LIVE_BOOKING.id}`,
-      });
-    }, liveBookingDelayMs);
+  const fetchGuestList = React.useCallback(
+    async (lounge: string): Promise<PartnerGuestRow[]> => {
+      const { data } = await supabase.rpc("partner_guest_list", { p_lounge_id: lounge, p_date: TODAY });
+      const nextRows = (data as PartnerGuestRow[] | null) ?? [];
+      setRows(nextRows);
+      return nextRows;
+    },
+    [supabase],
+  );
 
-    const cancellationTimer = setTimeout(() => {
-      setGuests((current) => applyCancellationAndPromotion(current));
-      setActivity((current) => [WAITLIST_PROMOTION_ACTIVITY, CANCELLATION_ACTIVITY, ...current]);
-      setClockLabel("3:54 PM");
-    }, liveBookingDelayMs + cancellationDelayMs);
+  React.useEffect(() => {
+    let active = true;
+    supabase
+      .from("partner_lounges")
+      .select("lounge_id")
+      .limit(1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!active || !data) return;
+        setLoungeId(data.lounge_id);
+        fetchGuestList(data.lounge_id);
+      });
+    return () => {
+      active = false;
+    };
+  }, [supabase, fetchGuestList]);
+
+  React.useEffect(() => {
+    if (!loungeId) return;
+    const interval = setInterval(() => fetchGuestList(loungeId), REFRESH_INTERVAL_MS);
+    return () => clearInterval(interval);
+  }, [loungeId, fetchGuestList]);
+
+  React.useEffect(() => {
+    if (!loungeId) return;
+
+    const channel = supabase
+      .channel(`partner-bookings-${loungeId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "bookings", filter: `lounge_id=eq.${loungeId}` },
+        async (payload) => {
+          const booking = payload.new as {
+            id: string;
+            date: string;
+            status: string;
+            slot_time: string;
+            confirmation_code: string;
+          };
+          if (booking.date !== TODAY || booking.status !== "confirmed") return;
+
+          const nextRows = await fetchGuestList(loungeId);
+          const guestRow = nextRows.find((row) => row.id === booking.id);
+          const guestName = guestRow?.member_name ?? "A guest";
+
+          setNewlyBookedIds((current) => new Set(current).add(booking.id));
+          setHighlightedId(booking.confirmation_code);
+          setToast({
+            title: "New booking just came in",
+            body: `${guestName} · ${booking.slot_time} tonight · ${booking.confirmation_code}`,
+          });
+          setActivity((current) => [
+            {
+              id: `new-booking-${booking.id}`,
+              kind: "new-booking",
+              title: "New booking",
+              time: nowLabel(),
+              body: `${guestName} booked ${booking.slot_time} today · ${booking.confirmation_code}.`,
+              read: false,
+              emailHref: "/partner/emails/new-booking",
+            },
+            ...current,
+          ]);
+
+          setTimeout(() => {
+            setNewlyBookedIds((current) => {
+              const next = new Set(current);
+              next.delete(booking.id);
+              return next;
+            });
+          }, NEW_BOOKING_HIGHLIGHT_MS);
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "bookings", filter: `lounge_id=eq.${loungeId}` },
+        async (payload) => {
+          const updated = payload.new as {
+            id: string;
+            date: string;
+            status: string;
+            confirmation_code: string;
+          };
+          const previous = payload.old as { status?: string };
+          if (updated.date !== TODAY) return;
+
+          const nextRows = await fetchGuestList(loungeId);
+
+          if (updated.status === "cancelled" && previous.status !== "cancelled") {
+            const guestRow = nextRows.find((row) => row.id === updated.id);
+            const guestName = guestRow?.member_name ?? "A guest";
+            const stillExpected = guestCounts(nextRows.map((row) => mapGuestRow(row))).expected;
+
+            setActivity((current) => [
+              {
+                id: `cancellation-${updated.id}-${Date.now()}`,
+                kind: "cancellation",
+                title: "Cancellation",
+                time: nowLabel(),
+                body: `${guestName} cancelled · ${updated.confirmation_code}. Today's count is now ${stillExpected}.`,
+                read: false,
+                emailHref: "/partner/emails/cancellation",
+              },
+              ...current,
+            ]);
+          }
+        },
+      )
+      .subscribe();
 
     return () => {
-      clearTimeout(liveBookingTimer);
-      clearTimeout(cancellationTimer);
+      supabase.removeChannel(channel);
     };
-  }, [liveBookingDelayMs, cancellationDelayMs]);
+  }, [supabase, loungeId, fetchGuestList]);
+
+  const guests = React.useMemo(
+    () => rows.map((row) => mapGuestRow(row, { newlyBooked: newlyBookedIds.has(row.id) })),
+    [rows, newlyBookedIds],
+  );
 
   const filtered = guests.filter((guest) => matchesGuestQuery(guest, query));
   const counts = guestCounts(guests);
@@ -101,15 +201,52 @@ export function TodayDashboard({
   const noShowGuest = noShowGuestId ? findPartnerGuest(guests, noShowGuestId) : undefined;
   const blurred = Boolean(detailGuest) || Boolean(noShowGuest);
 
-  function handleMarkArrived(id: string) {
-    setGuests((current) => markArrived(current, id));
+  async function handleMarkArrived(id: string) {
     setDetailGuestId(null);
+    const guest = findPartnerGuest(guests, id);
+    if (!guest?.bookingId || !loungeId) return;
+
+    const { error } = await supabase.rpc("partner_checkin_booking", { p_booking_id: guest.bookingId });
+    if (error) return;
+
+    setActivity((current) => [
+      {
+        id: `checked-in-${guest.bookingId}-${Date.now()}`,
+        kind: "checked-in",
+        title: "Checked in",
+        time: nowLabel(),
+        body: `${guest.name} · ${guest.arrivalTime} arrival.`,
+        read: false,
+      },
+      ...current,
+    ]);
+    fetchGuestList(loungeId);
   }
 
-  function handleReportNoShow(id: string, reason: NoShowReason) {
-    setGuests((current) => reportNoShow(current, id, reason));
+  async function handleReportNoShow(id: string, reason: NoShowReason) {
     setNoShowGuestId(null);
     setDetailGuestId(null);
+    const guest = findPartnerGuest(guests, id);
+    if (!guest?.bookingId || !loungeId) return;
+
+    const { error } = await supabase.rpc("partner_report_no_show", {
+      p_booking_id: guest.bookingId,
+      p_reason: reason,
+    });
+    if (error) return;
+
+    setActivity((current) => [
+      {
+        id: `no-show-${guest.bookingId}-${Date.now()}`,
+        kind: "no-show",
+        title: "No-show recorded",
+        time: nowLabel(),
+        body: `${guest.name} · ${guest.arrivalTime} arrival.`,
+        read: false,
+      },
+      ...current,
+    ]);
+    fetchGuestList(loungeId);
   }
 
   return (
@@ -117,10 +254,10 @@ export function TodayDashboard({
       <PartnerShell
         blurred={blurred}
         topbarLabel="Today"
-        topbarMeta={`· ${PARTNER_VENUE.dateLabel} · ${clockLabel}`}
+        topbarMeta={`· ${formatLongWeekdayDate(TODAY)}`}
         topbarRight={
           <div className="flex items-center gap-2.5">
-            <LiveStatusChip label="Live · updated just now" />
+            <LiveStatusChip label="Live" />
             <ActivityPanel
               items={activity}
               onMarkAllRead={() => setActivity((current) => current.map((item) => ({ ...item, read: true })))}
@@ -128,14 +265,14 @@ export function TodayDashboard({
                 setActivity((current) => current.map((item) => (item.id === id ? { ...item, read: true } : item)))
               }
             />
-            <PartnerRefreshButton />
+            <PartnerRefreshButton onClick={() => loungeId && fetchGuestList(loungeId)} />
           </div>
         }
       >
         <div className="flex items-center gap-6">
           <div className="min-w-0 flex-1">
             <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">
-              {PARTNER_VENUE.name} · {PARTNER_VENUE.dateLabel} ·{" "}
+              {formatLongWeekdayDate(TODAY)} ·{" "}
               <Link href="/partner/emails/digest" className="normal-case text-accent-strong">
                 view this morning&apos;s digest
               </Link>
@@ -157,10 +294,6 @@ export function TodayDashboard({
                 className="flex-1 bg-transparent text-[13.5px] text-fg outline-none placeholder:text-fg-subtle"
               />
             </div>
-
-            <span className="flex h-11 shrink-0 items-center gap-2 rounded-[11px] border-[1.5px] border-line px-4.5 text-[13.5px] font-semibold text-fg">
-              Sep 14
-            </span>
 
             <button
               type="button"
@@ -226,7 +359,7 @@ export function TodayDashboard({
           body={toast.body}
           primaryLabel="Open guest"
           onPrimary={() => {
-            setDetailGuestId(LIVE_BOOKING.id);
+            if (highlightedId) setDetailGuestId(highlightedId);
             setToast(null);
           }}
           onDismiss={() => setToast(null)}

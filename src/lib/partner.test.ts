@@ -1,31 +1,31 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  ANALYTICS_SUMMARY,
-  ARRIVALS_BY_WEEKDAY,
-  CANCELLED_GUEST_ID,
-  GUESTS_WHO_ARRIVED,
   LIVE_BOOKING,
   PARTNER_GUESTS,
-  REPEAT_GUESTS,
-  REVENUE_BREAKDOWN,
-  TOTAL_REVENUE_ATTRIBUTED,
-  WAITLIST_PROMOTED_GUEST,
-  MONTHLY_BOOKINGS_BY_DAY,
-  applyCancellationAndPromotion,
-  applyLiveBooking,
+  type RepeatGuestRow,
+  bookedAgoLabel,
+  bookingsByWeekday,
   bookingsForRange,
   filterRepeatGuests,
   formatCurrency,
   guestCounts,
   guestListToCsv,
   loyaltyTier,
-  markArrived,
+  mapGuestRow,
+  mapRepeatGuestRow,
   matchesGuestQuery,
-  reportNoShow,
+  repeatGuestsSummary,
   repeatGuestsToCsv,
+  revenueBreakdownFor,
   revenueBreakdownToCsv,
+  totalRevenueAttributed,
 } from "./partner";
+
+const SAMPLE_REPEAT_GUESTS: RepeatGuestRow[] = [
+  { name: "Alexandra Rivas", email: "alexandra.rivas@example.com", visits: 12, lastVisitLabel: "Sep 9, 2025", firstVisitLabel: "Mar 1, 2024", attributed: 456 },
+  { name: "Elena Vasquez", email: "elena.vasquez@example.com", visits: 1, lastVisitLabel: "Sep 9, 2025", firstVisitLabel: "Sep 9, 2025", attributed: 75 },
+];
 
 /**
  * Story 7.1 — Daily Guest Management. Los criterios que cubren estas
@@ -95,63 +95,114 @@ describe("guestListToCsv", () => {
   });
 });
 
-describe("markArrived / reportNoShow", () => {
-  it("marca un invitado pendiente como llegado sin tocar a los demás", () => {
-    const updated = markArrived(PARTNER_GUESTS, "LP-842407");
-    const idris = updated.find((g) => g.id === "LP-842407");
+describe("mapGuestRow — backend real (partner_guest_list → PartnerGuest)", () => {
+  const baseRow = {
+    id: "11111111-1111-1111-1111-111111111111",
+    confirmation_code: "LP-999001",
+    member_name: "Theo Lindqvist",
+    member_email: "theo.lindqvist@example.com",
+    member_phone: "+1 (555) 214-9930",
+    band: "morning",
+    slot_time: "10:00 AM",
+    status: "confirmed",
+    checked_in_at: null,
+    no_show: false,
+    no_show_reason: null,
+    special_requests: "",
+    created_at: new Date().toISOString(),
+    is_day_pass: false,
+    visit_number: 3,
+    emergency_contact: null,
+  };
 
-    expect(idris?.status).toBe("arrived");
-    expect(updated.find((g) => g.id === "LP-842612")?.status).toBe("pending");
+  it("usa el LP# como id de UI y guarda el uuid real como bookingId", () => {
+    const guest = mapGuestRow(baseRow);
+
+    expect(guest.id).toBe("LP-999001");
+    expect(guest.bookingId).toBe(baseRow.id);
   });
 
-  it("reporta un no-show para el invitado indicado, con su motivo", () => {
-    const updated = reportNoShow(PARTNER_GUESTS, "LP-842407", "never-arrived");
-    const guest = updated.find((g) => g.id === "LP-842407");
+  it("deriva iniciales y el ordinal de la visita", () => {
+    const guest = mapGuestRow(baseRow);
 
-    expect(guest?.status).toBe("no-show");
-    expect(guest?.noShowReason).toBe("never-arrived");
+    expect(guest.initials).toBe("TL");
+    expect(guest.visitLabel).toBe("3rd visit here");
+  });
+
+  it("etiqueta day pass vs. membresía según is_day_pass", () => {
+    expect(mapGuestRow(baseRow).membershipLabel).toBe("Annual member");
+    expect(mapGuestRow({ ...baseRow, is_day_pass: true }).membershipLabel).toBe("Day pass");
+  });
+
+  it("mapea el estado de la reserva al status de PartnerGuest", () => {
+    expect(mapGuestRow({ ...baseRow, status: "confirmed" }).status).toBe("pending");
+    expect(mapGuestRow({ ...baseRow, status: "in_progress" }).status).toBe("arrived");
+    expect(mapGuestRow({ ...baseRow, status: "completed", no_show: true }).status).toBe("no-show");
+    expect(mapGuestRow({ ...baseRow, status: "cancelled" }).status).toBe("cancelled");
+  });
+
+  it("marca 'new-booking' solo cuando newlyBooked está activo y sigue pendiente", () => {
+    expect(mapGuestRow(baseRow, { newlyBooked: true }).status).toBe("new-booking");
+    expect(
+      mapGuestRow({ ...baseRow, status: "in_progress" }, { newlyBooked: true }).status,
+    ).toBe("arrived");
+  });
+
+  it("vacía el contacto cuando la RPC ya lo ocultó (reserva cancelada)", () => {
+    const guest = mapGuestRow({ ...baseRow, status: "cancelled", member_email: null, member_phone: null });
+
+    expect(guest.email).toBe("");
+    expect(guest.phone).toBe("");
   });
 });
 
-describe("applyLiveBooking", () => {
-  it("añade la reserva en vivo y sube el total esperado de 14 a 15", () => {
-    const before = guestCounts(PARTNER_GUESTS);
-    const after = guestCounts(applyLiveBooking(PARTNER_GUESTS));
+describe("bookedAgoLabel", () => {
+  it("dice 'just now' para algo recién creado", () => {
+    const now = new Date("2025-09-09T15:00:00Z");
+    expect(bookedAgoLabel(new Date("2025-09-09T14:59:30Z").toISOString(), now)).toBe("Booked just now");
+  });
 
-    expect(before.expected).toBe(14);
-    expect(after.expected).toBe(15);
-    expect(after.pending).toBe(before.pending + 1);
+  it("cuenta en horas dentro del mismo día", () => {
+    const now = new Date("2025-09-09T15:00:00Z");
+    expect(bookedAgoLabel(new Date("2025-09-09T12:00:00Z").toISOString(), now)).toBe("Booked 3 hours ago");
+  });
+
+  it("cuenta en días más allá de 24 horas", () => {
+    const now = new Date("2025-09-09T15:00:00Z");
+    expect(bookedAgoLabel(new Date("2025-09-05T15:00:00Z").toISOString(), now)).toBe("Booked 4 days ago");
   });
 });
 
-describe("applyCancellationAndPromotion", () => {
-  it("cancela el hueco y promociona a la waitlist sin cambiar el total esperado", () => {
-    const withLiveBooking = applyLiveBooking(PARTNER_GUESTS);
-    const before = guestCounts(withLiveBooking);
-    const after = applyCancellationAndPromotion(withLiveBooking);
+describe("Story 7.3 — revenueBreakdownFor / totalRevenueAttributed (backend real)", () => {
+  const summary = { bookings: 187, day_pass_visits: 53, membership_visits: 118, no_shows: 9, cancellations: 7 };
 
-    expect(after.find((g) => g.id === CANCELLED_GUEST_ID)?.status).toBe("cancelled");
-    expect(after.some((g) => g.id === WAITLIST_PROMOTED_GUEST.id)).toBe(true);
-    expect(guestCounts(after).expected).toBe(before.expected);
+  it("aplica las tarifas de partner a cada categoría", () => {
+    const breakdown = revenueBreakdownFor(summary);
+
+    expect(breakdown.dayPasses).toBe(3975);
+    expect(breakdown.membershipVisits).toBe(4484);
+    expect(breakdown.noShowFees).toBe(157.5);
+  });
+
+  it("el total es la suma de las tres partidas", () => {
+    const breakdown = revenueBreakdownFor(summary);
+    expect(formatCurrency(totalRevenueAttributed(breakdown))).toBe("$8,616.50");
   });
 });
 
-describe("Story 7.3 — cifras de Analytics cuadran entre sí", () => {
-  it("la distribución semanal suma el total de bookings del mes", () => {
-    const total = ARRIVALS_BY_WEEKDAY.reduce((sum, d) => sum + d.guests, 0);
-    expect(total).toBe(ANALYTICS_SUMMARY.bookings);
-  });
+describe("bookingsByWeekday", () => {
+  it("suma una serie diaria por día de la semana, lunes primero", () => {
+    const days = [
+      { day: "2025-09-08", bookings: 5 }, // Monday
+      { day: "2025-09-09", bookings: 3 }, // Tuesday
+      { day: "2025-09-15", bookings: 2 }, // Monday (semana siguiente)
+    ];
 
-  it("day passes + visitas de membresía cuadran con los invitados que llegaron", () => {
-    expect(ANALYTICS_SUMMARY.dayPassVisits + ANALYTICS_SUMMARY.membershipVisits).toBe(
-      GUESTS_WHO_ARRIVED,
-    );
-  });
+    const result = bookingsByWeekday(days);
 
-  it("el desglose de ingresos suma el total atribuido", () => {
-    const sum = REVENUE_BREAKDOWN.dayPasses + REVENUE_BREAKDOWN.membershipVisits + REVENUE_BREAKDOWN.noShowFees;
-    expect(sum).toBeCloseTo(TOTAL_REVENUE_ATTRIBUTED);
-    expect(formatCurrency(TOTAL_REVENUE_ATTRIBUTED)).toBe("$8,616.50");
+    expect(result[0]).toEqual({ day: "Mon", guests: 7 });
+    expect(result[1]).toEqual({ day: "Tue", guests: 3 });
+    expect(result.map((r) => r.day)).toEqual(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]);
   });
 });
 
@@ -173,32 +224,40 @@ describe("loyaltyTier", () => {
 
 describe("filterRepeatGuests", () => {
   it('"came-back" excluye a quien solo tiene una visita', () => {
-    const filtered = filterRepeatGuests(REPEAT_GUESTS, "came-back");
+    const filtered = filterRepeatGuests(SAMPLE_REPEAT_GUESTS, "came-back");
     expect(filtered.every((g) => g.visits >= 2)).toBe(true);
     expect(filtered.some((g) => g.name === "Elena Vasquez")).toBe(false);
   });
 
   it('"first-visit" solo deja a quien tiene una visita', () => {
-    const filtered = filterRepeatGuests(REPEAT_GUESTS, "first-visit");
+    const filtered = filterRepeatGuests(SAMPLE_REPEAT_GUESTS, "first-visit");
     expect(filtered).toHaveLength(1);
     expect(filtered[0].name).toBe("Elena Vasquez");
   });
 });
 
 describe("bookingsForRange", () => {
-  it('"week" son los últimos 7 días de los 14 del mes', () => {
-    expect(bookingsForRange("week")).toEqual(MONTHLY_BOOKINGS_BY_DAY.slice(-7));
-    expect(bookingsForRange("week")).toHaveLength(7);
+  const series = [9, 8, 10, 12, 14, 18, 21, 10, 9, 11, 12, 14, 23, 15];
+
+  it('"week" son los últimos 7 días de la serie', () => {
+    expect(bookingsForRange(series, "week")).toEqual(series.slice(-7));
+    expect(bookingsForRange(series, "week")).toHaveLength(7);
   });
 
-  it('"month" son los 14 días completos', () => {
-    expect(bookingsForRange("month")).toEqual(MONTHLY_BOOKINGS_BY_DAY);
+  it('"month" es la serie completa', () => {
+    expect(bookingsForRange(series, "month")).toEqual(series);
   });
 });
 
 describe("revenueBreakdownToCsv", () => {
   it("incluye las tres partidas y el total", () => {
-    const csv = revenueBreakdownToCsv();
+    const csv = revenueBreakdownToCsv({
+      bookings: 187,
+      day_pass_visits: 53,
+      membership_visits: 118,
+      no_shows: 9,
+      cancellations: 7,
+    });
 
     expect(csv).toContain("Day passes");
     expect(csv).toContain("$3,975.00");
@@ -212,11 +271,50 @@ describe("revenueBreakdownToCsv", () => {
 
 describe("repeatGuestsToCsv", () => {
   it("incluye la cabecera y el nivel de lealtad calculado", () => {
-    const csv = repeatGuestsToCsv(REPEAT_GUESTS.slice(0, 1));
+    const csv = repeatGuestsToCsv(SAMPLE_REPEAT_GUESTS.slice(0, 1));
     const [header, row] = csv.split("\n");
 
     expect(header).toBe("Guest name,Email,Visits here,Last visit,First visit,Loyalty,Attributed");
     expect(row).toContain("Regular");
     expect(row).toContain("$456.00");
+  });
+});
+
+describe("mapRepeatGuestRow — backend real (partner_repeat_guests → RepeatGuestRow)", () => {
+  it("formatea las fechas y traslada nombre/email/visitas/atribuido", () => {
+    const guest = mapRepeatGuestRow({
+      member_id: "22222222-2222-2222-2222-222222222222",
+      member_name: "Alexandra Rivas",
+      member_email: "alexandra.rivas@example.com",
+      visits: 12,
+      first_visit: "2024-03-01",
+      last_visit: "2025-09-09",
+      attributed: 456,
+    });
+
+    expect(guest.name).toBe("Alexandra Rivas");
+    expect(guest.lastVisitLabel).toBe("Sep 9, 2025");
+    expect(guest.firstVisitLabel).toBe("Mar 1, 2024");
+    expect(guest.attributed).toBe(456);
+  });
+});
+
+describe("repeatGuestsSummary", () => {
+  it("cuenta miembros totales, los que repitieron y la tasa de retorno", () => {
+    const summary = repeatGuestsSummary(SAMPLE_REPEAT_GUESTS);
+
+    expect(summary.totalMembers).toBe(2);
+    expect(summary.cameBackAtLeastOnce).toBe(1);
+    expect(summary.returnRate).toBe(50);
+    expect(summary.averageVisits).toBe(6.5);
+  });
+
+  it("no divide por cero con una lista vacía", () => {
+    expect(repeatGuestsSummary([])).toEqual({
+      totalMembers: 0,
+      cameBackAtLeastOnce: 0,
+      returnRate: 0,
+      averageVisits: 0,
+    });
   });
 });

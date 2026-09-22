@@ -3,21 +3,27 @@
 import * as React from "react";
 import { Download, FileText } from "lucide-react";
 
+import { RequirePartnerSession } from "@/components/partner/require-partner-session";
 import { PartnerShell } from "@/components/patterns/partner-shell";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PaymentOptionRow } from "@/components/ui/payment-option-row";
 import { Segmented } from "@/components/ui/segmented";
+import { createClient } from "@/lib/supabase/client";
+import { TODAY, addDays } from "@/lib/availability";
 import {
   DEFAULT_REPORT_ID,
-  PARTNER_GUESTS,
   PARTNER_REPORTS,
-  REPEAT_GUESTS,
   RECENT_DOWNLOADS,
   REPORT_DELIVERY_OPTIONS,
+  type PartnerAnalyticsSummary,
+  type PartnerGuestRow,
+  type PartnerRepeatGuestRow,
+  type PartnerReport,
   guestListToCsv,
+  mapGuestRow,
+  mapRepeatGuestRow,
   repeatGuestsToCsv,
   revenueBreakdownToCsv,
-  type PartnerReport,
 } from "@/lib/partner";
 import { downloadTextFile } from "@/lib/download";
 import { cn } from "@/lib/utils";
@@ -31,10 +37,53 @@ const MONTHLY_COLUMNS = [
 
 const OPTIONAL_COLUMN = "Attributed revenue";
 
-function reportToCsv(reportId: PartnerReport["id"]): string {
-  if (reportId === "daily-guest-list") return guestListToCsv(PARTNER_GUESTS);
-  if (reportId === "repeat-guests") return repeatGuestsToCsv(REPEAT_GUESTS);
-  if (reportId === "revenue-attribution") return revenueBreakdownToCsv();
+/** 90 días, mismo rango que Analytics — para "revenue-attribution". */
+const RANGE_FROM = addDays(TODAY, -89);
+
+/**
+ * Backend real (22 sept 2026): a diferencia de Analytics/Guests (que
+ * precargan al montar), aquí se pide bajo demanda — el partner puede elegir
+ * cualquiera de los seis informes antes de descargar, así que no vale la
+ * pena precargar los tres reales de antemano. "weekly-booking-volume",
+ * "monthly-booking-volume" y "no-show-log" ya eran solo la cabecera de
+ * columnas en el mockup (nunca tuvieron CSV completo, ni siquiera de
+ * muestra) — se quedan igual, fuera de alcance de esta conexión.
+ */
+async function reportToCsv(
+  supabase: ReturnType<typeof createClient>,
+  reportId: PartnerReport["id"],
+): Promise<string> {
+  if (reportId === "daily-guest-list") {
+    const { data } = await supabase
+      .from("partner_lounges")
+      .select("lounge_id")
+      .limit(1)
+      .maybeSingle();
+    if (!data) return guestListToCsv([]);
+    const { data: guestRows } = await supabase.rpc("partner_guest_list", {
+      p_lounge_id: data.lounge_id,
+      p_date: TODAY,
+    });
+    return guestListToCsv(((guestRows as PartnerGuestRow[] | null) ?? []).map((row) => mapGuestRow(row)));
+  }
+
+  if (reportId === "repeat-guests") {
+    const { data } = await supabase.rpc("partner_repeat_guests");
+    return repeatGuestsToCsv(((data as PartnerRepeatGuestRow[] | null) ?? []).map(mapRepeatGuestRow));
+  }
+
+  if (reportId === "revenue-attribution") {
+    const { data } = await supabase.rpc("partner_analytics_summary", { p_from: RANGE_FROM, p_to: TODAY });
+    const summary = (data as PartnerAnalyticsSummary[] | null)?.[0] ?? {
+      bookings: 0,
+      day_pass_visits: 0,
+      membership_visits: 0,
+      no_shows: 0,
+      cancellations: 0,
+    };
+    return revenueBreakdownToCsv(summary);
+  }
+
   return [MONTHLY_COLUMNS.join(","), OPTIONAL_COLUMN].join("\n");
 }
 
@@ -47,13 +96,15 @@ function reportToCsv(reportId: PartnerReport["id"]): string {
  * la misma anatomía — los cinco checkboxes de columnas son un placeholder
  * hasta que cada informe tenga su propio modelo de columnas.
  */
-export default function ReportsPage() {
+function ReportsContent() {
+  const supabase = React.useMemo(() => createClient(), []);
   const [selectedId, setSelectedId] = React.useState<PartnerReport["id"]>(DEFAULT_REPORT_ID);
   const [range, setRange] = React.useState<"3" | "12" | "custom">("12");
   const [columns, setColumns] = React.useState<string[]>([...MONTHLY_COLUMNS]);
   const [delivery, setDelivery] = React.useState<(typeof REPORT_DELIVERY_OPTIONS)[number]["value"]>(
     "download",
   );
+  const [downloading, setDownloading] = React.useState(false);
 
   const selected = PARTNER_REPORTS.find((r) => r.id === selectedId)!;
 
@@ -61,8 +112,14 @@ export default function ReportsPage() {
     setColumns((current) => (checked ? [...current, column] : current.filter((c) => c !== column)));
   }
 
-  function download() {
-    downloadTextFile(`ainsworth-${selected.id}.csv`, reportToCsv(selected.id));
+  async function download() {
+    setDownloading(true);
+    try {
+      const csv = await reportToCsv(supabase, selected.id);
+      downloadTextFile(`partner-${selected.id}.csv`, csv);
+    } finally {
+      setDownloading(false);
+    }
   }
 
   return (
@@ -172,16 +229,25 @@ export default function ReportsPage() {
           <button
             type="button"
             onClick={download}
+            disabled={downloading}
             className={cn(
-              "mt-5 flex h-12.5 w-full items-center justify-center gap-2.5 rounded-control bg-accent text-[13px] font-bold uppercase tracking-[0.12em] text-on-accent",
+              "mt-5 flex h-12.5 w-full items-center justify-center gap-2.5 rounded-control bg-accent text-[13px] font-bold uppercase tracking-[0.12em] text-on-accent disabled:opacity-50",
               "transition-colors duration-150 hover:bg-accent-strong",
             )}
           >
             <Download size={16} strokeWidth={1.9} aria-hidden />
-            Download CSV
+            {downloading ? "Preparing…" : "Download CSV"}
           </button>
         </div>
       </div>
     </PartnerShell>
+  );
+}
+
+export default function ReportsPage() {
+  return (
+    <RequirePartnerSession>
+      <ReportsContent />
+    </RequirePartnerSession>
   );
 }

@@ -3,38 +3,82 @@
 import * as React from "react";
 import { Download } from "lucide-react";
 
+import { RequirePartnerSession } from "@/components/partner/require-partner-session";
 import { PartnerShell } from "@/components/patterns/partner-shell";
 import { Segmented } from "@/components/ui/segmented";
 import { MetricTile } from "@/components/ui/metric-tile";
+import { createClient } from "@/lib/supabase/client";
+import { TODAY, addDays } from "@/lib/availability";
 import {
-  ANALYTICS_SUMMARY,
-  ARRIVALS_BY_WEEKDAY,
-  GUESTS_WHO_ARRIVED,
-  MONTHLY_BOOKINGS_TOTAL,
-  REVENUE_BREAKDOWN,
-  TODAY_DAY_OF_MONTH,
-  TOTAL_REVENUE_ATTRIBUTED,
   type AnalyticsRange,
-  bookingsForRange,
+  type PartnerAnalyticsSummary,
+  bookingsByWeekday,
   formatCurrency,
+  revenueBreakdownFor,
   revenueBreakdownToCsv,
+  totalRevenueAttributed,
 } from "@/lib/partner";
 import { downloadTextFile } from "@/lib/download";
 import { cn } from "@/lib/utils";
 
+/** 90 días termina en hoy — suficiente para que "When they come" tenga las 7 columnas pobladas. */
+const RANGE_DAYS = 90;
+const RANGE_FROM = addDays(TODAY, -(RANGE_DAYS - 1));
+
+const EMPTY_SUMMARY: PartnerAnalyticsSummary = {
+  bookings: 0,
+  day_pass_visits: 0,
+  membership_visits: 0,
+  no_shows: 0,
+  cancellations: 0,
+};
+
 /**
  * Story 7.3 — Partner Analytics. DESIGN-SYSTEM.md §5 patrón 19 (vista de
  * analítica, sobre el patrón 15). Artboard: Analytics.dc.html.
+ *
+ * Backend real (22 sept 2026): `partner_analytics_summary`/
+ * `partner_bookings_by_day` (`supabase/schemas/partner_analytics.sql`)
+ * agregan sobre los lounges reales del partner autenticado — sin selector de
+ * venue (ver ese archivo, decisión consciente). "When they come" ya no es
+ * un dato de muestra: se deriva sumando la misma serie diaria por día de la
+ * semana (`bookingsByWeekday`).
  */
-export default function AnalyticsPage() {
+function AnalyticsContent() {
+  const supabase = React.useMemo(() => createClient(), []);
   const [range, setRange] = React.useState<AnalyticsRange>("month");
-  const bars = bookingsForRange(range);
-  const maxWeekday = Math.max(...ARRIVALS_BY_WEEKDAY.map((d) => d.guests));
+  const [summary, setSummary] = React.useState<PartnerAnalyticsSummary>(EMPTY_SUMMARY);
+  const [dailySeries, setDailySeries] = React.useState<{ day: string; bookings: number }[]>([]);
+
+  React.useEffect(() => {
+    let active = true;
+    Promise.all([
+      supabase.rpc("partner_analytics_summary", { p_from: RANGE_FROM, p_to: TODAY }),
+      supabase.rpc("partner_bookings_by_day", { p_from: RANGE_FROM, p_to: TODAY }),
+    ]).then(([summaryResult, dailyResult]) => {
+      if (!active) return;
+      if (summaryResult.data?.[0]) setSummary(summaryResult.data[0]);
+      if (dailyResult.data) setDailySeries(dailyResult.data);
+    });
+    return () => {
+      active = false;
+    };
+  }, [supabase]);
+
+  const seriesForRange = range === "week" ? dailySeries.slice(-7) : dailySeries;
+  const arrivalsByWeekday = bookingsByWeekday(dailySeries);
+  const maxWeekday = Math.max(1, ...arrivalsByWeekday.map((d) => d.guests));
+  const guestsWhoArrived = summary.day_pass_visits + summary.membership_visits;
+  const revenueBreakdown = revenueBreakdownFor(summary);
+  const totalRevenue = totalRevenueAttributed(revenueBreakdown);
+  const keptPct = summary.bookings === 0 ? 0 : Math.round((guestsWhoArrived / summary.bookings) * 1000) / 10;
+  const noShowPct = summary.bookings === 0 ? 0 : Math.round((summary.no_shows / summary.bookings) * 1000) / 10;
+  const averagePerDay = dailySeries.length === 0 ? 0 : summary.bookings / dailySeries.length;
 
   return (
     <PartnerShell
       topbarLabel="Analytics"
-      topbarMeta="· The Ainsworth · September 1 – 14, month to date"
+      topbarMeta={`· Last ${RANGE_DAYS} days`}
       topbarRight={
         <div className="flex items-center gap-2.5">
           <Segmented
@@ -59,30 +103,26 @@ export default function AnalyticsPage() {
       }
     >
       <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">
-        September 1 – 14 · compared with August
+        Last {RANGE_DAYS} days
       </p>
-      <h1 className="mt-2 text-[34px] text-fg">How the month is going</h1>
+      <h1 className="mt-2 text-[34px] text-fg">How things are going</h1>
 
       <div className="mt-5 grid grid-cols-4 gap-3.5">
-        <MetricTile
-          label="Bookings"
-          value={String(MONTHLY_BOOKINGS_TOTAL)}
-          note={`${ANALYTICS_SUMMARY.bookingsLastMonthSameDays} in the same days of August`}
-        />
+        <MetricTile label="Bookings" value={String(summary.bookings)} note={`Over the last ${RANGE_DAYS} days`} />
         <MetricTile
           label="Guests who arrived"
-          value={String(GUESTS_WHO_ARRIVED)}
-          note="91.4% of bookings kept"
+          value={String(guestsWhoArrived)}
+          note={`${keptPct}% of bookings kept`}
         />
         <MetricTile
           label="No-shows"
-          value={String(ANALYTICS_SUMMARY.noShows)}
-          note={`4.8% · plus ${ANALYTICS_SUMMARY.cancellations} cancellations`}
+          value={String(summary.no_shows)}
+          note={`${noShowPct}% · plus ${summary.cancellations} cancellations`}
         />
         <MetricTile
           label="Attributed to LuxePass"
-          value={formatCurrency(TOTAL_REVENUE_ATTRIBUTED)}
-          note="Paid out on October 5"
+          value={formatCurrency(totalRevenue)}
+          note="Statements issued monthly"
         />
       </div>
 
@@ -91,20 +131,20 @@ export default function AnalyticsPage() {
           <div className="rounded-content border border-line bg-dark-card p-5">
             <p className="m-0 text-sm font-bold text-fg">Bookings a day</p>
             <p className="m-0 mt-1 text-xs text-fg-subtle">
-              September 1 – 14 · {(MONTHLY_BOOKINGS_TOTAL / 14).toFixed(1)} a day on average
+              Last {RANGE_DAYS} days · {averagePerDay.toFixed(1)} a day on average
             </p>
             <div className="mt-5 flex h-[140px] items-end gap-2">
-              {bars.map((value, index) => {
-                const dayNumber = range === "month" ? index + 1 : TODAY_DAY_OF_MONTH - 6 + index;
-                const isToday = dayNumber === TODAY_DAY_OF_MONTH;
+              {seriesForRange.map((point) => {
+                const isToday = point.day === TODAY;
+                const dayNumber = new Date(`${point.day}T00:00:00Z`).getUTCDate();
                 return (
-                  <div key={dayNumber} className="flex flex-1 flex-col items-center gap-1.5">
+                  <div key={point.day} className="flex flex-1 flex-col items-center gap-1.5">
                     <span className={cn("text-[11px] font-bold", isToday ? "text-accent" : "text-fg-subtle")}>
-                      {value}
+                      {point.bookings}
                     </span>
                     <div
                       data-testid="daily-bar"
-                      style={{ height: `${value * 5}px` }}
+                      style={{ height: `${point.bookings * 5}px` }}
                       className={cn(
                         "w-full rounded-t-[6px] rounded-b-[3px]",
                         isToday ? "border-[1.5px] border-dashed border-accent bg-transparent" : "bg-accent",
@@ -122,10 +162,10 @@ export default function AnalyticsPage() {
           <div className="rounded-content border border-line bg-dark-card p-5">
             <p className="m-0 text-sm font-bold text-fg">When they come</p>
             <p className="m-0 mt-1 text-xs text-fg-subtle">
-              Arrivals by day of the week · Friday and Saturday are 41% of the month
+              Arrivals by day of the week · last {RANGE_DAYS} days
             </p>
             <div className="mt-4 flex flex-col">
-              {ARRIVALS_BY_WEEKDAY.map((day) => (
+              {arrivalsByWeekday.map((day) => (
                 <div key={day.day} className="flex items-center gap-3 border-b border-[rgba(58,50,42,0.6)] py-1.75 last:border-b-0">
                   <span className="w-9 shrink-0 text-xs font-bold text-fg-muted">{day.day}</span>
                   <div className="h-2.25 flex-1 rounded-pill bg-panel-black">
@@ -143,22 +183,22 @@ export default function AnalyticsPage() {
 
         <div className="w-86 shrink-0 rounded-content border border-line bg-dark-card p-5.5">
           <p className="m-0 text-sm font-bold text-fg">Where the money comes from</p>
-          <p className="m-0 mt-1 text-xs text-fg-subtle">{GUESTS_WHO_ARRIVED} guests who actually arrived</p>
+          <p className="m-0 mt-1 text-xs text-fg-subtle">{guestsWhoArrived} guests who actually arrived</p>
 
           <RevenueRow
             label="Day passes"
-            note={`${ANALYTICS_SUMMARY.dayPassVisits} visits · $75.00 each`}
-            amount={formatCurrency(REVENUE_BREAKDOWN.dayPasses)}
+            note={`${summary.day_pass_visits} visits · $75.00 each`}
+            amount={formatCurrency(revenueBreakdown.dayPasses)}
           />
           <RevenueRow
             label="Membership visits"
-            note={`${ANALYTICS_SUMMARY.membershipVisits} visits · $38.00 partner rate`}
-            amount={formatCurrency(REVENUE_BREAKDOWN.membershipVisits)}
+            note={`${summary.membership_visits} visits · $38.00 partner rate`}
+            amount={formatCurrency(revenueBreakdown.membershipVisits)}
           />
           <RevenueRow
             label="Shared no-show fees"
-            note={`${ANALYTICS_SUMMARY.noShows} no-shows · half of $35.00`}
-            amount={formatCurrency(REVENUE_BREAKDOWN.noShowFees)}
+            note={`${summary.no_shows} no-shows · half of $35.00`}
+            amount={formatCurrency(revenueBreakdown.noShowFees)}
             last
           />
 
@@ -168,14 +208,9 @@ export default function AnalyticsPage() {
                 Attributed to LuxePass
               </p>
               <h3 className="mt-1.5 font-display text-[27px] text-fg">
-                {formatCurrency(TOTAL_REVENUE_ATTRIBUTED)}
+                {formatCurrency(totalRevenue)}
               </h3>
             </div>
-            <p className="m-0 text-right text-[11.5px] leading-[1.4] text-fg-subtle">
-              {formatCurrency(ANALYTICS_SUMMARY.revenueVsAugust)}
-              <br />
-              more than August
-            </p>
           </div>
 
           <p className="m-0 mt-4 text-[11.5px] leading-[1.6] text-fg-subtle">
@@ -185,7 +220,7 @@ export default function AnalyticsPage() {
 
           <button
             type="button"
-            onClick={() => downloadTextFile("ainsworth-revenue.csv", revenueBreakdownToCsv())}
+            onClick={() => downloadTextFile("partner-revenue.csv", revenueBreakdownToCsv(summary))}
             className="mt-4 flex h-11.5 w-full items-center justify-center gap-2 rounded-[11px] border-[1.5px] border-line text-[12.5px] font-bold text-fg-muted transition-colors duration-150 hover:border-accent hover:bg-surface-hover"
           >
             <Download size={16} strokeWidth={1.8} className="text-accent" aria-hidden />
@@ -194,6 +229,14 @@ export default function AnalyticsPage() {
         </div>
       </div>
     </PartnerShell>
+  );
+}
+
+export default function AnalyticsPage() {
+  return (
+    <RequirePartnerSession>
+      <AnalyticsContent />
+    </RequirePartnerSession>
   );
 }
 

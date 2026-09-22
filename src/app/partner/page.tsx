@@ -1,3 +1,4 @@
+import { RequirePartnerSession } from "@/components/partner/require-partner-session";
 import { TodayDashboard } from "@/components/partner/today-dashboard";
 
 /**
@@ -7,5 +8,9 @@ import { TodayDashboard } from "@/components/partner/today-dashboard";
  * `default`.
  */
 export default function PartnerTodayPage() {
-  return <TodayDashboard />;
+  return (
+    <RequirePartnerSession>
+      <TodayDashboard />
+    </RequirePartnerSession>
+  );
 }

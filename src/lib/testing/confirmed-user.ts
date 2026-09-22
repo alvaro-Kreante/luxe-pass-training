@@ -63,3 +63,48 @@ export async function signUpConfirmedMemberAndSignIn(
 
   return user;
 }
+
+/**
+ * Epic 7 — como `signUpConfirmedAndSignIn`, más el alta operativa de un
+ * partner (`user_roles` + `partners` + `partner_lounges`, ver
+ * `supabase/schemas/partners.sql` "Alta de un partner") — nunca un
+ * self-service, así que los tests la replican aquí con el service role en
+ * vez de una RPC pública.
+ */
+export async function signUpConfirmedPartnerAndSignIn(
+  supabase: SupabaseClient,
+  email: string,
+  password: string,
+  options: { businessName: string; loungeIds: string[] },
+) {
+  await signUpConfirmedAndSignIn(supabase, email, password);
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("signUpConfirmedAndSignIn did not leave a session");
+
+  const admin = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+
+  const { error: roleError } = await admin
+    .from("user_roles")
+    .insert({ user_id: user.id, role: "partner" });
+  if (roleError) throw roleError;
+
+  const { data: partner, error: partnerError } = await admin
+    .from("partners")
+    .insert({ user_id: user.id, business_name: options.businessName, contact_email: email })
+    .select("id")
+    .single();
+  if (partnerError) throw partnerError;
+
+  const { error: linkError } = await admin
+    .from("partner_lounges")
+    .insert(options.loungeIds.map((lounge_id) => ({ partner_id: partner.id, lounge_id })));
+  if (linkError) throw linkError;
+
+  return user;
+}

@@ -9,7 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { partnerCredentialsMatch } from "@/lib/partner";
+import { createClient } from "@/lib/supabase/client";
+
+const INVALID_CREDENTIALS_MESSAGE =
+  "We could not find a partner account with that email and password.";
 
 /**
  * Flow: flow-partner-experience.md — "Partner Login". Sin historia ni
@@ -21,23 +24,51 @@ import { partnerCredentialsMatch } from "@/lib/partner";
  * mitades son oscuras — `AuthSplit` da por hecho un panel derecho claro, así
  * que esta pantalla no lo reutiliza y queda anotada como propia en
  * COMPONENT-MAP.md, igual que la consola de recepción (patrón 12).
+ *
+ * Backend real (22 sept 2026, ver CLAUDE.md §Alcance y
+ * docs/DATA-MODEL-MAP.md): Supabase Auth real + tabla `user_roles`
+ * (`has_role('partner')`, `supabase/schemas/user_roles.sql`) — una cuenta de
+ * miembro con contraseña correcta pero sin ese rol se rechaza igual que una
+ * contraseña equivocada, y cierra la sesión que `signInWithPassword` acaba
+ * de abrir para no dejarla a medias.
  */
 export default function PartnerLoginPage() {
   const router = useRouter();
+  const supabase = React.useMemo(() => createClient(), []);
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [rememberDevice, setRememberDevice] = React.useState(false);
   const [error, setError] = React.useState("");
+  const [submitting, setSubmitting] = React.useState(false);
 
-  function handleSubmit(event: React.FormEvent) {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (submitting) return;
 
-    if (partnerCredentialsMatch(email, password)) {
+    setSubmitting(true);
+    setError("");
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      if (signInError) {
+        setError(INVALID_CREDENTIALS_MESSAGE);
+        return;
+      }
+
+      const { data: isPartner } = await supabase.rpc("has_role", { p_role: "partner" });
+      if (!isPartner) {
+        await supabase.auth.signOut();
+        setError(INVALID_CREDENTIALS_MESSAGE);
+        return;
+      }
+
       router.push("/partner");
-      return;
+    } finally {
+      setSubmitting(false);
     }
-
-    setError("We could not find a partner account with that email and password.");
   }
 
   return (
@@ -90,6 +121,7 @@ export default function PartnerLoginPage() {
                 placeholder="you@yourvenue.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled={submitting}
                 icon={<Mail size={18} strokeWidth={1.8} />}
               />
             </Field>
@@ -108,6 +140,7 @@ export default function PartnerLoginPage() {
                 placeholder="Enter your password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={submitting}
                 aria-invalid={Boolean(error)}
                 icon={<Lock size={18} strokeWidth={1.7} />}
               />
@@ -122,8 +155,8 @@ export default function PartnerLoginPage() {
               </span>
             </div>
 
-            <Button type="submit" block>
-              Sign in
+            <Button type="submit" block disabled={submitting}>
+              {submitting ? "Signing in…" : "Sign in"}
             </Button>
           </form>
 

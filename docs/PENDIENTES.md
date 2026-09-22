@@ -149,10 +149,16 @@ se esperó a que Epic 7 resolviera el rol de staff, tal como
 `docs/DATA-MODEL-MAP.md` ya anticipaba que esa decisión era "al empezar
 Epic 7, no antes".
 
+**Rol de partner ya resuelto** (22 sept 2026, al conectar Epic 7 — tabla
+`user_roles`, ver `docs/DATA-MODEL-MAP.md` §Epic 7), pero `/reception`
+**sigue sin moverse detrás de ese login a propósito**: ninguna de las tres
+historias del Epic 7 lo pide (siguen siendo artboards distintos, kiosco vs.
+back-office).
+
 **Se resuelve:** si una historia futura pide explícitamente que la recepción
 viva detrás del login de partner (p. ej. `/partner/reception`), no antes —
 ese mismo momento es el que debería endurecer las RPC de kiosco a exigir
-sesión de staff en vez de `anon`.
+`has_role('partner')` en vez de `anon`.
 
 ### 2.8 "Settings" del Partner Dashboard no tiene pantalla propia
 
@@ -199,7 +205,25 @@ explícita en vez de tocar otra vez el schema recién mergeado de Epic 3.
 **Desbloquea:** antes de que Epic 7/8.3 permita dar de alta un lounge con
 sus propios días, resolver esto — o el rediseño de arriba, o esperar a que
 Epic 4 (`bookings`) exista y derivar de ahí las plazas en vivo (ver
-`docs/DATA-MODEL-MAP.md` §Epic 7).
+`docs/DATA-MODEL-MAP.md` §Epic 7). Epic 7 ya se conectó (22 sept 2026) sin
+tocar esto — el partner de muestra se dio de alta contra un lounge ya
+existente (`the-ainsworth`), nunca ejercitó el alta de uno nuevo.
+
+### 2.11 La promoción automática de la waitlist no tiene mecanismo real en ningún epic
+
+El flow de Epic 7 (`flow-partner-experience.md`, segmento Story 7.2) termina
+en "Waitlist promotion alerts", y el mockup lo simulaba (`applyCancellationAndPromotion`
+en `lib/partner.ts`, ya eliminado al conectar el epic). Al conectar Story 7.2
+a Supabase real (22 sept 2026) se implementó la notificación real de
+cancelación (`notify_partner_cancellation`, `supabase/schemas/partner_notifications.sql`),
+pero **no** una promoción automática: `join_waitlist` (Epic 4) aparca la
+reserva en `status='waitlisted'` y ninguna función de ningún epic conectado
+hasta ahora la sube a `confirmed` cuando se libera un hueco. Construirlo
+habría expandido el alcance del Epic 4 (dueño real de `bookings`), no del 7
+— se documenta aquí como hueco real en vez de simularlo o inventarlo.
+
+**Desbloquea:** que una historia futura (probablemente una extensión de
+Epic 4, "Waitlist management") defina y construya esa promoción automática.
 
 Misma ventana fija explica por qué el cron de recordatorios de la Story 5.3
 (`dispatch_booking_reminders()`, ver `docs/design/COMPONENT-MAP.md`
@@ -365,6 +389,44 @@ existente (key/Map ID de `luxepass-dev` y de `luxepass-prod` pueden ser el
 mismo par o pares distintos — decisión pendiente, no técnica) antes de
 promover esta rama a `staging`.
 
+### 4.5 `supabase_edge_runtime` puede quedarse caído tras un rato con el stack local arriba — resuelto con `supabase stop && supabase start`
+
+Al conectar Epic 7 (22 sept 2026), un primer intento de verificar
+`send-partner-booking-event`/`send-partner-digest` de punta a punta con
+`supabase functions serve` falló: el contenedor `supabase_edge_runtime_Luxe_Pass`
+moría nada más crearse ("dead or marked for removal" en bucle), a la vez que
+`docker ps` mostraba `supabase_vector_Luxe_Pass` reiniciándose en bucle —
+ninguno de los dos tiene que ver con el código de las functions (mismo
+patrón exacto que las cuatro Edge Functions ya funcionando de epics
+anteriores). `supabase stop` + `supabase start` (recrea los contenedores
+conservando los datos, `backup: true` por defecto) lo resolvió: el edge
+runtime volvió a subir solo, sin necesidad de `supabase functions serve`
+aparte, y un `curl` directo contra `send-partner-digest`/
+`send-partner-booking-event` respondió `200` en las dos — verificadas de
+punta a punta. `supabase_vector` (un sidecar de logs) sigue reiniciándose en
+bucle incluso después del restart, pero no impide que el resto del stack
+(incluido el edge runtime) funcione.
+
+**Si vuelve a pasar:** `supabase stop` seguido de `supabase start` antes de
+asumir que el código de una Edge Function nueva está roto.
+
+### 4.6 Epic 7 no tiene nada desplegado a `staging`/`main` todavía
+
+Mismo hueco que tuvieron Epic 5/Epic 6 antes de sus PR de despliegue
+dedicados (ver los dos "Resuelto" de `deploy.yml` en la tabla de abajo):
+`.github/workflows/deploy.yml` no conoce `send-partner-booking-event` ni
+`send-partner-digest`, y los 4 secretos de Vault
+(`partner_notification_webhook_url`/`_secret`,
+`partner_digest_webhook_url`/`_secret`) solo existen en el Docker local
+(dados de alta a mano en esta rama, ver `supabase/schemas/partner_notifications.sql`).
+
+**Desbloquea:** un PR aparte (mismo patrón que Epic 5/6) que amplíe
+`deploy.yml` con `supabase secrets set` + `supabase functions deploy
+send-partner-booking-event --no-verify-jwt` / `send-partner-digest
+--no-verify-jwt` en `migrate-dev`/`migrate-prod`, más los secrets de GitHub
+correspondientes y el alta manual de los 4 secretos de Vault en
+`luxepass-dev`/`luxepass-prod` vía Studio.
+
 ---
 
 ## 5. Decisiones abiertas
@@ -477,3 +539,4 @@ de la tarifa de no-show.
 | Epic 5 (recordatorio de reserva, Story 5.3) no tenía nada desplegado a `staging`/`main` — `deploy.yml` solo desplegaba las 5 Edge Functions de Epic 4, sin `send-booking-reminder` ni sus secrets (§4.5, ya retirada de este archivo) | 22 sept 2026 | `deploy.yml` ampliado (mismo patrón que Epic 4) con `supabase secrets set BOOKING_REMINDER_WEBHOOK_SECRET` + `supabase functions deploy send-booking-reminder --no-verify-jwt` en `migrate-dev`/`migrate-prod`. Los 2 secrets de GitHub (`BOOKING_REMINDER_WEBHOOK_SECRET_DEV`/`_PROD`) dados de alta, y el usuario confirmó haber creado los 2 secretos de Vault (`booking_reminder_webhook_url`/`_secret`) en `luxepass-dev` y `luxepass-prod` a mano vía Studio. Epic 5 queda listo para promoverse a `staging` y eventualmente a `main`. |
 | Epic 6 (Member Experience & Notifications) no tenía backend: perfil, preferencias, favoritos, privacidad, notificaciones y cancelación de reserva eran datos de muestra fijos, y el corazón de favorito de `Preferences.dc.html` no tenía ningún lugar desde el que guardarse | 21 sept 2026 | Conectado a Supabase local real, decisiones tomadas con el usuario antes de implementar (ver `CLAUDE.md` §Alcance): `notifications`/`member_favorite_lounges` nacen aquí; `cancel_booking` (RPC) cierra Story 6.1; de los 6 tipos de notificación solo 2 tienen evento real (confirmación de reserva, aviso de las 6 AM vía `pg_cron`), el resto se siembra como muestra real al crear el perfil; el borrado de cuenta es un soft-delete reversible con `pg_cron` para el borrado físico a los 30 días, fiel a la promesa del artboard; el botón de favorito en `/lounges/[id]` se compuso reutilizando el botón de acción rápida existente (sin artboard propio, decisión tomada con el usuario). **Bug real encontrado y corregido con TDD**: el fetch inicial de favorito (parte del mismo `Promise.all` que fotos/disponibilidad, más lento) podía resolver DESPUÉS de un click muy temprano del miembro y pisar el toggle optimista con el valor previo — un `favoriteOverriddenRef` evita que ese fetch tardío sobrescriba un cambio ya hecho por el usuario. **Segundo bug real de la misma clase, encontrado por CI** (runner más lento que local): el fetch inicial de notificaciones podía resolver después de un "mark as read" temprano, mismo fix (`mutatedRef`) en `NotificationBellMenu` y `/notifications`. Ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 6" y `docs/DATA-MODEL-MAP.md` §Epic 6. |
 | Epic 6 (borrado de cuenta, Story 6.3) no tenía nada desplegado a `staging`/`main` — `deploy.yml` solo desplegaba las Edge Functions de Epic 4/5, sin `delete-account` ni sus secrets | 22 sept 2026 | `deploy.yml` ampliado (mismo patrón que Epic 4/5) con `supabase secrets set ACCOUNT_DELETION_WEBHOOK_SECRET` + `supabase functions deploy delete-account --no-verify-jwt` en `migrate-dev`/`migrate-prod`. Los 2 secrets de GitHub (`ACCOUNT_DELETION_WEBHOOK_SECRET_DEV`/`_PROD`) dados de alta, y el usuario confirmó haber creado los 2 secretos de Vault (`account_deletion_webhook_url`/`_secret`) en `luxepass-dev` y `luxepass-prod` a mano vía Studio. `delete-account` ya desplegada de verdad en `luxepass-dev` (confirmado en el run de `deploy.yml` del merge a `staging`); `luxepass-prod` la recibe en cuanto `staging` se promueva a `main`. Epic 6 queda listo para promoverse a `staging` (ya hecho) y eventualmente a `main`. |
+| Epic 7 (Partner Dashboard) era mockup puro: `/partner/login` validaba credenciales en el cliente, `/partner`/`/partner/analytics`/`/partner/guests`/`/partner/reports` corrían sobre datos de muestra fijos, y la decisión de rol member/partner/admin (`docs/DATA-MODEL-MAP.md`) seguía pospuesta | 22 sept 2026 | Conectado a Supabase local real, decisiones de arquitectura tomadas con el usuario antes de implementar: tabla `user_roles` (no custom claim ni esquema separado) para el rol, `partner_lounges` como tabla puente many-to-many (no FK directa en `lounges`). Story 7.1: `partner_guest_list`/`partner_checkin_booking`/`partner_report_no_show` (RPC autenticadas, no "de kiosco") + suscripción de Supabase Realtime en `/partner` reemplazando los temporizadores deterministas. Story 7.2: dos triggers (Database Webhook) + un `pg_cron` (digest 6:30 AM), mismo mecanismo que Story 4.2/5.1/5.3 — decisión consciente de **no** usar la tabla `notifications` de Epic 6 (el AC es "recibir un email", no una fila en el centro de notificaciones del miembro). Story 7.3: `partner_analytics_summary`/`partner_bookings_by_day`/`partner_repeat_guests`, agregando sobre todos los lounges reales del partner. **Bug real encontrado y corregido corriendo la suite localmente**: `partner_bookings_by_day` devolvía `timestamp with time zone` donde la función declaraba `date` (`generate_series` sobre un rango de fechas produce timestamps, no fechas) — Postgres lo rechazaba con "structure of query does not match function result type"; corregido con un cast `::date` explícito. Las dos Edge Functions nuevas se verificaron de punta a punta con un `curl` directo contra el edge runtime local (200 en ambas) tras resolver una caída puntual del contenedor con `supabase stop && supabase start` (§4.5). Ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 7" y `docs/DATA-MODEL-MAP.md` §Epic 7. |

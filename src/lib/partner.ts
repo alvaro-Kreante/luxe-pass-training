@@ -20,17 +20,16 @@ export const PARTNER_VENUE = {
   initial: "A",
 };
 
+/**
+ * Cuenta de muestra para desarrollo local (ver
+ * `scripts/seed-partner-account.ts` y `supabase/schemas/partners.sql` "Alta
+ * de un partner") — ya no valida credenciales en el cliente (Story 7.1/7.2,
+ * backend real): `/partner/login` usa Supabase Auth de verdad.
+ */
 export const PARTNER_ACCOUNT = {
   email: "dana.okafor@theainsworth.com",
   password: "AinsworthFOH!24",
 };
-
-export function partnerCredentialsMatch(email: string, password: string): boolean {
-  return (
-    email.trim().toLowerCase() === PARTNER_ACCOUNT.email.toLowerCase() &&
-    password === PARTNER_ACCOUNT.password
-  );
-}
 
 /** Ventana de admisión de la Fase 2: 4 horas desde la hora reservada. */
 export const ADMISSION_WINDOW_HOURS = 4;
@@ -40,6 +39,15 @@ export type PartnerGuestStatus = "arrived" | "pending" | "no-show" | "new-bookin
 export interface PartnerGuest {
   /** También el número LP de la reserva. */
   id: string;
+  /**
+   * Story 7.1 — backend real: el `id` (uuid) real de `bookings`, para las
+   * RPC `partner_checkin_booking`/`partner_report_no_show`
+   * (`supabase/schemas/bookings.sql`). `id` de arriba sigue siendo el LP# —
+   * es lo que ya muestra la UI — así que este campo es opcional: los datos
+   * de muestra de las pantallas de email (`/partner/emails/*`, sin backend)
+   * no lo necesitan.
+   */
+  bookingId?: string;
   name: string;
   initials: string;
   membershipLabel: string;
@@ -344,6 +352,131 @@ export function findPartnerGuest(guests: PartnerGuest[], id: string): PartnerGue
   return guests.find((guest) => guest.id === id);
 }
 
+/* ------------------------------------------------------------------ */
+/* Story 7.1 — backend real: fila de `partner_guest_list` → PartnerGuest */
+/* ------------------------------------------------------------------ */
+
+/** Shape exacto que devuelve la RPC `partner_guest_list` (`bookings.sql`). */
+export interface PartnerGuestRow {
+  id: string;
+  confirmation_code: string;
+  member_name: string;
+  member_email: string | null;
+  member_phone: string | null;
+  band: string;
+  slot_time: string;
+  status: string;
+  checked_in_at: string | null;
+  no_show: boolean;
+  no_show_reason: NoShowReason | null;
+  special_requests: string;
+  created_at: string;
+  is_day_pass: boolean;
+  visit_number: number;
+  emergency_contact: string | null;
+}
+
+function ordinal(n: number): string {
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
+  switch (n % 10) {
+    case 1:
+      return `${n}st`;
+    case 2:
+      return `${n}nd`;
+    case 3:
+      return `${n}rd`;
+    default:
+      return `${n}th`;
+  }
+}
+
+function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const first = parts[0]?.[0] ?? "";
+  const last = parts.length > 1 ? parts[parts.length - 1]?.[0] : "";
+  return `${first}${last ?? ""}`.toUpperCase();
+}
+
+/**
+ * "Until 8:30 PM" — `slot_time` + la ventana de admisión fija de 4h. No
+ * distingue "Window closed" (el mock lo hacía comparando contra un reloj de
+ * demo en vivo): sin un reloj real que tenga sentido comparar contra el "hoy"
+ * fijo de mockup (`TODAY`), se simplifica a informativo siempre — anotado
+ * como desviación consciente en docs/design/COMPONENT-MAP.md.
+ */
+/** "Saturday, September 14" — mismo estilo que `PARTNER_VENUE.dateLabel`, pero de una fecha real. */
+export function formatLongWeekdayDate(dateIso: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${dateIso}T00:00:00Z`));
+}
+
+function admissionWindowLabelFor(slotTime: string): string {
+  const parsed = new Date(`2000-01-01 ${slotTime}`);
+  parsed.setHours(parsed.getHours() + ADMISSION_WINDOW_HOURS);
+  const formatted = parsed.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  return `Until ${formatted}`;
+}
+
+/** "Booked 3 days ago" / "Booked just now" — relativo a `now` (inyectable para tests). */
+export function bookedAgoLabel(createdAtIso: string, now: Date = new Date()): string {
+  const diffMs = now.getTime() - new Date(createdAtIso).getTime();
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 1) return "Booked just now";
+  if (minutes < 60) return `Booked ${minutes} minute${minutes === 1 ? "" : "s"} ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `Booked ${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  return `Booked ${days} day${days === 1 ? "" : "s"} ago`;
+}
+
+function statusFromRow(row: Pick<PartnerGuestRow, "status" | "no_show">): PartnerGuestStatus {
+  if (row.status === "cancelled") return "cancelled";
+  if (row.no_show) return "no-show";
+  if (row.status === "in_progress" || row.status === "completed") return "arrived";
+  return "pending";
+}
+
+/**
+ * Convierte una fila real de `partner_guest_list` al `PartnerGuest` que ya
+ * consumen `GuestListTable`/`GuestDetailDrawer`/`NoShowModal` sin cambios.
+ *
+ * `newlyBooked`: decoración puramente de cliente para el chip "New booking"
+ * que ya distinguía el mockup — no hay un estado `new-booking` real en
+ * `bookings.status` (solo 'confirmed' antes del check-in). `TodayDashboard`
+ * la activa unos segundos tras recibir el INSERT de Realtime de esa reserva.
+ */
+export function mapGuestRow(
+  row: PartnerGuestRow,
+  options: { newlyBooked?: boolean; now?: Date } = {},
+): PartnerGuest {
+  const baseStatus = statusFromRow(row);
+  const status = options.newlyBooked && baseStatus === "pending" ? "new-booking" : baseStatus;
+
+  return {
+    id: row.confirmation_code,
+    bookingId: row.id,
+    name: row.member_name,
+    initials: initialsFromName(row.member_name),
+    membershipLabel: row.is_day_pass ? "Day pass" : "Annual member",
+    visitLabel: `${ordinal(row.visit_number)} visit here`,
+    arrivalTime: row.slot_time,
+    status,
+    email: row.member_email ?? "",
+    phone: row.member_phone ?? "",
+    admissionWindowLabel: admissionWindowLabelFor(row.slot_time),
+    admissionLabel: "1 member · no guests",
+    bookedAgoLabel: bookedAgoLabel(row.created_at, options.now),
+    specialRequests: row.special_requests || "No special requests noted.",
+    emergencyContact: row.emergency_contact ?? undefined,
+    noShowReason: row.no_show_reason ?? undefined,
+  };
+}
+
 /** Story 7.1 — "search/filter guests by name or date": coincide por nombre o LP#. */
 export function matchesGuestQuery(guest: PartnerGuest, query: string): boolean {
   const normalized = query.trim().toLowerCase();
@@ -376,39 +509,6 @@ export const NO_SHOW_REASONS = [
 ] as const;
 
 export type NoShowReason = (typeof NO_SHOW_REASONS)[number]["value"];
-
-/** Story 7.1 — reporta el no-show del invitado `id`, sin mutar el array de entrada. */
-export function reportNoShow(
-  guests: PartnerGuest[],
-  id: string,
-  reason: NoShowReason,
-): PartnerGuest[] {
-  return guests.map((guest) =>
-    guest.id === id ? { ...guest, status: "no-show", noShowReason: reason } : guest,
-  );
-}
-
-/** Story 7.1 — marca la llegada del invitado `id` (el gesto de la casilla de asistencia). */
-export function markArrived(guests: PartnerGuest[], id: string): PartnerGuest[] {
-  return guests.map((guest) => (guest.id === id ? { ...guest, status: "arrived" } : guest));
-}
-
-/** Story 7.1 — "real-time updates when new bookings are made": añade la reserva en vivo. */
-export function applyLiveBooking(guests: PartnerGuest[]): PartnerGuest[] {
-  return [...guests, LIVE_BOOKING];
-}
-
-/**
- * Story 7.2 — cancela `CANCELLED_GUEST_ID` y, en el mismo instante, promociona
- * automáticamente al siguiente de la waitlist. El recuento neto no cambia
- * (una plaza cancelada, otra ocupada), tal como cuenta `EmailCancellation.dc.html`.
- */
-export function applyCancellationAndPromotion(guests: PartnerGuest[]): PartnerGuest[] {
-  const withCancellation = guests.map((guest) =>
-    guest.id === CANCELLED_GUEST_ID ? { ...guest, status: "cancelled" as const } : guest,
-  );
-  return [...withCancellation, WAITLIST_PROMOTED_GUEST];
-}
 
 export interface PartnerActivityItem {
   id: string;
@@ -544,43 +644,33 @@ export const MEMBERSHIP_VISIT_PARTNER_RATE = 38;
 export const NO_SHOW_FEE = 35;
 export const NO_SHOW_PARTNER_SHARE = NO_SHOW_FEE / 2;
 
-/** "Bookings a day" — September 1–14, month to date. El día 14 es hoy. */
-export const MONTHLY_BOOKINGS_BY_DAY = [9, 8, 10, 12, 14, 18, 21, 10, 9, 11, 12, 14, 23, 15];
-export const TODAY_DAY_OF_MONTH = 14;
+/** Fila cruda de `partner_analytics_summary` (`supabase/schemas/partner_analytics.sql`). */
+export interface PartnerAnalyticsSummary {
+  bookings: number;
+  day_pass_visits: number;
+  membership_visits: number;
+  no_shows: number;
+  cancellations: number;
+}
 
-/** "When they come" — arrivals by day of the week, suma exacta 187. */
-export const ARRIVALS_BY_WEEKDAY = [
-  { day: "Mon", guests: 17 },
-  { day: "Tue", guests: 21 },
-  { day: "Wed", guests: 25 },
-  { day: "Thu", guests: 28 },
-  { day: "Fri", guests: 41 },
-  { day: "Sat", guests: 36 },
-  { day: "Sun", guests: 19 },
-];
+export interface RevenueBreakdown {
+  dayPasses: number;
+  membershipVisits: number;
+  noShowFees: number;
+}
 
-export const MONTHLY_BOOKINGS_TOTAL = ARRIVALS_BY_WEEKDAY.reduce((sum, d) => sum + d.guests, 0);
+/** "Where the money comes from" — reutiliza las mismas tarifas asumidas de arriba, sobre cifras reales. */
+export function revenueBreakdownFor(summary: PartnerAnalyticsSummary): RevenueBreakdown {
+  return {
+    dayPasses: summary.day_pass_visits * DAY_PASS_PARTNER_RATE,
+    membershipVisits: summary.membership_visits * MEMBERSHIP_VISIT_PARTNER_RATE,
+    noShowFees: summary.no_shows * NO_SHOW_PARTNER_SHARE,
+  };
+}
 
-export const ANALYTICS_SUMMARY = {
-  bookings: MONTHLY_BOOKINGS_TOTAL,
-  bookingsLastMonthSameDays: 162,
-  dayPassVisits: 53,
-  membershipVisits: 118,
-  noShows: 9,
-  cancellations: 7,
-  revenueVsAugust: 742.0,
-};
-
-export const GUESTS_WHO_ARRIVED = ANALYTICS_SUMMARY.dayPassVisits + ANALYTICS_SUMMARY.membershipVisits;
-
-export const REVENUE_BREAKDOWN = {
-  dayPasses: ANALYTICS_SUMMARY.dayPassVisits * DAY_PASS_PARTNER_RATE,
-  membershipVisits: ANALYTICS_SUMMARY.membershipVisits * MEMBERSHIP_VISIT_PARTNER_RATE,
-  noShowFees: ANALYTICS_SUMMARY.noShows * NO_SHOW_PARTNER_SHARE,
-};
-
-export const TOTAL_REVENUE_ATTRIBUTED =
-  REVENUE_BREAKDOWN.dayPasses + REVENUE_BREAKDOWN.membershipVisits + REVENUE_BREAKDOWN.noShowFees;
+export function totalRevenueAttributed(breakdown: RevenueBreakdown): number {
+  return breakdown.dayPasses + breakdown.membershipVisits + breakdown.noShowFees;
+}
 
 export function formatCurrency(amount: number): string {
   return amount.toLocaleString("en-US", {
@@ -592,28 +682,55 @@ export function formatCurrency(amount: number): string {
 
 export type AnalyticsRange = "week" | "month";
 
-/** El segmented Week/Month decide cuántos de los 14 días del gráfico se ven. */
-export function bookingsForRange(range: AnalyticsRange): number[] {
-  return range === "week" ? MONTHLY_BOOKINGS_BY_DAY.slice(-7) : MONTHLY_BOOKINGS_BY_DAY;
+/**
+ * El segmented Week/Month decide cuántos días del gráfico se ven — los
+ * últimos 7 o la serie completa. Backend real (22 sept 2026): `data` ya no
+ * es siempre `MONTHLY_BOOKINGS_BY_DAY` — Analytics lo llama con la serie
+ * real de `partner_bookings_by_day` (`supabase/schemas/partner_analytics.sql`).
+ */
+export function bookingsForRange(data: number[], range: AnalyticsRange): number[] {
+  return range === "week" ? data.slice(-7) : data;
+}
+
+/**
+ * "When they come" — agrega una serie diaria por día de la semana. Backend
+ * real: sustituye a `ARRIVALS_BY_WEEKDAY` (dato de muestra) sumando la serie
+ * real de `partner_bookings_by_day` por weekday, sobre el rango que se le
+ * pase (Analytics pide los últimos 90 días).
+ */
+export function bookingsByWeekday(
+  days: { day: string; bookings: number }[],
+): { day: string; guests: number }[] {
+  const labels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const totals = [0, 0, 0, 0, 0, 0, 0];
+
+  for (const row of days) {
+    const weekday = new Date(`${row.day}T00:00:00Z`).getUTCDay();
+    totals[weekday] += row.bookings;
+  }
+
+  // Lunes primero, como ya dibujaba `ARRIVALS_BY_WEEKDAY`.
+  return [1, 2, 3, 4, 5, 6, 0].map((weekday) => ({ day: labels[weekday], guests: totals[weekday] }));
 }
 
 /** Story 7.3 — "revenue attribution from Luxe Pass bookings", CSV descargable. */
-export function revenueBreakdownToCsv(): string {
+export function revenueBreakdownToCsv(summary: PartnerAnalyticsSummary): string {
+  const breakdown = revenueBreakdownFor(summary);
   const rows = [
-    ["Day passes", String(ANALYTICS_SUMMARY.dayPassVisits), formatCurrency(DAY_PASS_PARTNER_RATE), formatCurrency(REVENUE_BREAKDOWN.dayPasses)],
+    ["Day passes", String(summary.day_pass_visits), formatCurrency(DAY_PASS_PARTNER_RATE), formatCurrency(breakdown.dayPasses)],
     [
       "Membership visits",
-      String(ANALYTICS_SUMMARY.membershipVisits),
+      String(summary.membership_visits),
       formatCurrency(MEMBERSHIP_VISIT_PARTNER_RATE),
-      formatCurrency(REVENUE_BREAKDOWN.membershipVisits),
+      formatCurrency(breakdown.membershipVisits),
     ],
     [
       "Shared no-show fees",
-      String(ANALYTICS_SUMMARY.noShows),
+      String(summary.no_shows),
       formatCurrency(NO_SHOW_PARTNER_SHARE),
-      formatCurrency(REVENUE_BREAKDOWN.noShowFees),
+      formatCurrency(breakdown.noShowFees),
     ],
-    ["Total", "", "", formatCurrency(TOTAL_REVENUE_ATTRIBUTED)],
+    ["Total", "", "", formatCurrency(totalRevenueAttributed(breakdown))],
   ];
 
   const header = "Category,Visits,Rate,Amount";
@@ -647,28 +764,54 @@ export interface RepeatGuestRow {
   attributed: number;
 }
 
-export const REPEAT_GUESTS: RepeatGuestRow[] = [
-  { name: "Alexandra Rivas", email: "alexandra.rivas@example.com", visits: 12, lastVisitLabel: "Today · 3:30 PM", firstVisitLabel: "March 2024", attributed: 456 },
-  { name: "Beatrice Nolan", email: "beatrice.nolan@example.com", visits: 9, lastVisitLabel: "Today · 3:00 PM", firstVisitLabel: "May 2024", attributed: 342 },
-  { name: "Jonah Whitfield", email: "jonah.whitfield@example.com", visits: 7, lastVisitLabel: "Today · 11:00 AM", firstVisitLabel: "January 2025", attributed: 266 },
-  { name: "Marcus Ellery", email: "marcus.ellery@example.com", visits: 6, lastVisitLabel: "Today · 9:00 AM", firstVisitLabel: "February 2025", attributed: 228 },
-  { name: "Rowan Achebe", email: "rowan.achebe@example.com", visits: 5, lastVisitLabel: "Today · 12:30 PM", firstVisitLabel: "April 2025", attributed: 190 },
-  { name: "Idris Fontaine", email: "idris.fontaine@example.com", visits: 4, lastVisitLabel: "Today · 4:30 PM", firstVisitLabel: "June 2025", attributed: 152 },
-  { name: "Theo Lindqvist", email: "theo.lindqvist@example.com", visits: 3, lastVisitLabel: "Today · 10:00 AM", firstVisitLabel: "July 2025", attributed: 114 },
-  { name: "Sofia Marchetti", email: "sofia.marchetti@example.com", visits: 2, lastVisitLabel: "Today · 1:30 PM", firstVisitLabel: "August 2025", attributed: 76 },
-  { name: "Priya Raghunathan", email: "priya.raghunathan@example.com", visits: 2, lastVisitLabel: "Today · 9:00 AM", firstVisitLabel: "August 2025", attributed: 76 },
-  { name: "Elena Vasquez", email: "elena.vasquez@example.com", visits: 1, lastVisitLabel: "Today · 12:00 PM", firstVisitLabel: "Today", attributed: 75 },
-];
+/** Fila cruda de `partner_repeat_guests` (`supabase/schemas/partner_analytics.sql`). */
+export interface PartnerRepeatGuestRow {
+  member_id: string;
+  member_name: string;
+  member_email: string;
+  visits: number;
+  first_visit: string;
+  last_visit: string;
+  attributed: number;
+}
 
-export const REPEAT_GUESTS_SUMMARY = {
-  totalMembers: 412,
-  cameBackAtLeastOnce: 148,
-};
+function formatShortDate(dateIso: string): string {
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" }).format(
+    new Date(`${dateIso}T00:00:00Z`),
+  );
+}
 
-export const RETURN_RATE =
-  Math.round((REPEAT_GUESTS_SUMMARY.cameBackAtLeastOnce / REPEAT_GUESTS_SUMMARY.totalMembers) * 1000) / 10;
+/** Convierte una fila real de `partner_repeat_guests` al `RepeatGuestRow` que ya consume `/partner/guests`. */
+export function mapRepeatGuestRow(row: PartnerRepeatGuestRow): RepeatGuestRow {
+  return {
+    name: row.member_name,
+    email: row.member_email,
+    visits: row.visits,
+    lastVisitLabel: formatShortDate(row.last_visit),
+    firstVisitLabel: formatShortDate(row.first_visit),
+    attributed: row.attributed,
+  };
+}
 
-export const AVERAGE_VISITS_PER_GUEST = 3.2;
+/**
+ * "N members visited / N came back / return rate / average visits" — se
+ * calcula sobre la lista ya cargada (cada fila de `partner_repeat_guests` es
+ * un miembro con al menos una visita real), no una RPC aparte.
+ */
+export function repeatGuestsSummary(guests: RepeatGuestRow[]): {
+  totalMembers: number;
+  cameBackAtLeastOnce: number;
+  returnRate: number;
+  averageVisits: number;
+} {
+  const totalMembers = guests.length;
+  const cameBackAtLeastOnce = guests.filter((g) => g.visits >= 2).length;
+  const returnRate = totalMembers === 0 ? 0 : Math.round((cameBackAtLeastOnce / totalMembers) * 1000) / 10;
+  const averageVisits =
+    totalMembers === 0 ? 0 : Math.round((guests.reduce((sum, g) => sum + g.visits, 0) / totalMembers) * 10) / 10;
+
+  return { totalMembers, cameBackAtLeastOnce, returnRate, averageVisits };
+}
 
 /** Story 7.1 — "search/filter": coincide por nombre o email. */
 export function matchesRepeatGuestQuery(guest: RepeatGuestRow, query: string): boolean {

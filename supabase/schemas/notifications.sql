@@ -1,9 +1,12 @@
 -- Story 6.2 — In-app Notifications. Nace aquí, dueña Epic 6 (ver
--- docs/DATA-MODEL-MAP.md): "Referenciada por Epic 5 (reminder), Epic 7
--- (notificaciones a partners), Epic 9 (confirmación de referido)" — ninguno
--- de esos tres la usa todavía (Story 5.3 se conectó con pg_cron real en vez
--- de depender de esta tabla, ver docs/DATA-MODEL-MAP.md "decisión
--- revertida").
+-- docs/DATA-MODEL-MAP.md): anticipada como "referenciada por Epic 5
+-- (reminder), Epic 7 (notificaciones a partners), Epic 9 (confirmación de
+-- referido)" — ninguno de los tres acabó usándola: Story 5.3 se conectó con
+-- pg_cron real ("decisión revertida"), y Epic 7 decidió lo mismo a
+-- propósito al implementarse (22 sept 2026, ver
+-- supabase/schemas/partner_notifications.sql) — el AC de Story 7.2 es
+-- "recibir un email", no una fila en este centro de notificaciones del
+-- miembro. Epic 9 sigue sin conectar.
 --
 -- De los seis tipos que pide el AC, solo dos tienen un evento real detrás en
 -- este repo hoy — los otros cuatro (nuevo lounge partner, renovación de
