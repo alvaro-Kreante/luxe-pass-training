@@ -96,6 +96,19 @@ jobs:
             BOOKING_REMINDER_WEBHOOK_SECRET="${{ secrets.BOOKING_REMINDER_WEBHOOK_SECRET_DEV }}"
       - name: Desplegar la Edge Function send-booking-reminder
         run: supabase functions deploy send-booking-reminder --no-verify-jwt
+      # Story 6.3 — mismo patrón que send-booking-reminder arriba: pg_cron
+      # (dispatch_account_deletions, ver supabase/schemas/account_deletion.sql)
+      # llama a esta function vía pg_net pasados los 30 días de gracia del
+      # borrado de cuenta, sin JWT de usuario. El secreto compartido debe
+      # coincidir con el que se dé de alta en Supabase Vault
+      # (account_deletion_webhook_secret) de este mismo proyecto — paso
+      # manual, ver CLAUDE.md §Borrado de cuenta (pg_cron).
+      - name: Configurar secret de la Edge Function delete-account
+        run: |
+          supabase secrets set \
+            ACCOUNT_DELETION_WEBHOOK_SECRET="${{ secrets.ACCOUNT_DELETION_WEBHOOK_SECRET_DEV }}"
+      - name: Desplegar la Edge Function delete-account
+        run: supabase functions deploy delete-account --no-verify-jwt
       - name: Instalar Vercel CLI
         run: npm install --global vercel@latest
       - name: Descargar configuración del proyecto luxepass-dev
@@ -165,6 +178,12 @@ jobs:
             BOOKING_REMINDER_WEBHOOK_SECRET="${{ secrets.BOOKING_REMINDER_WEBHOOK_SECRET_PROD }}"
       - name: Desplegar la Edge Function send-booking-reminder
         run: supabase functions deploy send-booking-reminder --no-verify-jwt
+      - name: Configurar secret de la Edge Function delete-account
+        run: |
+          supabase secrets set \
+            ACCOUNT_DELETION_WEBHOOK_SECRET="${{ secrets.ACCOUNT_DELETION_WEBHOOK_SECRET_PROD }}"
+      - name: Desplegar la Edge Function delete-account
+        run: supabase functions deploy delete-account --no-verify-jwt
       - name: Instalar Vercel CLI
         run: npm install --global vercel@latest
       - name: Descargar configuración del proyecto luxepass-prod
