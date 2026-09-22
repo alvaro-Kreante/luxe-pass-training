@@ -17,21 +17,28 @@ import {
 } from "lucide-react";
 
 import { NotificationBellMenu } from "@/components/account/notification-bell-menu";
+import { RequireSession } from "@/components/onboarding/require-session";
 import { NotificationRow } from "@/components/ui/notification-row";
 import { AlwaysOnChip } from "@/components/ui/switch";
 import { AppShell } from "@/components/patterns/app-shell";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
-  NOTIFICATIONS,
   QUIET_HOURS,
+  fetchNotifications,
+  markAllNotificationsRead,
+  markNotificationRead,
   type NotificationCategory,
   type NotificationIcon,
   type NotificationItem,
 } from "@/lib/notifications";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 /**
- * Story 6.2 — centro de notificaciones completo. `Notifications.dc.html`.
+ * Story 6.2 — centro de notificaciones completo, backend real
+ * (`Notifications.dc.html`). `RequireSession` porque RLS exige `auth.uid()`
+ * para leer `notifications`, igual que el resto de pantallas de miembro ya
+ * conectadas (`/my-pass`, `/explore`…).
  */
 const ICONS: Record<NotificationIcon, React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>> = {
   morning: CalendarClock,
@@ -51,14 +58,39 @@ const CATEGORY_FILTERS: { value: NotificationCategory | "all"; label: string }[]
 ];
 
 export default function NotificationsPage() {
+  return (
+    <RequireSession>
+      <NotificationsScreen />
+    </RequireSession>
+  );
+}
+
+function NotificationsScreen() {
   const router = useRouter();
-  const [items, setItems] = React.useState<NotificationItem[]>(NOTIFICATIONS);
+  const supabase = React.useMemo(() => createClient(), []);
+  const [items, setItems] = React.useState<NotificationItem[]>([]);
   const [filter, setFilter] = React.useState<NotificationCategory | "all">("all");
+
+  React.useEffect(() => {
+    let active = true;
+    fetchNotifications(supabase).then((fetched) => {
+      if (active) setItems(fetched);
+    });
+    return () => {
+      active = false;
+    };
+  }, [supabase]);
 
   const visible = items.filter((item) => filter === "all" || item.category === filter);
 
   function markRead(id: string) {
     setItems((current) => current.map((item) => (item.id === id ? { ...item, read: true } : item)));
+    markNotificationRead(supabase, id).catch(() => {});
+  }
+
+  function markAllRead() {
+    setItems((current) => current.map((item) => ({ ...item, read: true })));
+    markAllNotificationsRead(supabase).catch(() => {});
   }
 
   return (
@@ -78,7 +110,7 @@ export default function NotificationsPage() {
           <NotificationBellMenu />
           <button
             type="button"
-            onClick={() => setItems((current) => current.map((item) => ({ ...item, read: true })))}
+            onClick={markAllRead}
             className={cn(buttonVariants({ variant: "secondary", size: "md" }), "normal-case")}
           >
             <CheckCheck size={16} strokeWidth={1.9} className="text-gold-600" aria-hidden />

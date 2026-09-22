@@ -1,47 +1,85 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { Heart } from "lucide-react";
 
 import { toneOf } from "@/components/lounges/lounge-thumb";
+import { RequireSession } from "@/components/onboarding/require-session";
 import { AccountShell, SavedIndicatorChip } from "@/components/patterns/account-shell";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { SelectableChip } from "@/components/ui/chip";
 import { AMENITIES, type AmenityId } from "@/lib/amenities";
 import {
-  FAVORITE_LOUNGES,
   INTERESTS,
-  PREFERRED_AMENITY_IDS,
-  SAMPLE_SELECTED_INTERESTS,
+  fetchFavoriteLounges,
+  fetchInterests,
+  fetchPreferredAmenities,
+  removeFavoriteLounge,
+  updateInterests,
+  updatePreferredAmenities,
   type DistanceUnit,
+  type FavoriteLounge,
 } from "@/lib/profile";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 /**
  * Story 6.3 — "Favorite lounges list", "Preferred amenities selection".
- * `Preferences.dc.html`.
+ * `Preferences.dc.html`, backend real (autoguarda cada cambio, como marca
+ * `SavedIndicatorChip`).
  */
 export default function PreferencesPage() {
-  const [amenities, setAmenities] = React.useState<Set<AmenityId>>(new Set(PREFERRED_AMENITY_IDS));
-  const [interests, setInterests] = React.useState<Set<string>>(new Set(SAMPLE_SELECTED_INTERESTS));
+  return (
+    <RequireSession>
+      <PreferencesScreen />
+    </RequireSession>
+  );
+}
+
+function PreferencesScreen() {
+  const supabase = React.useMemo(() => createClient(), []);
+  const [favorites, setFavorites] = React.useState<FavoriteLounge[]>([]);
+  const [amenities, setAmenities] = React.useState<Set<AmenityId>>(new Set());
+  const [interests, setInterests] = React.useState<Set<string>>(new Set());
   const [unit, setUnit] = React.useState<DistanceUnit>("mi");
 
-  function toggleAmenity(id: AmenityId) {
-    setAmenities((current) => {
-      const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  React.useEffect(() => {
+    let active = true;
+
+    Promise.all([fetchFavoriteLounges(supabase), fetchPreferredAmenities(supabase), fetchInterests(supabase)]).then(
+      ([favoriteLounges, preferredAmenities, savedInterests]) => {
+        if (!active) return;
+        setFavorites(favoriteLounges);
+        setAmenities(new Set(preferredAmenities));
+        setInterests(new Set(savedInterests));
+      },
+    );
+
+    return () => {
+      active = false;
+    };
+  }, [supabase]);
+
+  async function removeFavorite(loungeId: string) {
+    setFavorites((current) => current.filter((lounge) => lounge.id !== loungeId));
+    await removeFavoriteLounge(supabase, loungeId);
   }
 
-  function toggleInterest(interest: string) {
-    setInterests((current) => {
-      const next = new Set(current);
-      if (next.has(interest)) next.delete(interest);
-      else next.add(interest);
-      return next;
-    });
+  async function toggleAmenity(id: AmenityId) {
+    const next = new Set(amenities);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setAmenities(next);
+    await updatePreferredAmenities(supabase, Array.from(next));
+  }
+
+  async function toggleInterest(interest: string) {
+    const next = new Set(interests);
+    if (next.has(interest)) next.delete(interest);
+    else next.add(interest);
+    setInterests(next);
+    await updateInterests(supabase, Array.from(next));
   }
 
   return (
@@ -57,11 +95,11 @@ export default function PreferencesPage() {
 
       <div className="mt-6 flex items-baseline justify-between">
         <p className="m-0 text-xs font-bold uppercase tracking-[0.1em] text-gold-600">Favorite lounges</p>
-        <span className="text-xs text-fg-subtle">{FAVORITE_LOUNGES.length} saved</span>
+        <span className="text-xs text-fg-subtle">{favorites.length} saved</span>
       </div>
 
       <div className="mt-3 flex flex-col gap-2.5">
-        {FAVORITE_LOUNGES.map((lounge) => (
+        {favorites.map((lounge) => (
           <div
             key={lounge.id}
             className="flex items-center gap-3.5 rounded-content border border-line bg-surface p-3 shadow-content"
@@ -69,14 +107,22 @@ export default function PreferencesPage() {
             <span aria-hidden data-tone={toneOf(lounge.name)} className="lounge-hero size-11 shrink-0 rounded-[11px]" />
             <div className="min-w-0 flex-1">
               <p className="m-0 text-sm font-bold text-fg">{lounge.name}</p>
-              <p className="m-0 mt-0.5 text-xs text-fg-subtle">
-                {lounge.neighborhood} · {lounge.distanceMi} mi · visited {lounge.visitCount} times
-              </p>
+              <p className="m-0 mt-0.5 text-xs text-fg-subtle">{lounge.neighborhood}</p>
             </div>
-            <Heart size={19} strokeWidth={1.4} className="fill-accent text-accent-strong" aria-hidden />
-            <Button variant="secondary" size="md" type="button" className="h-9 px-3.5 text-xs normal-case">
+            <button
+              type="button"
+              aria-label={`Remove ${lounge.name} from favorites`}
+              onClick={() => removeFavorite(lounge.id)}
+              className="cursor-pointer"
+            >
+              <Heart size={19} strokeWidth={1.4} className="fill-accent text-accent-strong" aria-hidden />
+            </button>
+            <Link
+              href={`/lounges/${lounge.id}/book`}
+              className={cn(buttonVariants({ variant: "secondary", size: "md" }), "h-9 px-3.5 text-xs normal-case")}
+            >
               Book
-            </Button>
+            </Link>
           </div>
         ))}
       </div>

@@ -7,7 +7,14 @@ import { Cake, CalendarClock, CircleCheck, CreditCard, MapPin, Tag } from "lucid
 
 import { NotificationBellButton } from "@/components/ui/notification-bell-button";
 import { NotificationRow } from "@/components/ui/notification-row";
-import { NOTIFICATIONS, unreadNotificationCount, type NotificationIcon, type NotificationItem } from "@/lib/notifications";
+import {
+  fetchNotifications,
+  markAllNotificationsRead,
+  unreadNotificationCount,
+  type NotificationIcon,
+  type NotificationItem,
+} from "@/lib/notifications";
+import { createClient } from "@/lib/supabase/client";
 
 /**
  * DESIGN-SYSTEM.md §5 patrón 14 — Panel de notificaciones. Desplegable de
@@ -27,13 +34,33 @@ const ICONS: Record<NotificationIcon, React.ComponentType<{ size?: number; strok
 /**
  * `extraItems` antepone notificaciones que solo aplican en un estado concreto
  * de una pantalla (Story 9.2 — "friend sign-up confirmation notification" en
- * `/profile/membership/referrals?state=credited`), sin mutar el array
- * `NOTIFICATIONS` global que también pinta `/notifications` y "My Pass".
+ * `/profile/membership/referrals?state=credited`) a las notificaciones reales
+ * del miembro — nunca se escriben en `notifications` (siguen siendo de
+ * muestra, Story 9.2 sin conectar), así que "Mark all as read" solo llega de
+ * verdad a Supabase para el resto.
  */
-export function NotificationBellMenu({ extraItems }: { extraItems?: NotificationItem[] } = {}) {
-  const [items, setItems] = React.useState<NotificationItem[]>(() => [...(extraItems ?? []), ...NOTIFICATIONS]);
+export function NotificationBellMenu({ extraItems = [] }: { extraItems?: NotificationItem[] } = {}) {
+  const supabase = React.useMemo(() => createClient(), []);
+  const [items, setItems] = React.useState<NotificationItem[]>([]);
   const [open, setOpen] = React.useState(false);
-  const unread = unreadNotificationCount(items);
+
+  React.useEffect(() => {
+    let active = true;
+    fetchNotifications(supabase).then((fetched) => {
+      if (active) setItems(fetched);
+    });
+    return () => {
+      active = false;
+    };
+  }, [supabase]);
+
+  const combined = [...extraItems, ...items];
+  const unread = unreadNotificationCount(combined);
+
+  async function markAllRead() {
+    setItems((current) => current.map((item) => ({ ...item, read: true })));
+    await markAllNotificationsRead(supabase);
+  }
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
@@ -50,7 +77,7 @@ export function NotificationBellMenu({ extraItems }: { extraItems?: Notification
             <p className="m-0 flex-1 text-[13.5px] font-bold text-fg">Notifications</p>
             <button
               type="button"
-              onClick={() => setItems((current) => current.map((item) => ({ ...item, read: true })))}
+              onClick={markAllRead}
               className="cursor-pointer text-xs font-semibold text-accent-strong"
             >
               Mark all as read
@@ -58,7 +85,7 @@ export function NotificationBellMenu({ extraItems }: { extraItems?: Notification
           </div>
 
           <div className="flex max-h-[380px] flex-col gap-2 overflow-y-auto p-3">
-            {items.slice(0, 5).map((item) => {
+            {combined.slice(0, 5).map((item) => {
               const Icon = ICONS[item.icon];
               return (
                 <NotificationRow

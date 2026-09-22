@@ -9,22 +9,27 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { DetailRow } from "@/components/ui/detail-row";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { SAMPLE_MEMBER } from "@/lib/member";
-import { SAMPLE_UPCOMING_BOOKINGS_COUNT, LATE_CANCELLATION_FEE_LABEL } from "@/lib/passes";
+import { LATE_CANCELLATION_FEE_LABEL } from "@/lib/passes";
 import { ACCOUNT_DELETION_GRACE_DAYS, DELETE_ACCOUNT_CONFIRMATION_WORD } from "@/lib/profile";
 
 /**
  * Story 6.3 — "Account deletion option with confirmation". `DeleteAccount.dc.html`:
  * declara lo que cancela, lo que cobra y los 30 días de gracia, y ofrece
- * pausar la membresía en su lugar.
+ * pausar la membresía en su lugar. Backend real: soft-delete reversible
+ * (`requestAccountDeletion`, ver `lib/profile.ts`) — el artboard promete
+ * que "sign in before then and everything comes back".
  */
 export function DeleteAccountModal({
   open,
   onOpenChange,
+  memberName,
+  upcomingBookingsCount,
   onConfirmDelete,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  memberName: string;
+  upcomingBookingsCount: number;
   onConfirmDelete: () => void;
 }) {
   const [acknowledged, setAcknowledged] = React.useState(false);
@@ -44,7 +49,7 @@ export function DeleteAccountModal({
       open={open}
       onOpenChange={handleOpenChange}
       title="Delete your account?"
-      description={`This ends the membership of ${SAMPLE_MEMBER.name} and everything attached to it.`}
+      description={`This ends the membership of ${memberName} and everything attached to it.`}
       media={
         <span className="mb-4 flex size-14 items-center justify-center rounded-full bg-accent-soft">
           <Trash2 size={26} strokeWidth={1.8} className="text-accent-strong" aria-hidden />
@@ -74,7 +79,7 @@ export function DeleteAccountModal({
           icon={<Calendar size={16} strokeWidth={1.9} className="text-accent-strong" aria-hidden />}
           text={
             <>
-              <strong className="text-fg">{SAMPLE_UPCOMING_BOOKINGS_COUNT} upcoming bookings are cancelled</strong> — any
+              <strong className="text-fg">{upcomingBookingsCount} upcoming bookings are cancelled</strong> — any
               inside the 24-hour window is charged the {LATE_CANCELLATION_FEE_LABEL} fee.
             </>
           }

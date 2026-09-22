@@ -12,9 +12,11 @@ import { StatusChip } from "@/components/ui/status-chip";
 import { Notice } from "@/components/ui/notice";
 import { AppShell } from "@/components/patterns/app-shell";
 import { buttonVariants } from "@/components/ui/button";
+import { TODAY } from "@/lib/availability";
 import {
   BOOKING_RECORD_SUMMARY,
   VISITS_THIS_MONTH,
+  cancelBooking,
   fetchPastBookings,
   fetchUpcomingBookings,
   type PastBooking,
@@ -52,14 +54,15 @@ export default function MyPassPage() {
 }
 
 function MyPassScreen() {
+  const supabase = React.useMemo(() => createClient(), []);
   const [tab, setTab] = React.useState<Tab>("upcoming");
   const [upcoming, setUpcoming] = React.useState<UpcomingBooking[]>([]);
   const [past, setPast] = React.useState<PastBooking[]>([]);
   const [cancelTarget, setCancelTarget] = React.useState<UpcomingBooking | null>(null);
+  const [cancelError, setCancelError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     let active = true;
-    const supabase = createClient();
 
     Promise.all([fetchUpcomingBookings(supabase), fetchPastBookings(supabase)]).then(
       ([upcomingBookings, pastBookings]) => {
@@ -72,10 +75,22 @@ function MyPassScreen() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [supabase]);
 
   function removeUpcoming(id: string) {
     setUpcoming((current) => current.filter((booking) => booking.id !== id));
+  }
+
+  /** AC "Modification options: Cancel" — también cierra una reserva en waitlist ("Leave"). */
+  async function cancelAndRefresh(booking: UpcomingBooking) {
+    setCancelError(null);
+    try {
+      await cancelBooking(supabase, booking.id, TODAY);
+      removeUpcoming(booking.id);
+      setPast(await fetchPastBookings(supabase));
+    } catch {
+      setCancelError("Something went wrong cancelling this booking. Try again in a moment.");
+    }
   }
 
   return (
@@ -113,11 +128,17 @@ function MyPassScreen() {
               />
             </div>
 
+            {cancelError && (
+              <Notice tone="attention" icon={<CircleAlert size={18} strokeWidth={1.8} />} className="mt-4">
+                <p className="m-0">{cancelError}</p>
+              </Notice>
+            )}
+
             {tab === "upcoming" ? (
               <UpcomingList
                 bookings={upcoming}
                 onRequestCancel={setCancelTarget}
-                onLeaveWaitlist={removeUpcoming}
+                onLeaveWaitlist={cancelAndRefresh}
               />
             ) : (
               <PastList bookings={past} />
@@ -137,8 +158,8 @@ function MyPassScreen() {
             if (!open) setCancelTarget(null);
           }}
           booking={cancelTarget}
-          onConfirmCancel={() => {
-            removeUpcoming(cancelTarget.id);
+          onConfirmCancel={async () => {
+            await cancelAndRefresh(cancelTarget);
             setCancelTarget(null);
           }}
         />
@@ -181,7 +202,7 @@ function UpcomingList({
 }: {
   bookings: UpcomingBooking[];
   onRequestCancel: (booking: UpcomingBooking) => void;
-  onLeaveWaitlist: (id: string) => void;
+  onLeaveWaitlist: (booking: UpcomingBooking) => void;
 }) {
   return (
     <ul className="m-0 mt-5 flex list-none flex-col gap-3 p-0">
@@ -215,7 +236,7 @@ function UpcomingList({
             {booking.status === "waitlisted" ? (
               <button
                 type="button"
-                onClick={() => onLeaveWaitlist(booking.id)}
+                onClick={() => onLeaveWaitlist(booking)}
                 className={ROW_BUTTON}
               >
                 Leave

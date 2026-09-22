@@ -31,6 +31,27 @@ create table if not exists public.profiles (
   emergency_contact_name text,
   emergency_contact_relation text,
   emergency_contact_phone text,
+  -- Story 6.3 (Epic 6) — "Membership status Active/Inactive". El resto de
+  -- `MEMBERSHIP_SUMMARY` (plan, renovación, visitas) sigue sin conectar:
+  -- dueño real es `memberships` (Epic 9, todavía mockup) — ver
+  -- docs/DATA-MODEL-MAP.md. Esta columna es un stub mínimo consciente para
+  -- no bloquear Epic 6 en Epic 9; a reconciliar cuando Epic 9 se conecte.
+  membership_status text not null default 'active' check (membership_status in ('active', 'inactive')),
+  -- Story 6.3 — "Preferred amenities selection" (`Preferences.dc.html`).
+  -- Reutiliza los ids de `lib/amenities.ts` (Story 2.2), sin CHECK contra esa
+  -- lista porque vive en TS, no en SQL — igual criterio que `interests`, ya
+  -- libre de CHECK desde la Story 1.1.
+  preferred_amenities text[] not null default '{}',
+  -- Story 6.3 — "Privacy settings for data usage" (`Privacy.dc.html`).
+  privacy_personalized_recommendations boolean not null default true,
+  privacy_share_with_lounge boolean not null default true,
+  privacy_product_research boolean not null default false,
+  privacy_marketing_analytics boolean not null default false,
+  -- Story 6.3 — "Account deletion option with confirmation". Soft-delete con
+  -- gracia de 30 días (`DeleteAccount.dc.html`: "erased after 30 days...
+  -- sign in before then and everything comes back") — el borrado físico real
+  -- de `auth.users` es un cron aparte, ver `supabase/schemas/account_deletion.sql`.
+  deleted_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

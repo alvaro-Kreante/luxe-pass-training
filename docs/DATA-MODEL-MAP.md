@@ -155,16 +155,26 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
 
 ### Epic 6 — Member Experience & Notifications
 
-- `notifications` (**nace aquí**, dueño) — genérica: member_id, tipo, mensaje,
-  leído/no leído. Referenciada por Epic 5 (reminder), Epic 7 (notificaciones a
-  partners — evaluar `recipient_type` vs. tabla separada
-  `partner_notifications`), Epic 9 (confirmación de referido).
-- Story 6.1 reutiliza `bookings` (Epic 4), sin tabla propia; "Support contact"
-  cruza a `support_tickets` (Epic 8).
-- Story 6.3 extiende `profiles`: favoritos → tabla puente
-  `member_favorite_lounges` (candidata, dueño Epic 6, cruza a `lounges`);
-  membership status y referral code sharing solo *leen* `memberships` /
-  `referrals` (Epic 9), no tabla propia aquí.
+**Conectado a Supabase real desde el 21 sept 2026** — ver CLAUDE.md §Alcance y
+`docs/design/COMPONENT-MAP.md` "Backend real — Epic 6".
+
+- `notifications` (**nace aquí**, dueño, ya real) — member_id, category, icon,
+  title, body, read_at, created_at. Story 5.3 (reminder) terminó sin
+  depender de esta tabla (se conectó con `pg_cron` propio, ver más arriba);
+  Epic 7 (notificaciones a partners) y Epic 9 (confirmación de referido)
+  siguen sin conectarse a ella todavía.
+- Story 6.1 reutiliza `bookings` (Epic 4), sin tabla propia — `cancel_booking`
+  (RPC) y columnas `cancellation_fee_cents`/`cancelled_at` viven en
+  `bookings.sql`. "Support contact" sigue cruzando a `support_tickets`
+  (Epic 8, sin conectar).
+- Story 6.3 extiende `profiles` (ya real): `membership_status` (stub mínimo,
+  Active/Inactive — el resto de membresía sigue en Epic 9),
+  `preferred_amenities`, `privacy_*` (4 columnas), `deleted_at` (soft-delete).
+  Favoritos → tabla puente `member_favorite_lounges` (nace aquí, dueño Epic 6,
+  ya real, cruza a `lounges`). Membership status ya no es "solo leer" — nace
+  con su propio stub; referral code sharing sigue sin tabla `referrals`
+  propia (Epic 9, sin conectar): `referralCodeFor` es determinista, no
+  persistido.
 
 ### Epic 7 — Partner Dashboard
 

@@ -1,7 +1,15 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 /**
- * Story 6.2 (In-app Notifications). Sin backend: el centro de notificaciones,
- * el panel de la campana y los ajustes por canal son datos de muestra
- * deterministas, como el resto de "My Pass" en `lib/passes.ts`.
+ * Story 6.2 (In-app Notifications) — conectada a Supabase real (tabla
+ * `notifications`, ver `supabase/schemas/notifications.sql`). De los seis
+ * tipos que pide el AC, dos tienen un evento real detrás (confirmación de
+ * reserva, trigger AFTER INSERT; aviso de las 6 AM, pg_cron) y los otros
+ * cuatro (nuevo lounge partner, renovación de membresía, ofertas, mes de
+ * cumpleaños) se siembran como filas de muestra reales al crear el perfil —
+ * desviación consciente, ver `docs/design/COMPONENT-MAP.md`. Los ajustes por
+ * canal (`NOTIFICATION_CHANNEL_SETTINGS`/horas de silencio) no son un AC de
+ * esta historia y siguen siendo datos de muestra.
  */
 
 export type NotificationCategory = "bookings" | "lounges" | "offers" | "membership";
@@ -22,73 +30,90 @@ export interface NotificationItem {
   linkLabel?: string;
 }
 
-/**
- * Los seis tipos que pide la Story 6.2: confirmación de reserva, aviso de las
- * 6 AM el día de la visita, nuevo lounge partner, renovación de membresía,
- * ofertas y promoción del mes de cumpleaños. `Notifications.dc.html`.
- */
-export const NOTIFICATIONS: NotificationItem[] = [
-  {
-    id: "n-morning-reminder",
-    category: "bookings",
-    icon: "morning",
-    title: "Your visit today at The Vestry",
-    body: "Arrive at 11:00 AM · 41 Grand St, SoHo · admission stays open until 1:00 PM. Your pass is LP-851402.",
-    time: "6:00 AM",
-    read: false,
-    showBookingActions: true,
-  },
-  {
-    id: "n-birthday-month",
-    category: "membership",
-    icon: "birthday",
-    title: "September is your birthday month",
-    body: "A complimentary day pass is on your account until September 30 — any lounge, any time, on top of your monthly visits.",
-    time: "9:14 AM",
-    read: false,
-  },
-  {
-    id: "n-booking-confirmed",
-    category: "bookings",
-    icon: "booking",
-    title: "Booking confirmed · LP-850118",
-    body: "Bergdorf Lounge, Friday September 13 at 10:00 AM. The pass is waiting in My Pass and the confirmation is in your email.",
-    time: "Wed, 4:32 PM",
-    read: true,
-  },
-  {
-    id: "n-new-lounge",
-    category: "lounges",
-    icon: "lounge",
-    title: "New lounge: The Gramercy Reading Room",
-    body: "Open to members from today in Gramercy Park, 0.9 mi from you. Quiet rooms, a library bar and a terrace.",
-    time: "Tue, 10:05 AM",
-    read: true,
-    linkLabel: "View lounge",
-  },
-  {
-    id: "n-membership-renewal",
-    category: "membership",
-    icon: "membership",
-    title: "Your membership renews on November 3",
-    body: "Annual membership, on the Visa ending 4242. Nothing to do unless you want to change the plan or the card.",
-    time: "Mon, 8:00 AM",
-    read: true,
-    linkLabel: "Manage membership",
-  },
-  {
-    id: "n-offer",
-    category: "offers",
-    icon: "offer",
-    title: "Members' hours at The Ainsworth this Thursday",
-    body: "A seasonal tasting for members only, 6:00–9:00 PM. Reserve a spot from the lounge profile.",
-    time: "Fri, 2:00 PM",
-    read: true,
-  },
-];
-
-export function unreadNotificationCount(items: NotificationItem[] = NOTIFICATIONS): number {
+export function unreadNotificationCount(items: NotificationItem[]): number {
   return items.filter((item) => !item.read).length;
+}
+
+/* ------------------------------------------------------------------ */
+/* Backend real — tabla `notifications`                                 */
+/* ------------------------------------------------------------------ */
+
+interface NotificationRow {
+  id: string;
+  category: NotificationCategory;
+  icon: NotificationIcon;
+  title: string;
+  body: string;
+  read_at: string | null;
+  created_at: string;
+}
+
+function linkLabelFor(icon: NotificationIcon): string | undefined {
+  if (icon === "lounge") return "View lounge";
+  if (icon === "membership") return "Manage membership";
+  return undefined;
+}
+
+/** "6:00 AM" el mismo día (UTC, igual que el resto de la app); "Wed, 4:32 PM" en cualquier otro. */
+function formatNotificationTime(createdAtIso: string): string {
+  const date = new Date(createdAtIso);
+  const time = new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "UTC",
+  }).format(date);
+
+  const sameUtcDay = date.toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10);
+  if (sameUtcDay) return time;
+
+  const weekday = new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone: "UTC" }).format(date);
+  return `${weekday}, ${time}`;
+}
+
+function fromRow(row: NotificationRow): NotificationItem {
+  return {
+    id: row.id,
+    category: row.category,
+    icon: row.icon,
+    title: row.title,
+    body: row.body,
+    time: formatNotificationTime(row.created_at),
+    read: row.read_at !== null,
+    showBookingActions: row.icon === "morning",
+    linkLabel: linkLabelFor(row.icon),
+  };
+}
+
+/** RLS ya limita a las notificaciones del miembro con sesión. */
+export async function fetchNotifications(supabase: SupabaseClient): Promise<NotificationItem[]> {
+  const { data, error } = await supabase
+    .from("notifications")
+    .select("id, category, icon, title, body, read_at, created_at")
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+
+  return (data as NotificationRow[]).map(fromRow);
+}
+
+export async function markNotificationRead(supabase: SupabaseClient, id: string): Promise<void> {
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("id", id)
+    .is("read_at", null);
+
+  if (error) throw error;
+}
+
+export async function markAllNotificationsRead(supabase: SupabaseClient): Promise<void> {
+  const { error } = await supabase
+    .from("notifications")
+    .update({ read_at: new Date().toISOString() })
+    .is("read_at", null);
+
+  if (error) throw error;
 }
 
 /* ------------------------------------------------------------------ */

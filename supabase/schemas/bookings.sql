@@ -29,6 +29,17 @@ create table if not exists public.bookings (
   -- Story 5.3 — evita que el cron de recordatorios (`booking_reminders.sql`)
   -- reenvíe el email si vuelve a correr dentro de la misma ventana de 24h.
   reminder_sent_at  timestamptz,
+  -- Story 6.2 — evita que el cron del aviso de las 6 AM
+  -- (`notifications.sql`) reenvíe el aviso si vuelve a correr dentro de la
+  -- misma ventana.
+  morning_notification_sent_at timestamptz,
+  -- Story 6.1 — "No show policy enforcement - flat fee" / "24-hour advance
+  -- notice requirement for cancellation". Decisión consciente (ver
+  -- CLAUDE.md): el fee se REGISTRA, nunca se cobra de verdad — no hay
+  -- PaymentIntent ni cargo contra Stripe detrás de esta columna, a
+  -- diferencia del pago de la reserva (Story 4.2).
+  cancellation_fee_cents integer,
+  cancelled_at      timestamptz,
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now()
 );
@@ -326,7 +337,9 @@ grant execute on function public.reception_checkin_booking(text, date, text) to 
 -- AC "No-show tracking for booking history". No hay valor 'no_show' en
 -- `status` (ver comentario de la tabla) — cierra la reserva como
 -- 'completed' con `no_show=true`, para que Epic 6 (historial) distinga los
--- dos casos.
+-- dos casos. Story 6.1 — "No show policy enforcement - flat fee": registra
+-- los mismos $35.00 planos que `cancel_booking` (LATE_CANCELLATION_FEE_LABEL
+-- en `src/lib/passes.ts`), sin cobrarlos de verdad.
 create or replace function public.reception_report_no_show(
   p_lounge_id text,
   p_date date,
@@ -341,7 +354,7 @@ declare
   v_booking public.bookings;
 begin
   update public.bookings b
-    set no_show = true, status = 'completed', updated_at = now()
+    set no_show = true, status = 'completed', cancellation_fee_cents = 3500, updated_at = now()
     where b.lounge_id = p_lounge_id
       and b.date = p_date
       and b.confirmation_code = upper(trim(p_confirmation_code))
@@ -376,3 +389,66 @@ as $$
 $$;
 
 grant execute on function public.reception_today_summary(text, date) to anon, authenticated;
+
+-- Story 6.1 (Epic 6) — "Modification options: Cancel", "24-hour advance
+-- notice requirement for cancellation", "No show policy enforcement - flat
+-- fee". `p_today` en vez de `current_date`, mismo criterio que
+-- `confirm_booking`/las RPC de recepción: todo el proyecto trabaja sobre el
+-- "hoy" de mockup fijo (`TODAY` en `src/lib/availability.ts`), no el reloj
+-- real — el cliente manda siempre `TODAY` (ver `isFreeCancellation` en
+-- `src/lib/passes.ts`, que ya calcula `hoursUntilArrival` con el mismo
+-- criterio de días completos × 24, replicado aquí para que la decisión
+-- servidor/cliente coincida siempre).
+--
+-- Solo el miembro dueño de la reserva puede cancelarla (`auth.uid()`, no un
+-- RPC "de kiosco" como los de recepción) — 'waitlisted' cancela sin fee (no
+-- hay reserva de verdad que perder); 'confirmed' cobra el fee si quedan
+-- menos de 24h. El resto de estados ('in_progress', 'completed',
+-- 'cancelled') no son cancelables — ya se hizo check-in, ya cerró o ya
+-- estaba cancelada.
+create or replace function public.cancel_booking(p_booking_id uuid, p_today date)
+returns public.bookings
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_member_id uuid := auth.uid();
+  v_booking public.bookings;
+  v_hours_until_arrival integer;
+  v_fee_cents integer := null;
+begin
+  if v_member_id is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  select b.* into v_booking
+  from public.bookings b
+  where b.id = p_booking_id and b.member_id = v_member_id
+  for update;
+
+  if v_booking.id is null then
+    raise exception 'Booking not found';
+  end if;
+
+  if v_booking.status not in ('confirmed', 'waitlisted') then
+    raise exception 'Booking cannot be cancelled from status %', v_booking.status;
+  end if;
+
+  if v_booking.status = 'confirmed' then
+    v_hours_until_arrival := greatest(v_booking.date - p_today, 0) * 24;
+    if v_hours_until_arrival < 24 then
+      v_fee_cents := 3500;
+    end if;
+  end if;
+
+  update public.bookings b
+    set status = 'cancelled', cancelled_at = now(), cancellation_fee_cents = v_fee_cents, updated_at = now()
+    where b.id = p_booking_id
+    returning b.* into v_booking;
+
+  return v_booking;
+end;
+$$;
+
+grant execute on function public.cancel_booking(uuid, date) to authenticated;
