@@ -5,29 +5,41 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ChevronRight, CircleCheck, Clock, FileText, MapPin, Navigation2, PhoneCall, Share2, Star } from "lucide-react";
 
+import { RequireSession } from "@/components/onboarding/require-session";
 import { DigitalPassCard } from "@/components/passes/digital-pass-card";
 import { AppShell } from "@/components/patterns/app-shell";
 import { buttonVariants } from "@/components/ui/button";
 import { Notice } from "@/components/ui/notice";
 import { toneOf } from "@/components/lounges/lounge-thumb";
 import {
-  AINSWORTH_PASS,
+  fetchDigitalPass,
   isPassLifecycleState,
+  type DigitalPass,
   type PassLifecycleState,
 } from "@/lib/passes";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 /**
  * Story 5.1 — el pase digital (`Main.dc.html`) y su expiración automática
  * (`Expired.dc.html`). Story 5.3 enlaza aquí el email de recordatorio.
- * DESIGN-SYSTEM.md §5 patrón 11: cuatro estados de la misma tarjeta, que
- * aquí se alcanzan por `?state=` porque no hay reloj real que los dispare.
+ * DESIGN-SYSTEM.md §5 patrón 11: cuatro estados de la misma tarjeta.
+ *
+ * Backend real (Supabase local): `fetchDigitalPass` trae la reserva propia
+ * por LP# (RLS ya la limita al miembro con sesión) — ver
+ * `docs/design/COMPONENT-MAP.md` "Backend real — Epic 5". Los cuatro
+ * estados se siguen alcanzando por `?state=`: no hay cron que mueva una
+ * reserva vencida a completed/no-show (esa automatización es Epic 6,
+ * desviación ya documentada antes de conectar este módulo), así que el
+ * paso del tiempo no los dispara solo — ver cabecera de `src/lib/passes.ts`.
  */
 export default function PassDetailPage() {
   return (
-    <React.Suspense>
-      <PassDetailScreen />
-    </React.Suspense>
+    <RequireSession>
+      <React.Suspense>
+        <PassDetailScreen />
+      </React.Suspense>
+    </RequireSession>
   );
 }
 
@@ -40,10 +52,23 @@ function PassDetailScreen() {
     ? requestedState
     : "upcoming";
 
-  const pass = reference === AINSWORTH_PASS.reference ? AINSWORTH_PASS : null;
+  const [pass, setPass] = React.useState<DigitalPass | null | undefined>(undefined);
 
   React.useEffect(() => {
-    if (!pass) router.replace("/my-pass");
+    let active = true;
+    const supabase = createClient();
+
+    fetchDigitalPass(supabase, reference).then((found) => {
+      if (active) setPass(found);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [reference]);
+
+  React.useEffect(() => {
+    if (pass === null) router.replace("/my-pass");
   }, [pass, router]);
 
   if (!pass) return null;
@@ -68,7 +93,7 @@ function PassDetailScreen() {
   );
 }
 
-function Topbar({ pass, state }: { pass: typeof AINSWORTH_PASS; state: PassLifecycleState }) {
+function Topbar({ pass, state }: { pass: DigitalPass; state: PassLifecycleState }) {
   const crumb =
     state === "today"
       ? `Today · ${pass.reference}`
@@ -132,7 +157,7 @@ function VisitDetailsCard({
   statusLabel,
   children,
 }: {
-  pass: typeof AINSWORTH_PASS;
+  pass: DigitalPass;
   statusLabel: string;
   children: React.ReactNode;
 }) {
@@ -168,7 +193,7 @@ function Field({ label, value, wide = false }: { label: string; value: string; w
   );
 }
 
-function UpcomingBody({ pass }: { pass: typeof AINSWORTH_PASS }) {
+function UpcomingBody({ pass }: { pass: DigitalPass }) {
   return (
     <>
       <h1 className="m-0 text-[34px] text-fg">Your digital pass</h1>
@@ -179,7 +204,7 @@ function UpcomingBody({ pass }: { pass: typeof AINSWORTH_PASS }) {
 
       <div className="mt-5.5">
         <VisitDetailsCard pass={pass} statusLabel="Valid · in 2 days">
-          <Field label="Member" value="Alexandra Rivas" />
+          <Field label="Member" value={pass.memberName} />
           <Field label="Date" value={pass.dateLabel} />
           <Field label="Arrival" value={pass.arrivalTime} />
           <Field label="Duration" value={`Up to ${pass.stayHours} hours`} />
@@ -221,7 +246,7 @@ function UpcomingBody({ pass }: { pass: typeof AINSWORTH_PASS }) {
   );
 }
 
-function TodayBody({ pass }: { pass: typeof AINSWORTH_PASS }) {
+function TodayBody({ pass }: { pass: DigitalPass }) {
   return (
     <>
       <h1 className="m-0 text-[34px] text-fg">You are expected today</h1>
@@ -261,7 +286,7 @@ function TodayBody({ pass }: { pass: typeof AINSWORTH_PASS }) {
             <MapPin size={17} strokeWidth={1.7} className="text-gold-600" aria-hidden />
           </span>
           <div className="flex-1">
-            <p className="m-0 text-[13px] font-bold text-fg">{pass.directionsMinutes} min away</p>
+            <p className="m-0 text-[13px] font-bold text-fg">{pass.address}</p>
             <p className="m-0 mt-0.5 text-[11.5px] text-fg-subtle">Open directions in Google Maps</p>
           </div>
         </div>
@@ -279,7 +304,7 @@ function TodayBody({ pass }: { pass: typeof AINSWORTH_PASS }) {
   );
 }
 
-function CheckedInBody({ pass }: { pass: typeof AINSWORTH_PASS }) {
+function CheckedInBody({ pass }: { pass: DigitalPass }) {
   return (
     <>
       <div className="flex items-center gap-4.5">
@@ -296,7 +321,7 @@ function CheckedInBody({ pass }: { pass: typeof AINSWORTH_PASS }) {
 
       <div className="mt-5.5">
         <VisitDetailsCard pass={pass} statusLabel="Checked in">
-          <Field label="Checked in at" value={pass.checkedInAt} />
+          <Field label="Checked in at" value={pass.checkedInAt ?? "—"} />
           <Field label="Your stay ends" value={pass.windowCloseTime} />
           <Field label="Time remaining" value="3 h 56 min" />
           <Field label="Your requests" value={`${pass.specialRequests} — passed to the floor team.`} wide />
@@ -315,7 +340,7 @@ function CheckedInBody({ pass }: { pass: typeof AINSWORTH_PASS }) {
   );
 }
 
-function ExpiredBody({ pass }: { pass: typeof AINSWORTH_PASS }) {
+function ExpiredBody({ pass }: { pass: DigitalPass }) {
   return (
     <>
       <div className="flex items-center gap-4.5">
@@ -336,12 +361,16 @@ function ExpiredBody({ pass }: { pass: typeof AINSWORTH_PASS }) {
           What happened with this booking
         </p>
 
-        <TimelineEntry title="Booked and paid" detail={`September 12 at 3:14 PM · ${pass.amountPaidLabel} · Visa 4242`} />
-        <TimelineEntry title="Reminder sent" detail="September 13 at 3:30 PM · 24 hours before arrival" />
-        <TimelineEntry title="Checked in at reception" detail={`${pass.dateLabel} at ${pass.checkedInAt} · welcomed by ${pass.checkedInBy}`} />
+        <TimelineEntry title="Booked" detail={`${pass.bookedOnLabel} · ${pass.amountPaidLabel}`} />
+        <TimelineEntry title="Reminder sent" detail="24 hours before arrival" />
+        {pass.checkedInAt ? (
+          <TimelineEntry title="Checked in at reception" detail={`${pass.dateLabel} at ${pass.checkedInAt}`} />
+        ) : (
+          <TimelineEntry title="Never checked in" detail={`${pass.dateLabel} · recorded as a no-show`} />
+        )}
         <TimelineEntry
           title="Window closed, pass expired"
-          detail={`${pass.dateLabel} at ${pass.windowCloseTime} · visit counted as attended`}
+          detail={`${pass.dateLabel} at ${pass.windowCloseTime} · visit counted as ${pass.noShow ? "a no-show" : "attended"}`}
           last
         />
       </div>

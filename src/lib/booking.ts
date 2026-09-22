@@ -259,18 +259,34 @@ export function paymentWillDecline(methodId: string | null): boolean {
 /* Referencias de reserva                                               */
 /* ------------------------------------------------------------------ */
 
-/** Hash estable y pequeño — no es criptográfico, solo determinista por semilla. */
+/**
+ * Hash estable y pequeño — no es criptográfico, solo determinista por
+ * semilla. Posicional (`hash*31 + code`, tomando `% 900000` en cada paso
+ * para no perder precisión en JS con cadenas largas) a propósito: una suma
+ * simple de códigos ASCII es conmutativa — dos UUID que son anagramas entre
+ * sí (o que simplemente suman igual) colisionan en el mismo LP#, un bug
+ * real desde que Epic 5 usa esta referencia como clave de búsqueda (checkin
+ * de recepción, pase digital), no solo como copy decorativo del recibo.
+ */
 function hashOf(seed: string): number {
-  return [...seed].reduce((total, char) => total + char.charCodeAt(0) * 31, 0);
+  let hash = 0;
+  for (const char of seed) {
+    hash = (hash * 31 + char.charCodeAt(0)) % 900000;
+  }
+  return hash;
 }
 
 /**
  * "LP-######" a partir del `id` real de `bookings` (uuid devuelto por
  * `confirm_booking`/`join_waitlist`) — sustituye a la referencia derivada de
- * lounge/fecha/hora ahora que la reserva es real.
+ * lounge/fecha/hora ahora que la reserva es real. **Debe coincidir** con
+ * `booking_reference` en `supabase/schemas/bookings.sql` (columna generada,
+ * clave real de búsqueda de la Story 5.2) y con su réplica en
+ * `send-booking-receipt/index.ts` — SQL/Deno no pueden importar TS del
+ * proyecto Next.js.
  */
 export function bookingReferenceFromId(bookingId: string): string {
-  const digits = String(100000 + (hashOf(bookingId) % 900000));
+  const digits = String(100000 + hashOf(bookingId));
 
   return `LP-${digits}`;
 }
@@ -285,8 +301,7 @@ export function errorReference(
   dateIso: string,
   time: string,
 ): string {
-  const hash = hashOf(`${loungeId}|${dateIso}|${time}`);
-  const digits = String(100000 + (hash % 900000));
+  const digits = String(100000 + hashOf(`${loungeId}|${dateIso}|${time}`));
 
   return `LP-ERR-${digits}`;
 }

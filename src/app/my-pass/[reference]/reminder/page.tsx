@@ -5,23 +5,48 @@ import { useParams, useRouter } from "next/navigation";
 
 import { QrCode } from "@/components/ui/qr-code";
 import { buttonVariants } from "@/components/ui/button";
-import { AINSWORTH_PASS } from "@/lib/passes";
-import { SAMPLE_MEMBER } from "@/lib/member";
+import { RequireSession } from "@/components/onboarding/require-session";
+import { fetchDigitalPass, type DigitalPass } from "@/lib/passes";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 /**
  * Story 5.3 — Booking Reminder Notification, "24 hrs before the booking
  * time" (`Reminder.dc.html`). DESIGN-SYSTEM.md §5 patrón 20 — email de
- * marca, sin App shell, igual que `Receipt.dc.html`. Sin backend, este
- * criterio se cubre visualmente; alcanzable desde el pase digital.
+ * marca, sin App shell, igual que `Receipt.dc.html`. Esta pantalla sigue
+ * siendo visual (el email real ya lo manda `send-booking-reminder` vía
+ * pg_cron, ver `supabase/schemas/booking_reminders.sql`) — pinta la
+ * reserva real, igual que `Receipt.dc.html` pinta el pago real de la
+ * Story 4.2.
  */
 export default function ReminderPage() {
+  return (
+    <RequireSession>
+      <ReminderScreen />
+    </RequireSession>
+  );
+}
+
+function ReminderScreen() {
   const router = useRouter();
   const { reference } = useParams<{ reference: string }>();
-  const pass = reference === AINSWORTH_PASS.reference ? AINSWORTH_PASS : null;
+  const [pass, setPass] = React.useState<DigitalPass | null | undefined>(undefined);
 
   React.useEffect(() => {
-    if (!pass) router.replace("/my-pass");
+    let active = true;
+    const supabase = createClient();
+
+    fetchDigitalPass(supabase, reference).then((found) => {
+      if (active) setPass(found);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, [reference]);
+
+  React.useEffect(() => {
+    if (pass === null) router.replace("/my-pass");
   }, [pass, router]);
 
   if (!pass) return null;
@@ -39,7 +64,7 @@ export default function ReminderPage() {
                 En Soleil · LuxePass{" "}
                 <span className="font-medium text-fg-subtle">&lt;bookings@luxepass.co&gt;</span>
               </p>
-              <p className="m-0 mt-0.5 text-xs text-fg-subtle">to {SAMPLE_MEMBER.email}</p>
+              <p className="m-0 mt-0.5 text-xs text-fg-subtle">to {pass.memberEmail}</p>
             </div>
             <span className="rounded-pill bg-accent-soft px-2.5 py-1 text-[11px] font-bold text-fg">
               Reminder
@@ -55,13 +80,13 @@ export default function ReminderPage() {
             <p className="m-0 text-[11.5px] font-bold uppercase tracking-[0.16em] text-fg-subtle">
               See you tomorrow
             </p>
-            <h2 className="mt-2.5 font-display text-[30px] text-fg">Saturday, {pass.arrivalTime}</h2>
+            <h2 className="mt-2.5 font-display text-[30px] text-fg">{pass.shortDateLabel}, {pass.arrivalTime}</h2>
           </div>
         </div>
 
         <div className="px-8 py-5">
           <p className="m-0 text-sm leading-[1.6] text-fg-muted">
-            {SAMPLE_MEMBER.name.split(" ")[0]}, your lounge visit is tomorrow. Nothing to print —
+            {pass.memberName.split(" ")[0]}, your lounge visit is tomorrow. Nothing to print —
             give the number below at reception, or let them scan the code.
           </p>
 
@@ -70,14 +95,14 @@ export default function ReminderPage() {
               <ReminderField
                 label="When"
                 value={pass.dateLabel}
-                detail={`Arrive ${pass.arrivalTime} · stay up to ${pass.stayHours} hours · doors close for you at 5:30 PM`}
+                detail={`Arrive ${pass.arrivalTime} · stay up to ${pass.stayHours} hours · doors close for you at ${pass.windowCloseTime}`}
               />
               <ReminderField
                 label="Where"
                 value={pass.loungeName}
                 detail={`${pass.address} · ${pass.receptionNote}`}
               />
-              <ReminderField label="Admission" value={`${pass.admission} · Alexandra Rivas`} />
+              <ReminderField label="Admission" value={`${pass.admission} · ${pass.memberName}`} />
             </div>
 
             <div className="w-[158px] shrink-0 rounded-2xl border border-line bg-surface p-3.5 text-center">

@@ -439,6 +439,13 @@ verify_jwt = false
 [functions.send-booking-receipt]
 verify_jwt = false
 
+# Story 5.3 — el cron `dispatch_booking_reminders` (pg_net, ver
+# supabase/schemas/booking_reminders.sql) llama a esta function desde
+# Postgres, mismo motivo/mecanismo que send-booking-receipt pero disparado
+# por el paso del tiempo en vez de un insert.
+[functions.send-booking-reminder]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54337

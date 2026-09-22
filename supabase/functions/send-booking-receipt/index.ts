@@ -23,13 +23,17 @@ function getServiceClient() {
   );
 }
 
-/** Debe coincidir con `bookingReferenceFromId` de `src/lib/booking.ts` — SQL/Deno no pueden importar TS del proyecto Next.js. */
+/** Debe coincidir con `bookingReferenceFromId` de `src/lib/booking.ts` (y `booking_reference` en `bookings.sql`) — SQL/Deno no pueden importar TS del proyecto Next.js. */
 function hashOf(seed: string): number {
-  return [...seed].reduce((total, char) => total + char.charCodeAt(0) * 31, 0);
+  let hash = 0;
+  for (const char of seed) {
+    hash = (hash * 31 + char.charCodeAt(0)) % 900000;
+  }
+  return hash;
 }
 
 function bookingReferenceFromId(bookingId: string): string {
-  const digits = String(100000 + (hashOf(bookingId) % 900000));
+  const digits = String(100000 + hashOf(bookingId));
   return `LP-${digits}`;
 }
 

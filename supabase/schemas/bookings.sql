@@ -19,9 +19,56 @@ create table if not exists public.bookings (
   status            text not null default 'confirmed' check (
     status in ('confirmed', 'in_progress', 'completed', 'cancelled', 'waitlisted')
   ),
+  -- Story 5.2 — "No-show tracking for booking history". No es un valor de
+  -- `status` (ese dominio no tiene 'no_show', ver comentario de arriba):
+  -- un no-show cierra la reserva con `status='completed'` + `no_show=true`,
+  -- para que Epic 6 (historial) distinga "completed" de "no-show" sin
+  -- ampliar el CHECK. `checked_in_at` es la contraparte positiva.
+  checked_in_at     timestamptz,
+  no_show           boolean not null default false,
+  -- Story 5.3 — evita que el cron de recordatorios (`booking_reminders.sql`)
+  -- reenvíe el email si vuelve a correr dentro de la misma ventana de 24h.
+  reminder_sent_at  timestamptz,
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now()
 );
+
+-- Story 5.1 — "Unique confirmation number generated for each booking LP#".
+-- Columna generada, no una insertada aparte: `bookingReferenceFromId` (TS,
+-- `src/lib/booking.ts`) y su réplica en `send-booking-receipt/index.ts` ya
+-- derivan el LP# del `id` de la reserva — esta función replica el mismo
+-- algoritmo en SQL (**debe coincidir con las otras dos**, ver ese comentario)
+-- para poder indexarlo y que `/reception` busque por LP# sin escanear toda
+-- la tabla.
+--
+-- Hash posicional (`hash*31 + code`, `% 900000` en cada paso), no una suma
+-- simple de códigos ASCII: la suma es conmutativa (dos UUID que son
+-- anagramas entre sí colisionan en el mismo LP#) — un bug real de verdad
+-- desde que este código es una clave de búsqueda (checkin de recepción,
+-- pase digital), no solo copy decorativo del recibo. Reproducido y
+-- corregido en las tres implementaciones a la vez.
+create or replace function public.booking_reference(p_booking_id uuid)
+returns text
+language plpgsql
+immutable
+set search_path = ''
+as $$
+declare
+  v_seed text := p_booking_id::text;
+  v_hash integer := 0;
+begin
+  for i in 1..length(v_seed) loop
+    v_hash := (v_hash * 31 + ascii(substr(v_seed, i, 1))) % 900000;
+  end loop;
+
+  return 'LP-' || (100000 + v_hash)::text;
+end;
+$$;
+
+alter table public.bookings
+  add column if not exists confirmation_code text generated always as (public.booking_reference(id)) stored;
+
+create index if not exists bookings_confirmation_code_idx on public.bookings (confirmation_code);
 
 alter table public.bookings enable row level security;
 
@@ -164,3 +211,168 @@ end;
 $$;
 
 grant execute on function public.join_waitlist(text, date, text, text, text) to authenticated;
+
+-- Story 5.2 — Lounge Check-In Process. `/reception` no tiene login de
+-- personal (gap señalado en docs/PENDIENTES.md, y docs/DATA-MODEL-MAP.md
+-- deja el rol staff/partner para cuando arranque el Epic 7, no antes) —
+-- decisión consciente (ver CLAUDE.md): estas cuatro funciones son un RPC
+-- "de kiosco", autorizado solo por conocer el LP# de hoy en el lounge
+-- correcto, igual que un lector físico de QR en el mostrador de recepción.
+-- Se conceden a `anon` a propósito — la consola no inicia sesión de
+-- miembro ni de staff. Documentado como desviación consciente en
+-- docs/design/COMPONENT-MAP.md "Backend real — Epic 5".
+--
+-- `p_date` en vez de `current_date`: todo el proyecto trabaja sobre el "hoy"
+-- de mockup fijo (`TODAY` en `src/lib/availability.ts`, 2025-09-09), no el
+-- reloj real de Postgres — igual que `confirm_booking` recibe `p_date`
+-- como parámetro en vez de asumirlo. El cliente (`src/lib/reception.ts`)
+-- siempre manda `TODAY`.
+create or replace function public.reception_lookup_booking(
+  p_lounge_id text,
+  p_date date,
+  p_confirmation_code text
+)
+returns table (
+  id uuid,
+  confirmation_code text,
+  member_name text,
+  member_email text,
+  slot_time text,
+  special_requests text,
+  status text,
+  checked_in_at timestamptz,
+  no_show boolean,
+  emergency_contact_name text,
+  emergency_contact_relation text,
+  emergency_contact_phone text
+)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_booking public.bookings;
+begin
+  select b.* into v_booking
+  from public.bookings b
+  where b.lounge_id = p_lounge_id
+    and b.date = p_date
+    and b.confirmation_code = upper(trim(p_confirmation_code))
+    and b.status <> 'cancelled';
+
+  if v_booking.id is null then
+    return;
+  end if;
+
+  return query
+    select
+      v_booking.id,
+      v_booking.confirmation_code,
+      coalesce(p.full_name, split_part(u.email::text, '@', 1)),
+      u.email::text,
+      v_booking.slot_time,
+      v_booking.special_requests,
+      v_booking.status,
+      v_booking.checked_in_at,
+      v_booking.no_show,
+      p.emergency_contact_name,
+      p.emergency_contact_relation,
+      p.emergency_contact_phone
+    from auth.users u
+    left join public.profiles p on p.id = u.id
+    where u.id = v_booking.member_id;
+end;
+$$;
+
+grant execute on function public.reception_lookup_booking(text, date, text) to anon, authenticated;
+
+-- AC "Instant verification of booking validity" + "Check-in confirmation to
+-- member's app" (el miembro ve `status='in_progress'` al recargar /my-pass,
+-- ver src/lib/passes.ts). Idempotente por construcción: una segunda llamada
+-- no encuentra fila `checked_in_at is null` y falla con un mensaje claro en
+-- vez de reescribir el check-in.
+create or replace function public.reception_checkin_booking(
+  p_lounge_id text,
+  p_date date,
+  p_confirmation_code text
+)
+returns public.bookings
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_booking public.bookings;
+begin
+  update public.bookings b
+    set checked_in_at = now(), status = 'in_progress', updated_at = now()
+    where b.lounge_id = p_lounge_id
+      and b.date = p_date
+      and b.confirmation_code = upper(trim(p_confirmation_code))
+      and b.status = 'confirmed'
+      and b.checked_in_at is null
+    returning b.* into v_booking;
+
+  if v_booking.id is null then
+    raise exception 'No confirmed booking for % at % on %, or it is already checked in', p_confirmation_code, p_lounge_id, p_date;
+  end if;
+
+  return v_booking;
+end;
+$$;
+
+grant execute on function public.reception_checkin_booking(text, date, text) to anon, authenticated;
+
+-- AC "No-show tracking for booking history". No hay valor 'no_show' en
+-- `status` (ver comentario de la tabla) — cierra la reserva como
+-- 'completed' con `no_show=true`, para que Epic 6 (historial) distinga los
+-- dos casos.
+create or replace function public.reception_report_no_show(
+  p_lounge_id text,
+  p_date date,
+  p_confirmation_code text
+)
+returns public.bookings
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_booking public.bookings;
+begin
+  update public.bookings b
+    set no_show = true, status = 'completed', updated_at = now()
+    where b.lounge_id = p_lounge_id
+      and b.date = p_date
+      and b.confirmation_code = upper(trim(p_confirmation_code))
+      and b.status = 'confirmed'
+      and b.checked_in_at is null
+    returning b.* into v_booking;
+
+  if v_booking.id is null then
+    raise exception 'No confirmed booking for % at % on %, or it already checked in', p_confirmation_code, p_lounge_id, p_date;
+  end if;
+
+  return v_booking;
+end;
+$$;
+
+grant execute on function public.reception_report_no_show(text, date, text) to anon, authenticated;
+
+-- Decorativo pero real (contador "N expected today / M checked in" de la
+-- topbar de `/reception`) — agregado barato sobre el índice de
+-- `(lounge_id, date)` que ya usan las funciones de arriba.
+create or replace function public.reception_today_summary(p_lounge_id text, p_date date)
+returns table (expected integer, checked_in integer)
+language sql
+security definer
+set search_path = ''
+as $$
+  select
+    count(*) filter (where status <> 'cancelled')::int,
+    count(*) filter (where checked_in_at is not null)::int
+  from public.bookings
+  where lounge_id = p_lounge_id and date = p_date;
+$$;
+
+grant execute on function public.reception_today_summary(text, date) to anon, authenticated;

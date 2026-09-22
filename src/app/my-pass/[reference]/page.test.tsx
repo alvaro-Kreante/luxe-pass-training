@@ -1,80 +1,118 @@
-import { render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { AINSWORTH_PASS } from "@/lib/passes";
+import { bookingReferenceFromId, confirmBooking } from "@/lib/booking";
+import { TODAY } from "@/lib/availability";
+import { LOUNGES } from "@/lib/lounges";
+import { createClient } from "@/lib/supabase/client";
+import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
 
 import PassDetailPage from "./page";
 
 /**
  * Story 5.1 — el pase digital y su expiración automática al cerrar la
  * ventana de la reserva. `Main` (upcoming) · `ArrivalDay` (today) ·
- * `CheckedIn` · `Expired.dc.html` son cuatro estados de la misma pantalla;
- * sin backend, se alcanzan por `?state=` como el resto de estados de borde
- * del proyecto (`?covered=1`, `?map=error`).
+ * `CheckedIn` · `Expired.dc.html` son cuatro estados de la misma pantalla,
+ * alcanzados por `?state=` (ver cabecera de `src/lib/passes.ts` — sigue sin
+ * haber un cron que dispare la expiración sola).
+ *
+ * Backend real (Supabase local): `fetchDigitalPass` trae la reserva propia
+ * por LP# (RLS), así que cada test confirma una reserva real primero.
  */
+let reference = "";
+const params = vi.fn(() => ({ reference }));
 const replace = vi.fn();
-const params = vi.fn(() => ({ reference: AINSWORTH_PASS.reference }));
 let query = new URLSearchParams();
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace }),
   useParams: () => params(),
   useSearchParams: () => query,
-  usePathname: () => "/my-pass/LP-842193",
+  usePathname: () => "/my-pass/reference",
 }));
 
+const ainsworth = LOUNGES.find((lounge) => lounge.id === "the-ainsworth")!;
+
+beforeAll(async () => {
+  const supabase = createClient();
+  await signUpConfirmedMemberAndSignIn(
+    supabase,
+    `pass-detail-${Date.now()}@ensoleil-test.com`,
+    "EnSoleil!2026",
+  );
+
+  const booking = await confirmBooking(supabase, {
+    loungeId: ainsworth.id,
+    dateIso: TODAY,
+    band: "morning",
+    time: "10:30 AM",
+    specialRequests: "",
+  });
+  if (!booking) throw new Error("No se pudo confirmar la reserva de prueba");
+
+  reference = bookingReferenceFromId(booking.id);
+});
+
 beforeEach(() => {
+  params.mockReturnValue({ reference });
   replace.mockClear();
-  params.mockReturnValue({ reference: AINSWORTH_PASS.reference });
   query = new URLSearchParams();
 });
 
 describe("guardia de entrada", () => {
-  it("vuelve a My Pass si el número de confirmación no existe", () => {
+  it("vuelve a My Pass si el número de confirmación no existe", async () => {
     params.mockReturnValue({ reference: "LP-000000" });
 
     render(<PassDetailPage />);
 
-    expect(replace).toHaveBeenCalledWith("/my-pass");
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/my-pass"));
   });
 });
 
 describe("estado por defecto (upcoming)", () => {
-  it("muestra el pase con el nombre del miembro, el lounge y la fecha", () => {
+  it("muestra el pase con el LP# real", async () => {
     render(<PassDetailPage />);
 
-    expect(screen.getByRole("heading", { name: "Your digital pass" })).toBeInTheDocument();
-    expect(screen.getAllByText(AINSWORTH_PASS.reference).length).toBeGreaterThan(0);
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Your digital pass" })).toBeInTheDocument(),
+    );
+    expect(screen.getAllByText(reference).length).toBeGreaterThan(0);
   });
 });
 
 describe("?state=today", () => {
-  it("muestra la cuenta atrás del día de la reserva", () => {
+  it("muestra la cuenta atrás del día de la reserva", async () => {
     query = new URLSearchParams("state=today");
 
     render(<PassDetailPage />);
 
-    expect(screen.getByRole("heading", { name: "You are expected today" })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "You are expected today" })).toBeInTheDocument(),
+    );
   });
 });
 
 describe("?state=checked-in", () => {
-  it("confirma el check-in en la app del miembro", () => {
+  it("confirma el check-in en la app del miembro", async () => {
     query = new URLSearchParams("state=checked-in");
 
     render(<PassDetailPage />);
 
-    expect(screen.getByRole("heading", { name: "You are checked in" })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "You are checked in" })).toBeInTheDocument(),
+    );
   });
 });
 
 describe("?state=expired", () => {
-  it("explica que la reserva expiró automáticamente al cerrar la ventana", () => {
+  it("explica que la reserva expiró automáticamente al cerrar la ventana", async () => {
     query = new URLSearchParams("state=expired");
 
     render(<PassDetailPage />);
 
-    expect(screen.getByRole("heading", { name: "This pass has expired" })).toBeInTheDocument();
-    expect(screen.getByText(/checked in at reception/i)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "This pass has expired" })).toBeInTheDocument(),
+    );
+    expect(screen.getByText(/never checked in|checked in at reception/i)).toBeInTheDocument();
   });
 });

@@ -10,7 +10,7 @@ import { DetailRow } from "@/components/ui/detail-row";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { SAMPLE_MEMBER } from "@/lib/member";
-import { UPCOMING_BOOKINGS, LATE_CANCELLATION_FEE_LABEL } from "@/lib/passes";
+import { SAMPLE_UPCOMING_BOOKINGS_COUNT, LATE_CANCELLATION_FEE_LABEL } from "@/lib/passes";
 import { ACCOUNT_DELETION_GRACE_DAYS, DELETE_ACCOUNT_CONFIRMATION_WORD } from "@/lib/profile";
 
 /**
@@ -74,7 +74,7 @@ export function DeleteAccountModal({
           icon={<Calendar size={16} strokeWidth={1.9} className="text-accent-strong" aria-hidden />}
           text={
             <>
-              <strong className="text-fg">{UPCOMING_BOOKINGS.length} upcoming bookings are cancelled</strong> — any
+              <strong className="text-fg">{SAMPLE_UPCOMING_BOOKINGS_COUNT} upcoming bookings are cancelled</strong> — any
               inside the 24-hour window is charged the {LATE_CANCELLATION_FEE_LABEL} fee.
             </>
           }
