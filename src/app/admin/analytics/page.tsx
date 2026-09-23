@@ -5,45 +5,102 @@ import { CalendarDays, Download } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { AdminShell } from "@/components/patterns/admin-shell";
+import { RequireAdminSession } from "@/components/admin/require-admin-session";
 import { MetricTile } from "@/components/ui/metric-tile";
 import { Segmented } from "@/components/ui/segmented";
+import { createClient } from "@/lib/supabase/client";
+import { getTicketCounts, type TicketCounts } from "@/lib/admin";
 import {
-  ANALYTICS_PERIOD_LABEL,
-  BOOKINGS_PER_DAY,
-  MEMBER_ACQUISITION,
-  NETWORK_METRICS,
-  PARTNER_ATTRIBUTION_NOTE,
-  REVENUE_LINES,
+  type AnalyticsPeriod,
+  type BookingsByDayPoint,
+  type NetworkSummary,
+  type RevenueByPartnerRow,
+  dateRangeForPeriod,
   formatCurrency,
+  formatDateRangeLabel,
+  getBookingsByDay,
+  getNetworkSummary,
+  getRevenueByPartner,
+  noShowRatePct,
+  totalGrossRevenueCents,
 } from "@/lib/admin-analytics";
-import { ADMIN_CASE_COUNTS } from "@/lib/admin";
-
-type Period = "14d" | "month" | "quarter";
 
 /**
  * Story 8.2 — "No-show rate tracking", "Member acquisition and retention
  * metrics" y "Revenue reporting by partner and time period". Artboard:
  * docs/design/epic-8-admin-support/Analytics.dc.html.
  *
- * El segmented "14 days / Month / Quarter" solo cambia su propia selección:
- * el catálogo de muestra solo modela la quincena del 1 al 14 de septiembre
- * (ver `lib/admin-analytics.ts`), así que no hay otro dataset que enseñar —
- * mismo criterio que el rango "Sep 1 – Sep 14" fijo del Epic 7.
+ * Backend real (22 sept 2026): `admin_network_summary`/
+ * `admin_bookings_by_day`/`admin_revenue_by_partner`
+ * (`supabase/schemas/admin_reports.sql`), sobre un rango relativo a `TODAY`.
+ * La narrativa fija del mock (1,208 reservas, $336,250.00 brutos...) se
+ * retira: la cifra real depende de lo que haya en la base al momento de
+ * mirar la pantalla. "Net revenue"/"partner attribution" del mock asumían
+ * una facturación de membresía que Epic 9 todavía no modela de verdad —
+ * este panel muestra el ingreso bruto real (solo cargos succeeded de
+ * Stripe) sin esa resta inventada. Desviación anotada en
+ * `docs/design/COMPONENT-MAP.md`.
  */
 export default function AnalyticsPage() {
+  return (
+    <RequireAdminSession>
+      <AnalyticsScreen />
+    </RequireAdminSession>
+  );
+}
+
+function AnalyticsScreen() {
   const router = useRouter();
-  const [period, setPeriod] = React.useState<Period>("14d");
+  const supabase = React.useMemo(() => createClient(), []);
+  const [period, setPeriod] = React.useState<AnalyticsPeriod>("14d");
+  const [summary, setSummary] = React.useState<NetworkSummary | null>(null);
+  const [byDay, setByDay] = React.useState<BookingsByDayPoint[]>([]);
+  const [revenue, setRevenue] = React.useState<RevenueByPartnerRow[]>([]);
+  const [counts, setCounts] = React.useState<TicketCounts | null>(null);
+
+  const range = React.useMemo(() => dateRangeForPeriod(period), [period]);
+
+  React.useEffect(() => {
+    let active = true;
+    Promise.all([
+      getNetworkSummary(supabase, range),
+      getBookingsByDay(supabase, range),
+      getRevenueByPartner(supabase, range),
+    ]).then(([summaryRow, dayRows, revenueRows]) => {
+      if (!active) return;
+      setSummary(summaryRow);
+      setByDay(dayRows);
+      setRevenue(revenueRows);
+    });
+    return () => {
+      active = false;
+    };
+  }, [supabase, range]);
+
+  React.useEffect(() => {
+    let active = true;
+    getTicketCounts(supabase).then((row) => {
+      if (active) setCounts(row);
+    });
+    return () => {
+      active = false;
+    };
+  }, [supabase]);
+
+  const maxDay = Math.max(...byDay.map((d) => d.count), 1);
+  const grossRevenueCents = totalGrossRevenueCents(revenue);
+  const topPartners = [...revenue].sort((a, b) => b.grossRevenueCents - a.grossRevenueCents).slice(0, 5);
 
   return (
     <AdminShell
       topbarLabel={<span className="text-[13.5px] font-bold text-fg">Analytics</span>}
-      topbarMeta={`· Network overview · figures settled to September 14`}
-      supportBadge={ADMIN_CASE_COUNTS.open}
+      topbarMeta="· Network overview"
+      supportBadge={counts?.open}
     >
       <div className="flex items-center gap-6">
         <div className="min-w-0 flex-1">
           <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">
-            {ANALYTICS_PERIOD_LABEL} · 12 lounges · 3 cities
+            {formatDateRangeLabel(range)}
           </p>
           <h1 className="mt-2 font-display text-[34px] text-fg">How the network is doing</h1>
         </div>
@@ -61,7 +118,7 @@ export default function AnalyticsPage() {
           />
           <span className="flex h-11 items-center gap-2.5 rounded-[11px] border-[1.5px] border-line px-4">
             <CalendarDays size={17} strokeWidth={1.7} className="text-accent" aria-hidden />
-            <span className="text-[13.5px] font-semibold text-fg">Sep 1 – Sep 14</span>
+            <span className="text-[13.5px] font-semibold text-fg">{formatDateRangeLabel(range)}</span>
           </span>
           <button
             type="button"
@@ -74,53 +131,39 @@ export default function AnalyticsPage() {
         </div>
       </div>
 
-      <div className="mt-4.5 grid grid-cols-4 gap-3.5">
-        <MetricTile
-          label="Bookings"
-          value={NETWORK_METRICS.bookings.toLocaleString("en-US")}
-          note={`${NETWORK_METRICS.attended.toLocaleString("en-US")} attended · ${NETWORK_METRICS.noShows} no-shows · ${NETWORK_METRICS.cancelled} cancelled`}
-        />
-        <MetricTile
-          label="Active members"
-          value={NETWORK_METRICS.activeMembers.toLocaleString("en-US")}
-          note={`${NETWORK_METRICS.joined} joined, ${NETWORK_METRICS.left} left in the period`}
-        />
-        <MetricTile
-          label="No-show rate"
-          value={`${NETWORK_METRICS.noShowRatePct}%`}
-          note={`${NETWORK_METRICS.noShows} of ${NETWORK_METRICS.bookings.toLocaleString("en-US")} · ${NETWORK_METRICS.noShowRatePrevPct}% in the fortnight before`}
-        />
-        <MetricTile
-          label="Net revenue"
-          value={formatCurrency(NETWORK_METRICS.netRevenue)}
-          note={`after ${formatCurrency(NETWORK_METRICS.partnerAttribution)} attributed to partners`}
-        />
-      </div>
+      {summary ? (
+        <div className="mt-4.5 grid grid-cols-4 gap-3.5">
+          <MetricTile
+            label="Bookings"
+            value={summary.bookings.toLocaleString("en-US")}
+            note={`${summary.attended.toLocaleString("en-US")} attended · ${summary.noShows} no-shows · ${summary.cancelled} cancelled`}
+          />
+          <MetricTile
+            label="Active members"
+            value={summary.activeMembers.toLocaleString("en-US")}
+            note={`${summary.joined} joined, ${summary.left} left in the period`}
+          />
+          <MetricTile
+            label="No-show rate"
+            value={`${noShowRatePct(summary.noShows, summary.bookings)}%`}
+            note={`${summary.noShows} of ${summary.bookings.toLocaleString("en-US")}`}
+          />
+          <MetricTile label="Gross revenue" value={formatCurrency(grossRevenueCents / 100)} note="real Stripe charges only" />
+        </div>
+      ) : null}
 
       <div className="mt-4 flex min-h-0 gap-4">
         <div className="flex min-w-0 flex-1 flex-col gap-3.5">
           <div className="rounded-content border border-line bg-dark-card px-5.5 py-5">
-            <div className="flex items-center gap-3">
-              <div>
-                <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">Bookings per day</p>
-                <p className="m-0 mt-1.5 text-[12.5px] text-fg-muted">
-                  The fourteen bars add up to the {NETWORK_METRICS.bookings.toLocaleString("en-US")} in the tile
-                  above.
-                </p>
-              </div>
-              <div className="flex-1" />
-              <span className="rounded-pill border border-line px-3.5 py-1.5 text-[11.5px] font-bold text-fg-muted">
-                Weekends run lighter
-              </span>
-            </div>
+            <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">Bookings per day</p>
 
             <div className="mt-4 flex h-[158px] items-end gap-2.5">
-              {BOOKINGS_PER_DAY.map((day) => (
+              {byDay.map((day) => (
                 <div key={day.label} className="flex flex-1 flex-col items-center justify-end">
                   <p className="m-0 mb-1.5 text-[11px] font-bold text-fg-subtle">{day.count}</p>
                   <div
                     data-testid="daily-bar"
-                    style={{ height: `${(day.count / 97) * 130}px` }}
+                    style={{ height: `${(day.count / maxDay) * 130}px` }}
                     className="w-full rounded-t-[6px] rounded-b-[3px] bg-accent"
                   />
                   <p className="m-0 mt-1.5 text-[10.5px] text-fg-subtle">{day.label}</p>
@@ -142,66 +185,35 @@ export default function AnalyticsPage() {
               </button>
             </div>
 
-            <div className="mt-3.5 grid grid-cols-4 gap-3.5">
-              <AcquisitionTile label="Joined" value={String(MEMBER_ACQUISITION.joined)} />
-              <AcquisitionTile label="Cancelled" value={String(MEMBER_ACQUISITION.cancelled)} />
-              <AcquisitionTile label="Net change" value={`+${MEMBER_ACQUISITION.netChange}`} highlighted />
-              <AcquisitionTile label="Churn in period" value={`${MEMBER_ACQUISITION.churnPct}%`} />
-            </div>
-
-            <div className="mt-3.5 flex items-center gap-3.5">
-              <p className="m-0 w-[190px] text-[12.5px] font-bold text-fg-muted">Twelve-month retention</p>
-              <div className="h-2.5 flex-1 overflow-hidden rounded-pill bg-panel-black">
-                <div
-                  className="h-2.5 rounded-pill bg-accent"
-                  style={{ width: `${MEMBER_ACQUISITION.retentionPct}%` }}
-                />
+            {summary ? (
+              <div className="mt-3.5 grid grid-cols-3 gap-3.5">
+                <AcquisitionTile label="Joined" value={String(summary.joined)} />
+                <AcquisitionTile label="Left" value={String(summary.left)} />
+                <AcquisitionTile label="Net change" value={`${summary.joined - summary.left >= 0 ? "+" : ""}${summary.joined - summary.left}`} highlighted />
               </div>
-              <p className="m-0 w-11 text-right text-[13px] font-extrabold text-fg">
-                {MEMBER_ACQUISITION.retentionPct}%
-              </p>
-            </div>
+            ) : null}
           </div>
         </div>
 
         <div className="h-fit w-[344px] shrink-0 rounded-content border border-line bg-dark-card px-5.5 py-5">
           <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">
-            Revenue · {ANALYTICS_PERIOD_LABEL}
+            Revenue by partner · {formatDateRangeLabel(range)}
           </p>
 
-          {REVENUE_LINES.map((line) => (
-            <div key={line.label} className="flex items-center gap-3 border-t border-[rgba(58,50,42,0.6)] py-3 first:mt-2.5">
+          {topPartners.map((line) => (
+            <div key={line.loungeId} className="flex items-center gap-3 border-t border-[rgba(58,50,42,0.6)] py-3 first:mt-2.5">
               <div className="min-w-0 flex-1">
-                <p className="m-0 text-[12.5px] font-bold text-fg">{line.label}</p>
-                <p className="m-0 mt-0.5 text-[11px] text-fg-subtle">{line.detail}</p>
+                <p className="m-0 text-[12.5px] font-bold text-fg">{line.loungeName}</p>
+                <p className="m-0 mt-0.5 text-[11px] text-fg-subtle">{line.bookings} bookings</p>
               </div>
-              <p className="m-0 text-[13px] font-bold text-fg">{formatCurrency(line.amount)}</p>
+              <p className="m-0 text-[13px] font-bold text-fg">{formatCurrency(line.grossRevenueCents / 100)}</p>
             </div>
           ))}
 
-          <div className="flex items-center gap-3 border-t border-line py-3">
-            <p className="m-0 flex-1 text-[12.5px] font-bold text-fg-muted">Gross</p>
-            <p className="m-0 text-[13px] font-bold text-fg-muted">{formatCurrency(NETWORK_METRICS.grossRevenue)}</p>
-          </div>
-          <div className="flex items-center gap-3 border-t border-[rgba(58,50,42,0.6)] py-3">
-            <div className="min-w-0 flex-1">
-              <p className="m-0 text-[12.5px] font-bold text-fg">Attributed to partners</p>
-              <p className="m-0 mt-0.5 text-[11px] text-fg-subtle">{PARTNER_ATTRIBUTION_NOTE}</p>
-            </div>
-            <p className="m-0 text-[13px] font-bold text-fg-muted">
-              −{formatCurrency(NETWORK_METRICS.partnerAttribution)}
-            </p>
-          </div>
-
           <div className="mt-3.5 flex items-center gap-3 rounded-2xl border border-gold-600 bg-panel-black px-4 py-3.5">
-            <p className="m-0 flex-1 text-[12.5px] font-bold text-fg">Net to LuxePass</p>
-            <p className="m-0 font-display text-xl text-accent">{formatCurrency(NETWORK_METRICS.netRevenue)}</p>
+            <p className="m-0 flex-1 text-[12.5px] font-bold text-fg">Gross revenue</p>
+            <p className="m-0 font-display text-xl text-accent">{formatCurrency(grossRevenueCents / 100)}</p>
           </div>
-
-          <p className="mt-3.5 text-[11.5px] text-fg-subtle">
-            Partner attribution follows each agreement: the whole day pass, $38.00 per membership visit and half of
-            every no-show fee. The Ainsworth&apos;s $8,616.50 is the largest single share.
-          </p>
 
           <button
             type="button"

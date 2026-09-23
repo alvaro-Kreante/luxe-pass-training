@@ -465,6 +465,12 @@ verify_jwt = false
 [functions.send-partner-digest]
 verify_jwt = false
 
+# Story 8.2 — el cron `dispatch_scheduled_reports` (pg_net, ver
+# supabase/schemas/admin_reports.sql) llama a esta function desde Postgres,
+# mismo motivo/mecanismo que send-partner-digest.
+[functions.send-admin-report]
+verify_jwt = false
+
 [analytics]
 enabled = true
 port = 54337
