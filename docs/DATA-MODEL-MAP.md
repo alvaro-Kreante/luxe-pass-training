@@ -165,20 +165,21 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
   Epic 7 **decidió conscientemente no usarla tampoco** (el AC de Story 7.2
   es "recibir un email", no una fila en el centro de notificaciones del
   miembro — se conectó con el mismo patrón de Database Webhook/pg_cron que
-  Story 5.3, ver "Epic 7" más abajo); Epic 9 (confirmación de referido)
-  sigue sin conectarse a ella todavía.
+  Story 5.3, ver "Epic 7" más abajo); Epic 9 **sí la usa** desde el 23 sept
+  2026: "… joined" (alta de un referido), "Your referral day pass is ready"
+  (premio acreditado) y el aviso de renovación de membresía (pg_cron) son
+  filas reales de esta tabla.
 - Story 6.1 reutiliza `bookings` (Epic 4), sin tabla propia — `cancel_booking`
   (RPC) y columnas `cancellation_fee_cents`/`cancelled_at` viven en
   `bookings.sql`. "Support contact" sigue cruzando a `support_tickets`
   (Epic 8, sin conectar).
-- Story 6.3 extiende `profiles` (ya real): `membership_status` (stub mínimo,
-  Active/Inactive — el resto de membresía sigue en Epic 9),
+- Story 6.3 extiende `profiles` (ya real): `membership_status` (stub mínimo
+  Active/Inactive; desde Epic 9 es un espejo de `memberships`, ver abajo),
   `preferred_amenities`, `privacy_*` (4 columnas), `deleted_at` (soft-delete).
   Favoritos → tabla puente `member_favorite_lounges` (nace aquí, dueño Epic 6,
-  ya real, cruza a `lounges`). Membership status ya no es "solo leer" — nace
-  con su propio stub; referral code sharing sigue sin tabla `referrals`
-  propia (Epic 9, sin conectar): `referralCodeFor` es determinista, no
-  persistido.
+  ya real, cruza a `lounges`). El código de referido pasó a
+  `profiles.referral_code` (persistido, único) al conectar Epic 9 —
+  `referralCodeFor` (determinista, sin persistir) se retiró.
 
 ### Epic 7 — Partner Dashboard
 
@@ -250,11 +251,38 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
 
 ### Epic 9 — Membership & Referrals
 
-- `memberships` (**nace aquí**, dueño) — tier, precio mensual/anual,
-  renewal_date, auto_renew, status. FK 1:1 a `profiles`.
-- `referrals` (**nace aquí**, dueño) — referrer_id, referido (email o
-  user_id), código, estado, reward_status ("pending" — la propia historia 9.2
-  lo deja abierto).
+**Conectado** (23 sept 2026 — ver `docs/design/COMPONENT-MAP.md` "Backend
+real — Epic 9"). Decisiones de producto tomadas con el usuario antes de
+implementar: el miembro nace sin membresía hasta elegir plan; alta y subida
+mensual → anual son un cobro puntual real de Stripe (no Stripe Billing); el
+premio de referido se acredita con el primer pago real liquidado del amigo;
+el amigo llega por `/join/[code]` → `/signup?ref=` (metadatos de Auth).
+
+- `memberships` (**nace aquí**, dueño, ya real) — `member_id` (PK, FK 1:1 a
+  `profiles`), `plan` (monthly/annual), `status` (active/expired),
+  `started_at`, `current_period_start`/`_end` (renovación / próximo cargo),
+  `auto_renew`, `renewal_notice_sent_at`. Sin escrituras de cliente: la
+  activa el trigger `apply_membership_payment` sobre `payments`, y
+  `profiles.membership_status` (Epic 6) pasa a ser su espejo.
+- `payments.membership_plan` (columna nueva en una tabla de Epic 4) — marca
+  un pago como compra de plan.
+- `referrals` (**nace aquí**, dueño, ya real) — `referrer_id`, `referee_id`
+  (único: "only the first code counts"), `code`, instantánea de nombre/email
+  del amigo, `status` (pending/credited), `joined_at`, `credited_at`. Nace
+  al crear el perfil del amigo; no hay fila por invitación a un email
+  concreto (`Share.dc.html` no lo pide).
+- `referral_shares` (**nace aquí**, dueño, ya real) — cada vez que el
+  miembro comparte su código ("Invitations sent").
+- `profiles.referral_code` (columna nueva en una tabla de Epic 1) — código
+  único "AR-SOLEIL-24", junto a `membership_status`/`stripe_customer_id`
+  protegido contra escritura del propio miembro
+  (`guard_profile_managed_columns`).
+- Cruces: `bookings`/`payments` (visitas del mes y crédito del premio),
+  `notifications` (Epic 6). `lounge_availability` (restricciones por plan)
+  no llegó a cruzarse — los dos planes dan el mismo acceso
+  (`DESIGN-SYSTEM.md` §6 Fase 9). Day passes sin tabla propia: se derivan de
+  `referrals` + `profiles.birth_month`, y aún no se gastan (ver
+  `docs/PENDIENTES.md` §2.12).
 
 ---
 
@@ -276,8 +304,9 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
 | `support_tickets` / `support_ticket_messages` | 8 | 1/9 (member), 4 (`bookings`) |
 | `lounge_content_submissions` | 8 | 2/3 (`lounges`) |
 | `scheduled_reports` | 8 | — |
-| `memberships` | 9 | 3 (restricciones), 6 (status) |
-| `referrals` | 9 | 6 (sharing) |
+| `memberships` | 9 | 6 (espejo en `profiles.membership_status`), 8 (ficha de miembro, sin enriquecer aún) |
+| `referrals` | 9 | 6 (sharing, notificaciones) |
+| `referral_shares` | 9 | — |
 
 **Resuelto** (22 sept 2026, al empezar Epic 7 — ver arriba "Epic 7 — Partner
 Dashboard"): el rol (member / partner / admin) sobre `auth.users` se
