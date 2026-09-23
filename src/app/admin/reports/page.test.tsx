@@ -155,11 +155,21 @@ describe("Export data (/admin/reports)", () => {
     render(<ExportPage />);
 
     await screen.findByRole("heading", { name: "Export data" });
-    await user.click(screen.getByRole("radio", { name: /Email it to me/ }));
-    expect(screen.getByRole("button", { name: "Email me the CSV" })).toBeInTheDocument();
-
     await user.click(screen.getByRole("radio", { name: /Save as a scheduled report/ }));
     expect(screen.getByRole("button", { name: "Save scheduled report" })).toBeInTheDocument();
+  });
+
+  it("keeps Email it to me disabled — send-admin-report needs a Vault secret the browser can't hold", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ExportPage />);
+
+    await screen.findByRole("heading", { name: "Export data" });
+    const emailOption = screen.getByRole("radio", { name: /Email it to me/ });
+    expect(emailOption).toHaveAttribute("aria-disabled", "true");
+
+    await user.click(emailOption);
+    expect(emailOption).toHaveAttribute("aria-checked", "false");
+    expect(screen.getByRole("button", { name: "Download CSV" })).toBeInTheDocument();
   });
 
   it("preselects Save as a scheduled report from ?delivery=schedule", async () => {

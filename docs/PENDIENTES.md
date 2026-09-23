@@ -432,19 +432,41 @@ correspondientes y el alta manual de los 4 secretos de Vault en
 
 Mismo hueco que Epic 5/6/7 antes de sus PR de despliegue dedicados:
 `.github/workflows/deploy.yml` no conoce `stripe-refund-payment` ni
-`send-admin-report`, y los 2 secretos de Vault
-(`admin_report_webhook_url`/`_secret`) solo existen en el Docker local
-(dados de alta a mano en esta rama, ver
-`supabase/schemas/admin_reports.sql`). `stripe-refund-payment` no necesita
-un secreto de Vault propio — reutiliza `STRIPE_SECRET_KEY`, ya presente en
-`deploy.yml` desde Epic 4.
+`send-admin-report`. `stripe-refund-payment` no necesita un secreto de
+Vault propio — reutiliza `STRIPE_SECRET_KEY`, ya presente en `deploy.yml`
+desde Epic 4.
 
-**Desbloquea:** un PR aparte (mismo patrón que Epic 5/6/7) que amplíe
-`deploy.yml` con `supabase functions deploy stripe-refund-payment` +
-`supabase secrets set` + `supabase functions deploy send-admin-report
---no-verify-jwt` en `migrate-dev`/`migrate-prod`, más el secret de GitHub
+`send-admin-report` sí necesita 2 secretos de Vault
+(`admin_report_webhook_url`/`_secret`) — ya dados de alta y verificados
+de punta a punta en el Docker local de esta rama (ver CLAUDE.md
+§"Reportes programados reales"). **Pendiente explícito: el alta manual
+de esos mismos 2 secretos en `luxepass-dev`/`luxepass-prod` vía Studio**
+— no se ha hecho todavía, y de nada sirve hasta que exista también el PR
+de `deploy.yml` de abajo (sin la Edge Function desplegada, el cron sigue
+sin nada que llamar). El SQL a correr en cada proyecto remoto está en
+`CLAUDE.md` §"Reportes programados reales (pg_cron, Story 8.2)".
+
+**Desbloquea (cron `dispatch_scheduled_reports`):** un PR aparte (mismo
+patrón que Epic 5/6/7) que amplíe `deploy.yml` con `supabase functions
+deploy stripe-refund-payment` + `supabase secrets set` + `supabase
+functions deploy send-admin-report --no-verify-jwt` en
+`migrate-dev`/`migrate-prod`, más el secret de GitHub
 `ADMIN_REPORT_WEBHOOK_SECRET_DEV`/`_PROD` y el alta manual de los 2
 secretos de Vault en `luxepass-dev`/`luxepass-prod` vía Studio.
+
+**"Email it to me" (`/admin/reports`) queda deshabilitado en la UI, no
+solo pendiente de despliegue.** A diferencia del cron (que sí puede leer
+el secreto de Vault desde Postgres), este botón invocaría
+`send-admin-report` directamente desde el navegador del admin — y esa
+function solo acepta `x-webhook-secret`, un secreto que no puede vivir en
+el cliente sin dejar de ser un secreto. Se deshabilitó (`disabled` en
+`PaymentOptionRow`, visible con "Coming soon") en vez de dejarlo roto en
+silencio. Arreglarlo de verdad implica una segunda vía de autenticación
+para `send-admin-report` (p. ej. una RPC `SECURITY DEFINER` que verifique
+`has_role('admin')` sobre el llamador y dispare el mismo `pg_net` que ya
+usa el cron, en vez de que el cliente invoque la Edge Function
+directamente) — no solo el alta de Vault de arriba. Ver
+`docs/design/COMPONENT-MAP.md` tabla de desviaciones.
 
 ---
 
