@@ -3,7 +3,7 @@ import { CalendarClock, Clock, CreditCard } from "lucide-react";
 import { Modal } from "@/components/patterns/modal";
 import { Button } from "@/components/ui/button";
 import { DetailRow } from "@/components/ui/detail-row";
-import { COMPLIMENTARY_DAY_PASSES_COUNT, type MembershipAccount } from "@/lib/membership";
+import type { MembershipAccount } from "@/lib/membership";
 
 /**
  * "Turn off auto-renewal?" — `AutoRenew.dc.html`. Story 9.1 — "Renewal date
@@ -58,21 +58,30 @@ export function AutoRenewModal({
           icon={<CalendarClock size={18} strokeWidth={1.7} className="text-accent-strong" aria-hidden />}
           text={
             <>
-              Your <span className="font-bold text-fg">{account.visitsIncluded} included visits a month</span> stop
-              on {account.renewalOrChargeDateLabel}. After that, day passes are charged at the full rate.
+              Your <span className="font-bold text-fg">{account.visitsIncluded} included visits a month</span> stop on{" "}
+              {account.renewalOrChargeDateLabel}. After that, day passes are charged at the full rate.
             </>
           }
         />
-        <div className="my-1 h-px bg-line" />
-        <DetailRow
-          icon={<CreditCard size={18} strokeWidth={1.7} className="text-accent-strong" aria-hidden />}
-          text={
-            <>
-              The <span className="font-bold text-fg">{COMPLIMENTARY_DAY_PASSES_COUNT} complimentary day passes</span>{" "}
-              you have not used expire with the membership.
-            </>
-          }
-        />
+        {account.complimentaryDayPassesCount > 0 ? (
+          <>
+            <div className="my-1 h-px bg-line" />
+            <DetailRow
+              icon={<CreditCard size={18} strokeWidth={1.7} className="text-accent-strong" aria-hidden />}
+              text={
+                <>
+                  The{" "}
+                  <span className="font-bold text-fg">
+                    {account.complimentaryDayPassesCount === 1
+                      ? "complimentary day pass"
+                      : `${account.complimentaryDayPassesCount} complimentary day passes`}
+                  </span>{" "}
+                  you have not used expire with the membership.
+                </>
+              }
+            />
+          </>
+        ) : null}
         <div className="my-1 h-px bg-line" />
         <DetailRow
           icon={<Clock size={18} strokeWidth={1.7} className="text-accent-strong" aria-hidden />}
@@ -91,8 +100,7 @@ export function AutoRenewModal({
           <div className="min-w-0 flex-1">
             <p className="m-0 text-[13.5px] font-bold text-fg">Pause for up to 3 months</p>
             <p className="m-0 mt-0.5 text-xs leading-[1.5] text-fg-subtle">
-              Billing stops. Your history, your favorites and the code {account.referralCode} stay exactly as they
-              are.
+              Billing stops. Your history, your favorites and the code {account.referralCode} stay exactly as they are.
             </p>
           </div>
         </div>

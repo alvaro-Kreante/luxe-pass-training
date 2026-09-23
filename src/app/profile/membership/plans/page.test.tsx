@@ -1,51 +1,108 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import { fetchMembership } from "@/lib/membership";
+import { createClient } from "@/lib/supabase/client";
+import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
+import { giveTestMemberSavedCard, grantTestMembership } from "@/lib/testing/membership-fixture";
 
 import PlansPage from "./page";
 
 /**
  * Story 9.1 — "Upgrade options to monthly subscribers and pricing (monthly →
- * yearly price)". `Plans.dc.html`.
+ * yearly price)". `Plans.dc.html`, backend real. Sin membresía, la misma
+ * pantalla sirve para elegir plan (decisión de producto, 23 sept 2026 — sin
+ * artboard propio): ninguna card lleva "Your plan" y las dos ofrecen
+ * "Choose …", que abre el modal de `Upgrade.dc.html` sin prorrateo.
  */
-let query = new URLSearchParams();
-
+const push = vi.fn();
 vi.mock("next/navigation", () => ({
-  useSearchParams: () => query,
   usePathname: () => "/profile/membership/plans",
+  useRouter: () => ({ push }),
 }));
 
-beforeEach(() => {
-  query = new URLSearchParams();
-});
+beforeEach(() => push.mockReset());
+
+async function freshMember(label: string) {
+  const supabase = createClient();
+  const email = `plans-page-${Date.now()}-${label}@ensoleil-test.com`;
+  const user = await signUpConfirmedMemberAndSignIn(supabase, email, "EnSoleil!2026");
+  return { supabase, user, email };
+}
 
 describe("comparación de planes", () => {
-  it("muestra el precio mensual y el anual", () => {
+  it("muestra el precio mensual, el anual y la tabla comparativa", async () => {
+    await freshMember("compare");
     render(<PlansPage />);
 
-    expect(screen.getByText("$249.00")).toBeInTheDocument();
+    expect(await screen.findByText("$249.00")).toBeInTheDocument();
     expect(screen.getAllByText("$2,400.00").length).toBeGreaterThan(0);
-  });
-
-  it("incluye la tabla comparativa con una fila de valor y la fila de total", () => {
-    render(<PlansPage />);
-
-    expect(screen.getByText("Included visits each month")).toBeInTheDocument();
     expect(screen.getByText("What twelve months costs")).toBeInTheDocument();
-    expect(screen.getByText("$2,988.00")).toBeInTheDocument();
   });
+});
 
-  it("por defecto, Annual lleva el chip 'Your plan'", () => {
+describe("sin membresía — elegir plan", () => {
+  it("ninguna card es la actual y las dos se pueden elegir", async () => {
+    await freshMember("choose");
     render(<PlansPage />);
 
-    expect(screen.getByText("Your plan")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Choose monthly" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Choose annual" })).toBeInTheDocument();
+    expect(screen.queryByText("Your plan")).not.toBeInTheDocument();
+  });
+
+  it("elegir el anual abre la confirmación por el precio completo", async () => {
+    await freshMember("choose-modal");
+    const user = userEvent.setup({ delay: null });
+    render(<PlansPage />);
+
+    await user.click(await screen.findByRole("button", { name: "Choose annual" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText("Confirm your new plan")).toBeInTheDocument();
+    expect(await within(dialog).findByRole("button", { name: "Pay $2,400.00 and join" })).toBeInTheDocument();
+    expect(within(dialog).queryByText(/unused days/)).not.toBeInTheDocument();
+  });
+
+  it("pagar con la tarjeta guardada activa el plan y vuelve a Membership", async () => {
+    const { supabase, user, email } = await freshMember("choose-pay");
+    await giveTestMemberSavedCard(user.id, email);
+    const userEvents = userEvent.setup({ delay: null });
+    render(<PlansPage />);
+
+    await userEvents.click(await screen.findByRole("button", { name: "Choose monthly" }));
+    const pay = await screen.findByRole("button", { name: "Pay $249.00 and join" });
+    await waitFor(() => expect(pay).toBeEnabled());
+    await userEvents.click(pay);
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/profile/membership"), { timeout: 15000 });
+    const membership = await fetchMembership(supabase);
+    expect(membership.status).toBe("active");
+    expect(membership.plan).toBe("monthly");
+  }, 30000);
+});
+
+describe("con membresía", () => {
+  it("el plan anual contratado lleva 'Your plan' y la bajada a mensual queda inerte", async () => {
+    const { user } = await freshMember("annual");
+    await grantTestMembership(user.id, "annual");
+    render(<PlansPage />);
+
+    expect(await screen.findByText("Your plan")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Current plan" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Switch to monthly" })).toBeInTheDocument();
   });
 
-  it("con ?plan=monthly, el chip 'Your plan' se mueve a Monthly", () => {
-    query = new URLSearchParams({ plan: "monthly" });
+  it("desde el mensual, 'Switch to annual' abre la subida con prorrateo", async () => {
+    const { user } = await freshMember("monthly");
+    await grantTestMembership(user.id, "monthly");
+    const userEvents = userEvent.setup({ delay: null });
     render(<PlansPage />);
 
-    expect(screen.getByText("Your plan")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Switch to annual" })).toBeInTheDocument();
+    await userEvents.click(await screen.findByRole("button", { name: "Switch to annual" }));
+
+    const dialog = await screen.findByRole("dialog");
+    expect(await within(dialog).findByRole("button", { name: /^Pay \$[\d,.]+ and switch$/ })).toBeInTheDocument();
   });
 });

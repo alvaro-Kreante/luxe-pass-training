@@ -17,7 +17,6 @@ import {
   isFavoriteLounge,
   parseDateOfBirth,
   reactivateAccountIfDeleted,
-  referralCodeFor,
   removeFavoriteLounge,
   requestAccountDeletion,
   updateInterests,
@@ -89,15 +88,7 @@ describe("fetchMembershipStatus", () => {
   it("AC 'Membership status Active/Inactive' — nace 'active'", async () => {
     const { supabase } = await signUpFreshMember("membership-status");
 
-    expect(await fetchMembershipStatus(supabase)).toBe("active");
-  });
-});
-
-describe("referralCodeFor", () => {
-  it("AC 'Referral code sharing functionality' — determinista y con las iniciales del miembro", () => {
-    const code = referralCodeFor("Jordan Reyes", "11111111-1111-1111-1111-111111111111");
-    expect(code).toMatch(/^JR-SOLEIL-\d{2}$/);
-    expect(referralCodeFor("Jordan Reyes", "11111111-1111-1111-1111-111111111111")).toBe(code);
+    expect(await fetchMembershipStatus(supabase)).toBe("inactive");
   });
 });
 

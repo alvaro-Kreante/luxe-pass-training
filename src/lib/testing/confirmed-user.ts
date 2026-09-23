@@ -14,6 +14,7 @@ export async function signUpConfirmedAndSignIn(
   supabase: SupabaseClient,
   email: string,
   password: string,
+  options: { userMetadata?: Record<string, unknown> } = {},
 ) {
   const admin = createAdminClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -23,6 +24,7 @@ export async function signUpConfirmedAndSignIn(
     email,
     password,
     email_confirm: true,
+    user_metadata: options.userMetadata,
   });
   if (createError) throw createError;
 
@@ -43,8 +45,9 @@ export async function signUpConfirmedMemberAndSignIn(
   supabase: SupabaseClient,
   email: string,
   password: string,
+  options: { userMetadata?: Record<string, unknown>; fullName?: string } = {},
 ) {
-  await signUpConfirmedAndSignIn(supabase, email, password);
+  await signUpConfirmedAndSignIn(supabase, email, password, options);
 
   const {
     data: { user },
@@ -53,7 +56,7 @@ export async function signUpConfirmedMemberAndSignIn(
 
   const { error } = await supabase.from("profiles").insert({
     id: user.id,
-    full_name: "Test Member",
+    full_name: options.fullName ?? "Test Member",
     phone: "+15555550100",
     city: "New York",
     industry: "Testing",

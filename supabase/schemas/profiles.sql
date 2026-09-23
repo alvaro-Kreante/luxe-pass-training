@@ -31,12 +31,18 @@ create table if not exists public.profiles (
   emergency_contact_name text,
   emergency_contact_relation text,
   emergency_contact_phone text,
-  -- Story 6.3 (Epic 6) — "Membership status Active/Inactive". El resto de
-  -- `MEMBERSHIP_SUMMARY` (plan, renovación, visitas) sigue sin conectar:
-  -- dueño real es `memberships` (Epic 9, todavía mockup) — ver
-  -- docs/DATA-MODEL-MAP.md. Esta columna es un stub mínimo consciente para
-  -- no bloquear Epic 6 en Epic 9; a reconciliar cuando Epic 9 se conecte.
-  membership_status text not null default 'active' check (membership_status in ('active', 'inactive')),
+  -- Story 6.3 (Epic 6) — "Membership status Active/Inactive". Desde Epic 9
+  -- es un ESPEJO de `memberships` (trigger `sync_profile_membership_status`,
+  -- ver memberships.sql): un miembro nace 'inactive' hasta elegir plan
+  -- (decisión de producto, 23 sept 2026). Se conserva la columna porque
+  -- Epic 6/8 ya la leen; el miembro no puede escribirla
+  -- (`guard_profile_managed_columns`, referrals.sql).
+  membership_status text not null default 'inactive' check (membership_status in ('active', 'inactive')),
+  -- Story 9.2 — "Unique referral code generation" ("AR-SOLEIL-24"). Lo
+  -- asigna `guard_profile_managed_columns` (referrals.sql) al crear el
+  -- perfil; nullable solo para perfiles anteriores a Epic 9, que lo reciben
+  -- en su próximo UPDATE o vía `my_referral_code()`.
+  referral_code text unique,
   -- Story 6.3 — "Preferred amenities selection" (`Preferences.dc.html`).
   -- Reutiliza los ids de `lib/amenities.ts` (Story 2.2), sin CHECK contra esa
   -- lista porque vive en TS, no en SQL — igual criterio que `interests`, ya

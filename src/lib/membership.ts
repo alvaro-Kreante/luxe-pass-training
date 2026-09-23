@@ -1,17 +1,23 @@
-import { MEMBERSHIP_SUMMARY, REFERRAL_CODE } from "./profile";
-import { VISITS_THIS_MONTH } from "./passes";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import { TODAY } from "./availability";
+import { ensureReferralCode, fetchReferralOverview } from "./referrals";
+import { listSavedPaymentMethods, type SavedPaymentMethod } from "./stripe-payments";
 
 /**
- * Story 9.1 (Membership). Sin backend: los dos planes, la cuenta anual de
- * Alexandra Rivas (reutiliza `MEMBERSHIP_SUMMARY`/`REFERRAL_CODE` de
- * `lib/profile.ts` y `VISITS_THIS_MONTH` de `lib/passes.ts`) y la cuenta
- * mensual de Naomi Feldstein son datos de muestra deterministas.
+ * Story 9.1 (Membership) — conectada a Supabase real (`memberships`, nace en
+ * Epic 9, ver `supabase/schemas/memberships.sql`) y a Stripe real en modo
+ * test (Edge Function `stripe-membership-checkout`). Decisiones de producto
+ * del 23 sept 2026: el miembro nace sin membresía hasta elegir plan, y
+ * elegir/subir de plan es un cobro puntual (no Stripe Billing) — ver
+ * `docs/design/COMPONENT-MAP.md` "Backend real — Epic 9".
  *
  * `DESIGN-SYSTEM.md` §6 Fase 9 fija el modelo de negocio: un plan mensual de
  * $249.00 frente a los $2,400.00 anuales ya fijados en la Fase 5 — el anual
  * ahorra $588.00 al año ($249 × 12 = $2,988). Los dos planes dan exactamente
  * lo mismo; solo cambia la periodicidad, el precio y que el anual congela la
- * tarifa durante el término.
+ * tarifa durante el término. Los precios en centavos están duplicados en
+ * `membership_change_quote` (SQL no lee TS).
  */
 
 export type PlanId = "annual" | "monthly";
@@ -21,9 +27,206 @@ export const ANNUAL_PRICE = 2400.0;
 export const MONTHLY_ANNUALIZED_PRICE = 2988.0;
 export const ANNUAL_SAVINGS = 588.0;
 export const DAY_PASS_PRICE = 75.0;
+export const MEMBERSHIP_VISITS_INCLUDED = 8;
+
+export function priceForPlan(plan: PlanId): number {
+  return plan === "annual" ? ANNUAL_PRICE : MONTHLY_PRICE;
+}
+
+/* ------------------------------------------------------------------ */
+/* Formato — siempre en UTC, igual que el resto de la app               */
+/* ------------------------------------------------------------------ */
+
+/** "November 2025" — "Member since". */
+export function formatMonthYear(iso: string): string {
+  return new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" }).format(new Date(iso));
+}
+
+/** "November 3, 2026" — renovación / próximo cargo. */
+export function formatLongDate(iso: string): string {
+  return new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(
+    new Date(iso),
+  );
+}
+
+/** "October 3" — el aviso de un mes antes (`Main.dc.html`). */
+export function formatMonthDay(iso: string): string {
+  return new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", timeZone: "UTC" }).format(new Date(iso));
+}
+
+/** "Sept 12, 2026" — rango del nuevo término (`Upgrade.dc.html`). */
+export function formatShortDate(iso: string): string {
+  const formatted = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(iso));
+  return formatted.replace(/^Sep /, "Sept ");
+}
+
+/* ------------------------------------------------------------------ */
+/* Backend real — `memberships`                                         */
+/* ------------------------------------------------------------------ */
+
+export interface MemberMembership {
+  status: "active" | "inactive";
+  plan: PlanId | null;
+  startedAt: string | null;
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+  autoRenew: boolean;
+}
+
+interface MembershipRow {
+  plan: PlanId;
+  status: "active" | "expired";
+  started_at: string;
+  current_period_start: string;
+  current_period_end: string;
+  auto_renew: boolean;
+}
+
+/** AC "Clear membership display in profile (active/inactive)". Sin fila (o vencida) = inactiva. */
+export async function fetchMembership(supabase: SupabaseClient): Promise<MemberMembership> {
+  const { data, error } = await supabase
+    .from("memberships")
+    .select("plan, status, started_at, current_period_start, current_period_end, auto_renew")
+    .maybeSingle();
+  if (error) throw error;
+
+  const row = data as MembershipRow | null;
+  if (!row || row.status !== "active") {
+    return {
+      status: "inactive",
+      plan: null,
+      startedAt: row?.started_at ?? null,
+      currentPeriodStart: null,
+      currentPeriodEnd: null,
+      autoRenew: false,
+    };
+  }
+
+  return {
+    status: "active",
+    plan: row.plan,
+    startedAt: row.started_at,
+    currentPeriodStart: row.current_period_start,
+    currentPeriodEnd: row.current_period_end,
+    autoRenew: row.auto_renew,
+  };
+}
+
+export interface MembershipQuote {
+  kind: "join" | "upgrade";
+  plan: PlanId;
+  termStart: string;
+  termEnd: string;
+  chargeCents: number;
+  creditCents: number;
+  creditDays: number;
+  dueCents: number;
+}
+
+interface QuoteRow {
+  kind: "join" | "upgrade";
+  plan: PlanId;
+  term_start: string;
+  term_end: string;
+  charge_cents: number;
+  credit_cents: number;
+  credit_days: number;
+  due_cents: number;
+}
+
+/** AC "Upgrade options... (monthly → yearly price)". El servidor decide el importe, no el navegador. */
+export async function fetchMembershipQuote(supabase: SupabaseClient, plan: PlanId): Promise<MembershipQuote> {
+  const { data, error } = await supabase.rpc("membership_change_quote", { p_plan: plan });
+  if (error) throw error;
+
+  const row = (data as QuoteRow[])[0];
+  if (!row) throw new Error("No quote returned");
+  return {
+    kind: row.kind,
+    plan: row.plan,
+    termStart: row.term_start,
+    termEnd: row.term_end,
+    chargeCents: row.charge_cents,
+    creditCents: row.credit_cents,
+    creditDays: row.credit_days,
+    dueCents: row.due_cents,
+  };
+}
+
+export interface MembershipChargeResult {
+  paymentId: string;
+  status: "succeeded" | "failed";
+  error: string | null;
+}
+
+/** Tarjeta guardada — cobro puntual servidor a servidor; el plan se activa en la misma respuesta. */
+export async function chargeMembershipWithSavedCard(
+  supabase: SupabaseClient,
+  request: { plan: PlanId; paymentMethodId: string },
+): Promise<MembershipChargeResult> {
+  const { data, error } = await supabase.functions.invoke("stripe-membership-checkout", {
+    body: { action: "charge_saved", ...request },
+  });
+  if (error) throw error;
+  return data as MembershipChargeResult;
+}
+
+/** Tarjeta nueva — Checkout Session `ui_mode: "elements"`; el plan se activa cuando el webhook liquida el pago. */
+export async function createMembershipCheckoutSession(
+  supabase: SupabaseClient,
+  request: { plan: PlanId; saveCard: boolean },
+): Promise<{ clientSecret: string; paymentId: string }> {
+  const { data, error } = await supabase.functions.invoke("stripe-membership-checkout", {
+    body: { action: "create_session", ...request },
+  });
+  if (error) throw error;
+  return data as { clientSecret: string; paymentId: string };
+}
+
+/**
+ * Tras `checkout.confirm()` el webhook de Stripe llega de forma asíncrona —
+ * mismo reintento corto que `findSettledPayment` en `send-booking-receipt`.
+ */
+export async function waitForMembershipPlan(
+  supabase: SupabaseClient,
+  plan: PlanId,
+  { attempts = 10, delayMs = 1000 }: { attempts?: number; delayMs?: number } = {},
+): Promise<boolean> {
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const membership = await fetchMembership(supabase);
+    if (membership.status === "active" && membership.plan === plan) return true;
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+  }
+  return false;
+}
+
+/** AC "Renewal date and auto-renewal settings". Apagarla cancela sin tarifa las reservas posteriores al término. */
+export async function setMembershipAutoRenew(supabase: SupabaseClient, autoRenew: boolean): Promise<void> {
+  const { error } = await supabase.rpc("set_membership_auto_renew", { p_auto_renew: autoRenew });
+  if (error) throw error;
+}
+
+/** "Visits this month" — reservas del mes de `todayIso` (el "hoy" de mockup) sin day pass pagado detrás. */
+export async function fetchVisitsThisMonth(
+  supabase: SupabaseClient,
+  todayIso: string = TODAY,
+): Promise<{ used: number; included: number }> {
+  const { data, error } = await supabase.rpc("membership_visits_in_month", { p_month: todayIso });
+  if (error) throw error;
+  return { used: data as number, included: MEMBERSHIP_VISITS_INCLUDED };
+}
+
+/* ------------------------------------------------------------------ */
+/* Cuenta completa para `/profile/membership`                          */
+/* ------------------------------------------------------------------ */
 
 export interface BillingCard {
-  brand: "visa" | "mastercard";
+  brand: string;
   last4: string;
   expiry: string;
 }
@@ -31,59 +234,128 @@ export interface BillingCard {
 export interface MembershipAccount {
   memberName: string;
   initials: string;
-  plan: PlanId;
+  status: "active" | "inactive";
+  plan: PlanId | null;
   memberSince: string;
   /** "November 3, 2026" (anual, fecha de renovación) u "October 4, 2026" (mensual, próximo cargo). */
   renewalOrChargeDateLabel: string;
-  billingCard: BillingCard;
+  /** "October 3" — un mes antes de la renovación del anual. */
+  renewalNoticeDateLabel: string;
+  /** "October 3" — hasta cuándo está pagado el término actual (`MonthlyPlan.dc.html`). */
+  paidUpToLabel: string;
+  /** Días que quedan del término actual — los que acredita la subida a anual (mismo cálculo que `membership_change_quote`). */
+  unusedDaysInTerm: number;
+  billingCard: BillingCard | null;
   autoRenewal: boolean;
   visitsUsed: number;
   visitsIncluded: number;
   visitsResetLabel: string;
   referralCode: string;
-  invoiceCount?: number;
   referralsSentCount: number;
+  referralsSummary: string;
+  complimentaryDayPassesCount: number;
+  complimentaryDayPassesNote: string;
+  invoiceCount?: number;
 }
 
-/**
- * `MEMBERSHIP_SUMMARY.memberSince` corrige "March 2026" (Epic 6) a
- * "November 2025" en `lib/profile.ts` — ver COMPONENT-MAP.md, desviación de
- * la Fase 9 sobre el término de doce meses que no cuadraba con la renovación
- * de noviembre de 2026.
- */
-export const ALEXANDRA_MEMBERSHIP: MembershipAccount = {
-  memberName: "Alexandra Rivas",
-  initials: "AR",
-  plan: "annual",
-  memberSince: MEMBERSHIP_SUMMARY.memberSince,
-  renewalOrChargeDateLabel: MEMBERSHIP_SUMMARY.renews,
-  billingCard: { brand: "visa", last4: "4242", expiry: "04/29" },
-  autoRenewal: true,
-  visitsUsed: VISITS_THIS_MONTH.used,
-  visitsIncluded: VISITS_THIS_MONTH.included,
-  visitsResetLabel: "Resets on October 1",
-  referralCode: REFERRAL_CODE,
-  referralsSentCount: 5,
-};
+export function billingCardFrom(methods: SavedPaymentMethod[]): BillingCard | null {
+  const method = methods.find((m) => m.isDefault) ?? methods[0];
+  if (!method) return null;
+  return {
+    brand: method.brand,
+    last4: method.last4,
+    expiry: `${String(method.expMonth).padStart(2, "0")}/${String(method.expYear).slice(-2)}`,
+  };
+}
 
-export const NAOMI_MEMBERSHIP: MembershipAccount = {
-  memberName: "Naomi Feldstein",
-  initials: "NF",
-  plan: "monthly",
-  memberSince: "July 2026",
-  renewalOrChargeDateLabel: "October 4, 2026",
-  billingCard: { brand: "mastercard", last4: "8813", expiry: "11/28" },
-  autoRenewal: true,
-  visitsUsed: 5,
-  visitsIncluded: 8,
-  visitsResetLabel: "Resets Oct 1",
-  referralCode: "NF-SOLEIL-26",
-  invoiceCount: 3,
-  referralsSentCount: 0,
-};
+export function cardBrandLabel(brand: string): string {
+  if (brand === "visa") return "Visa";
+  if (brand === "mastercard") return "Mastercard";
+  if (brand === "amex") return "American Express";
+  return brand.charAt(0).toUpperCase() + brand.slice(1);
+}
 
-export function membershipAccountForPlan(plan: PlanId): MembershipAccount {
-  return plan === "monthly" ? NAOMI_MEMBERSHIP : ALEXANDRA_MEMBERSHIP;
+export function initialsOf(fullName: string): string {
+  return (
+    fullName
+      .trim()
+      .split(/\s+/)
+      .map((word) => word[0]?.toUpperCase() ?? "")
+      .join("")
+      .slice(0, 2) || "LP"
+  );
+}
+
+/** "Resets on October 1" — el primer día del mes siguiente al "hoy" de mockup. */
+export function visitsResetLabel(todayIso: string = TODAY): string {
+  const today = new Date(`${todayIso}T00:00:00Z`);
+  const next = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 1));
+  return `Resets on ${formatMonthDay(next.toISOString())}`;
+}
+
+/** Días que quedan hasta `periodEndIso`, redondeando hacia arriba — igual que `membership_change_quote`. */
+export function unusedDaysUntil(periodEndIso: string, now: Date = new Date()): number {
+  return Math.max(0, Math.ceil((Date.parse(periodEndIso) - now.getTime()) / 86400000));
+}
+
+/** Un mes antes de la renovación — `Main.dc.html` "We email you on October 3 — a month before". */
+export function renewalNoticeDate(periodEndIso: string): string {
+  const end = new Date(periodEndIso);
+  return new Date(Date.UTC(end.getUTCFullYear(), end.getUTCMonth() - 1, end.getUTCDate())).toISOString();
+}
+
+export async function fetchMembershipAccount(supabase: SupabaseClient): Promise<MembershipAccount> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const [profile, membership, visits, referralCode, referrals, methods] = await Promise.all([
+    supabase.from("profiles").select("full_name").eq("id", user.id).single(),
+    fetchMembership(supabase),
+    fetchVisitsThisMonth(supabase),
+    ensureReferralCode(supabase),
+    fetchReferralOverview(supabase),
+    listSavedPaymentMethods(supabase).catch(() => [] as SavedPaymentMethod[]),
+  ]);
+  if (profile.error) throw profile.error;
+
+  const fullName = (profile.data as { full_name: string }).full_name;
+  const { invitations, stats, readyDayPassCount, dayPassesNote } = referrals;
+
+  return {
+    memberName: fullName,
+    initials: initialsOf(fullName),
+    status: membership.status,
+    plan: membership.plan,
+    memberSince: membership.startedAt ? formatMonthYear(membership.startedAt) : "",
+    renewalOrChargeDateLabel: membership.currentPeriodEnd ? formatLongDate(membership.currentPeriodEnd) : "",
+    renewalNoticeDateLabel: membership.currentPeriodEnd
+      ? formatMonthDay(renewalNoticeDate(membership.currentPeriodEnd))
+      : "",
+    paidUpToLabel: membership.currentPeriodEnd ? formatMonthDay(membership.currentPeriodEnd) : "",
+    unusedDaysInTerm: membership.currentPeriodEnd ? unusedDaysUntil(membership.currentPeriodEnd) : 0,
+    billingCard: billingCardFrom(methods),
+    autoRenewal: membership.autoRenew,
+    visitsUsed: visits.used,
+    visitsIncluded: visits.included,
+    visitsResetLabel: visitsResetLabel(),
+    referralCode,
+    referralsSentCount: stats.sentCount,
+    referralsSummary: referralsRailSummary(invitations.length, stats.earnedCount),
+    complimentaryDayPassesCount: readyDayPassCount,
+    complimentaryDayPassesNote: dayPassesNote,
+  };
+}
+
+/** "2 friends joined with your code. 1 day pass is credited, 1 is still pending." */
+export function referralsRailSummary(joined: number, credited: number): string {
+  if (joined === 0) return "Share your code and you each get a complimentary day pass when they join.";
+  const pending = joined - credited;
+  const friends = joined === 1 ? "1 friend joined" : `${joined} friends joined`;
+  const creditedText = credited === 1 ? "1 day pass is credited" : `${credited} day passes are credited`;
+  const pendingText = pending === 1 ? "1 is still pending" : `${pending} are still pending`;
+  return `${friends} with your code. ${creditedText}${pending > 0 ? `, ${pendingText}` : ""}.`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -105,9 +377,6 @@ export const MEMBERSHIP_BENEFITS: MembershipBenefit[] = [
   { id: "support", title: "Support from any booking", subtitle: "Moves, refunds and waivers" },
 ];
 
-/** El aviso de la card "Visits this month" (`Main.dc.html`). */
-export const COMPLIMENTARY_DAY_PASSES_NOTE = "1 from a referral, 1 for your birthday month.";
-export const COMPLIMENTARY_DAY_PASSES_COUNT = 2;
 export const EXTRA_VISIT_PRICE_LABEL = "$75.00";
 
 /* ------------------------------------------------------------------ */
@@ -135,15 +404,52 @@ export const PLAN_COMPARISON_ROWS: PlanComparisonRow[] = [
 ];
 
 /* ------------------------------------------------------------------ */
-/* Subida mensual → anual con prorrateo — `Upgrade.dc.html`             */
+/* Fixtures de componente (sin Supabase) — cuentas de los artboards     */
 /* ------------------------------------------------------------------ */
 
-export const UPGRADE_PRORATION = {
-  newTermLabel: "Annual membership · Sept 12, 2026 – Sept 11, 2027",
-  newTermCharge: 2400.0,
-  unusedDaysCreditLabel: "Credit for 22 unused days on monthly",
-  unusedDaysCredit: 182.6,
-  dueToday: 2217.4,
-  nextChargeAfterLabel: "$2,400.00 on September 12, 2027",
-  visitsCarryOverLabel: "you have used 5 of 8 visits and the other 3 stay yours",
+/** Alexandra Rivas, anual (`Main.dc.html`). Solo para tests de componente, no toca Supabase. */
+export const ALEXANDRA_MEMBERSHIP: MembershipAccount = {
+  memberName: "Alexandra Rivas",
+  initials: "AR",
+  status: "active",
+  plan: "annual",
+  memberSince: "November 2025",
+  renewalOrChargeDateLabel: "November 3, 2026",
+  renewalNoticeDateLabel: "October 3",
+  paidUpToLabel: "November 3",
+  unusedDaysInTerm: 41,
+  billingCard: { brand: "visa", last4: "4242", expiry: "04/29" },
+  autoRenewal: true,
+  visitsUsed: 3,
+  visitsIncluded: 8,
+  visitsResetLabel: "Resets on October 1",
+  referralCode: "AR-SOLEIL-24",
+  referralsSentCount: 5,
+  referralsSummary: referralsRailSummary(2, 1),
+  complimentaryDayPassesCount: 2,
+  complimentaryDayPassesNote: "1 from a referral, 1 for your birthday month.",
+};
+
+/** Naomi Feldstein, mensual (`MonthlyPlan.dc.html`). Solo para tests de componente. */
+export const NAOMI_MEMBERSHIP: MembershipAccount = {
+  memberName: "Naomi Feldstein",
+  initials: "NF",
+  status: "active",
+  plan: "monthly",
+  memberSince: "July 2026",
+  renewalOrChargeDateLabel: "October 4, 2026",
+  renewalNoticeDateLabel: "September 4",
+  paidUpToLabel: "October 3",
+  unusedDaysInTerm: 22,
+  billingCard: { brand: "mastercard", last4: "8813", expiry: "11/28" },
+  autoRenewal: true,
+  visitsUsed: 5,
+  visitsIncluded: 8,
+  visitsResetLabel: "Resets Oct 1",
+  referralCode: "NF-SOLEIL-26",
+  invoiceCount: 3,
+  referralsSentCount: 0,
+  referralsSummary: referralsRailSummary(0, 0),
+  complimentaryDayPassesCount: 0,
+  complimentaryDayPassesNote: "",
 };

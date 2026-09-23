@@ -23,19 +23,12 @@ export function ReferralSummaryRailCard({ account }: { account: MembershipAccoun
         </span>
       </div>
 
-      <p className="m-0 mt-2 text-[12.5px] leading-[1.55] text-fg-muted">
-        {hasSent
-          ? "2 friends joined with your code. 1 day pass is credited, 1 is still pending."
-          : "Share your code and you each get a complimentary day pass when they join."}
-      </p>
+      <p className="m-0 mt-2 text-[12.5px] leading-[1.55] text-fg-muted">{account.referralsSummary}</p>
 
       <ReferralCode code={account.referralCode} className="mt-3.5" />
 
       {hasSent ? (
-        <Link
-          href="/profile/membership/referrals"
-          className={cn(buttonVariants({ size: "md", block: true }), "mt-3")}
-        >
+        <Link href="/profile/membership/referrals" className={cn(buttonVariants({ size: "md", block: true }), "mt-3")}>
           Open referrals
         </Link>
       ) : null}

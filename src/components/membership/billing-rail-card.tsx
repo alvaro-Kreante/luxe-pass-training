@@ -8,21 +8,26 @@ import type { MembershipAccount } from "@/lib/membership";
  * "Update" e "Invoices and receipts" no llevan a ningún sitio propio (ningún
  * artboard dibuja un formulario de tarjeta ni una lista de facturas) — quedan
  * inertes, igual que otros enlaces sin destino ya documentados en
- * COMPONENT-MAP.md.
+ * COMPONENT-MAP.md. La tarjeta es la guardada de verdad en Stripe (la por
+ * defecto, o la primera) — sin ninguna, lo dice.
  */
 export function BillingRailCard({ account }: { account: MembershipAccount }) {
   return (
     <div className="rounded-content border border-line bg-surface p-5 shadow-content">
       <p className="m-0 text-xs font-bold uppercase tracking-[0.1em] text-accent-strong">Billing</p>
 
-      <div className="mt-3.5 flex items-center gap-3">
-        <CardBrandBadge brand={account.billingCard.brand} />
-        <div className="min-w-0 flex-1">
-          <p className="m-0 text-[13px] font-bold text-fg">•••• {account.billingCard.last4}</p>
-          <p className="m-0 mt-0.5 text-[11.5px] text-fg-subtle">Expires {account.billingCard.expiry}</p>
+      {account.billingCard ? (
+        <div className="mt-3.5 flex items-center gap-3">
+          <CardBrandBadge brand={account.billingCard.brand} />
+          <div className="min-w-0 flex-1">
+            <p className="m-0 text-[13px] font-bold text-fg">•••• {account.billingCard.last4}</p>
+            <p className="m-0 mt-0.5 text-[11.5px] text-fg-subtle">Expires {account.billingCard.expiry}</p>
+          </div>
+          <a className="cursor-pointer text-[12.5px] font-bold text-accent-strong">Update</a>
         </div>
-        <a className="cursor-pointer text-[12.5px] font-bold text-accent-strong">Update</a>
-      </div>
+      ) : (
+        <p className="m-0 mt-3.5 text-[12.5px] text-fg-muted">No card saved yet.</p>
+      )}
 
       <div className="my-4 h-px bg-line" />
 

@@ -6,10 +6,19 @@ import { formatUsd } from "@/components/membership/plan-summary-card";
 
 /**
  * "Switch to annual" — card con borde dorado de `MonthlyPlan.dc.html`, solo
- * para el plan mensual de Naomi. Story 9.1 — "Upgrade options to monthly
- * subscribers and pricing (monthly → yearly price)".
+ * con plan mensual activo. Story 9.1 — "Upgrade options to monthly
+ * subscribers and pricing (monthly → yearly price)". Fecha y días del aviso
+ * salen del término real (`memberships`), no del literal del artboard.
  */
-export function UpgradeOfferCard({ onSwitchToAnnual }: { onSwitchToAnnual: () => void }) {
+export function UpgradeOfferCard({
+  paidUpToLabel,
+  unusedDays,
+  onSwitchToAnnual,
+}: {
+  paidUpToLabel: string;
+  unusedDays: number;
+  onSwitchToAnnual: () => void;
+}) {
   return (
     <div className="rounded-content border-[1.5px] border-accent bg-surface p-5.5 shadow-ring">
       <div className="flex items-center gap-3">
@@ -38,8 +47,8 @@ export function UpgradeOfferCard({ onSwitchToAnnual }: { onSwitchToAnnual: () =>
       <div className="mt-3.5 flex items-start gap-2.5 rounded-[12px] border border-line bg-blush-2 px-3.5 py-3">
         <CircleAlert size={16} strokeWidth={1.8} className="mt-0.5 shrink-0 text-accent-strong" aria-hidden />
         <p className="m-0 text-xs leading-[1.55] text-fg-muted">
-          You are paid up to <span className="font-bold text-fg">October 3</span>. Switching today credits the 22
-          days you have not used, so nothing is lost.
+          You are paid up to <span className="font-bold text-fg">{paidUpToLabel}</span>. Switching today credits the{" "}
+          {unusedDays === 1 ? "1 day" : `${unusedDays} days`} you have not used, so nothing is lost.
         </p>
       </div>
 

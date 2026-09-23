@@ -15,7 +15,6 @@ import { buttonVariants } from "@/components/ui/button";
 import { TODAY } from "@/lib/availability";
 import {
   BOOKING_RECORD_SUMMARY,
-  VISITS_THIS_MONTH,
   cancelBooking,
   fetchPastBookings,
   fetchUpcomingBookings,
@@ -23,7 +22,7 @@ import {
   type PastBookingOutcome,
   type UpcomingBooking,
 } from "@/lib/passes";
-import { MEMBERSHIP_SUMMARY } from "@/lib/profile";
+import { fetchMembership, fetchVisitsThisMonth, formatMonthYear } from "@/lib/membership";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -60,17 +59,24 @@ function MyPassScreen() {
   const [past, setPast] = React.useState<PastBooking[]>([]);
   const [cancelTarget, setCancelTarget] = React.useState<UpcomingBooking | null>(null);
   const [cancelError, setCancelError] = React.useState<string | null>(null);
+  const [visits, setVisits] = React.useState<{ used: number; included: number } | null>(null);
+  const [memberSince, setMemberSince] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     let active = true;
 
-    Promise.all([fetchUpcomingBookings(supabase), fetchPastBookings(supabase)]).then(
-      ([upcomingBookings, pastBookings]) => {
-        if (!active) return;
-        setUpcoming(upcomingBookings);
-        setPast(pastBookings);
-      },
-    );
+    Promise.all([
+      fetchUpcomingBookings(supabase),
+      fetchPastBookings(supabase),
+      fetchVisitsThisMonth(supabase),
+      fetchMembership(supabase),
+    ]).then(([upcomingBookings, pastBookings, nextVisits, membership]) => {
+      if (!active) return;
+      setUpcoming(upcomingBookings);
+      setPast(pastBookings);
+      setVisits(nextVisits);
+      setMemberSince(membership.startedAt ? formatMonthYear(membership.startedAt) : null);
+    });
 
     return () => {
       active = false;
@@ -146,7 +152,7 @@ function MyPassScreen() {
           </div>
 
           <div className="flex w-[344px] shrink-0 flex-col gap-3.5">
-            {tab === "upcoming" ? <UpcomingRail /> : <PastRail />}
+            {tab === "upcoming" ? <UpcomingRail visits={visits} /> : <PastRail memberSince={memberSince} />}
           </div>
         </div>
       </div>
@@ -158,6 +164,7 @@ function MyPassScreen() {
             if (!open) setCancelTarget(null);
           }}
           booking={cancelTarget}
+          visits={visits ?? undefined}
           onConfirmCancel={async () => {
             await cancelAndRefresh(cancelTarget);
             setCancelTarget(null);
@@ -357,8 +364,10 @@ function PastList({ bookings }: { bookings: PastBooking[] }) {
   );
 }
 
-function UpcomingRail() {
-  const progress = Array.from({ length: VISITS_THIS_MONTH.included }, (_, index) => index < VISITS_THIS_MONTH.used);
+function UpcomingRail({ visits }: { visits: { used: number; included: number } | null }) {
+  const used = visits?.used ?? 0;
+  const included = visits?.included ?? 8;
+  const progress = Array.from({ length: included }, (_, index) => index < used);
 
   return (
     <>
@@ -387,7 +396,7 @@ function UpcomingRail() {
         <div className="flex items-baseline justify-between">
           <p className="m-0 text-xs font-bold uppercase tracking-[0.1em] text-gold-600">Visits this month</p>
           <span className="text-[13px] font-bold text-fg">
-            {VISITS_THIS_MONTH.used} of {VISITS_THIS_MONTH.included}
+            {visits ? `${used} of ${included}` : "—"}
           </span>
         </div>
         <div className="mt-3.5 flex gap-1.5">
@@ -405,15 +414,15 @@ function UpcomingRail() {
   );
 }
 
-function PastRail() {
+function PastRail({ memberSince }: { memberSince: string | null }) {
   return (
     <>
       <div className="rounded-content border border-line bg-surface p-5 shadow-content">
         <p className="m-0 text-xs font-bold uppercase tracking-[0.1em] text-gold-600">Your record</p>
         <h2 className="mt-2.5 font-display text-[27px] text-fg">{BOOKING_RECORD_SUMMARY.totalVisits} visits</h2>
-        <p className="m-0 mt-1 text-[12.5px] text-fg-subtle">
-          Since you joined in {MEMBERSHIP_SUMMARY.memberSince}
-        </p>
+        {memberSince ? (
+          <p className="m-0 mt-1 text-[12.5px] text-fg-subtle">Since you joined in {memberSince}</p>
+        ) : null}
         <div className="my-4 h-px bg-line" />
         <div className="flex flex-col gap-2.5">
           <RailStat label="Completed" value={BOOKING_RECORD_SUMMARY.completed} />
