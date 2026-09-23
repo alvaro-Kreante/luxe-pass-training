@@ -19,9 +19,15 @@ export interface RefundCharge {
 }
 
 /**
- * Story 8.1 — "Refund processing interface". Artboard:
+ * Story 8.1 — "Refund processing interface", reembolso real vía Stripe
+ * (decisión tomada con el usuario el 22 sept 2026). Artboard:
  * docs/design/epic-8-admin-support/Refund.dc.html. El límite de aprobación
  * de soporte ($100.00) lo fija `DESIGN-SYSTEM.md` §6 (Fase 8).
+ *
+ * Solo cubre un cargo real (`payments.status = 'succeeded'`) — la tarifa de
+ * no-show/cancelación tardía nunca se cobró de verdad y se "waives" desde
+ * `CaseDetailPage` directamente, sin este modal (ver
+ * `admin_waive_booking_fee`).
  */
 export function RefundModal({
   open,
@@ -32,17 +38,27 @@ export function RefundModal({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   charge: RefundCharge;
-  onConfirm: (amount: number) => void;
+  onConfirm: (amount: number) => Promise<void> | void;
 }) {
   const [mode, setMode] = React.useState<"full" | "partial">("full");
   const [partialAmount, setPartialAmount] = React.useState("");
+  const [submitting, setSubmitting] = React.useState(false);
+  const [error, setError] = React.useState("");
 
   const amount = mode === "full" ? charge.amount : Number(partialAmount) || 0;
   const needsManager = amount > MANAGER_APPROVAL_LIMIT;
 
-  function confirm() {
-    onConfirm(amount);
-    onOpenChange(false);
+  async function confirm() {
+    setSubmitting(true);
+    setError("");
+    try {
+      await onConfirm(amount);
+      onOpenChange(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not process this refund");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -52,7 +68,7 @@ export function RefundModal({
       dark
       width={620}
       eyebrow="Refund"
-      title="Refund the no-show fee"
+      title="Refund this charge"
       footer={
         <div className="flex items-center gap-3">
           <Button variant="ghost" className="normal-case" onClick={() => onOpenChange(false)}>
@@ -64,8 +80,8 @@ export function RefundModal({
               ? `Needs a manager over ${formatCurrency(MANAGER_APPROVAL_LIMIT)}`
               : `Refund approved by you · no manager needed under ${formatCurrency(MANAGER_APPROVAL_LIMIT)}`}
           </p>
-          <Button onClick={confirm} disabled={amount <= 0}>
-            Refund {formatCurrency(amount)}
+          <Button onClick={confirm} disabled={amount <= 0 || submitting}>
+            {submitting ? "Refunding…" : `Refund ${formatCurrency(amount)}`}
           </Button>
         </div>
       }
@@ -88,7 +104,7 @@ export function RefundModal({
           selected={mode === "full"}
           onSelect={() => setMode("full")}
           title={`Full refund — ${formatCurrency(charge.amount)}`}
-          subtitle="The whole fee goes back to the card it came from"
+          subtitle="The whole charge goes back to the card it came from"
         />
         <PaymentOptionRow
           selected={mode === "partial"}
@@ -118,28 +134,20 @@ export function RefundModal({
           icon={<span className="text-accent">✓</span>}
           text={
             <>
-              <span className="font-bold text-fg">Remove the no-show from Camille&apos;s record</span>
+              <span className="font-bold text-fg">Reversed through Stripe, on the original card</span>
               <br />
-              It stops counting toward the three-in-twelve-months pause, and the visit goes back to her allowance.
-            </>
-          }
-        />
-        <DetailRow
-          icon={<span className="text-accent">✓</span>}
-          text={
-            <>
-              <span className="font-bold text-fg">Email her that the fee is reversed</span>
-              <br />
-              Sent from this case, with your reply above it.
+              Takes 5–10 business days to appear for the member.
             </>
           }
         />
       </div>
 
+      {error ? <p className="mt-4 text-[12.5px] font-bold text-accent-strong">{error}</p> : null}
+
       <div className="mt-5 rounded-2xl border border-dashed border-gold-600 bg-panel-black px-4.5 py-4">
         <p className="m-0 text-xs leading-[1.55] text-fg-muted">
-          Refunds go back to the original card through Stripe and take 5–10 business days to appear. This is written
-          to the audit log under your name and cannot be undone from this console.
+          Refunds go back to the original card through Stripe and take 5–10 business days to appear. This cannot be
+          undone from this console.
         </p>
       </div>
     </Modal>

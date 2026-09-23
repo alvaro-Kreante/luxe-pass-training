@@ -18,10 +18,19 @@ create table if not exists public.payments (
   amount_cents                integer not null check (amount_cents >= 0),
   currency                    text not null default 'usd',
   status                      text not null default 'pending' check (
-    status in ('pending', 'succeeded', 'failed')
+    status in ('pending', 'succeeded', 'failed', 'refunded')
   ),
   created_at                  timestamptz not null default now(),
-  updated_at                  timestamptz not null default now()
+  updated_at                  timestamptz not null default now(),
+  -- Story 8.1 (Epic 8) — "Refund processing interface", reembolso real vía
+  -- Stripe (Edge Function `stripe-refund-payment`). `refunded_amount_cents`
+  -- puede ser menor que `amount_cents` (reembolso parcial) — `status` solo
+  -- pasa a 'refunded' cuando el reembolso cubre el importe completo, igual
+  -- criterio que Stripe usa para `charge.refunded`.
+  refunded_amount_cents       integer check (refunded_amount_cents is null or refunded_amount_cents >= 0),
+  refunded_at                 timestamptz,
+  refund_reason               text,
+  stripe_refund_id            text unique
 );
 
 alter table public.payments enable row level security;

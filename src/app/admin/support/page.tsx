@@ -1,18 +1,24 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, ChevronRight, Plus, Search, SlidersHorizontal } from "lucide-react";
+import { ChevronRight, Plus, Search, SlidersHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { AdminShell } from "@/components/patterns/admin-shell";
+import { RequireAdminSession } from "@/components/admin/require-admin-session";
 import { CaseStatusChip } from "@/components/admin/case-status-chip";
-import { ADMIN_CASE_COUNTS, SUPPORT_CASES } from "@/lib/admin";
+import { createClient } from "@/lib/supabase/client";
+import { getTicketCounts, listSupportCases, type SupportCase, type TicketCounts } from "@/lib/admin";
 import { cn } from "@/lib/utils";
 
 /**
  * Story 8.1 — "Issue tracking and resolution notes" (la lista) y "Member
  * search by name, email or phone" (el atajo de la cabecera, que envía a
  * `/admin/members`). Artboard: docs/design/epic-8-admin-support/Main.dc.html.
+ *
+ * Backend real (22 sept 2026): `support_tickets` (nace en Epic 8, ver
+ * `supabase/schemas/support_tickets.sql`) vía `admin_list_support_tickets`/
+ * `admin_ticket_counts`.
  *
  * "New case" y "Filters" no llevan a ningún sitio: ningún artboard dibuja un
  * formulario de caso nuevo ni un panel de filtros para esta pantalla — igual
@@ -21,8 +27,36 @@ import { cn } from "@/lib/utils";
 const GRID = "grid-cols-[92px_206px_1fr_116px_132px_108px_30px]";
 
 export default function SupportDeskPage() {
+  return (
+    <RequireAdminSession>
+      <SupportDeskScreen />
+    </RequireAdminSession>
+  );
+}
+
+function SupportDeskScreen() {
   const router = useRouter();
+  const supabase = React.useMemo(() => createClient(), []);
   const [query, setQuery] = React.useState("");
+  const [cases, setCases] = React.useState<SupportCase[] | null>(null);
+  const [counts, setCounts] = React.useState<TicketCounts | null>(null);
+
+  React.useEffect(() => {
+    let active = true;
+    async function load() {
+      const [caseRows, ticketCounts] = await Promise.all([
+        listSupportCases(supabase),
+        getTicketCounts(supabase),
+      ]);
+      if (!active) return;
+      setCases(caseRows);
+      setCounts(ticketCounts);
+    }
+    load();
+    return () => {
+      active = false;
+    };
+  }, [supabase]);
 
   function submitSearch(event: React.FormEvent) {
     event.preventDefault();
@@ -33,13 +67,13 @@ export default function SupportDeskPage() {
   return (
     <AdminShell
       topbarLabel={<span className="text-[13.5px] font-bold text-fg">Support</span>}
-      topbarMeta="· Open cases · Monday, September 16 · 10:24 AM"
-      supportBadge={ADMIN_CASE_COUNTS.open}
+      topbarMeta="· Open cases"
+      supportBadge={counts?.open}
     >
       <div className="flex items-center gap-6">
         <div className="min-w-0 flex-1">
           <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">
-            En Soleil · all 12 lounges
+            En Soleil · support desk
           </p>
           <h1 className="mt-2 font-display text-[34px] text-fg">Support desk</h1>
         </div>
@@ -74,14 +108,16 @@ export default function SupportDeskPage() {
         </form>
       </div>
 
-      <div className="mt-3.5 flex items-center gap-2.5">
-        <CaseStatusChip status="open">{ADMIN_CASE_COUNTS.open} open</CaseStatusChip>
-        <CaseStatusChip status="waiting">{ADMIN_CASE_COUNTS.waitingOnMember} waiting on member</CaseStatusChip>
-        <CaseStatusChip status="escalated">{ADMIN_CASE_COUNTS.escalated} escalated</CaseStatusChip>
-        <CaseStatusChip status="resolved">{ADMIN_CASE_COUNTS.resolvedToday} resolved today</CaseStatusChip>
-        <div className="flex-1" />
-        <span className="text-[11.5px] font-semibold text-fg-subtle">Sorted by most recent</span>
-      </div>
+      {counts ? (
+        <div className="mt-3.5 flex items-center gap-2.5">
+          <CaseStatusChip status="open">{counts.open} open</CaseStatusChip>
+          <CaseStatusChip status="waiting">{counts.waitingOnMember} waiting on member</CaseStatusChip>
+          <CaseStatusChip status="escalated">{counts.escalated} escalated</CaseStatusChip>
+          <CaseStatusChip status="resolved">{counts.resolvedToday} resolved today</CaseStatusChip>
+          <div className="flex-1" />
+          <span className="text-[11.5px] font-semibold text-fg-subtle">Sorted by most recent</span>
+        </div>
+      ) : null}
 
       <div className="mt-4.5 overflow-hidden rounded-content border border-line bg-dark-card">
         <div className={cn("grid items-center gap-3.5 border-b border-line px-5.5", GRID)} style={{ height: 42 }}>
@@ -94,7 +130,7 @@ export default function SupportDeskPage() {
           <span />
         </div>
 
-        {SUPPORT_CASES.map((supportCase) => (
+        {(cases ?? []).map((supportCase) => (
           <button
             key={supportCase.id}
             type="button"
@@ -115,7 +151,6 @@ export default function SupportDeskPage() {
               </span>
               <span className="min-w-0">
                 <span className="block truncate text-[13.5px] font-bold text-fg">{supportCase.memberName}</span>
-                <span className="block truncate text-[11.5px] text-fg-subtle">{supportCase.membershipLabel}</span>
               </span>
             </span>
 
@@ -139,19 +174,23 @@ export default function SupportDeskPage() {
           </button>
         ))}
 
-        <div className="flex items-center gap-2.5 px-5.5" style={{ height: 34 }}>
-          <ChevronDown size={15} strokeWidth={1.9} className="text-fg-subtle" aria-hidden />
-          <span className="text-xs font-semibold text-fg-subtle">
-            Showing {ADMIN_CASE_COUNTS.shown} of {ADMIN_CASE_COUNTS.totalCases} cases · {ADMIN_CASE_COUNTS.open} open,{" "}
-            {ADMIN_CASE_COUNTS.waitingOnMember} waiting on member, {ADMIN_CASE_COUNTS.escalated} escalated
-          </span>
-        </div>
+        {cases && cases.length === 0 ? (
+          <p className="px-5.5 py-6 text-[13px] text-fg-subtle">No cases on file yet.</p>
+        ) : null}
+
+        {counts ? (
+          <div className="flex items-center gap-2.5 px-5.5" style={{ height: 34 }}>
+            <span className="text-xs font-semibold text-fg-subtle">
+              Showing {(cases ?? []).length} of {counts.totalCases} cases · {counts.open} open,{" "}
+              {counts.waitingOnMember} waiting on member, {counts.escalated} escalated
+            </span>
+          </div>
+        ) : null}
       </div>
 
       <p className="mt-3.5 text-xs text-fg-subtle">
         A no-show reported by a partner opens a case on its own: the flat fee is charged first and only reversed here
-        if support waives it. Every reply, refund and booking change made on these screens is written to the
-        member&apos;s audit trail with your name.
+        if support waives it.
       </p>
     </AdminShell>
   );

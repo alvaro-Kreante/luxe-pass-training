@@ -1,16 +1,31 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, ChevronRight, Mail, PencilLine, Plus } from "lucide-react";
+import { Mail } from "lucide-react";
 import Link from "next/link";
-import { notFound, useParams, useRouter } from "next/navigation";
+import { notFound, useParams } from "next/navigation";
 
 import { AdminShell } from "@/components/patterns/admin-shell";
+import { RequireAdminSession } from "@/components/admin/require-admin-session";
 import { BookingOverrideDrawer } from "@/components/admin/booking-override-drawer";
 import { MetricTile } from "@/components/ui/metric-tile";
 import { StatusChip } from "@/components/ui/status-chip";
 import { downloadTextFile } from "@/lib/download";
-import { ADMIN_CASE_COUNTS, getMemberProfile, type BookingHistoryStatus } from "@/lib/admin";
+import { createClient } from "@/lib/supabase/client";
+import {
+  formatCurrency,
+  getAdminMember,
+  getMemberBookings,
+  getMemberPayments,
+  getTicketCounts,
+  totalPaidToDateCents,
+  upcomingBookingFrom,
+  type AdminMember,
+  type BookingHistoryRow,
+  type BookingHistoryStatus,
+  type PaymentRow,
+  type TicketCounts,
+} from "@/lib/admin";
 import { cn } from "@/lib/utils";
 
 /**
@@ -19,23 +34,69 @@ import { cn } from "@/lib/utils";
  * capabilities" (el drawer `BookingOverrideDrawer`). Artboard:
  * docs/design/epic-8-admin-support/MemberProfile.dc.html.
  * DESIGN-SYSTEM.md §5 patrón 22 — Ficha de miembro (360).
+ *
+ * Backend real (22 sept 2026): `admin_member_profile`/`admin_member_bookings`/
+ * `admin_member_payments` (`supabase/schemas/support_tickets.sql`). El rail
+ * "Membership" del mock (renewal date, visits this month, referrals) asumía
+ * un plan real de Epic 9 (sin conectar) — se simplifica a lo que
+ * `profiles.membership_status` (Story 6.3) sí modela de verdad. Desviación
+ * anotada en `docs/design/COMPONENT-MAP.md`.
  */
-const HISTORY_GRID = "grid-cols-[104px_1fr_122px_132px_128px_30px]";
+const HISTORY_GRID = "grid-cols-[104px_1fr_122px_132px_128px]";
 
 export default function MemberProfilePage() {
-  const { id } = useParams<{ id: string }>();
-  const router = useRouter();
-  const [overrideOpen, setOverrideOpen] = React.useState(false);
+  return (
+    <RequireAdminSession>
+      <MemberProfileScreen />
+    </RequireAdminSession>
+  );
+}
 
-  const profile = getMemberProfile(id);
-  if (!profile) notFound();
+const TODAY_ISO = new Date().toISOString().slice(0, 10);
+
+function MemberProfileScreen() {
+  const { id } = useParams<{ id: string }>();
+  const supabase = React.useMemo(() => createClient(), []);
+  const [overrideOpen, setOverrideOpen] = React.useState(false);
+  const [profile, setProfile] = React.useState<AdminMember | null | undefined>(undefined);
+  const [bookings, setBookings] = React.useState<BookingHistoryRow[]>([]);
+  const [payments, setPayments] = React.useState<PaymentRow[]>([]);
+  const [counts, setCounts] = React.useState<TicketCounts | null>(null);
+  const [reloadToken, setReloadToken] = React.useState(0);
+  const reload = React.useCallback(() => setReloadToken((t) => t + 1), []);
+
+  React.useEffect(() => {
+    let active = true;
+    Promise.all([
+      getAdminMember(supabase, id),
+      getMemberBookings(supabase, id),
+      getMemberPayments(supabase, id),
+    ]).then(([memberRow, bookingRows, paymentRows]) => {
+      if (!active) return;
+      setProfile(memberRow ?? null);
+      setBookings(bookingRows);
+      setPayments(paymentRows);
+    });
+    getTicketCounts(supabase).then((row) => {
+      if (active) setCounts(row);
+    });
+    return () => {
+      active = false;
+    };
+  }, [supabase, id, reloadToken]);
+
+  if (profile === null) notFound();
+  if (profile === undefined) return null;
+
+  const upcomingBooking = upcomingBookingFrom(bookings, TODAY_ISO);
+  const noShows = bookings.filter((b) => b.status === "no-show").length;
+  const visits = bookings.filter((b) => b.status !== "cancelled").length;
+  const paidToDate = formatCurrency(totalPaidToDateCents(payments) / 100);
 
   function exportHistory() {
     const header = "Date,Lounge,Reference,Status,Charged";
-    const rows = profile!.bookingHistory.map((row) =>
-      [row.dateLabel, row.lounge, row.reference, row.status, row.charged].join(","),
-    );
-    downloadTextFile(`${profile!.id}-booking-history.csv`, [header, ...rows].join("\n"));
+    const rows = bookings.map((row) => [row.dateLabel, row.lounge, row.reference, row.status, row.charged].join(","));
+    downloadTextFile(`${id}-booking-history.csv`, [header, ...rows].join("\n"));
   }
 
   return (
@@ -49,7 +110,7 @@ export default function MemberProfilePage() {
           <span className="text-[13.5px] font-bold text-fg">{profile.name}</span>
         </>
       }
-      supportBadge={ADMIN_CASE_COUNTS.open}
+      supportBadge={counts?.open}
       blurred={overrideOpen}
     >
       <div className="flex items-center gap-4.5">
@@ -61,10 +122,10 @@ export default function MemberProfilePage() {
             <h1 className="m-0 font-display text-[30px] text-fg">{profile.name}</h1>
             {profile.status === "active" ? (
               <StatusChip available outlined>
-                {profile.membershipLabel} · Active
+                {profile.membershipLabel}
               </StatusChip>
             ) : (
-              <StatusChip available={false}>No membership</StatusChip>
+              <StatusChip available={false}>{profile.membershipLabel}</StatusChip>
             )}
           </div>
           <p className="mt-1.5 text-[13px] text-fg-subtle">
@@ -73,31 +134,23 @@ export default function MemberProfilePage() {
         </div>
         <div className="flex items-center gap-2.5">
           <QuickAction icon={Mail}>Email member</QuickAction>
-          {profile.upcomingBooking ? (
+          {upcomingBooking ? (
             <button
               type="button"
               onClick={() => setOverrideOpen(true)}
               className="flex h-11 items-center justify-center gap-2 rounded-[11px] border-[1.5px] border-line px-4 transition-colors duration-150 hover:border-accent hover:bg-surface-hover"
             >
-              <PencilLine size={16} strokeWidth={1.8} className="text-accent" aria-hidden />
               <span className="text-[12.5px] font-bold tracking-[0.06em] text-fg-muted">Modify booking</span>
             </button>
           ) : null}
-          <button
-            type="button"
-            className="flex h-11 items-center justify-center gap-2 rounded-[11px] bg-accent px-5 transition-colors duration-150 hover:bg-accent-strong"
-          >
-            <Plus size={16} strokeWidth={2} className="text-on-accent" aria-hidden />
-            <span className="text-[12.5px] font-bold uppercase tracking-[0.1em] text-on-accent">Open case</span>
-          </button>
         </div>
       </div>
 
       <div className="mt-5 grid grid-cols-4 gap-3.5">
-        <MetricTile label="Visits" value={String(profile.visits)} note={profile.visitsNote} />
-        <MetricTile label="No-shows" value={String(profile.noShows)} note={profile.noShowsNote} />
-        <MetricTile label="Paid to date" value={profile.paidToDate} note={profile.paidNote} />
-        <MetricTile label="Open cases" value={String(profile.openCasesCount)} note={profile.openCasesNote} />
+        <MetricTile label="Visits" value={String(visits)} note="not cancelled" />
+        <MetricTile label="No-shows" value={String(noShows)} note="of all visits on file" />
+        <MetricTile label="Paid to date" value={paidToDate} note="real Stripe charges only" />
+        <MetricTile label="Open cases" value={String(profile.openCasesCount)} note="not yet resolved" />
       </div>
 
       <div className="mt-4.5 flex min-h-0 gap-4">
@@ -105,10 +158,6 @@ export default function MemberProfilePage() {
           <div className="flex items-center gap-3">
             <h2 className="m-0 font-display text-[22px] text-fg">Booking history</h2>
             <div className="flex-1" />
-            <button type="button" className="text-xs font-bold text-accent-strong">
-              All bookings
-            </button>
-            <span className="text-xs text-fg-subtle">·</span>
             <button type="button" onClick={exportHistory} className="text-xs font-bold text-accent-strong">
               Export this member&apos;s history
             </button>
@@ -124,12 +173,11 @@ export default function MemberProfilePage() {
               <Th>Reference</Th>
               <Th>Status</Th>
               <Th>Charged</Th>
-              <span />
             </div>
 
-            {profile.bookingHistory.map((row) => (
+            {bookings.map((row) => (
               <div
-                key={row.reference}
+                key={row.bookingId}
                 className={cn(
                   "grid items-center gap-3.5 border-b border-[rgba(58,50,42,0.6)] px-5.5 last:border-b-0",
                   HISTORY_GRID,
@@ -149,14 +197,16 @@ export default function MemberProfilePage() {
                   <BookingHistoryStatusChip status={row.status} />
                 </span>
                 <span className="text-[12.5px] font-bold text-fg-muted">{row.charged}</span>
-                <ChevronRight size={17} strokeWidth={1.8} className="justify-self-end text-fg-subtle" aria-hidden />
               </div>
             ))}
 
-            <div className="flex items-center gap-2.5 px-5.5" style={{ height: 34 }}>
-              <ChevronDown size={15} strokeWidth={1.9} className="text-fg-subtle" aria-hidden />
-              <span className="text-xs font-semibold text-fg-subtle">{profile.bookingHistorySummary}</span>
-            </div>
+            {bookings.length === 0 ? (
+              <p className="px-5.5 py-6 text-[13px] text-fg-subtle">No bookings on file.</p>
+            ) : (
+              <div className="flex items-center gap-2.5 px-5.5" style={{ height: 34 }}>
+                <span className="text-xs font-semibold text-fg-subtle">Showing all {bookings.length} bookings on file</span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -165,35 +215,34 @@ export default function MemberProfilePage() {
             <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">Membership</p>
             <div className="mt-2.5 flex items-baseline gap-2.5">
               <p className="m-0 font-display text-[27px] text-fg">{profile.membershipLabel}</p>
-              <p className="m-0 text-[13px] text-fg-subtle">{profile.membershipPriceLabel}</p>
             </div>
-            <RailRow label="Renews" value={profile.renewsLabel} />
-            <RailRow label="Visits this month" value={profile.visitsThisMonthLabel} />
-            <RailRow label="Referrals" value={profile.referralsLabel} />
+            <RailRow label="Member since" value={profile.memberSinceLabel.replace("member since ", "")} />
           </div>
 
           <div className="rounded-content border border-line bg-dark-card px-5.5 py-5">
             <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">Payments</p>
-            {profile.payments.length === 0 ? (
+            {payments.length === 0 ? (
               <p className="mt-2.5 text-[12.5px] text-fg-subtle">No payments on file.</p>
             ) : (
-              profile.payments.map((payment) => (
+              payments.map((payment) => (
                 <div
-                  key={payment.title}
+                  key={payment.id}
                   className="flex items-center gap-3 border-t border-[rgba(58,50,42,0.6)] py-3 first:mt-2.5 first:border-t-0"
                 >
                   <div className="min-w-0 flex-1">
                     <p className="m-0 text-[12.5px] font-bold text-fg">{payment.title}</p>
-                    <p className="m-0 mt-0.5 text-[11px] text-fg-subtle">{payment.detail}</p>
+                    <p className="m-0 mt-0.5 text-[11px] text-fg-subtle">
+                      {payment.detail} {payment.kind === "fee" ? "· recorded, not charged" : ""}
+                    </p>
                   </div>
                   <p className="m-0 text-[13px] font-bold text-fg">{payment.amount}</p>
                 </div>
               ))
             )}
-            {profile.payments.length > 0 ? (
+            {payments.length > 0 ? (
               <div className="flex items-center gap-3 border-t border-line pt-3">
-                <p className="m-0 flex-1 text-[12.5px] font-bold text-fg-muted">{profile.paidToDateNote}</p>
-                <p className="m-0 text-[13.5px] font-extrabold text-accent">{profile.paidToDate}</p>
+                <p className="m-0 flex-1 text-[12.5px] font-bold text-fg-muted">Paid to date · real charges only</p>
+                <p className="m-0 text-[13.5px] font-extrabold text-accent">{paidToDate}</p>
               </div>
             ) : null}
           </div>
@@ -207,15 +256,23 @@ export default function MemberProfilePage() {
         </div>
       </div>
 
-      {profile.upcomingBooking ? (
+      {upcomingBooking ? (
         <BookingOverrideDrawer
           open={overrideOpen}
           onOpenChange={setOverrideOpen}
           memberName={profile.name}
-          booking={profile.upcomingBooking}
-          onApply={() => {
-            router.refresh();
+          booking={{
+            lounge: upcomingBooking.lounge,
+            area: upcomingBooking.detail.split(" · ")[0] ?? "",
+            detail: `${upcomingBooking.dayLabel}, ${upcomingBooking.dateLabel} · arrive ${upcomingBooking.slotTime}`,
+            reference: upcomingBooking.reference,
+            bookingId: upcomingBooking.bookingId,
+            loungeId: upcomingBooking.loungeId,
+            date: upcomingBooking.date,
+            band: upcomingBooking.band,
+            slotTime: upcomingBooking.slotTime,
           }}
+          onApply={reload}
         />
       ) : null}
     </AdminShell>

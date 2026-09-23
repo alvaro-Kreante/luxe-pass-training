@@ -16,7 +16,8 @@ import {
 } from "lucide-react";
 
 import { NavBadge } from "@/components/ui/nav-badge";
-import { ADMIN_STAFF } from "@/lib/admin";
+import { displayNameFromEmail } from "@/lib/admin";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 /**
@@ -69,6 +70,22 @@ export function AdminShell({
   children,
 }: AdminShellProps) {
   const pathname = usePathname();
+  const supabase = React.useMemo(() => createClient(), []);
+  const [adminEmail, setAdminEmail] = React.useState("");
+
+  React.useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user?.email) setAdminEmail(data.user.email);
+    });
+  }, [supabase]);
+
+  const adminName = adminEmail ? displayNameFromEmail(adminEmail) : "Admin";
+  const adminInitials = adminName
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 
   const onClient = React.useSyncExternalStore(
     () => () => {},
@@ -144,11 +161,11 @@ export function AdminShell({
 
         <div className="flex items-center gap-2.5 border-t border-line pt-4.5">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-nav border border-gold-600 bg-[rgba(201,168,118,0.14)] font-display text-base text-accent">
-            {ADMIN_STAFF.initials}
+            {adminInitials}
           </span>
           <span className="flex-1 overflow-hidden">
-            <span className="block truncate text-[13px] font-bold text-fg">{ADMIN_STAFF.name}</span>
-            <span className="mt-0.5 block text-[11.5px] text-fg-subtle">{ADMIN_STAFF.roleLabel}</span>
+            <span className="block truncate text-[13px] font-bold text-fg">{adminName}</span>
+            <span className="mt-0.5 block text-[11.5px] text-fg-subtle">Support · En Soleil</span>
           </span>
           <ChevronDown size={16} strokeWidth={1.8} className="text-fg-subtle" aria-hidden />
         </div>
