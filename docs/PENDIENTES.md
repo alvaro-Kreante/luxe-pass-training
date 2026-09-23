@@ -513,10 +513,9 @@ directamente) — no solo el alta de Vault de arriba. Ver
 `feat/deploy-epic9-membership`, apilada sobre el PR de Epic 9) — mismo
 patrón que Epic 4–6. Antes de mergearla hacen falta, a mano:
 
-1. **Secrets de GitHub** `MEMBERSHIP_RENEWAL_WEBHOOK_SECRET_DEV` y
-   `MEMBERSHIP_RENEWAL_WEBHOOK_SECRET_PROD` (un valor aleatorio distinto por
-   ambiente). Sin ellos, `supabase secrets set` del job recibe un valor
-   vacío.
+1. ~~**Secrets de GitHub** `MEMBERSHIP_RENEWAL_WEBHOOK_SECRET_DEV` y
+   `MEMBERSHIP_RENEWAL_WEBHOOK_SECRET_PROD`~~ — hecho (23 sept 2026, valor
+   aleatorio distinto por ambiente, generado y dado de alta con `gh`).
 2. **Secretos de Vault** en `luxepass-dev` y `luxepass-prod` (Studio → SQL
    Editor): `membership_renewal_webhook_url` (la URL pública de
    `membership-renewal` de ese proyecto) y `membership_renewal_webhook_secret`
