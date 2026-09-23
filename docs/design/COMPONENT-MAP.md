@@ -647,6 +647,52 @@ Desviaciones conscientes de esta parte:
 
 ---
 
+## Backend real (Supabase local) — Epic 7 (Stories 7.1, 7.2, 7.3)
+
+Séptimo epic con backend real. Las pantallas de `/partner/**` ya existían
+como mockup navegable desde el 5 sept 2026 (patrón 15-19) — esta conexión no
+crea pantallas nuevas (salvo los emails de Story 7.2, que se quedan como
+preview fija, ver más abajo), sustituye sus datos de muestra por Supabase.
+`user_roles` y `partners`/`partner_lounges` nacen aquí — decisión de
+arquitectura tomada con el usuario antes de implementar (pospuesta a
+propósito hasta este momento, ver `docs/DATA-MODEL-MAP.md`): tabla
+`user_roles` (no un custom claim ni esquemas separados) para el rol
+member/partner/admin, y `partner_lounges` como tabla puente many-to-many (un
+partner puede gestionar varios lounges, no una FK directa
+`lounges.partner_id`). El resto extiende `bookings` (Epic 4) y `lounges`
+(Epic 2).
+
+| Módulo | Qué resuelve |
+|---|---|
+| `supabase/schemas/user_roles.sql` | Tabla `user_roles` (nace aquí) + `has_role(text)` — sin fila = miembro corriente, solo se registran roles elevados (partner aquí; admin cuando arranque Epic 8) |
+| `supabase/schemas/partners.sql` | `partners` (nace aquí, dueño Epic 7) + `partner_lounges` (puente many-to-many) + `partner_lounge_ids()`, reutilizado por las policies/RPC de abajo |
+| `supabase/schemas/bookings.sql` — policy `select own or managed bookings`, `no_show_reason` | Story 7.1 — un partner ve (y recibe por Realtime) las reservas de los lounges que gestiona, fusionada en una sola policy con "select own bookings" (evita el warning de "multiple permissive policies" de `supabase db advisors`) |
+| `supabase/schemas/bookings.sql` — `partner_guest_list`/`partner_checkin_booking`/`partner_report_no_show` (RPC) | Story 7.1 — "Today's guest list", check-in y no-show reporting, autenticados de verdad (a diferencia de las RPC "de kiosco" de recepción, Epic 5) y autorizados contra `partner_lounge_ids()`. Contacto (email/teléfono/emergencia) solo si la reserva no está cancelada — "Contact details are shown while the booking is open" (DESIGN-SYSTEM.md §6 Fase 2) |
+| `supabase/schemas/partner_notifications.sql` | Story 7.2 — dos triggers (`booking_confirmed_notify_partner`/`booking_cancelled_notify_partner`, Database Webhook vía `pg_net`, mismo mecanismo que `booking_receipts.sql`) para "new booking"/"cancellation" al partner, y `dispatch_partner_morning_digest()` (pg_cron, 6:30 AM) para el digest matutino — mismo gap conocido que Story 5.3/6.2 (ver abajo) |
+| `supabase/functions/send-partner-booking-event` | Edge Function — una sola function para "new booking" y "cancellation" (distinguidos por `type` en el payload), comparten destinatario y casi todo el render |
+| `supabase/functions/send-partner-digest` | Edge Function del digest matutino |
+| `supabase/schemas/partner_analytics.sql` | Story 7.3 — `partner_analytics_summary`/`partner_bookings_by_day`/`partner_repeat_guests`, agregando sobre `bookings` real de todos los lounges del partner (sin selector de venue, ver el propio archivo) |
+| `lib/partner.ts` | `mapGuestRow`/`bookedAgoLabel` (Story 7.1); `revenueBreakdownFor`/`totalRevenueAttributed`/`bookingsByWeekday` (Story 7.3, sustituyen a `ANALYTICS_SUMMARY`/`ARRIVALS_BY_WEEKDAY`, ya eliminados); `mapRepeatGuestRow`/`repeatGuestsSummary` (Story 7.3). `PARTNER_VENUE`/`PARTNER_GUESTS`/`LIVE_BOOKING`/`PARTNER_ACTIVITY` y el resto de la narrativa de muestra se quedan — siguen alimentando las pantallas de email fijas y el bloque de cuenta del shell, ver desviaciones abajo |
+| `components/partner/require-partner-session.tsx` | Gemelo de `RequireSession` para `/partner/**` (salvo `/partner/login`): exige sesión real y `has_role('partner')` — una cuenta de miembro sin ese rol se trata igual que si no hubiera sesión |
+| `app/partner/login/page.tsx` | Supabase Auth real + `has_role('partner')`; ya no valida contra `PARTNER_ACCOUNT` en el cliente |
+| `components/partner/today-dashboard.tsx` (`/partner`) | Story 7.1/7.2 real: `partner_guest_list` + suscripción de Supabase Realtime (`postgres_changes` sobre `bookings`) reemplazan la simulación de temporizadores; check-in/no-show llaman a las RPC reales |
+| `app/partner/analytics/page.tsx`, `app/partner/guests/page.tsx`, `app/partner/reports/page.tsx` | `RequirePartnerSession` + RPC reales de `partner_analytics.sql`. "Downloaded recently" (`RECENT_DOWNLOADS`) se queda como metadato de muestra — ningún AC pide un historial real de descargas |
+| `scripts/seed-partner-account.mjs` | Alta operativa (no self-service, sin historia de "partner signup") de la cuenta de muestra de The Ainsworth en Supabase local — mismo patrón que la alta manual de secretos de Vault |
+
+Desviaciones conscientes de esta parte:
+
+- **Las tres pantallas de email de Story 7.2 (`/partner/emails/digest`, `/new-booking`, `/cancellation`) se quedan como preview fija de la narrativa de muestra, sin conectar.** El AC es "recibir un email" (ya real, ver Edge Functions arriba) — ninguna historia pide que esas tres pantallas *muestren* el envío real más reciente; son documentación visual de qué aspecto tiene el email, igual criterio que "Settings → Notifications" (sin diseñar todavía).
+- **La promoción automática de la waitlist ("waitlist promotion alerts", nodo del flow) no tiene mecanismo real detrás en ningún epic.** `join_waitlist` (Epic 4) aparca la reserva en `status='waitlisted'`, pero ningún epic conectado hasta ahora implementa una promoción automática al liberarse un hueco — construirla sería expandir el alcance del Epic 4 (dueño real de `bookings`/reservas), no del 7. Se documenta aquí como hueco real, no se simula.
+- **El panel de actividad (`ActivityPanel`, `/partner`) es puramente de sesión, no un historial persistido.** No hay tabla `partner_activity`: arranca vacío y se llena con lo que ocurre real de verdad mientras el dashboard está abierto (nueva reserva/cancelación por Realtime, check-in/no-show hechos desde ahí) — recargar la pantalla la vacía de nuevo.
+- **"Day pass" vs. "visita de membresía" se deriva de si la reserva tiene un pago real cobrado (Epic 4), no de un campo de tipo de visita.** No existe ese campo en `profiles`/`bookings` (Epic 9, planes de membresía, sigue sin conectar) — con pago `succeeded` ligado es day pass, sin pago es membresía. Mismo criterio en `partner_guest_list.is_day_pass` y en `partner_analytics_summary`/`partner_repeat_guests`.
+- **La ventana de admisión ("Until 8:30 PM") ya no distingue "Window closed".** El mock lo comparaba contra un reloj de demo en vivo; sin un reloj real que tenga sentido comparar contra el "hoy" de mockup (`TODAY`), se simplifica a informativo siempre (`admissionWindowLabelFor` en `lib/partner.ts`).
+- **El bloque de cuenta del shell (`PartnerShell`, inicial + nombre del venue + "Dana O. · Front of house") sigue mostrando `PARTNER_VENUE`, no la sesión real.** Ninguna historia pide que ese bloque decorativo refleje `partners.business_name`/`contact_email` en vivo — es chrome de navegación, igual categoría que "Settings" (inerte).
+- **Sin selector de venue para un partner que gestione varios lounges.** La decisión de 1 partner : N lounges (`partner_lounges`) ya generaliza el modelo, pero ningún artboard de esta fase diseña un selector — las tres RPC de `partner_analytics.sql` agregan sobre *todos* los lounges del partner autenticado a propósito, para no bloquear el caso multi-lounge sin inventar una pantalla.
+- **`send-partner-booking-event`/`send-partner-digest` sí se verificaron de punta a punta contra el edge runtime local** (`curl` directo con el secreto compartido real, ambas responden `200`), tras un `supabase stop && supabase start` que resolvió una caída puntual de `supabase_edge_runtime` — ver `docs/PENDIENTES.md` §4.5.
+- **El digest matutino (`dispatch_partner_morning_digest`, pg_cron 6:30 AM) tiene el mismo gap conocido que Story 5.3/6.2**: `lounge_availability` está sembrada en una ventana fija desde 2025-09-09, así que el `current_date` real que este cron usa a propósito no tiene reservas — no ejercitable de punta a punta en local/CI todavía.
+
+---
+
 ## Pendiente de implementar
 
 Lo que el design system especifica y **todavía no existe en código**. Antes de escribirlo,

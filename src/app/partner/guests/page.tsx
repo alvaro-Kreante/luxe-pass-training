@@ -3,19 +3,21 @@
 import * as React from "react";
 import { ChevronRight, Download, Search } from "lucide-react";
 
+import { RequirePartnerSession } from "@/components/partner/require-partner-session";
 import { PartnerShell } from "@/components/patterns/partner-shell";
 import { Segmented } from "@/components/ui/segmented";
 import { StatusChip } from "@/components/ui/status-chip";
+import { createClient } from "@/lib/supabase/client";
 import {
-  AVERAGE_VISITS_PER_GUEST,
-  REPEAT_GUESTS,
-  REPEAT_GUESTS_SUMMARY,
-  RETURN_RATE,
+  type PartnerRepeatGuestRow,
   type RepeatGuestFilter,
+  type RepeatGuestRow,
   filterRepeatGuests,
   formatCurrency,
   loyaltyTier,
+  mapRepeatGuestRow,
   matchesRepeatGuestQuery,
+  repeatGuestsSummary,
   repeatGuestsToCsv,
 } from "@/lib/partner";
 import { downloadTextFile } from "@/lib/download";
@@ -29,23 +31,42 @@ import { downloadTextFile } from "@/lib/download";
  * tabla dibuja a Elena Vasquez con una sola visita ("First visit") — el
  * artboard se contradice. Aquí el filtro por defecto es "Everyone" para que
  * las tres etiquetas de lealtad se puedan ver sin interactuar.
+ *
+ * Backend real (22 sept 2026): `partner_repeat_guests`
+ * (`supabase/schemas/partner_analytics.sql`) agrega toda la historia real de
+ * los lounges del partner autenticado — sin límite de fecha, "repeat guest"
+ * es un hecho acumulado, no del periodo de Analytics.
  */
-export default function RepeatGuestsPage() {
+function RepeatGuestsContent() {
+  const supabase = React.useMemo(() => createClient(), []);
+  const [guests, setGuests] = React.useState<RepeatGuestRow[]>([]);
   const [query, setQuery] = React.useState("");
   const [filter, setFilter] = React.useState<RepeatGuestFilter>("everyone");
 
-  const filtered = filterRepeatGuests(REPEAT_GUESTS, filter).filter((guest) =>
+  React.useEffect(() => {
+    let active = true;
+    supabase.rpc("partner_repeat_guests").then(({ data }) => {
+      if (!active || !data) return;
+      setGuests((data as PartnerRepeatGuestRow[]).map(mapRepeatGuestRow));
+    });
+    return () => {
+      active = false;
+    };
+  }, [supabase]);
+
+  const filtered = filterRepeatGuests(guests, filter).filter((guest) =>
     matchesRepeatGuestQuery(guest, query),
   );
+  const summary = repeatGuestsSummary(guests);
 
   return (
     <PartnerShell
       topbarLabel="Guests"
-      topbarMeta="· The Ainsworth · last 12 months"
+      topbarMeta="· all-time"
       topbarRight={
         <button
           type="button"
-          onClick={() => downloadTextFile("ainsworth-repeat-guests.csv", repeatGuestsToCsv(filtered))}
+          onClick={() => downloadTextFile("partner-repeat-guests.csv", repeatGuestsToCsv(filtered))}
           className="flex h-10 items-center gap-2 rounded-[11px] border-[1.5px] border-line px-4 text-[12.5px] font-bold text-fg-muted transition-colors duration-150 hover:border-accent hover:bg-surface-hover"
         >
           <Download size={16} strokeWidth={1.8} className="text-accent" aria-hidden />
@@ -56,7 +77,7 @@ export default function RepeatGuestsPage() {
       <div className="flex items-center gap-6">
         <div className="min-w-0 flex-1">
           <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">
-            September 2025 – September 2026 · everyone who booked here
+            Everyone who booked here
           </p>
           <h1 className="mt-2 text-[34px] text-fg">Guests who came back</h1>
         </div>
@@ -92,10 +113,10 @@ export default function RepeatGuestsPage() {
       </div>
 
       <div className="mt-3.5 flex flex-wrap gap-2.5">
-        <SummaryChip label={`${REPEAT_GUESTS_SUMMARY.totalMembers} members visited`} active />
-        <SummaryChip label={`${REPEAT_GUESTS_SUMMARY.cameBackAtLeastOnce} came back at least once`} />
-        <SummaryChip label={`${RETURN_RATE}% return rate`} />
-        <SummaryChip label={`${AVERAGE_VISITS_PER_GUEST} visits each on average`} />
+        <SummaryChip label={`${summary.totalMembers} members visited`} active />
+        <SummaryChip label={`${summary.cameBackAtLeastOnce} came back at least once`} />
+        <SummaryChip label={`${summary.returnRate}% return rate`} />
+        <SummaryChip label={`${summary.averageVisits} visits each on average`} />
       </div>
 
       <div className="mt-5 overflow-hidden rounded-content border border-line bg-dark-card">
@@ -163,6 +184,14 @@ export default function RepeatGuestsPage() {
         history at other lounges is never shared with you.
       </p>
     </PartnerShell>
+  );
+}
+
+export default function RepeatGuestsPage() {
+  return (
+    <RequirePartnerSession>
+      <RepeatGuestsContent />
+    </RequirePartnerSession>
   );
 }
 

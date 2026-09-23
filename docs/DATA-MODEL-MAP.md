@@ -140,7 +140,8 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
   `reception_checkin_booking`/`reception_report_no_show`/
   `reception_today_summary`, `SECURITY DEFINER`, concedidas a `anon`):
   decisión tomada con el usuario para no bloquear en la decisión de rol
-  staff/partner que esta misma tabla deja abierta más abajo para Epic 7 —
+  staff/partner que esta misma tabla dejaba abierta para Epic 7 —
+  **resuelta al implementar ese epic** (tabla `user_roles`, ver más abajo) —
   autorizadas solo por LP# + lounge + fecha (`TODAY` de mockup, no
   `current_date`), sin login de personal.
 - Story 5.3 (reminder 24h antes) — **decisión revertida el 21 sept 2026**:
@@ -161,8 +162,11 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
 - `notifications` (**nace aquí**, dueño, ya real) — member_id, category, icon,
   title, body, read_at, created_at. Story 5.3 (reminder) terminó sin
   depender de esta tabla (se conectó con `pg_cron` propio, ver más arriba);
-  Epic 7 (notificaciones a partners) y Epic 9 (confirmación de referido)
-  siguen sin conectarse a ella todavía.
+  Epic 7 **decidió conscientemente no usarla tampoco** (el AC de Story 7.2
+  es "recibir un email", no una fila en el centro de notificaciones del
+  miembro — se conectó con el mismo patrón de Database Webhook/pg_cron que
+  Story 5.3, ver "Epic 7" más abajo); Epic 9 (confirmación de referido)
+  sigue sin conectarse a ella todavía.
 - Story 6.1 reutiliza `bookings` (Epic 4), sin tabla propia — `cancel_booking`
   (RPC) y columnas `cancellation_fee_cents`/`cancelled_at` viven en
   `bookings.sql`. "Support contact" sigue cruzando a `support_tickets`
@@ -178,14 +182,22 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
 
 ### Epic 7 — Partner Dashboard
 
-- `partners` (**nace aquí**, dueño) — cuenta de partner. Implica FK
-  `lounges.partner_id` (o tabla puente `partner_lounges` si un partner
-  gestiona varias lounges) — **decisión de diseño pendiente**, afecta a
-  `lounges` (Epic 2), resolver al implementar este epic.
-- Auth de partners: ¿mismo `auth.users` con rol/claim, o esquema separado? —
-  cruce directo a Epic 1, señalar antes de tocar RLS.
-- 7.1/7.2 reutilizan `bookings` + `profiles` + `notifications`. 7.3
-  (analytics) es vista agregada, sin tabla propia.
+**Resuelto** (22 sept 2026, al implementar este epic — ver
+`docs/design/COMPONENT-MAP.md` "Backend real — Epic 7"):
+
+- `partners` (**nace aquí**, dueño) — cuenta de partner. `partner_lounges`
+  es la tabla puente many-to-many con `lounges` (decisión tomada con el
+  usuario: un partner puede gestionar varios lounges, no una FK directa
+  `lounges.partner_id`).
+- Auth de partners: tabla `user_roles` (`user_id`, `role` — 'partner'/'admin'),
+  no un custom claim en el JWT ni esquemas separados. Sin fila = miembro
+  corriente; solo se registran roles elevados. Ver `supabase/schemas/user_roles.sql`.
+- 7.1/7.2 reutilizan `bookings` + `profiles`. 7.3 (analytics) es vista
+  agregada vía RPC (`partner_analytics.sql`), sin tabla propia.
+  `notifications` (Epic 6) **no** se usa para 7.2 — se mantiene el patrón de
+  Database Webhook/pg_cron por email directo al partner (mismo mecanismo que
+  `booking_receipts.sql`), ya que el AC es "recibir un email", no una fila
+  en el centro de notificaciones del miembro.
 - **Si una historia futura de este epic (u 8.3, "Add/edit/remove lounge
   profiles") necesita que un partner dé de alta un lounge y sus días
   disponibles: `lounges.bands`/`closed_weekdays`/`capacity`/`weekly_hours` y
@@ -238,20 +250,20 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
 | `payments` | 4 | 8 (refunds) |
 | `notifications` | 6 | 5, 7, 9 |
 | `member_favorite_lounges` | 6 | 2/3 (`lounges`) |
-| `partners` | 7 | 2/3 (`lounges.partner_id`) |
+| `partners` / `partner_lounges` | 7 | 2/3 (`lounges`, many-to-many vía `partner_lounges`) |
+| `user_roles` | 7 | 1 (auth), 8 (rol admin, cuando se conecte) |
 | `support_tickets` | 8 | 1/9 (member), 4 (`bookings`) |
 | `memberships` | 9 | 3 (restricciones), 6 (status) |
 | `referrals` | 9 | 6 (sharing) |
 
-**Decisión abierta a resolver *antes* de tocar RLS de Epic 7/8** (no antes):
-cómo se distingue el rol (member / partner / admin) sobre `auth.users` — vía
-tabla `user_roles`, custom claim, o esquemas separados. Es la única pieza que
-toca varios epics de golpe (7, 8, y las policies de 1), así que conviene
-decidirla en cuanto se empiece Epic 7, no dejarla implícita.
+**Resuelto** (22 sept 2026, al empezar Epic 7 — ver arriba "Epic 7 — Partner
+Dashboard"): el rol (member / partner / admin) sobre `auth.users` se
+distingue con la tabla `user_roles`, no un custom claim ni esquemas
+separados. Epic 8 (rol admin) reutiliza la misma tabla cuando se conecte.
 
 **Historias que apuntan a backend fuera del alcance del repo** (se simulan
 visualmente, se anotan como desviación al implementar): 8.1 (refund
-processing real), 6.2/7.2/8.2 (envío de email/reportes programados — Mailpit
+processing real), 6.2/8.2 (envío de email/reportes programados — Mailpit
 sirve para dev local, no hay cron de producción). Story 4.2 salió de esta
 lista el 17 sept 2026 — ver su fila arriba (Stripe real, salvo Apple
 Pay/Google Pay, que sí siguen fuera de alcance por dominio no verificado).

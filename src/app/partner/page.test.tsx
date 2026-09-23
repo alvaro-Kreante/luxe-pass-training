@@ -1,68 +1,155 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
-import { TodayDashboard } from "@/components/partner/today-dashboard";
+import { bookingReferenceFromId, confirmBooking } from "@/lib/booking";
+import { TODAY } from "@/lib/availability";
+import type { WeekBandId } from "@/lib/lounge-profile";
+import { createClient } from "@/lib/supabase/client";
+import {
+  signUpConfirmedMemberAndSignIn,
+  signUpConfirmedPartnerAndSignIn,
+} from "@/lib/testing/confirmed-user";
 
 import PartnerTodayPage from "./page";
 
 /**
  * Story 7.1 — Daily Guest Management. Story 7.2 — Booking Notifications for
- * Partners (real-time updates y sus alertas). Criterios en
+ * Partners (real-time updates). Criterios en
  * docs/specs/epic-7-partner-dashboard/story-7.1-daily-guest-management.md
  * y story-7.2-booking-notifications-for-partners.md
  *
- * Los tests de actualización en vivo pasan `liveBookingDelayMs`/
- * `cancellationDelayMs` muy cortos y esperan con timers reales — combinar
- * fake timers con el scheduler de React bajo jsdom se cuelga (ver el
- * comentario de `TodayDashboard` en `./page.tsx`).
+ * Backend real (22 sept 2026): cada guest de prueba es una reserva real
+ * confirmada contra Supabase local (`confirmBooking`, mismo helper que
+ * `/reception`) para The Ainsworth en `TODAY` — el mismo "hoy" fijo de
+ * mockup que usa el resto del proyecto (`src/lib/availability.ts`), no el
+ * reloj real. Como la lista del día acumula reservas de ejecuciones
+ * anteriores de esta suite (no hay `supabase db reset` entre corridas), los
+ * asserts nunca comprueban el recuento total absoluto — cada guest tiene un
+ * nombre único (con `Date.now()`) para que sus propios botones
+ * ("Mark X as arrived", "View details for X") no sean ambiguos frente a
+ * corridas previas.
  */
 vi.mock("next/navigation", () => ({
   usePathname: () => "/partner",
+  useRouter: () => ({ replace: vi.fn() }),
 }));
 
-describe("Today's guest list (Main.dc.html)", () => {
-  it("muestra nombre, contacto y número LP de cada invitado", () => {
-    render(<PartnerTodayPage />);
+interface TestGuest {
+  name: string;
+  email: string;
+  reference: string;
+}
 
-    expect(screen.getByText("Theo Lindqvist")).toBeVisible();
-    expect(screen.getByText("theo.lindqvist@example.com")).toBeVisible();
-    expect(screen.getByText("+1 (555) 214-9930")).toBeVisible();
-    expect(screen.getByText("LP-840107")).toBeVisible();
+async function createTestGuest(name: string, band: WeekBandId, slotTime: string): Promise<TestGuest> {
+  const email = `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}@ensoleil-test.com`;
+  const member = createClient();
+  await signUpConfirmedMemberAndSignIn(member, email, "EnSoleil!2026");
+
+  const {
+    data: { user },
+  } = await member.auth.getUser();
+  await member.from("profiles").update({ full_name: name }).eq("id", user!.id);
+
+  const booking = await confirmBooking(member, {
+    loungeId: "the-ainsworth",
+    dateIso: TODAY,
+    band,
+    time: slotTime,
+    specialRequests: "",
   });
+  if (!booking) throw new Error(`No se pudo confirmar la reserva de prueba para ${name}`);
 
-  it("resume el día: esperados, llegados, pendientes y no-show", () => {
+  await member.auth.signOut();
+
+  return { name, email, reference: bookingReferenceFromId(booking.id) };
+}
+
+let guestShow: TestGuest;
+let guestCheckIn: TestGuest;
+let guestNoShow: TestGuest;
+let guestSearchA: TestGuest;
+let guestSearchB: TestGuest;
+
+beforeAll(async () => {
+  const stamp = Date.now();
+
+  const partner = createClient();
+  await signUpConfirmedPartnerAndSignIn(
+    partner,
+    `partner-today-${stamp}@theainsworth-test.com`,
+    "AinsworthFOH!24",
+    { businessName: "The Ainsworth", loungeIds: ["the-ainsworth"] },
+  );
+  await partner.auth.signOut();
+
+  // Secuencial, no Promise.all: los clientes de Supabase de este proyecto
+  // comparten storage key en jsdom (una sola "ventana" por archivo de test)
+  // — firmar sesiones en paralelo pisa el token de sesión de las demás y
+  // rompe RLS a mitad de camino.
+  // `afternoon`/`late`: los únicos dos bands con plazas libres en el Docker
+  // local de esta rama (`morning` se agotó, `evening` solo tiene 1) — ver
+  // `scripts/check-seats.mjs` (herramienta puntual de esta sesión, no forma
+  // parte del proyecto).
+  guestShow = await createTestGuest(`Guest Show ${stamp}`, "afternoon", "1:00 PM");
+  guestCheckIn = await createTestGuest(`Guest CheckIn ${stamp}`, "afternoon", "3:30 PM");
+  guestNoShow = await createTestGuest(`Guest NoShow ${stamp}`, "late", "6:00 PM");
+  guestSearchA = await createTestGuest(`Guest SearchA ${stamp}`, "late", "6:00 PM");
+  guestSearchB = await createTestGuest(`Guest SearchB ${stamp}`, "late", "6:00 PM");
+
+  const partnerSession = createClient();
+  await partnerSession.auth.signInWithPassword({
+    email: `partner-today-${stamp}@theainsworth-test.com`,
+    password: "AinsworthFOH!24",
+  });
+});
+
+describe("Today's guest list (Main.dc.html)", () => {
+  it("muestra nombre, contacto y número LP de un invitado real", async () => {
     render(<PartnerTodayPage />);
 
-    expect(screen.getByText("14 expected today")).toBeVisible();
-    expect(screen.getByText("10 checked in")).toBeVisible();
-    expect(screen.getByText("3 still to arrive")).toBeVisible();
-    expect(screen.getByText("1 no-show")).toBeVisible();
+    await waitFor(() => expect(screen.getByText(guestShow.name)).toBeVisible());
+    expect(screen.getByText(guestShow.email)).toBeVisible();
+    // El teléfono es el mismo fijo para todos los miembros de prueba
+    // (`signUpConfirmedMemberAndSignIn`) — solo se comprueba que aparece,
+    // no que sea único.
+    expect(screen.getAllByText("+15555550100").length).toBeGreaterThan(0);
+    expect(screen.getByText(guestShow.reference)).toBeVisible();
   });
 });
 
 describe("check-in status tracking", () => {
-  it("marcar la casilla de un pendiente lo pasa a llegado", async () => {
+  it("marcar la casilla de un pendiente lo pasa a llegado de verdad (RPC partner_checkin_booking)", async () => {
     const user = userEvent.setup({ delay: null });
     render(<PartnerTodayPage />);
 
-    await user.click(screen.getByRole("button", { name: "Mark Idris Fontaine as arrived" }));
+    const markButton = await screen.findByRole("button", {
+      name: `Mark ${guestCheckIn.name} as arrived`,
+    });
+    await user.click(markButton);
 
-    expect(screen.getByText("11 checked in")).toBeVisible();
-    expect(screen.getByText("2 still to arrive")).toBeVisible();
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: `Mark ${guestCheckIn.name} as arrived` }),
+      ).not.toBeInTheDocument(),
+    );
   });
 });
 
 describe("no-show reporting", () => {
-  it("abre la ficha del invitado y reporta un no-show desde ahí", async () => {
+  it("abre la ficha del invitado y reporta un no-show real (RPC partner_report_no_show)", async () => {
     const user = userEvent.setup({ delay: null });
     render(<PartnerTodayPage />);
 
-    await user.click(screen.getByRole("button", { name: "View details for Idris Fontaine" }));
+    await user.click(await screen.findByRole("button", { name: `View details for ${guestNoShow.name}` }));
     await user.click(screen.getByRole("button", { name: "No-show" }));
     await user.click(screen.getByRole("button", { name: "Report no-show" }));
 
-    expect(screen.getByText("2 no-show")).toBeVisible();
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: `Mark ${guestNoShow.name} as arrived` }),
+      ).not.toBeInTheDocument(),
+    );
   });
 });
 
@@ -71,53 +158,23 @@ describe("search/filter guests", () => {
     const user = userEvent.setup({ delay: null });
     render(<PartnerTodayPage />);
 
-    await user.type(screen.getByLabelText("Search by name or LP number"), "theo");
+    await screen.findByText(guestSearchA.name);
+    await user.type(screen.getByLabelText("Search by name or LP number"), guestSearchA.name);
 
-    expect(screen.getByText("Theo Lindqvist")).toBeVisible();
-    expect(screen.queryByText("Camille Duforest")).not.toBeInTheDocument();
+    expect(screen.getByText(guestSearchA.name)).toBeVisible();
+    expect(screen.queryByText(guestSearchB.name)).not.toBeInTheDocument();
   });
 });
 
 describe("print-friendly / CSV export", () => {
-  it("Export CSV abre el panel con el recuento filtrado", async () => {
+  it("Export CSV abre el panel con el recuento filtrado a un único invitado", async () => {
     const user = userEvent.setup({ delay: null });
     render(<PartnerTodayPage />);
 
-    await user.type(screen.getByLabelText("Search by name or LP number"), "theo");
+    await screen.findByText(guestShow.name);
+    await user.type(screen.getByLabelText("Search by name or LP number"), guestShow.reference);
     await user.click(screen.getByRole("button", { name: "Export CSV" }));
 
     expect(screen.getByText(/1 guest · matching the filters on screen/)).toBeVisible();
-  });
-});
-
-describe("real-time updates (LiveUpdate.dc.html)", () => {
-  it("una reserva nueva sube el recuento, muestra un toast y resalta la fila", async () => {
-    render(<TodayDashboard liveBookingDelayMs={5} cancellationDelayMs={100000} />);
-
-    await waitFor(() => expect(screen.getByText("15 expected today")).toBeVisible());
-    expect(screen.getByText("New booking just came in")).toBeVisible();
-    expect(screen.getByText("Naomi Feldstein")).toBeVisible();
-  });
-
-  it("la notificación enlaza al email de la reserva nueva", async () => {
-    const user = userEvent.setup({ delay: null });
-    render(<TodayDashboard liveBookingDelayMs={5} cancellationDelayMs={100000} />);
-
-    await waitFor(() => expect(screen.getByText("15 expected today")).toBeVisible());
-    await user.click(screen.getByRole("button", { name: /unread/ }));
-
-    expect(screen.getByRole("link", { name: "View email" })).toHaveAttribute(
-      "href",
-      "/partner/emails/new-booking",
-    );
-  });
-});
-
-describe("cancellation + waitlist promotion (Story 7.2)", () => {
-  it("una cancelación libera el hueco y la waitlist lo ocupa automáticamente", async () => {
-    render(<TodayDashboard liveBookingDelayMs={5} cancellationDelayMs={5} />);
-
-    await waitFor(() => expect(screen.getByText("Victor Almeida")).toBeVisible());
-    expect(screen.getByText("15 expected today")).toBeVisible();
   });
 });

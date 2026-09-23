@@ -12,7 +12,7 @@ Repositorio integral del proyecto **LuxePass** (plataforma de membresía de lujo
 
 ## ⚠️ Alcance: mockup navegable + backend real parcial (Supabase)
 
-**Este repo empezó como un mockup navegable sin backend — eso ya no es así del todo.** Desde sept 2026, varias historias tienen lógica real conectada a Supabase: Epic 1 completo (Story 1.1 User Registration, Story 1.2 Login & Authentication), Epic 2 completo (Story 2.1 Map-Based Lounge Discovery, Story 2.2 Lounge Filtering & Search, Story 2.3 List View Alternative — catálogo real en `public.lounges`) y Epic 3 completo (Story 3.1 Lounge Profile Details, Story 3.2 Availability Calendar — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 2 / Epic 3). Epic 4 (Booking System) está completo: Story 4.1 (Seamless Booking Flow), Story 4.2 (Payment Processing, **Stripe real** en modo test) y Story 4.3 (Calendar Integration, ya real desde el mockup) — tablas `bookings`/`payments`, RPC `confirm_booking`/`join_waitlist`, y el email real de recibo de reserva (ver más abajo "Email de recibo de reserva real") — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 4. Epic 5 (QR Code & Check-in) está completo: Story 5.1 (Digital Pass Generation), Story 5.2 (Lounge Check-In Process, RPC "de kiosco" sin login de personal) y Story 5.3 (Booking Reminder, **pg_cron real**) — `bookings` gana `confirmation_code`/`checked_in_at`/`no_show`, `profiles` gana `emergency_contact_*` (ver más abajo "Check-in de recepción real" y "Recordatorio de reserva real") — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 5. Epic 6 (Member Experience & Notifications) está completo: Story 6.1 (Booking Management — RPC `cancel_booking`), Story 6.2 (In-app Notifications — tabla `notifications`, **nace aquí**, con dos de los seis tipos disparados de verdad: confirmación de reserva por trigger y aviso de las 6 AM por **pg_cron**; los otros cuatro se siembran como muestra real al crear el perfil) y Story 6.3 (Member Profile & Preferences — perfil/favoritos/preferencias/privacidad reales, borrado de cuenta como soft-delete reversible con **pg_cron** para el borrado físico a los 30 días) — ver más abajo "Notificaciones en la app reales" y "Borrado de cuenta real" — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 6. El resto de epics sigue el patrón de mockup visual descrito abajo, historia por historia, hasta que se conecten a su vez.
+**Este repo empezó como un mockup navegable sin backend — eso ya no es así del todo.** Desde sept 2026, varias historias tienen lógica real conectada a Supabase: Epic 1 completo (Story 1.1 User Registration, Story 1.2 Login & Authentication), Epic 2 completo (Story 2.1 Map-Based Lounge Discovery, Story 2.2 Lounge Filtering & Search, Story 2.3 List View Alternative — catálogo real en `public.lounges`) y Epic 3 completo (Story 3.1 Lounge Profile Details, Story 3.2 Availability Calendar — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 2 / Epic 3). Epic 4 (Booking System) está completo: Story 4.1 (Seamless Booking Flow), Story 4.2 (Payment Processing, **Stripe real** en modo test) y Story 4.3 (Calendar Integration, ya real desde el mockup) — tablas `bookings`/`payments`, RPC `confirm_booking`/`join_waitlist`, y el email real de recibo de reserva (ver más abajo "Email de recibo de reserva real") — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 4. Epic 5 (QR Code & Check-in) está completo: Story 5.1 (Digital Pass Generation), Story 5.2 (Lounge Check-In Process, RPC "de kiosco" sin login de personal) y Story 5.3 (Booking Reminder, **pg_cron real**) — `bookings` gana `confirmation_code`/`checked_in_at`/`no_show`, `profiles` gana `emergency_contact_*` (ver más abajo "Check-in de recepción real" y "Recordatorio de reserva real") — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 5. Epic 6 (Member Experience & Notifications) está completo: Story 6.1 (Booking Management — RPC `cancel_booking`), Story 6.2 (In-app Notifications — tabla `notifications`, **nace aquí**, con dos de los seis tipos disparados de verdad: confirmación de reserva por trigger y aviso de las 6 AM por **pg_cron**; los otros cuatro se siembran como muestra real al crear el perfil) y Story 6.3 (Member Profile & Preferences — perfil/favoritos/preferencias/privacidad reales, borrado de cuenta como soft-delete reversible con **pg_cron** para el borrado físico a los 30 días) — ver más abajo "Notificaciones en la app reales" y "Borrado de cuenta real" — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 6. Epic 7 (Partner Dashboard) está completo: Story 7.1 (Daily Guest Management — `partner_guest_list`/`partner_checkin_booking`/`partner_report_no_show`, RPC autenticadas, más **Supabase Realtime** en `/partner` para las actualizaciones en vivo, primer uso del proyecto), Story 7.2 (Booking Notifications for Partners — dos Database Webhooks + un **pg_cron** hacia dos Edge Functions nuevas) y Story 7.3 (Partner Analytics — `partner_analytics_summary`/`partner_bookings_by_day`/`partner_repeat_guests`) — nace la tabla `user_roles` (rol member/partner/admin, decisión de arquitectura pospuesta a propósito hasta este epic) y `partners`/`partner_lounges` (ver más abajo "Rol de partner real" y "Notificaciones al partner reales") — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 7. El resto de epics sigue el patrón de mockup visual descrito abajo, historia por historia, hasta que se conecten a su vez.
 
 La app en producción de En Soleil vive en `app.luxepass.co`; si este repo la reemplaza o sigue siendo un proyecto aparte no está resuelto en este documento — no asumir ninguna de las dos sin confirmar.
 
@@ -345,7 +345,8 @@ Estos tokens están replicados en el código como **CSS custom properties** en `
 - **Brevo** — envío de email transaccional real (confirmación, recovery de Story 1.1/1.2), vía Supabase Auth Hook `send_email` + Edge Function `supabase/functions/send-email`. Detalle en "Supabase Local Development" §Envío de email transaccional
 - **Stripe** (`@stripe/stripe-js` + `@stripe/react-stripe-js`) — procesamiento de pagos real (Story 4.2), modo test en desarrollo. Checkout Sessions con `ui_mode: 'elements'` + Payment Element (no PaymentIntent crudo, no Checkout hospedado — el formulario vive embebido en la propia pantalla, como pide `Payment.dc.html`). Sin route handlers de Next.js: Supabase Edge Functions para crear la Checkout Session y para el webhook, que es la única fuente de verdad del estado del pago. Datos de tarjeta solo tocan Stripe.js/Elements en el cliente, nunca nuestro servidor (PCI DSS SAQ A). Detalle en "Supabase Local Development" §Procesamiento de pagos (Stripe)
 - **pg_cron** — job programado real (Story 5.3), primero del proyecto: `dispatch_booking_reminders()` corre cada 30 min y despacha el recordatorio de 24h vía `pg_net` + Edge Function `send-booking-reminder`, mismo mecanismo de Database Webhook que el recibo de reserva pero disparado por tiempo, no por evento. Detalle en "Supabase Local Development" §Recordatorio de reserva (pg_cron)
-- **Vitest + Testing Library** — tests sobre jsdom, con `next/navigation` mockeado
+- **Supabase Realtime** — canal `postgres_changes` sobre `bookings` (Story 7.1, `/partner`, primer uso del proyecto): sustituye la simulación de temporizadores del mockup para "real-time updates when new bookings are made". Detalle en "Supabase Local Development" §Rol de partner real
+- **Vitest + Testing Library** — tests sobre jsdom, con `next/navigation` mockeado. jsdom no trae `WebSocket`; el que Node expone globalmente (`undici`) revienta al usarse desde `@supabase/realtime-js` dentro de jsdom — `vitest.setup.ts` lo sustituye por un stub inerte, mismo criterio que el relleno de `IntersectionObserver`
 - **Playwright** — navegador automatizado para verificación visual (uso puntual, no suite e2e masiva)
 
 **Convenciones de código:**
@@ -862,3 +863,81 @@ invocó.
 punta en 30 días reales aquí** — mismo tipo de gap que el recordatorio de
 Story 5.3, esta vez por la duración de la ventana (30 días) en vez de por
 el seed de disponibilidad.
+
+### Rol de partner real (`user_roles`)
+
+Epic 7 — decisión de arquitectura pospuesta a propósito hasta este epic
+(ver `docs/DATA-MODEL-MAP.md`: "cómo se distingue el rol member/partner/
+admin sobre `auth.users`... conviene decidirla en cuanto se empiece Epic
+7, no antes"). Decidido con el usuario (22 sept 2026): tabla `user_roles`
+(`user_id`, `role` — 'partner'/'admin'), no un custom claim en el JWT ni
+esquemas separados — no toca `auth.users`, no exige registrar un segundo
+Custom Access Token Hook por proyecto remoto, y el rol se puede cambiar
+sin esperar a que el JWT del miembro se refresque. Sin fila = miembro
+corriente; solo se registran roles elevados. Epic 8 (rol admin) reutiliza
+la misma tabla cuando se conecte.
+
+`partners`/`partner_lounges` (tabla puente many-to-many — un partner puede
+gestionar varios lounges, decisión tomada con el usuario, no una FK directa
+`lounges.partner_id`) completan el modelo. Dar de alta un partner es un
+proceso operativo, nunca self-service (no hay historia de "partner
+signup", solo `Login.dc.html`) — ver "Alta de un partner" en
+`supabase/schemas/partners.sql` y `scripts/seed-partner-account.mjs` para
+la cuenta de muestra de The Ainsworth en local.
+
+### Notificaciones al partner reales (Database Webhook + pg_cron)
+
+Story 7.2 — "Email notification for each new booking", "Cancellation
+notifications with updated guest count" y "Morning digest email with
+day's guest list" se envían de verdad. Mismo mecanismo que
+`booking_receipts.sql`/`booking_reminders.sql` (secreto compartido en
+Supabase Vault, `pg_net`, sin `verify_jwt` — quien llama es Postgres, no
+un miembro autenticado): dos triggers en `bookings`
+(`notify_partner_new_booking`/`notify_partner_cancellation`, Database
+Webhook) y un `pg_cron` a las 6:30 AM (`dispatch_partner_morning_digest`),
+todos en `supabase/schemas/partner_notifications.sql`, hacia dos Edge
+Functions nuevas (`send-partner-booking-event`, que cubre los dos eventos
+distinguidos por `type` en el payload, y `send-partner-digest`).
+
+**Decisión consciente: no se usa la tabla `notifications` de Epic 6.** El
+AC de Story 7.2 es "recibir un email", no una fila en el centro de
+notificaciones del miembro — `docs/DATA-MODEL-MAP.md` ya anticipaba a
+Epic 7 como posible referenciador de esa tabla, pero al conectarse de
+verdad se decidió lo mismo que ya había decidido Story 5.3 (pg_cron
+propio en vez de depender de `notifications`).
+
+Alta de los 4 secretos de Vault, una vez por proyecto (local/dev/prod):
+```sql
+select vault.create_secret(
+  'http://host.docker.internal:54331/functions/v1/send-partner-booking-event', -- local; staging/prod: la URL pública del proyecto
+  'partner_notification_webhook_url', 'URL de send-partner-booking-event'
+);
+select vault.create_secret(
+  '<mismo valor que PARTNER_NOTIFICATION_WEBHOOK_SECRET en supabase/functions/.env>',
+  'partner_notification_webhook_secret', 'Secreto compartido hacia send-partner-booking-event'
+);
+select vault.create_secret(
+  'http://host.docker.internal:54331/functions/v1/send-partner-digest',
+  'partner_digest_webhook_url', 'URL de send-partner-digest'
+);
+select vault.create_secret(
+  '<mismo valor que PARTNER_DIGEST_WEBHOOK_SECRET en supabase/functions/.env>',
+  'partner_digest_webhook_secret', 'Secreto compartido hacia send-partner-digest'
+);
+```
+Sin los 4 secretos dados de alta, ninguna de las tres funciones hace nada
+(mismo guard que el resto de este patrón) — así se comporta `ci.yml` a
+propósito (nunca los crea).
+
+**Las tres pantallas de email (`/partner/emails/digest`, `/new-booking`,
+`/cancellation`) se quedan como preview fija de la narrativa de muestra,
+sin conectar.** El AC ya está cubierto por el envío real de arriba —
+ninguna historia pide que esas pantallas *muestren* el envío más
+reciente.
+
+**La promoción automática de la waitlist no tiene mecanismo real en
+ningún epic.** `join_waitlist` (Epic 4) aparca la reserva en
+`status='waitlisted'`, pero ningún epic conectado hasta ahora la sube a
+`confirmed` cuando se libera un hueco — construirlo expandiría el
+alcance del Epic 4 (dueño real de `bookings`), no del 7. Documentado
+como hueco real en `docs/PENDIENTES.md` §2.11, no simulado.
