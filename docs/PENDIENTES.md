@@ -506,28 +506,26 @@ usa el cron, en vez de que el cliente invoque la Edge Function
 directamente) — no solo el alta de Vault de arriba. Ver
 `docs/design/COMPONENT-MAP.md` tabla de desviaciones.
 
-### 4.8 Epic 9 no tiene nada desplegado a `staging`/`main` todavía
+### 4.8 Epic 9: despliegue a `staging`/`main` — faltan los pasos manuales
 
-Mismo hueco que Epic 5–8 antes de sus PR de despliegue dedicados:
-`.github/workflows/deploy.yml` no conoce `stripe-membership-checkout` ni
-`membership-renewal`. `stripe-membership-checkout` no necesita
-secreto propio (reutiliza `STRIPE_SECRET_KEY`/`APP_URL`, ya presentes);
-`membership-renewal` necesita `STRIPE_SECRET_KEY` (ya presente) y `MEMBERSHIP_RENEWAL_WEBHOOK_SECRET`
-y los 2 secretos de Vault (`membership_renewal_webhook_url`/`_secret`),
-dados de alta solo en el Docker local de esta rama.
+`deploy.yml` ya despliega `stripe-membership-checkout` y
+`membership-renewal` en `migrate-dev`/`migrate-prod` (rama
+`feat/deploy-epic9-membership`, apilada sobre el PR de Epic 9) — mismo
+patrón que Epic 4–6. Antes de mergearla hacen falta, a mano:
 
-**Desbloquea:** un PR aparte que amplíe `deploy.yml` con `supabase
-functions deploy stripe-membership-checkout` + `supabase secrets set
-MEMBERSHIP_RENEWAL_WEBHOOK_SECRET` + `supabase functions deploy
-membership-renewal --no-verify-jwt` en
-`migrate-dev`/`migrate-prod`, los secrets de GitHub
-`MEMBERSHIP_RENEWAL_WEBHOOK_SECRET_DEV`/`_PROD` y el alta manual de los 2
-secretos de Vault en `luxepass-dev`/`luxepass-prod` vía Studio (SQL en
-`CLAUDE.md` §"Membresía y referidos reales"). Hasta entonces el cron de
-renovación sí inserta la notificación en la app y vence los términos sin
-auto-renovación (no depende de Vault), pero **no cobra las renovaciones**
-ni manda el email — en staging/prod, un término vencido con
-auto-renovación seguiría activo sin cobrar hasta completar este paso.
+1. **Secrets de GitHub** `MEMBERSHIP_RENEWAL_WEBHOOK_SECRET_DEV` y
+   `MEMBERSHIP_RENEWAL_WEBHOOK_SECRET_PROD` (un valor aleatorio distinto por
+   ambiente). Sin ellos, `supabase secrets set` del job recibe un valor
+   vacío.
+2. **Secretos de Vault** en `luxepass-dev` y `luxepass-prod` (Studio → SQL
+   Editor): `membership_renewal_webhook_url` (la URL pública de
+   `membership-renewal` de ese proyecto) y `membership_renewal_webhook_secret`
+   (el mismo valor que el secret de GitHub de ese ambiente) — SQL en
+   `CLAUDE.md` §"Membresía y referidos reales". Sin ellos, el cron no cobra
+   renovaciones ni manda el aviso por email (sí vence los términos sin
+   auto-renovación y avisa en la app).
+3. Después del primer deploy, **`scripts/sql/epic9-backfill-membership-status.sql`**
+   en cada proyecto (ver §2.12, opción A).
 
 ---
 
