@@ -583,13 +583,17 @@ pagos real (Story 4.2).
 compartido de una cuenta), creada el 17 sept 2026 con
 `stripe sandbox create --from-git` — `account_id` `acct_1UGUm6IBtxcBzVZb`.
 **Ya reclamada** (21 sept 2026, `stripe sandbox claim` + `stripe login
---complete-device`), asociada a una cuenta Stripe real — ya no expira. La
-clave restringida no rotó al reclamarla (verificado con una llamada real a
-la API): sigue siendo la misma en todos los lugares donde ya vivía. Claves
-guardadas en `.env.local`
-(`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`) y `supabase/functions/.env`
-(`STRIPE_SECRET_KEY`, ya con prefijo `rk`/restringida, no `sk_`) — ninguno de
-los dos archivos se comitea. **Vercel ya está montado** (staging/prod, ver
+--complete-device`), asociada a una cuenta Stripe real — ya no expira.
+**Ojo: reclamar no cambia la clave ya emitida.** La clave `rkcs_test_…`
+de antes del claim siguió funcionando, pero con el rate limit bajo de
+"claimable sandbox" (la suite completa lo agotaba: "Claimable sandbox
+request rate limit exceeded"); el 23 sept 2026 se sustituyó por una clave
+de test normal (`sk_test_…`) creada en el Dashboard de la sandbox ya
+reclamada, en `supabase/functions/.env`, `.env.local` y el secret de
+GitHub `STRIPE_SECRET_KEY` (CI). Claves guardadas en `.env.local`
+(`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_SECRET_KEY` para los
+fixtures de test) y `supabase/functions/.env` (`STRIPE_SECRET_KEY`) —
+ninguno de los dos archivos se comitea. **Vercel ya está montado** (staging/prod, ver
 "Infraestructura real ya montada" más arriba) — lo pendiente es dar de alta
 ahí `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (puede ser esta misma sandbox
 reclamada, o una independiente por ambiente — decisión de producto, no
@@ -620,7 +624,7 @@ Lo ya decidido, a seguir al implementar Story 4.2:
   la Edge Function, import `npm:stripe` en Deno) y llamar sobre esa
   instancia — nunca el patrón global/deprecado (`stripe.api_key = …`).
 - **Secrets de las functions** (mismo patrón que `BREVO_*`):
-  `STRIPE_SECRET_KEY` (restringida, prefijo `rk`) y `STRIPE_WEBHOOK_SECRET`.
+  `STRIPE_SECRET_KEY` (clave de test normal, `sk_test_`/`rk_test_` — nunca la `rkcs_` de sandbox sin reclamar) y `STRIPE_WEBHOOK_SECRET`.
   La clave publicable (`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`) es la única que
   sí llega al cliente, para `@stripe/stripe-js`/`@stripe/react-stripe-js`.
 - **Modo test en local y en `staging`**; cambiar a claves live en `main`
