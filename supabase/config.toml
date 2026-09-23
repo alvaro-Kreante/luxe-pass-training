@@ -480,9 +480,10 @@ verify_jwt = false
 verify_jwt = false
 
 # Story 9.1 — el cron `dispatch_membership_renewals` (pg_net, ver
-# supabase/schemas/memberships.sql) llama a esta function desde Postgres,
-# mismo motivo/mecanismo que send-booking-reminder.
-[functions.send-membership-renewal-notice]
+# supabase/schemas/memberships.sql) llama a esta function desde Postgres
+# (aviso de renovación y cobro de la renovación automática), mismo
+# motivo/mecanismo que send-booking-reminder.
+[functions.membership-renewal]
 verify_jwt = false
 
 [analytics]

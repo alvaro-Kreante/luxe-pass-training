@@ -7,10 +7,12 @@ import { listSavedPaymentMethods, type SavedPaymentMethod } from "./stripe-payme
 /**
  * Story 9.1 (Membership) — conectada a Supabase real (`memberships`, nace en
  * Epic 9, ver `supabase/schemas/memberships.sql`) y a Stripe real en modo
- * test (Edge Function `stripe-membership-checkout`). Decisiones de producto
- * del 23 sept 2026: el miembro nace sin membresía hasta elegir plan, y
- * elegir/subir de plan es un cobro puntual (no Stripe Billing) — ver
- * `docs/design/COMPONENT-MAP.md` "Backend real — Epic 9".
+ * test (Edge Functions `stripe-membership-checkout` y `membership-renewal`).
+ * Decisiones de producto del 23 sept 2026: el miembro nace sin membresía
+ * hasta elegir plan; elegir/subir de plan es un cobro puntual, y la
+ * renovación automática cobra la tarjeta guardada al vencer el término (sin
+ * Stripe Billing); el paso de anual a mensual se programa para el final del
+ * término — ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 9".
  *
  * `DESIGN-SYSTEM.md` §6 Fase 9 fija el modelo de negocio: un plan mensual de
  * $249.00 frente a los $2,400.00 anuales ya fijados en la Fase 5 — el anual
@@ -76,6 +78,8 @@ export interface MemberMembership {
   currentPeriodStart: string | null;
   currentPeriodEnd: string | null;
   autoRenew: boolean;
+  /** Plan con el que se renovará el término siguiente (hoy, solo anual → mensual). */
+  pendingPlan: PlanId | null;
 }
 
 interface MembershipRow {
@@ -85,13 +89,14 @@ interface MembershipRow {
   current_period_start: string;
   current_period_end: string;
   auto_renew: boolean;
+  pending_plan: PlanId | null;
 }
 
 /** AC "Clear membership display in profile (active/inactive)". Sin fila (o vencida) = inactiva. */
 export async function fetchMembership(supabase: SupabaseClient): Promise<MemberMembership> {
   const { data, error } = await supabase
     .from("memberships")
-    .select("plan, status, started_at, current_period_start, current_period_end, auto_renew")
+    .select("plan, status, started_at, current_period_start, current_period_end, auto_renew, pending_plan")
     .maybeSingle();
   if (error) throw error;
 
@@ -104,6 +109,7 @@ export async function fetchMembership(supabase: SupabaseClient): Promise<MemberM
       currentPeriodStart: null,
       currentPeriodEnd: null,
       autoRenew: false,
+      pendingPlan: null,
     };
   }
 
@@ -114,6 +120,7 @@ export async function fetchMembership(supabase: SupabaseClient): Promise<MemberM
     currentPeriodStart: row.current_period_start,
     currentPeriodEnd: row.current_period_end,
     autoRenew: row.auto_renew,
+    pendingPlan: row.pending_plan,
   };
 }
 
@@ -211,6 +218,22 @@ export async function setMembershipAutoRenew(supabase: SupabaseClient, autoRenew
   if (error) throw error;
 }
 
+/**
+ * Anual → mensual (`Plans.dc.html`: "Moving to monthly waits until your
+ * current term ends"). No cobra nada hoy: la renovación del término cobra
+ * ya el mensual (Edge Function `membership-renewal`).
+ */
+export async function scheduleMembershipPlanChange(supabase: SupabaseClient, plan: PlanId): Promise<void> {
+  const { error } = await supabase.rpc("schedule_membership_plan_change", { p_plan: plan });
+  if (error) throw error;
+}
+
+/** Deshace un paso a mensual programado — el término siguiente vuelve a ser anual. */
+export async function cancelMembershipPlanChange(supabase: SupabaseClient): Promise<void> {
+  const { error } = await supabase.rpc("cancel_membership_plan_change");
+  if (error) throw error;
+}
+
 /** "Visits this month" — reservas del mes de `todayIso` (el "hoy" de mockup) sin day pass pagado detrás. */
 export async function fetchVisitsThisMonth(
   supabase: SupabaseClient,
@@ -236,6 +259,8 @@ export interface MembershipAccount {
   initials: string;
   status: "active" | "inactive";
   plan: PlanId | null;
+  /** Plan con el que se renovará el término siguiente (paso a mensual programado). */
+  pendingPlan: PlanId | null;
   memberSince: string;
   /** "November 3, 2026" (anual, fecha de renovación) u "October 4, 2026" (mensual, próximo cargo). */
   renewalOrChargeDateLabel: string;
@@ -328,6 +353,7 @@ export async function fetchMembershipAccount(supabase: SupabaseClient): Promise<
     initials: initialsOf(fullName),
     status: membership.status,
     plan: membership.plan,
+    pendingPlan: membership.pendingPlan,
     memberSince: membership.startedAt ? formatMonthYear(membership.startedAt) : "",
     renewalOrChargeDateLabel: membership.currentPeriodEnd ? formatLongDate(membership.currentPeriodEnd) : "",
     renewalNoticeDateLabel: membership.currentPeriodEnd
@@ -413,6 +439,7 @@ export const ALEXANDRA_MEMBERSHIP: MembershipAccount = {
   initials: "AR",
   status: "active",
   plan: "annual",
+  pendingPlan: null,
   memberSince: "November 2025",
   renewalOrChargeDateLabel: "November 3, 2026",
   renewalNoticeDateLabel: "October 3",
@@ -436,6 +463,7 @@ export const NAOMI_MEMBERSHIP: MembershipAccount = {
   initials: "NF",
   status: "active",
   plan: "monthly",
+  pendingPlan: null,
   memberSince: "July 2026",
   renewalOrChargeDateLabel: "October 4, 2026",
   renewalNoticeDateLabel: "September 4",

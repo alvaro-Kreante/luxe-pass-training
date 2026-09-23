@@ -2,6 +2,8 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createClient as createAdminClient } from "@supabase/supabase-js";
+
 import { fetchMembership } from "@/lib/membership";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
@@ -26,6 +28,10 @@ vi.mock("next/navigation", () => ({
 }));
 
 beforeEach(() => push.mockReset());
+
+function admin() {
+  return createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+}
 
 async function freshMember(label: string) {
   const supabase = createClient();
@@ -87,14 +93,45 @@ describe("sin membresía — elegir plan", () => {
 });
 
 describe("con membresía", () => {
-  it("el plan anual contratado lleva 'Your plan' y la bajada a mensual queda inerte", async () => {
+  it("el plan anual contratado lleva 'Your plan' y ofrece pasar a mensual", async () => {
     const { user } = await freshMember("annual");
     await grantTestMembership(user.id, "annual");
     render(<PlansPage />);
 
     expect(await screen.findByText("Your plan", {}, LOAD)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Current plan" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Switch to monthly" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Switch to monthly" })).toBeEnabled();
+  });
+
+  it("pasar de anual a mensual no cobra hoy y queda programado para el final del término", async () => {
+    const { supabase, user } = await freshMember("downgrade");
+    await grantTestMembership(user.id, "annual");
+    const userEvents = userEvent.setup({ delay: null });
+    render(<PlansPage />);
+
+    await userEvents.click(await screen.findByRole("button", { name: "Switch to monthly" }, LOAD));
+
+    const dialog = await screen.findByRole("dialog", {}, LOAD);
+    expect(within(dialog).getByText("Confirm your new plan")).toBeInTheDocument();
+    expect(within(dialog).getByText("$0.00")).toBeInTheDocument();
+    await userEvents.click(within(dialog).getByRole("button", { name: /^Switch to monthly on / }));
+
+    await waitFor(async () => expect((await fetchMembership(supabase)).pendingPlan).toBe("monthly"));
+    expect(await screen.findByRole("button", { name: "Switch scheduled" }, LOAD)).toBeDisabled();
+    const { data: payments } = await admin().from("payments").select("id").eq("member_id", user.id);
+    expect(payments).toEqual([]);
+  });
+
+  it("con el paso a mensual programado, 'Keep annual' lo deshace", async () => {
+    const { supabase, user } = await freshMember("keep-annual");
+    await grantTestMembership(user.id, "annual", { pendingPlan: "monthly" });
+    const userEvents = userEvent.setup({ delay: null });
+    render(<PlansPage />);
+
+    await userEvents.click(await screen.findByRole("button", { name: "Keep annual" }, LOAD));
+
+    await waitFor(async () => expect((await fetchMembership(supabase)).pendingPlan).toBeNull());
+    expect(await screen.findByRole("button", { name: "Switch to monthly" }, LOAD)).toBeEnabled();
   });
 
   it("desde el mensual, 'Switch to annual' abre la subida con prorrateo", async () => {

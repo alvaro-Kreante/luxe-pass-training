@@ -133,6 +133,19 @@ describe("AC 'Renewal date and auto-renewal settings'", () => {
     await waitFor(async () => expect((await fetchMembership(supabase)).autoRenew).toBe(false));
   });
 
+  it("con el paso a mensual programado, el rail dice qué se cobrará al renovar", async () => {
+    const { user } = await freshMember("pending-monthly");
+    await grantTestMembership(user.id, "annual", {
+      periodStart: new Date("2025-11-03T00:00:00Z"),
+      periodEnd: new Date("2099-11-03T00:00:00Z"),
+      pendingPlan: "monthly",
+    });
+    render(<MembershipPage />);
+
+    expect(await screen.findByText(/\$249\.00 will be charged/, {}, LOAD)).toBeInTheDocument();
+    expect(screen.getByText(/Switching to monthly on November 3, 2099/)).toBeInTheDocument();
+  });
+
   it("encender el switch de nuevo la reactiva", async () => {
     const { supabase, user } = await freshMember("auto-renew-on");
     await grantTestMembership(user.id, "annual", { autoRenew: false });

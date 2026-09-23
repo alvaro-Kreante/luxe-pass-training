@@ -56,7 +56,7 @@ Ejemplo ya hecho de patrón mockup (epics aún no conectados): datos de muestra 
 
 **Borrado de cuenta real (Story 6.3):** desde el 21 sept 2026, "Account deletion option with confirmation" conecta contra Supabase — pero no borra nada al instante: `DeleteAccount.dc.html` promete un periodo de gracia reversible ("erased after 30 days... sign in before then and everything comes back"), así que confirmar el modal solo marca `profiles.deleted_at` y cancela las reservas futuras (RPC `request_account_deletion`), fiel a esa promesa. El borrado físico real es la quinta excepción viva a la regla "❌ Server Actions o fetch a servicios externos", y la segunda disparada por el paso del tiempo: `pg_cron` corre `dispatch_account_deletions()` una vez al día y, pasados los 30 días, llama (`pg_net`, mismo mecanismo que el recibo/recordatorio) a la Edge Function `delete-account` — primer uso del proyecto de `auth.admin.deleteUser`. El login (`reactivateAccountIfDeleted`) deshace el soft-delete si el miembro vuelve a entrar antes de esos 30 días. Mismo gap conocido que Story 5.3: no ejercitable de punta a punta en 30 días reales en este entorno. Detalle completo en `docs/design/COMPONENT-MAP.md` §Backend real — Epic 6.
 
-**Membresía y referidos reales (Epic 9):** desde el 23 sept 2026, `/profile/membership/**` corre sobre `memberships`/`referrals`/`referral_shares` reales, con cuatro decisiones de producto tomadas con el usuario antes de implementar: (1) el miembro nace **sin membresía** hasta elegir plan — la elección reutiliza `Plans.dc.html` + el modal de `Upgrade.dc.html` sin artboard propio; (2) alta y subida mensual→anual son un **cobro puntual real de Stripe** (Edge Function `stripe-membership-checkout`, importe de la RPC `membership_change_quote`), no Stripe Billing — la renovación automática no cobra sola, gap consciente; (3) el premio de referido queda *pending* al registrarse el amigo y pasa a *credited* con su **primer pago real liquidado** (trigger sobre `payments`); (4) el amigo entra por `/join/[code]` → `/signup?ref=CODE` (metadatos de Auth, sin campo nuevo en el signup). Sexta excepción viva a la regla "❌ Server Actions o fetch a servicios externos" (el cobro) y cuarto uso de `pg_cron` (`dispatch_membership_renewals()`, aviso un mes antes hacia `send-membership-renewal-notice`). Detalle completo en "Supabase Local Development" §Membresía y referidos reales y `docs/design/COMPONENT-MAP.md` §Backend real — Epic 9.
+**Membresía y referidos reales (Epic 9):** desde el 23 sept 2026, `/profile/membership/**` corre sobre `memberships`/`referrals`/`referral_shares` reales, con cuatro decisiones de producto tomadas con el usuario antes de implementar: (1) el miembro nace **sin membresía** hasta elegir plan — la elección reutiliza `Plans.dc.html` + el modal de `Upgrade.dc.html` sin artboard propio; (2) alta y subida mensual→anual son un **cobro puntual real de Stripe** (Edge Function `stripe-membership-checkout`, importe de la RPC `membership_change_quote`), no Stripe Billing; la **renovación automática sí cobra** (revisado con el usuario el mismo día: "por algo es renovación automática") — el cron cobra off-session la tarjeta guardada al vencer el término, y el paso de anual a mensual se programa para ese momento (`pending_plan`); (3) el premio de referido queda *pending* al registrarse el amigo y pasa a *credited* con su **primer pago real liquidado** (trigger sobre `payments`); (4) el amigo entra por `/join/[code]` → `/signup?ref=CODE` (metadatos de Auth, sin campo nuevo en el signup). Sexta excepción viva a la regla "❌ Server Actions o fetch a servicios externos" (el cobro) y cuarto uso de `pg_cron` (`dispatch_membership_renewals()`, diario: cobro de renovaciones vencidas y aviso un mes antes, ambos hacia la Edge Function `membership-renewal`). Detalle completo en "Supabase Local Development" §Membresía y referidos reales y `docs/design/COMPONENT-MAP.md` §Backend real — Epic 9.
 
 ---
 
@@ -346,7 +346,7 @@ Estos tokens están replicados en el código como **CSS custom properties** en `
 - **@ducanh2912/next-pwa** — service worker
 - **Brevo** — envío de email transaccional real (confirmación, recovery de Story 1.1/1.2), vía Supabase Auth Hook `send_email` + Edge Function `supabase/functions/send-email`. Desde Story 8.2 también manda adjuntos reales (`sendBrevoEmailWithAttachment`, `_shared/brevo.ts`) para el CSV de un reporte programado. Detalle en "Supabase Local Development" §Envío de email transaccional y §Reportes programados reales
 - **Stripe** (`@stripe/stripe-js` + `@stripe/react-stripe-js`) — procesamiento de pagos real (Story 4.2), modo test en desarrollo. Checkout Sessions con `ui_mode: 'elements'` + Payment Element (no PaymentIntent crudo, no Checkout hospedado — el formulario vive embebido en la propia pantalla, como pide `Payment.dc.html`). Sin route handlers de Next.js: Supabase Edge Functions para crear la Checkout Session, para el webhook (única fuente de verdad del estado del pago), desde Story 8.1, para reembolsar un cargo real (`stripe-refund-payment`) y, desde Epic 9, para cobrar el alta o la subida de plan de membresía (`stripe-membership-checkout`). Datos de tarjeta solo tocan Stripe.js/Elements en el cliente, nunca nuestro servidor (PCI DSS SAQ A). Detalle en "Supabase Local Development" §Procesamiento de pagos (Stripe) y §Reembolso real
-- **pg_cron** — jobs programados reales: `dispatch_booking_reminders()` (Story 5.3, primero del proyecto, cada 30 min, recordatorio de 24h), `dispatch_morning_notifications()`/`dispatch_partner_morning_digest()`/`dispatch_account_deletions()` (Story 6.2/6.3/7.2), `dispatch_scheduled_reports()` (Story 8.2, cada 15 min — la cadencia más corta, porque un reporte diario/semanal/mensual necesita revisar seguido si ya le toca) y `dispatch_membership_renewals()` (Epic 9, diario: vence términos sin auto-renovación y avisa un mes antes de renovar). Todos vía Database Webhook (`pg_net`) hacia su Edge Function, disparados por tiempo, no por evento. Detalle en "Supabase Local Development" §Recordatorio de reserva (pg_cron) y §Reportes programados reales
+- **pg_cron** — jobs programados reales: `dispatch_booking_reminders()` (Story 5.3, primero del proyecto, cada 30 min, recordatorio de 24h), `dispatch_morning_notifications()`/`dispatch_partner_morning_digest()`/`dispatch_account_deletions()` (Story 6.2/6.3/7.2), `dispatch_scheduled_reports()` (Story 8.2, cada 15 min — la cadencia más corta, porque un reporte diario/semanal/mensual necesita revisar seguido si ya le toca) y `dispatch_membership_renewals()` (Epic 9, diario: vence términos sin auto-renovación, cobra las renovaciones vencidas y avisa un mes antes de renovar). Todos vía Database Webhook (`pg_net`) hacia su Edge Function, disparados por tiempo, no por evento. Detalle en "Supabase Local Development" §Recordatorio de reserva (pg_cron) y §Reportes programados reales
 - **Supabase Realtime** — canal `postgres_changes` sobre `bookings` (Story 7.1, `/partner`, primer uso del proyecto): sustituye la simulación de temporizadores del mockup para "real-time updates when new bookings are made". Detalle en "Supabase Local Development" §Rol de partner real
 - **Vitest + Testing Library** — tests sobre jsdom, con `next/navigation` mockeado. jsdom no trae `WebSocket`; el que Node expone globalmente (`undici`) revienta al usarse desde `@supabase/realtime-js` dentro de jsdom — `vitest.setup.ts` lo sustituye por un stub inerte, mismo criterio que el relleno de `IntersectionObserver`
 - **Playwright** — navegador automatizado para verificación visual (uso puntual, no suite e2e masiva)
@@ -1051,7 +1051,19 @@ dentro de un `DEFINER`, `current_user` sería siempre el dueño).
 
 **El importe nunca lo decide el navegador.** `stripe-membership-checkout`
 llama a `membership_change_quote` con el JWT del propio miembro, así que
-hereda también sus reglas (no repetir plan, no bajar de anual a mensual).
+hereda también sus reglas (no repetir plan, no bajar de anual a mensual —
+eso no se cobra hoy: se programa con `schedule_membership_plan_change`).
+
+**La renovación automática cobra de verdad** (Edge Function
+`membership-renewal`, `type: "charge"`, llamada por el cron). Cobra
+off-session la tarjeta por defecto del Customer de Stripe (o la primera
+guardada) por `pending_plan ?? plan`; el trigger de `payments` abre el
+término siguiente **desde el fin del anterior**, no desde "ahora". Si no hay
+tarjeta o Stripe rechaza el cobro, la membresía vence y se inserta la
+notificación "We couldn't renew your membership". La function relee la fila
+antes de cobrar (409 si la auto-renovación se apagó o el término no ha
+vencido) y el cron marca `renewal_attempted_at` antes de llamarla, para no
+cobrar dos veces la misma renovación.
 
 **Tests:** `memberships` se siembra con el service role
 (`grantTestMembership`, `src/lib/testing/membership-fixture.ts`), igual que
@@ -1064,17 +1076,21 @@ Alta de los 2 secretos de Vault del aviso de renovación, una vez por
 proyecto (local/dev/prod):
 ```sql
 select vault.create_secret(
-  'http://host.docker.internal:54331/functions/v1/send-membership-renewal-notice', -- local; staging/prod: la URL pública del proyecto
-  'membership_renewal_webhook_url', 'URL de send-membership-renewal-notice'
+  'http://host.docker.internal:54331/functions/v1/membership-renewal', -- local; staging/prod: la URL pública del proyecto
+  'membership_renewal_webhook_url', 'URL de membership-renewal'
 );
 select vault.create_secret(
   '<mismo valor que MEMBERSHIP_RENEWAL_WEBHOOK_SECRET en supabase/functions/.env>',
-  'membership_renewal_webhook_secret', 'Secreto compartido del cron de renovación hacia send-membership-renewal-notice'
+  'membership_renewal_webhook_secret', 'Secreto compartido del cron de renovación hacia membership-renewal'
 );
 ```
 Sin los 2 secretos, `dispatch_membership_renewals()` sigue insertando la
-notificación en la app y venciendo términos (no dependen de Vault) — solo
-no manda el email. **`supabase db reset` borra Vault**: volver a darlos de
+notificación en la app y venciendo los términos sin auto-renovación (no
+dependen de Vault) — pero no cobra renovaciones ni manda el email: un
+término vencido con auto-renovación sigue activo hasta que existan. El mismo
+secreto también va en `.env.local` (`MEMBERSHIP_RENEWAL_WEBHOOK_SECRET`):
+los tests invocan el cobro directamente; en CI se genera al vuelo
+(`ci.yml`). **`supabase db reset` borra Vault**: volver a darlos de
 alta después (igual que los de `admin_report_*`).
 
 ### Gestión de contenido real (Story 8.3)

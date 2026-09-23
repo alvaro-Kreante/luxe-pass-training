@@ -242,19 +242,17 @@ Mismo motivo bloquea el aviso de las 6 AM de la Story 6.2
 `current_date` real que ese cron usa a propósito, ver
 `docs/design/COMPONENT-MAP.md` "Backend real — Epic 6".
 
-### 2.12 Epic 9: renovación sin cobro, day passes sin gastar y otros huecos reales
+### 2.12 Epic 9: day passes sin gastar y otros huecos reales
 
 Conectado Epic 9 (23 sept 2026), quedan huecos conscientes — decisiones de
 alcance tomadas con el usuario, no simulaciones:
 
-- **La renovación automática no cobra.** `auto_renew` y el aviso de un mes
-  antes son reales, pero al llegar `current_period_end` con
-  `auto_renew = true` el plan sigue activo sin ningún cargo (el cron solo
-  vence los que tienen la auto-renovación apagada). El alta y la subida de
-  plan son cobros puntuales; un cobro recurrente real sería Stripe Billing
-  (Subscriptions + webhooks de `invoice.*`), descartado por el usuario para
-  esta pasada. **Desbloquea:** decidir si se adopta Stripe Billing o un cron
-  que cobre off-session la tarjeta guardada al vencer el término.
+- **Un cobro de renovación rechazado no se reintenta.** Si la tarjeta
+  guardada falla al vencer el término, la membresía vence en el acto (y se
+  avisa en la app); no hay periodo de gracia ni reintentos como haría
+  Stripe Billing (Smart Retries), ni email del fallo. Tampoco se gestiona
+  una tarjeta que exija autenticación 3DS off-session — cuenta como fallo.
+  **Desbloquea:** decidir una política de reintentos/gracia.
 - **Los day passes (referido, bienvenida, cumpleaños) no se gastan.** Se
   cuentan y se muestran de verdad, pero "Use a day pass" sigue inerte y el
   flujo de reserva (Epic 4) no los consume — la variante "cubierta por la
@@ -263,9 +261,6 @@ alcance tomadas con el usuario, no simulaciones:
   **Desbloquea:** una decisión de cómo el booking decide "cubierta / day
   pass / pagada" a partir de `memberships` + visitas del mes + day passes,
   que es alcance de Epic 4.
-- **Bajar de anual a mensual sigue sin mecanismo** ("espera al final del
-  término", sin artboard de confirmación) — el botón queda inerte, igual
-  que en el mockup.
 - **Un pago reembolsado no retira el premio de referido** (Terms §3: "If
   that payment fails or is refunded, the pending reward is withdrawn") —
   un pago fallido nunca lo acredita, pero un reembolso posterior (Story
@@ -323,7 +318,7 @@ nada los hace cumplir.
 | 8.3 | Add lounge profile | **Resuelto a medias tras conectar Epic 8 (22 sept 2026).** Editar y archivar un lounge ya son reales (`admin_submit_lounge_content_change`/`admin_archive_lounges`); "Add lounge" en `/admin/lounges` sigue sin abrir ningún formulario — ningún artboard de la Fase 8 dibuja el alta de un lounge nuevo, se paró antes de inventarlo (ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 8") |
 | 8.3 | Image optimization and resizing | **Resuelto a medias tras conectar Epic 8.** La subida de foto ya es real (bucket de Storage `lounge-images`); el redimensionado a 1600/800/400 px que el artboard anuncia sigue sin tener nada detrás — no hay librería de procesamiento de imágenes en el stack |
 
-| 9.1 | Renewal date and auto-renewal settings — aviso por email un mes antes | **Resuelto tras conectar Epic 9 (23 sept 2026).** `dispatch_membership_renewals()` (pg_cron diario) inserta la notificación en la app y llama a `send-membership-renewal-notice` (Brevo) para los anuales con auto-renovación en su último mes. Lo que sigue abierto es el cobro de la renovación en sí — ver §2.12 |
+| 9.1 | Renewal date and auto-renewal settings — aviso por email un mes antes | **Resuelto tras conectar Epic 9 (23 sept 2026).** `dispatch_membership_renewals()` (pg_cron diario) inserta la notificación en la app y llama a `membership-renewal` (Brevo) para los anuales con auto-renovación en su último mes. La renovación en sí también cobra de verdad (misma function, `type: "charge"`) |
 | 9.1 | Upgrade options to monthly subscribers and pricing | **Resuelto tras conectar Epic 9.** "Pay … and switch" cobra de verdad con Stripe (modo test) el importe prorrateado de `membership_change_quote` y el trigger sobre `payments` sube el plan |
 | 9.2 | Reward crediting for successful referrals (pending) | **Resuelto tras conectar Epic 9.** "Reward pending" desde el alta del amigo; "Day pass credited" con su primer pago real liquidado (trigger `credit_referral_on_first_payment`). Gastar el day pass sigue sin conectar — ver §2.12 |
 | 9.2 | Friend's sign up confirmation notification | **Resuelto tras conectar Epic 9.** `create_referral_from_signup` inserta la notificación real "… joined" en cuanto el amigo crea su perfil con el código |
@@ -516,22 +511,24 @@ directamente) — no solo el alta de Vault de arriba. Ver
 
 Mismo hueco que Epic 5–8 antes de sus PR de despliegue dedicados:
 `.github/workflows/deploy.yml` no conoce `stripe-membership-checkout` ni
-`send-membership-renewal-notice`. `stripe-membership-checkout` no necesita
+`membership-renewal`. `stripe-membership-checkout` no necesita
 secreto propio (reutiliza `STRIPE_SECRET_KEY`/`APP_URL`, ya presentes);
-`send-membership-renewal-notice` necesita `MEMBERSHIP_RENEWAL_WEBHOOK_SECRET`
+`membership-renewal` necesita `STRIPE_SECRET_KEY` (ya presente) y `MEMBERSHIP_RENEWAL_WEBHOOK_SECRET`
 y los 2 secretos de Vault (`membership_renewal_webhook_url`/`_secret`),
 dados de alta solo en el Docker local de esta rama.
 
 **Desbloquea:** un PR aparte que amplíe `deploy.yml` con `supabase
 functions deploy stripe-membership-checkout` + `supabase secrets set
 MEMBERSHIP_RENEWAL_WEBHOOK_SECRET` + `supabase functions deploy
-send-membership-renewal-notice --no-verify-jwt` en
+membership-renewal --no-verify-jwt` en
 `migrate-dev`/`migrate-prod`, los secrets de GitHub
 `MEMBERSHIP_RENEWAL_WEBHOOK_SECRET_DEV`/`_PROD` y el alta manual de los 2
 secretos de Vault en `luxepass-dev`/`luxepass-prod` vía Studio (SQL en
 `CLAUDE.md` §"Membresía y referidos reales"). Hasta entonces el cron de
-renovación sí inserta la notificación en la app (no depende de Vault),
-pero no manda el email.
+renovación sí inserta la notificación en la app y vence los términos sin
+auto-renovación (no depende de Vault), pero **no cobra las renovaciones**
+ni manda el email — en staging/prod, un término vencido con
+auto-renovación seguiría activo sin cobrar hasta completar este paso.
 
 ---
 

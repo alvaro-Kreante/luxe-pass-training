@@ -29,6 +29,8 @@ export function RenewalRailCard({
   onTurnOn: () => void;
 }) {
   const isAnnual = account.plan === "annual";
+  const switchingToMonthly = isAnnual && account.pendingPlan === "monthly";
+  const nextChargePlan = switchingToMonthly ? "monthly" : account.plan;
 
   return (
     <div className="rounded-content border border-line bg-surface p-5 shadow-content">
@@ -37,7 +39,8 @@ export function RenewalRailCard({
       </p>
       <h2 className="mt-2 font-display text-[27px] text-fg">{account.renewalOrChargeDateLabel}</h2>
       <p className="m-0 mt-1.5 text-[12.5px] leading-[1.55] text-fg-muted">
-        {isAnnual ? "$2,400.00" : "$249.00"} will be charged to {cardLabel(account)}.
+        {nextChargePlan === "annual" ? "$2,400.00" : "$249.00"} will be charged to {cardLabel(account)}.
+        {switchingToMonthly ? ` Switching to monthly on ${account.renewalOrChargeDateLabel}.` : null}
       </p>
 
       <div className="my-4 h-px bg-line" />
@@ -47,7 +50,7 @@ export function RenewalRailCard({
           <p className="m-0 text-[13.5px] font-bold text-fg">Auto-renewal</p>
           <p className="m-0 mt-0.5 text-[11.5px] text-fg-subtle">
             {autoRenewal
-              ? `On · renews ${isAnnual ? "for another year" : "every month"}`
+              ? `On · ${switchingToMonthly ? "then monthly" : `renews ${isAnnual ? "for another year" : "every month"}`}`
               : `Off · ends ${account.renewalOrChargeDateLabel}`}
           </p>
         </div>
@@ -84,6 +87,6 @@ export function RenewalRailCard({
 }
 
 function cardLabel(account: MembershipAccount) {
-  if (!account.billingCard) return "your card";
+  if (!account.billingCard) return "a saved card — none yet, so the renewal would fail and the membership would end";
   return `${cardBrandLabel(account.billingCard.brand)} •••• ${account.billingCard.last4}`;
 }

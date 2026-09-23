@@ -61,6 +61,10 @@ async function adminFetch(env, pathname, body, method = 'POST') {
     const browser = await launchBrowser();
     const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
     global.__page = page;
+    page.on('pageerror', (error) => console.error('pageerror:', error.message));
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') console.error('console:', msg.text().slice(0, 300));
+    });
 
     await navigateTo(page, '/login');
     await page.getByLabel('Email address').fill(email);
@@ -109,6 +113,31 @@ async function adminFetch(env, pathname, body, method = 'POST') {
     await page.waitForTimeout(4000);
     await takeScreenshot(page, shot('upgrade-modal'));
     await page.keyboard.press('Escape');
+
+    // Anual → mensual programado al final del término (ScheduleMonthlyModal, sin artboard propio)
+    await adminFetch(env, '/rest/v1/memberships', {
+      member_id: user.id,
+      plan: 'annual',
+      status: 'active',
+      started_at: new Date('2025-11-03T00:00:00Z').toISOString(),
+      current_period_start: new Date('2025-11-03T00:00:00Z').toISOString(),
+      current_period_end: new Date('2026-11-03T00:00:00Z').toISOString(),
+      auto_renew: true,
+      pending_plan: null,
+    });
+    await navigateTo(page, '/profile/membership/plans');
+    await page.getByRole('button', { name: 'Switch to monthly' }).click({ timeout: 15000 });
+    await page.getByRole('dialog').waitFor();
+    await page.waitForTimeout(400);
+    await takeScreenshot(page, shot('schedule-monthly-modal'));
+    await page.getByRole('button', { name: /^Switch to monthly on / }).click();
+    await page.getByRole('button', { name: 'Switch scheduled' }).waitFor({ timeout: 15000 });
+    await page.waitForTimeout(300);
+    await takeScreenshot(page, shot('plans-monthly-scheduled'));
+    await navigateTo(page, '/profile/membership');
+    await page.getByText(/Switching to monthly on/).waitFor({ timeout: 15000 });
+    await page.waitForTimeout(300);
+    await takeScreenshot(page, shot('membership-switching-to-monthly'));
 
     // Story 9.2 — referidos reales (vacío)
     await navigateTo(page, '/profile/membership/referrals');

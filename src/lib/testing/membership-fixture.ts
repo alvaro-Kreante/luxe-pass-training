@@ -17,7 +17,13 @@ function adminClient() {
 export async function grantTestMembership(
   memberId: string,
   plan: PlanId,
-  options: { startedAt?: Date; periodStart?: Date; periodEnd?: Date; autoRenew?: boolean } = {},
+  options: {
+    startedAt?: Date;
+    periodStart?: Date;
+    periodEnd?: Date;
+    autoRenew?: boolean;
+    pendingPlan?: PlanId | null;
+  } = {},
 ) {
   const periodStart = options.periodStart ?? new Date();
   const periodEnd =
@@ -38,6 +44,7 @@ export async function grantTestMembership(
       current_period_start: periodStart.toISOString(),
       current_period_end: periodEnd.toISOString(),
       auto_renew: options.autoRenew ?? true,
+      pending_plan: options.pendingPlan ?? null,
     });
   if (error) throw error;
 }
@@ -86,4 +93,37 @@ export async function giveTestMemberSavedCard(memberId: string, email: string): 
   const paymentMethodId = await attachTestCard(customer.id);
   await setDefaultPaymentMethod(customer.id, paymentMethodId);
   return paymentMethodId;
+}
+
+/**
+ * Lo que hace el cron `dispatch_membership_renewals` por cada término
+ * vencido con auto-renovación: llamar a la Edge Function `membership-renewal`
+ * (`type: "charge"`) con el secreto compartido. Los tests la invocan
+ * directamente porque en CI no existen los secretos de Vault que usa
+ * `pg_net` — mismo criterio que el resto de crons del proyecto.
+ */
+export async function runMembershipRenewalCharge(
+  memberId: string,
+  secret: string = process.env.MEMBERSHIP_RENEWAL_WEBHOOK_SECRET!,
+): Promise<{ status: number; body: Record<string, unknown> }> {
+  const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/membership-renewal`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-webhook-secret": secret },
+    body: JSON.stringify({ type: "charge", record: { member_id: memberId } }),
+  });
+  return { status: res.status, body: (await res.json().catch(() => ({}))) as Record<string, unknown> };
+}
+
+/** La membresía tal cual está en la tabla (service role), incluidos los campos que el cliente no ve. */
+export async function readTestMembership(memberId: string) {
+  const { data, error } = await adminClient().from("memberships").select("*").eq("member_id", memberId).single();
+  if (error) throw error;
+  return data as {
+    plan: PlanId;
+    status: "active" | "expired";
+    current_period_start: string;
+    current_period_end: string;
+    auto_renew: boolean;
+    pending_plan: PlanId | null;
+  };
 }

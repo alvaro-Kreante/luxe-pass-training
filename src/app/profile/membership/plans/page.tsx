@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 
+import { ScheduleMonthlyModal } from "@/components/membership/schedule-monthly-modal";
 import { UpgradeConfirmModal } from "@/components/membership/upgrade-confirm-modal";
 import { formatUsd } from "@/components/membership/plan-summary-card";
 import { RequireSession } from "@/components/onboarding/require-session";
@@ -17,11 +18,13 @@ import {
   MONTHLY_ANNUALIZED_PRICE,
   MONTHLY_PRICE,
   PLAN_COMPARISON_ROWS,
+  cancelMembershipPlanChange,
   fetchMembership,
   fetchVisitsThisMonth,
   formatLongDate,
   formatMonthDay,
   initialsOf,
+  scheduleMembershipPlanChange,
   type MemberMembership,
   type PlanId,
 } from "@/lib/membership";
@@ -33,6 +36,8 @@ import { createClient } from "@/lib/supabase/client";
  * `memberships`. Sin membresía, ninguna card lo lleva y las dos ofrecen
  * "Choose …" — la elección de plan reutiliza esta pantalla (decisión de
  * producto, 23 sept 2026, sin artboard propio; ver COMPONENT-MAP.md).
+ * Desde el anual, "Switch to monthly" programa el cambio para el final del
+ * término (`ScheduleMonthlyModal`, sin cobro hoy) y "Keep annual" lo deshace.
  */
 export default function PlansPage() {
   return (
@@ -52,6 +57,7 @@ function PlansScreen() {
     included: number;
   } | null>(null);
   const [choice, setChoice] = React.useState<PlanId | null>(null);
+  const [scheduleOpen, setScheduleOpen] = React.useState(false);
 
   React.useEffect(() => {
     let active = true;
@@ -76,19 +82,28 @@ function PlansScreen() {
 
   const currentPlan = membership?.status === "active" ? membership.plan : null;
   const renewal = membership?.currentPeriodEnd ?? null;
+  const monthlyScheduled = currentPlan === "annual" && membership?.pendingPlan === "monthly";
+
+  async function reloadMembership() {
+    setMembership(await fetchMembership(supabase));
+  }
 
   const monthlyEffect =
-    currentPlan === "annual" && renewal
-      ? `Takes effect on ${formatMonthDay(renewal)}`
-      : currentPlan === "monthly" && renewal
-        ? `Next charge ${formatLongDate(renewal)}`
-        : "Starts today";
+    monthlyScheduled && renewal
+      ? `Starts ${formatLongDate(renewal)}`
+      : currentPlan === "annual" && renewal
+        ? `Takes effect on ${formatMonthDay(renewal)}`
+        : currentPlan === "monthly" && renewal
+          ? `Next charge ${formatLongDate(renewal)}`
+          : "Starts today";
   const annualEffect =
-    currentPlan === "annual" && renewal
-      ? `Renews ${formatLongDate(renewal)}`
-      : currentPlan === "monthly"
-        ? "Takes effect straight away"
-        : "Starts today";
+    monthlyScheduled && renewal
+      ? `Ends ${formatLongDate(renewal)}`
+      : currentPlan === "annual" && renewal
+        ? `Renews ${formatLongDate(renewal)}`
+        : currentPlan === "monthly"
+          ? "Takes effect straight away"
+          : "Starts today";
 
   return (
     <AccountShell
@@ -129,9 +144,30 @@ function PlansScreen() {
             note={`${formatUsd(MONTHLY_ANNUALIZED_PRICE)} over twelve months`}
             description="Charged on the same day each month. Cancel or pause before the next charge and it simply stops."
             isCurrent={currentPlan === "monthly"}
-            actionLabel={currentPlan ? "Switch to monthly" : "Choose monthly"}
+            actionLabel={monthlyScheduled ? "Switch scheduled" : currentPlan ? "Switch to monthly" : "Choose monthly"}
+            actionDisabled={monthlyScheduled}
             effectNote={monthlyEffect}
-            onSwitch={currentPlan ? undefined : () => setChoice("monthly")}
+            onSwitch={
+              currentPlan === "annual"
+                ? () => setScheduleOpen(true)
+                : currentPlan
+                  ? undefined
+                  : () => setChoice("monthly")
+            }
+            secondaryAction={
+              monthlyScheduled ? (
+                <button
+                  type="button"
+                  className="mt-2 w-full text-center text-[12.5px] font-bold text-accent-strong"
+                  onClick={async () => {
+                    await cancelMembershipPlanChange(supabase);
+                    await reloadMembership();
+                  }}
+                >
+                  Keep annual
+                </button>
+              ) : null
+            }
           />
           <PlanCard
             label="Annual"
@@ -168,6 +204,18 @@ function PlansScreen() {
         waits until your current term ends, so nothing you paid for is lost.
       </p>
 
+      {scheduleOpen && renewal ? (
+        <ScheduleMonthlyModal
+          open
+          onOpenChange={setScheduleOpen}
+          termEndIso={renewal}
+          onConfirm={async () => {
+            await scheduleMembershipPlanChange(supabase, "monthly");
+            await reloadMembership();
+          }}
+        />
+      ) : null}
+
       {choice ? (
         <UpgradeConfirmModal
           open
@@ -192,8 +240,10 @@ function PlanCard({
   description,
   isCurrent,
   actionLabel,
+  actionDisabled = false,
   effectNote,
   onSwitch,
+  secondaryAction,
 }: {
   label: string;
   price: string;
@@ -202,9 +252,12 @@ function PlanCard({
   description: string;
   isCurrent: boolean;
   actionLabel: string;
+  /** "Switch scheduled" — el paso a mensual ya está programado. */
+  actionDisabled?: boolean;
   effectNote: string;
-  /** Sin handler, el botón queda inerte — solo "Switch to monthly" desde el anual (sin artboard de confirmación). */
   onSwitch?: () => void;
+  /** "Keep annual" bajo la card mensual cuando el paso a mensual está programado. */
+  secondaryAction?: React.ReactNode;
 }) {
   return (
     <div
@@ -243,11 +296,20 @@ function PlanCard({
           Current plan
         </button>
       ) : (
-        <Button variant="secondary" size="lg" block className="mt-4 h-[46px]" type="button" onClick={onSwitch}>
+        <Button
+          variant="secondary"
+          size="lg"
+          block
+          className="mt-4 h-[46px]"
+          type="button"
+          disabled={actionDisabled}
+          onClick={onSwitch}
+        >
           {actionLabel}
         </Button>
       )}
       <p className="m-0 mt-2.5 text-center text-[11.5px] text-fg-subtle">{effectNote}</p>
+      {secondaryAction}
     </div>
   );
 }

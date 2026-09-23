@@ -8,10 +8,16 @@
 --     — la fila solo cambia cuando `payments.status` pasa a 'succeeded'
 --     (trigger `apply_membership_payment` de más abajo), nunca desde el
 --     cliente. Mismo principio que Story 4.2: el webhook de Stripe decide.
---   - La renovación automática NO cobra sola (eso sería Stripe Billing,
---     fuera de alcance): `auto_renew` es real y el aviso de un mes antes
---     también (pg_cron), pero al vencer un término con `auto_renew = true`
---     la fila sigue activa sin cobrar — gap documentado en PENDIENTES.
+--   - La renovación automática SÍ cobra (decisión del usuario, 23 sept
+--     2026, revierte la de "sin cobro recurrente"): al vencer un término con
+--     `auto_renew = true`, el cron diario llama a la Edge Function
+--     `membership-renewal` (`type: "charge"`), que cobra off-session la
+--     tarjeta guardada del miembro — sin Stripe Billing, mismo PaymentIntent
+--     que el resto del proyecto. Si no hay tarjeta o el cobro falla, la
+--     membresía vence y se avisa al miembro.
+--   - Pasar de anual a mensual "espera al final del término"
+--     (`Plans.dc.html`): `pending_plan` guarda el cambio y la renovación
+--     cobra ya el plan nuevo.
 --
 -- `profiles.membership_status` (stub de Story 6.3) pasa a ser un espejo de
 -- esta tabla (trigger `sync_profile_membership_status`), para no romper a
@@ -32,6 +38,12 @@ create table if not exists public.memberships (
   auto_renew             boolean not null default true,
   -- Guarda contra reenvíos del aviso de un mes antes (cron de más abajo).
   renewal_notice_sent_at timestamptz,
+  -- Plan con el que se renovará el término siguiente (solo anual → mensual:
+  -- la subida mensual → anual es inmediata, con prorrateo).
+  pending_plan           text check (pending_plan in ('monthly', 'annual')),
+  -- Guarda contra un segundo cobro de la misma renovación si el cron vuelve
+  -- a correr antes de que la Edge Function termine.
+  renewal_attempted_at   timestamptz,
   created_at             timestamptz not null default now(),
   updated_at             timestamptz not null default now()
 );
@@ -89,8 +101,9 @@ create trigger membership_changed_sync_profile
 --   - Sin membresía activa: alta, precio completo.
 --   - Mensual → anual: precio anual menos los días no usados del mes
 --     (`Upgrade.dc.html`: "Credit for 22 unused days on monthly").
---   - Mismo plan o anual → mensual: error. La bajada "espera al final del
---     término" y ningún artboard dibuja su confirmación.
+--   - Mismo plan o anual → mensual: error. La bajada no se cobra hoy:
+--     "espera al final del término" y se programa con
+--     `schedule_membership_plan_change` (más abajo).
 create or replace function public.membership_change_quote(p_plan text)
 returns table (
   kind         text,
@@ -164,12 +177,19 @@ grant execute on function public.membership_change_quote(text) to authenticated;
 -- membresía. Cubre las dos rutas de cobro sin tocar el webhook: tarjeta
 -- guardada (la Edge Function inserta el pago ya 'succeeded') y tarjeta nueva
 -- (el webhook de Stripe pasa el pago de 'pending' a 'succeeded').
+-- Renovación (término activo ya vencido): el término nuevo empieza donde
+-- acabó el anterior, no "ahora" — el cron corre una vez al día y no debe
+-- regalar ni comerse horas del término.
 create or replace function public.apply_membership_payment()
 returns trigger
 language plpgsql
 security definer
 set search_path = ''
 as $$
+declare
+  v_current public.memberships;
+  v_start timestamptz;
+  v_interval interval;
 begin
   if new.membership_plan is null or new.status <> 'succeeded' then
     return new;
@@ -178,21 +198,26 @@ begin
     return new;
   end if;
 
+  select * into v_current from public.memberships where member_id = new.member_id;
+  v_start := case
+    when v_current.status = 'active' and v_current.current_period_end <= now() then v_current.current_period_end
+    else now()
+  end;
+  v_interval := case new.membership_plan when 'annual' then interval '1 year' else interval '1 month' end;
+
   insert into public.memberships as m (
     member_id, plan, status, started_at, current_period_start, current_period_end, auto_renew
   )
-  values (
-    new.member_id, new.membership_plan, 'active', now(), now(),
-    now() + case new.membership_plan when 'annual' then interval '1 year' else interval '1 month' end,
-    true
-  )
+  values (new.member_id, new.membership_plan, 'active', now(), v_start, v_start + v_interval, true)
   on conflict (member_id) do update set
     plan = excluded.plan,
     status = 'active',
     current_period_start = excluded.current_period_start,
     current_period_end = excluded.current_period_end,
     auto_renew = true,
+    pending_plan = null,
     renewal_notice_sent_at = null,
+    renewal_attempted_at = null,
     updated_at = now();
 
   return new;
@@ -230,8 +255,12 @@ begin
     raise exception 'Not authenticated';
   end if;
 
+  -- Sin auto-renovación no habrá término siguiente: un cambio de plan
+  -- programado deja de tener sentido.
   update public.memberships
-  set auto_renew = p_auto_renew, updated_at = now()
+  set auto_renew = p_auto_renew,
+      pending_plan = case when p_auto_renew then pending_plan else null end,
+      updated_at = now()
   where member_id = v_uid and status = 'active'
   returning current_period_end into v_end;
 
@@ -251,6 +280,61 @@ $$;
 
 revoke execute on function public.set_membership_auto_renew(boolean) from public, anon;
 grant execute on function public.set_membership_auto_renew(boolean) to authenticated;
+
+-- Anual → mensual (`Plans.dc.html`: "Moving to monthly waits until your
+-- current term ends"). No cobra nada hoy: la renovación del término cobra
+-- ya el mensual. Programarlo reactiva la auto-renovación — es la forma de
+-- decir "sigo, pero en mensual".
+create or replace function public.schedule_membership_plan_change(p_plan text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    raise exception 'Not authenticated';
+  end if;
+  if p_plan <> 'monthly' then
+    raise exception 'Only the switch to monthly is scheduled — annual takes effect straight away';
+  end if;
+
+  update public.memberships
+  set pending_plan = 'monthly', auto_renew = true, updated_at = now()
+  where member_id = v_uid and status = 'active' and plan = 'annual';
+
+  if not found then
+    raise exception 'No active annual membership';
+  end if;
+end;
+$$;
+
+revoke execute on function public.schedule_membership_plan_change(text) from public, anon;
+grant execute on function public.schedule_membership_plan_change(text) to authenticated;
+
+create or replace function public.cancel_membership_plan_change()
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_uid uuid := auth.uid();
+begin
+  if v_uid is null then
+    raise exception 'Not authenticated';
+  end if;
+
+  update public.memberships
+  set pending_plan = null, updated_at = now()
+  where member_id = v_uid and status = 'active';
+end;
+$$;
+
+revoke execute on function public.cancel_membership_plan_change() from public, anon;
+grant execute on function public.cancel_membership_plan_change() to authenticated;
 
 -- "Visits this month": reservas del mes sin un day pass pagado detrás —
 -- mismo criterio "day pass vs visita de membresía" que ya usan Epic 7/8
@@ -277,16 +361,26 @@ as $$
 $$;
 
 /* -------------------------------------------------------------------- */
-/* Cron diario: vencimientos + aviso de renovación un mes antes         */
+/* Cron diario: vencimientos, cobro de renovaciones y aviso previo      */
 /* -------------------------------------------------------------------- */
 
--- "Renewal date: auto-renewal settings, notice a month in advance" (flow,
--- rama del plan anual) / `Main.dc.html` "We email you on October 3 — a
--- month before". Tercer tipo de notificación de Epic 6 que pasa a tener un
--- evento real ("Membership renewal reminders"). Mismo patrón Vault + pg_net
--- que `booking_reminders.sql` para el email (Edge Function
--- `send-membership-renewal-notice`); la notificación en la app se inserta
--- siempre, el email solo con los dos secretos dados de alta.
+-- Tres tareas, en este orden:
+--   1. Vence los términos acabados SIN auto-renovación.
+--   2. Cobra los términos acabados CON auto-renovación: una llamada (pg_net)
+--      a la Edge Function `membership-renewal` con `type: "charge"` por
+--      cada uno — `renewal_attempted_at` evita un segundo cobro si el cron
+--      vuelve a correr antes de que la function termine. La function cobra
+--      off-session la tarjeta guardada; el trigger de `payments` abre el
+--      término siguiente, o la function vence la membresía si no pudo cobrar.
+--   3. "Renewal date: auto-renewal settings, notice a month in advance"
+--      (flow, rama del plan anual) / `Main.dc.html` "We email you on
+--      October 3 — a month before": notificación real en la app + email
+--      (`type: "notice"`). Tercer tipo de notificación de Epic 6 que pasa a
+--      tener un evento real ("Membership renewal reminders").
+-- Mismo patrón Vault + pg_net que `booking_reminders.sql`. Sin los dos
+-- secretos no se cobra ni se manda email (un término vencido con
+-- auto-renovación sigue activo hasta que existan); los vencimientos (1) y la
+-- notificación en la app (3) no dependen de Vault.
 create or replace function public.dispatch_membership_renewals()
 returns void
 language plpgsql
@@ -307,6 +401,29 @@ begin
   select decrypted_secret into v_secret
   from vault.decrypted_secrets where name = 'membership_renewal_webhook_secret';
 
+  if v_url is not null and v_secret is not null then
+    for v_membership in
+      select m.*
+      from public.memberships m
+      where m.status = 'active'
+        and m.auto_renew
+        and m.current_period_end <= now()
+        and m.renewal_attempted_at is null
+    loop
+      update public.memberships set renewal_attempted_at = now() where member_id = v_membership.member_id;
+
+      perform net.http_post(
+        url := v_url,
+        body := jsonb_build_object('type', 'charge', 'record', to_jsonb(v_membership)),
+        headers := jsonb_build_object(
+          'Content-Type', 'application/json',
+          'x-webhook-secret', v_secret
+        ),
+        timeout_milliseconds := 30000
+      );
+    end loop;
+  end if;
+
   for v_membership in
     select m.*
     from public.memberships m
@@ -320,13 +437,16 @@ begin
     values (
       v_membership.member_id, 'membership', 'membership',
       'Your membership renews on ' || to_char(v_membership.current_period_end at time zone 'UTC', 'FMMonth FMDD, YYYY'),
-      'Nothing to do unless you want to change the plan or the card — manage it from Profile › Membership.'
+      case when v_membership.pending_plan = 'monthly'
+        then 'Your annual term ends then and you move to the monthly plan, $249.00 a month — manage it from Profile › Membership.'
+        else 'Nothing to do unless you want to change the plan or the card — manage it from Profile › Membership.'
+      end
     );
 
     if v_url is not null and v_secret is not null then
       perform net.http_post(
         url := v_url,
-        body := jsonb_build_object('record', to_jsonb(v_membership)),
+        body := jsonb_build_object('type', 'notice', 'record', to_jsonb(v_membership)),
         headers := jsonb_build_object(
           'Content-Type', 'application/json',
           'x-webhook-secret', v_secret

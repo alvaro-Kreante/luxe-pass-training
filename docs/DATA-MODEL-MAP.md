@@ -254,14 +254,16 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
 **Conectado** (23 sept 2026 — ver `docs/design/COMPONENT-MAP.md` "Backend
 real — Epic 9"). Decisiones de producto tomadas con el usuario antes de
 implementar: el miembro nace sin membresía hasta elegir plan; alta y subida
-mensual → anual son un cobro puntual real de Stripe (no Stripe Billing); el
+mensual → anual son un cobro puntual real de Stripe (no Stripe Billing) y la
+renovación automática cobra la tarjeta guardada al vencer el término; el
 premio de referido se acredita con el primer pago real liquidado del amigo;
 el amigo llega por `/join/[code]` → `/signup?ref=` (metadatos de Auth).
 
 - `memberships` (**nace aquí**, dueño, ya real) — `member_id` (PK, FK 1:1 a
   `profiles`), `plan` (monthly/annual), `status` (active/expired),
   `started_at`, `current_period_start`/`_end` (renovación / próximo cargo),
-  `auto_renew`, `renewal_notice_sent_at`. Sin escrituras de cliente: la
+  `auto_renew`, `renewal_notice_sent_at`, `pending_plan` (anual → mensual
+  programado), `renewal_attempted_at`. Sin escrituras de cliente: la
   activa el trigger `apply_membership_payment` sobre `payments`, y
   `profiles.membership_status` (Epic 6) pasa a ser su espejo.
 - `payments.membership_plan` (columna nueva en una tabla de Epic 4) — marca

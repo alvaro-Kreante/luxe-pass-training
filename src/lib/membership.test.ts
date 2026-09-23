@@ -2,6 +2,7 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
 
 import {
+  cancelMembershipPlanChange,
   chargeMembershipWithSavedCard,
   createMembershipCheckoutSession,
   fetchMembership,
@@ -9,13 +10,20 @@ import {
   fetchVisitsThisMonth,
   formatLongDate,
   formatMonthYear,
+  scheduleMembershipPlanChange,
   setMembershipAutoRenew,
 } from "./membership";
 import { fetchNotifications } from "./notifications";
 import { fetchMembershipStatus } from "./profile";
 import { createClient } from "./supabase/client";
 import { signUpConfirmedMemberAndSignIn } from "./testing/confirmed-user";
-import { grantTestMembership, settleTestPayment } from "./testing/membership-fixture";
+import {
+  giveTestMemberSavedCard,
+  grantTestMembership,
+  readTestMembership,
+  runMembershipRenewalCharge,
+  settleTestPayment,
+} from "./testing/membership-fixture";
 import { attachTestCard } from "./testing/stripe-fixture";
 
 /**
@@ -37,6 +45,13 @@ async function freshMember(label: string) {
     "EnSoleil!2026",
   );
   return { supabase, user };
+}
+
+async function freshMemberWithEmail(label: string) {
+  const supabase = createClient();
+  const email = `membership-${Date.now()}-${label}@ensoleil-test.com`;
+  const user = await signUpConfirmedMemberAndSignIn(supabase, email, "EnSoleil!2026");
+  return { supabase, user, email };
 }
 
 async function stripeCustomerFor(memberId: string) {
@@ -279,4 +294,153 @@ describe("Cron diario de renovación — 'notice a month in advance'", () => {
     expect((await fetchMembership(supabase)).status).toBe("inactive");
     expect(await fetchMembershipStatus(supabase)).toBe("inactive");
   });
+});
+
+describe("AC 'Renewal date and auto-renewal settings' — la renovación automática cobra de verdad", () => {
+  const DAY = 86400000;
+
+  it("al vencer un mensual con auto-renovación, cobra la tarjeta guardada y abre el mes siguiente desde el fin del anterior", async () => {
+    const { user, email } = await freshMemberWithEmail("renew-monthly");
+    const periodEnd = new Date(Date.now() - DAY);
+    await grantTestMembership(user.id, "monthly", { periodStart: new Date(periodEnd.getTime() - 30 * DAY), periodEnd });
+    await giveTestMemberSavedCard(user.id, email);
+
+    const result = await runMembershipRenewalCharge(user.id);
+    expect(result.status).toBe(200);
+    expect(result.body.status).toBe("succeeded");
+
+    const membership = await readTestMembership(user.id);
+    expect(membership.status).toBe("active");
+    expect(membership.plan).toBe("monthly");
+    expect(Date.parse(membership.current_period_start)).toBe(periodEnd.getTime());
+    expect(Date.parse(membership.current_period_end)).toBeGreaterThan(Date.now() + 25 * DAY);
+
+    const { data: payments } = await admin()
+      .from("payments")
+      .select("amount_cents, membership_plan, status")
+      .eq("member_id", user.id);
+    expect(payments).toEqual([{ amount_cents: 24900, membership_plan: "monthly", status: "succeeded" }]);
+  }, 30000);
+
+  it("un anual renueva otro año por $2,400.00", async () => {
+    const { user, email } = await freshMemberWithEmail("renew-annual");
+    const periodEnd = new Date(Date.now() - DAY);
+    await grantTestMembership(user.id, "annual", { periodStart: new Date(periodEnd.getTime() - 365 * DAY), periodEnd });
+    await giveTestMemberSavedCard(user.id, email);
+
+    const result = await runMembershipRenewalCharge(user.id);
+    expect(result.body.status).toBe("succeeded");
+
+    const membership = await readTestMembership(user.id);
+    expect(membership.plan).toBe("annual");
+    expect(Date.parse(membership.current_period_end)).toBeGreaterThan(Date.now() + 360 * DAY);
+    const { data: payments } = await admin().from("payments").select("amount_cents").eq("member_id", user.id);
+    expect(payments).toEqual([{ amount_cents: 240000 }]);
+  }, 30000);
+
+  it("sin tarjeta con la que cobrar, la membresía vence y se avisa al miembro", async () => {
+    const { supabase, user } = await freshMemberWithEmail("renew-no-card");
+    await grantTestMembership(user.id, "monthly", {
+      periodStart: new Date(Date.now() - 31 * DAY),
+      periodEnd: new Date(Date.now() - DAY),
+    });
+
+    const result = await runMembershipRenewalCharge(user.id);
+    expect(result.body.status).toBe("failed");
+
+    expect((await fetchMembership(supabase)).status).toBe("inactive");
+    const notifications = await fetchNotifications(supabase);
+    expect(notifications.some((n) => n.title === "We couldn't renew your membership")).toBe(true);
+  }, 30000);
+
+  it("no cobra un término que todavía no ha vencido (el cron podría llamar dos veces)", async () => {
+    const { user, email } = await freshMemberWithEmail("renew-early");
+    await grantTestMembership(user.id, "monthly");
+    await giveTestMemberSavedCard(user.id, email);
+
+    const result = await runMembershipRenewalCharge(user.id);
+    expect(result.status).toBe(409);
+
+    const { data: payments } = await admin().from("payments").select("id").eq("member_id", user.id);
+    expect(payments).toEqual([]);
+  }, 30000);
+
+  it("no cobra si la auto-renovación está apagada", async () => {
+    const { user, email } = await freshMemberWithEmail("renew-off");
+    await grantTestMembership(user.id, "monthly", {
+      periodStart: new Date(Date.now() - 31 * DAY),
+      periodEnd: new Date(Date.now() - DAY),
+      autoRenew: false,
+    });
+    await giveTestMemberSavedCard(user.id, email);
+
+    expect((await runMembershipRenewalCharge(user.id)).status).toBe(409);
+  }, 30000);
+
+  it("rechaza una llamada sin el secreto compartido", async () => {
+    const { user } = await freshMemberWithEmail("renew-secret");
+    expect((await runMembershipRenewalCharge(user.id, "wrong-secret")).status).toBe(401);
+  });
+});
+
+describe("AC 'Upgrade options' — pasar de anual a mensual al final del término", () => {
+  const DAY = 86400000;
+
+  it("programar el cambio lo deja pendiente sin cobrar nada hoy", async () => {
+    const { supabase, user } = await freshMemberWithEmail("downgrade-schedule");
+    await grantTestMembership(user.id, "annual");
+
+    await scheduleMembershipPlanChange(supabase, "monthly");
+
+    const membership = await fetchMembership(supabase);
+    expect(membership.plan).toBe("annual");
+    expect(membership.pendingPlan).toBe("monthly");
+    const { data: payments } = await admin().from("payments").select("id").eq("member_id", user.id);
+    expect(payments).toEqual([]);
+  });
+
+  it("cancelar el cambio programado vuelve a dejar solo el anual", async () => {
+    const { supabase, user } = await freshMemberWithEmail("downgrade-cancel");
+    await grantTestMembership(user.id, "annual", { pendingPlan: "monthly" });
+
+    await cancelMembershipPlanChange(supabase);
+
+    expect((await fetchMembership(supabase)).pendingPlan).toBeNull();
+  });
+
+  it("solo un anual activo puede programar el paso a mensual", async () => {
+    const { supabase, user } = await freshMemberWithEmail("downgrade-monthly");
+    await grantTestMembership(user.id, "monthly");
+
+    await expect(scheduleMembershipPlanChange(supabase, "monthly")).rejects.toThrow();
+  });
+
+  it("apagar la auto-renovación descarta el cambio programado — no habrá término siguiente", async () => {
+    const { supabase, user } = await freshMemberWithEmail("downgrade-auto-off");
+    await grantTestMembership(user.id, "annual", { pendingPlan: "monthly" });
+
+    await setMembershipAutoRenew(supabase, false);
+
+    expect((await fetchMembership(supabase)).pendingPlan).toBeNull();
+  });
+
+  it("al renovar, cobra el mensual y el plan pasa a mensual", async () => {
+    const { supabase, user, email } = await freshMemberWithEmail("downgrade-renew");
+    const periodEnd = new Date(Date.now() - DAY);
+    await grantTestMembership(user.id, "annual", {
+      periodStart: new Date(periodEnd.getTime() - 365 * DAY),
+      periodEnd,
+      pendingPlan: "monthly",
+    });
+    await giveTestMemberSavedCard(user.id, email);
+
+    const result = await runMembershipRenewalCharge(user.id);
+    expect(result.body.status).toBe("succeeded");
+
+    const membership = await fetchMembership(supabase);
+    expect(membership.plan).toBe("monthly");
+    expect(membership.pendingPlan).toBeNull();
+    const { data: payments } = await admin().from("payments").select("amount_cents").eq("member_id", user.id);
+    expect(payments).toEqual([{ amount_cents: 24900 }]);
+  }, 30000);
 });
