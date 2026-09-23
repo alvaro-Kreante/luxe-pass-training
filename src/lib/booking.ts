@@ -97,8 +97,16 @@ export interface BookingSlot {
   status: SlotStatus;
 }
 
-/** Los cinco horarios fijos de `Main.dc.html`, mapeados a las franjas de la Story 2.2. */
-const SLOT_DEFS: { time: string; band: WeekBandId }[] = [
+/**
+ * Los cinco horarios fijos de `Main.dc.html`, mapeados a las franjas de la
+ * Story 2.2. Exportado (Epic 8, Story 8.1) — `admin_reschedule_booking`
+ * (`supabase/schemas/support_tickets.sql`) exige un par (band, slot_time)
+ * válido de este mismo dominio, así que `BookingOverrideDrawer` lo reutiliza
+ * en vez de inventar horarios propios como hacía el mock
+ * (`BookingOverride.dc.html` dibuja "9:00 AM"/"11:00 AM", que no existen en
+ * el dominio real — desviación anotada en `docs/design/COMPONENT-MAP.md`).
+ */
+export const SLOT_DEFS: { time: string; band: WeekBandId }[] = [
   { time: "8:00 AM", band: "morning" },
   { time: "10:30 AM", band: "morning" },
   { time: "1:00 PM", band: "afternoon" },

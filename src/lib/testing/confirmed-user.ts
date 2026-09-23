@@ -108,3 +108,33 @@ export async function signUpConfirmedPartnerAndSignIn(
 
   return user;
 }
+
+/**
+ * Epic 8 — como `signUpConfirmedAndSignIn`, más el alta operativa del rol
+ * admin (`user_roles`, ver "Alta de un admin" en
+ * `scripts/seed-admin-account.mjs`) — tampoco es self-service.
+ */
+export async function signUpConfirmedAdminAndSignIn(
+  supabase: SupabaseClient,
+  email: string,
+  password: string,
+) {
+  await signUpConfirmedAndSignIn(supabase, email, password);
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("signUpConfirmedAndSignIn did not leave a session");
+
+  const admin = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+
+  const { error: roleError } = await admin
+    .from("user_roles")
+    .insert({ user_id: user.id, role: "admin" });
+  if (roleError) throw roleError;
+
+  return user;
+}

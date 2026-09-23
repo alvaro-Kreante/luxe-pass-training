@@ -76,6 +76,35 @@ Deno.serve(async (req) => {
         .eq("stripe_payment_intent_id", intent.id);
       break;
     }
+    // Story 8.1 — defensa en profundidad del reembolso que ya escribe
+    // `stripe-refund-payment` de forma optimista: cubre un reembolso que
+    // Stripe termine de confirmar de forma asíncrona (modo live) o uno
+    // iniciado desde el propio Dashboard de Stripe, no desde esta consola.
+    case "charge.refunded": {
+      const charge = event.data.object as Stripe.Charge;
+      const intentId =
+        typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
+      if (!intentId) break;
+
+      const { data: payment } = await service
+        .from("payments")
+        .select("amount_cents")
+        .eq("stripe_payment_intent_id", intentId)
+        .single();
+      if (!payment) break;
+
+      const fullyRefunded = charge.amount_refunded >= payment.amount_cents;
+      await service
+        .from("payments")
+        .update({
+          status: fullyRefunded ? "refunded" : "succeeded",
+          refunded_amount_cents: charge.amount_refunded,
+          refunded_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("stripe_payment_intent_id", intentId);
+      break;
+    }
   }
 
   return new Response(JSON.stringify({ received: true }), {

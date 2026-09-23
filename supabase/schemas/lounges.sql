@@ -34,6 +34,13 @@ create table if not exists public.lounges (
   -- Story 3.2 — capacidad y restricciones estáticas por lounge.
   capacity             integer not null default 40,
   booking_restrictions text[] not null default '{}',
+  -- Story 8.3 — "Add/edit/remove lounge profiles" + "Content approval
+  -- workflow". Estado de publicación real, ortogonal a si hay un cambio de
+  -- contenido pendiente de aprobar (eso vive en
+  -- `lounge_content_submissions`, ver `supabase/schemas/admin_content.sql`)
+  -- — un lounge 'live' con una edición en revisión sigue siendo visible
+  -- para los miembros con su contenido ya publicado hasta que se apruebe.
+  content_status       text not null default 'live' check (content_status in ('live', 'draft', 'archived')),
   created_at           timestamptz not null default now(),
   updated_at           timestamptz not null default now()
 );
@@ -42,10 +49,13 @@ alter table public.lounges enable row level security;
 
 -- Catálogo de solo lectura para miembros con sesión; /explore pasa a exigir
 -- login real (RequireSession, mismo patrón que /onboarding — ver
--- docs/design/COMPONENT-MAP.md "Backend real — Epic 2"). Sin policies de
--- escritura: el catálogo se siembra por migración hasta que Epic 8.3 diseñe
--- su admin.
+-- docs/design/COMPONENT-MAP.md "Backend real — Epic 2"). Story 8.3: un
+-- lounge 'draft' o 'archived' queda fuera del catálogo de miembro — el
+-- admin (`has_role('admin')`) sigue viendo todo, incluidos esos, para poder
+-- gestionarlos desde `/admin/lounges`. Sin policies de insert/update/delete
+-- de miembro: el contenido solo se escribe vía las RPC de
+-- `admin_content.sql`.
 create policy "select lounges"
 on public.lounges for select
 to authenticated
-using ( true );
+using ( content_status = 'live' or public.has_role('admin') );

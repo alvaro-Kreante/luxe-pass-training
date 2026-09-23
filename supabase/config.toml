@@ -129,6 +129,14 @@ public = false
 file_size_limit = "5MiB"
 allowed_mime_types = ["image/png", "image/jpeg"]
 
+# Story 8.3 — "Upload and manage lounge images". Público (a diferencia de
+# profile-photos): son fotos de un lounge que cualquier miembro ve en
+# /explore o en la ficha del lounge, no un dato privado.
+[storage.buckets.lounge-images]
+public = true
+file_size_limit = "5MiB"
+allowed_mime_types = ["image/png", "image/jpeg"]
+
 # Allow connections via S3 compatible clients
 [storage.s3_protocol]
 enabled = true
@@ -463,6 +471,12 @@ verify_jwt = false
 # supabase/schemas/partner_notifications.sql) llama a esta function desde
 # Postgres, mismo motivo/mecanismo que send-booking-reminder.
 [functions.send-partner-digest]
+verify_jwt = false
+
+# Story 8.2 — el cron `dispatch_scheduled_reports` (pg_net, ver
+# supabase/schemas/admin_reports.sql) llama a esta function desde Postgres,
+# mismo motivo/mecanismo que send-partner-digest.
+[functions.send-admin-report]
 verify_jwt = false
 
 [analytics]

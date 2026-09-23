@@ -213,19 +213,40 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
   esperar a que Epic 4 (`bookings`) exista y de ahí sí derivar plazas en
   vivo.
 
-### Epic 8 — Admin & Support
+### Epic 8 — Admin & Support *(implementado — Supabase local, sept 2026)*
 
-- `support_tickets` (**nace aquí**, dueño) — issue tracking, resolution
-  notes, log de comunicación, escalación. FK a `profiles` y `bookings`.
-- `refunds`: candidata a extender `payments` (Epic 4) con un status, no tabla
-  nueva — **fuera de alcance real** (Stripe refund), se simula visualmente
-  igual que 4.2.
-- Rol admin sobre `auth.users` — mismo cruce que partners con Epic 1.
-- 8.2 (export/analytics) y parte de 8.3 (bulk update) son vistas/operaciones
-  agregadas, no tablas nuevas. El CRUD real de 8.3 es sobre
-  `lounges` / `lounge_images` / `lounge_availability` (Epic 2/3) —
-  "content approval workflow" sugiere columna `status`
-  (draft/pending/published) en `lounges`, no tabla nueva.
+- `support_tickets`/`support_ticket_messages` (**nacen aquí**, dueño,
+  implementadas) — issue tracking, resolution notes, log de comunicación,
+  escalación. FK a `profiles` (vía `auth.users`) y `bookings`.
+- **Resuelto (22 sept 2026, decisión tomada con el usuario antes de
+  implementar, revierte la nota original de esta fila):** el reembolso
+  (Story 8.1) **sí es real** para un cargo `succeeded` de Stripe (Edge
+  Function `stripe-refund-payment`) — extiende `payments` con
+  `refunded_amount_cents`/`refunded_at`/`refund_reason`/`stripe_refund_id`
+  y el status `'refunded'`, sin tabla `refunds` propia. Una tarifa de
+  no-show/cancelación tardía (Story 6.1) nunca se cobró de verdad, así que
+  esa mitad ("waive") sigue sin tocar Stripe — solo limpia
+  `bookings.cancellation_fee_cents`.
+- Rol admin sobre `auth.users` — **resuelto al implementar Epic 7**:
+  reutiliza `user_roles` (`role = 'admin'`), la misma tabla que partners.
+- `lounge_content_submissions` (**nace aquí**, dueño, implementada) — cola
+  de "Content approval workflow" real y genérica (no solo The Vestry): un
+  cambio propuesto (`proposed`, jsonb) nunca toca `lounges` hasta
+  aprobarse. `lounges` gana `content_status` (live/draft/archived),
+  ortogonal a si hay una fila pendiente en esta tabla.
+- `scheduled_reports` (**nace aquí**, dueño, implementada). **Resuelto (22
+  sept 2026, decisión tomada con el usuario antes de implementar, revierte
+  la nota original de esta fila):** los reportes programados (Story 8.2)
+  **sí son reales** vía `pg_cron` (`dispatch_scheduled_reports`, cada 15
+  min) + Edge Function `send-admin-report` (adjunto CSV real por Brevo) —
+  mismo mecanismo de Database Webhook/cron que Story 5.3/6.2/7.2.
+- 8.2 (export/analytics) es vistas/operaciones agregadas sobre
+  `bookings`/`payments`/`profiles`/`lounges` ya reales, sin tabla propia
+  (salvo `scheduled_reports` arriba). El CRUD real de 8.3 es sobre
+  `lounges`/`lounge_images` (Epic 2/3) — `lounge_availability` (Epic 3) no
+  se conectó a un editor de disponibilidad propio en esta pasada (sigue
+  siendo el seed estático de 18 semanas, ver su fila en "Epic 3" y
+  `docs/PENDIENTES.md`).
 
 ### Epic 9 — Membership & Referrals
 
@@ -252,22 +273,26 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
 | `member_favorite_lounges` | 6 | 2/3 (`lounges`) |
 | `partners` / `partner_lounges` | 7 | 2/3 (`lounges`, many-to-many vía `partner_lounges`) |
 | `user_roles` | 7 | 1 (auth), 8 (rol admin, cuando se conecte) |
-| `support_tickets` | 8 | 1/9 (member), 4 (`bookings`) |
+| `support_tickets` / `support_ticket_messages` | 8 | 1/9 (member), 4 (`bookings`) |
+| `lounge_content_submissions` | 8 | 2/3 (`lounges`) |
+| `scheduled_reports` | 8 | — |
 | `memberships` | 9 | 3 (restricciones), 6 (status) |
 | `referrals` | 9 | 6 (sharing) |
 
 **Resuelto** (22 sept 2026, al empezar Epic 7 — ver arriba "Epic 7 — Partner
 Dashboard"): el rol (member / partner / admin) sobre `auth.users` se
 distingue con la tabla `user_roles`, no un custom claim ni esquemas
-separados. Epic 8 (rol admin) reutiliza la misma tabla cuando se conecte.
+separados. Epic 8 (rol admin) reutiliza la misma tabla.
 
 **Historias que apuntan a backend fuera del alcance del repo** (se simulan
-visualmente, se anotan como desviación al implementar): 8.1 (refund
-processing real), 6.2/8.2 (envío de email/reportes programados — Mailpit
-sirve para dev local, no hay cron de producción). Story 4.2 salió de esta
-lista el 17 sept 2026 — ver su fila arriba (Stripe real, salvo Apple
-Pay/Google Pay, que sí siguen fuera de alcance por dominio no verificado).
-Story 5.3 salió el 21 sept 2026 — primer job real con `pg_cron` del
-proyecto (ver su fila en "Epic 5" arriba), aunque sin poder ejercitarse de
-punta a punta en local/CI hasta que el seed de `lounge_availability` deje
-de estar anclado a una fecha fija (ver `docs/PENDIENTES.md`).
+visualmente, se anotan como desviación al implementar): ninguna a esta
+altura (22 sept 2026) — la última candidata, Story 4.2 (Stripe real, salvo
+Apple Pay/Google Pay por dominio no verificado), salió el 17 sept 2026;
+Story 5.3 (pg_cron) salió el 21 sept 2026; Story 8.1 (reembolso real) y
+Story 8.2 (reportes programados reales) salieron el 22 sept 2026 al
+implementar Epic 8 — ver sus filas arriba. Sigue habiendo gaps puntuales
+documentados epic por epic (p. ej. Story 5.3/6.2/7.2 sin poder ejercitarse
+de punta a punta en local/CI mientras `lounge_availability` siga anclada a
+una fecha fija, o "image optimization and resizing" de Story 8.3 sin
+redimensionado real) — ver `docs/PENDIENTES.md` y
+`docs/design/COMPONENT-MAP.md`.

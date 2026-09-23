@@ -12,7 +12,7 @@ Repositorio integral del proyecto **LuxePass** (plataforma de membresía de lujo
 
 ## ⚠️ Alcance: mockup navegable + backend real parcial (Supabase)
 
-**Este repo empezó como un mockup navegable sin backend — eso ya no es así del todo.** Desde sept 2026, varias historias tienen lógica real conectada a Supabase: Epic 1 completo (Story 1.1 User Registration, Story 1.2 Login & Authentication), Epic 2 completo (Story 2.1 Map-Based Lounge Discovery, Story 2.2 Lounge Filtering & Search, Story 2.3 List View Alternative — catálogo real en `public.lounges`) y Epic 3 completo (Story 3.1 Lounge Profile Details, Story 3.2 Availability Calendar — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 2 / Epic 3). Epic 4 (Booking System) está completo: Story 4.1 (Seamless Booking Flow), Story 4.2 (Payment Processing, **Stripe real** en modo test) y Story 4.3 (Calendar Integration, ya real desde el mockup) — tablas `bookings`/`payments`, RPC `confirm_booking`/`join_waitlist`, y el email real de recibo de reserva (ver más abajo "Email de recibo de reserva real") — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 4. Epic 5 (QR Code & Check-in) está completo: Story 5.1 (Digital Pass Generation), Story 5.2 (Lounge Check-In Process, RPC "de kiosco" sin login de personal) y Story 5.3 (Booking Reminder, **pg_cron real**) — `bookings` gana `confirmation_code`/`checked_in_at`/`no_show`, `profiles` gana `emergency_contact_*` (ver más abajo "Check-in de recepción real" y "Recordatorio de reserva real") — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 5. Epic 6 (Member Experience & Notifications) está completo: Story 6.1 (Booking Management — RPC `cancel_booking`), Story 6.2 (In-app Notifications — tabla `notifications`, **nace aquí**, con dos de los seis tipos disparados de verdad: confirmación de reserva por trigger y aviso de las 6 AM por **pg_cron**; los otros cuatro se siembran como muestra real al crear el perfil) y Story 6.3 (Member Profile & Preferences — perfil/favoritos/preferencias/privacidad reales, borrado de cuenta como soft-delete reversible con **pg_cron** para el borrado físico a los 30 días) — ver más abajo "Notificaciones en la app reales" y "Borrado de cuenta real" — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 6. Epic 7 (Partner Dashboard) está completo: Story 7.1 (Daily Guest Management — `partner_guest_list`/`partner_checkin_booking`/`partner_report_no_show`, RPC autenticadas, más **Supabase Realtime** en `/partner` para las actualizaciones en vivo, primer uso del proyecto), Story 7.2 (Booking Notifications for Partners — dos Database Webhooks + un **pg_cron** hacia dos Edge Functions nuevas) y Story 7.3 (Partner Analytics — `partner_analytics_summary`/`partner_bookings_by_day`/`partner_repeat_guests`) — nace la tabla `user_roles` (rol member/partner/admin, decisión de arquitectura pospuesta a propósito hasta este epic) y `partners`/`partner_lounges` (ver más abajo "Rol de partner real" y "Notificaciones al partner reales") — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 7. El resto de epics sigue el patrón de mockup visual descrito abajo, historia por historia, hasta que se conecten a su vez.
+**Este repo empezó como un mockup navegable sin backend — eso ya no es así del todo.** Desde sept 2026, varias historias tienen lógica real conectada a Supabase: Epic 1 completo (Story 1.1 User Registration, Story 1.2 Login & Authentication), Epic 2 completo (Story 2.1 Map-Based Lounge Discovery, Story 2.2 Lounge Filtering & Search, Story 2.3 List View Alternative — catálogo real en `public.lounges`) y Epic 3 completo (Story 3.1 Lounge Profile Details, Story 3.2 Availability Calendar — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 2 / Epic 3). Epic 4 (Booking System) está completo: Story 4.1 (Seamless Booking Flow), Story 4.2 (Payment Processing, **Stripe real** en modo test) y Story 4.3 (Calendar Integration, ya real desde el mockup) — tablas `bookings`/`payments`, RPC `confirm_booking`/`join_waitlist`, y el email real de recibo de reserva (ver más abajo "Email de recibo de reserva real") — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 4. Epic 5 (QR Code & Check-in) está completo: Story 5.1 (Digital Pass Generation), Story 5.2 (Lounge Check-In Process, RPC "de kiosco" sin login de personal) y Story 5.3 (Booking Reminder, **pg_cron real**) — `bookings` gana `confirmation_code`/`checked_in_at`/`no_show`, `profiles` gana `emergency_contact_*` (ver más abajo "Check-in de recepción real" y "Recordatorio de reserva real") — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 5. Epic 6 (Member Experience & Notifications) está completo: Story 6.1 (Booking Management — RPC `cancel_booking`), Story 6.2 (In-app Notifications — tabla `notifications`, **nace aquí**, con dos de los seis tipos disparados de verdad: confirmación de reserva por trigger y aviso de las 6 AM por **pg_cron**; los otros cuatro se siembran como muestra real al crear el perfil) y Story 6.3 (Member Profile & Preferences — perfil/favoritos/preferencias/privacidad reales, borrado de cuenta como soft-delete reversible con **pg_cron** para el borrado físico a los 30 días) — ver más abajo "Notificaciones en la app reales" y "Borrado de cuenta real" — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 6. Epic 7 (Partner Dashboard) está completo: Story 7.1 (Daily Guest Management — `partner_guest_list`/`partner_checkin_booking`/`partner_report_no_show`, RPC autenticadas, más **Supabase Realtime** en `/partner` para las actualizaciones en vivo, primer uso del proyecto), Story 7.2 (Booking Notifications for Partners — dos Database Webhooks + un **pg_cron** hacia dos Edge Functions nuevas) y Story 7.3 (Partner Analytics — `partner_analytics_summary`/`partner_bookings_by_day`/`partner_repeat_guests`) — nace la tabla `user_roles` (rol member/partner/admin, decisión de arquitectura pospuesta a propósito hasta este epic) y `partners`/`partner_lounges` (ver más abajo "Rol de partner real" y "Notificaciones al partner reales") — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 7. Epic 8 (Admin & Support) está completo: Story 8.1 (Customer Support Dashboard — `support_tickets`/`support_ticket_messages`, **nacen aquí**; reembolso real vía Stripe para un cargo succeeded, ver "Reembolso real" más abajo), Story 8.2 (Data Export & Analytics — analítica real sobre toda la red, export por dataset, y reportes programados reales vía **pg_cron** + Brevo, ver "Reportes programados reales") y Story 8.3 (Content Management — `lounges` gana `content_status`, `lounge_content_submissions` **nace aquí** para un "Content approval workflow" real y genérico, bucket de Storage real `lounge-images`, ver "Gestión de contenido real") — reutiliza `user_roles` (rol admin) nacida en Epic 7, `/admin/login` sin artboard propio (decisión confirmada con el usuario, reutiliza el layout de `/partner/login`) — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 8. Los 9 epics del alcance original ya están conectados a Supabase real; trabajo a partir de aquí es bugfix, refactor o una historia adicional fuera de ese alcance.
 
 La app en producción de En Soleil vive en `app.luxepass.co`; si este repo la reemplaza o sigue siendo un proyecto aparte no está resuelto en este documento — no asumir ninguna de las dos sin confirmar.
 
@@ -342,9 +342,9 @@ Estos tokens están replicados en el código como **CSS custom properties** en `
 - **Recharts** — gráficos (`components/charts/`: BarChart, LineChart), para Epic 7 y 8
 - **@vis.gl/react-google-maps + @googlemaps/markerclusterer** — Google Maps real, proveedor único de mapa de la app desde la migración de Epic 2 (`/explore`, `components/explore/city-map.tsx`). Cualquier mapa nuevo (mini-mapa de lounge profile, u otro futuro) lo reutiliza — nunca SVG propio ni otro proveedor de tiles
 - **@ducanh2912/next-pwa** — service worker
-- **Brevo** — envío de email transaccional real (confirmación, recovery de Story 1.1/1.2), vía Supabase Auth Hook `send_email` + Edge Function `supabase/functions/send-email`. Detalle en "Supabase Local Development" §Envío de email transaccional
-- **Stripe** (`@stripe/stripe-js` + `@stripe/react-stripe-js`) — procesamiento de pagos real (Story 4.2), modo test en desarrollo. Checkout Sessions con `ui_mode: 'elements'` + Payment Element (no PaymentIntent crudo, no Checkout hospedado — el formulario vive embebido en la propia pantalla, como pide `Payment.dc.html`). Sin route handlers de Next.js: Supabase Edge Functions para crear la Checkout Session y para el webhook, que es la única fuente de verdad del estado del pago. Datos de tarjeta solo tocan Stripe.js/Elements en el cliente, nunca nuestro servidor (PCI DSS SAQ A). Detalle en "Supabase Local Development" §Procesamiento de pagos (Stripe)
-- **pg_cron** — job programado real (Story 5.3), primero del proyecto: `dispatch_booking_reminders()` corre cada 30 min y despacha el recordatorio de 24h vía `pg_net` + Edge Function `send-booking-reminder`, mismo mecanismo de Database Webhook que el recibo de reserva pero disparado por tiempo, no por evento. Detalle en "Supabase Local Development" §Recordatorio de reserva (pg_cron)
+- **Brevo** — envío de email transaccional real (confirmación, recovery de Story 1.1/1.2), vía Supabase Auth Hook `send_email` + Edge Function `supabase/functions/send-email`. Desde Story 8.2 también manda adjuntos reales (`sendBrevoEmailWithAttachment`, `_shared/brevo.ts`) para el CSV de un reporte programado. Detalle en "Supabase Local Development" §Envío de email transaccional y §Reportes programados reales
+- **Stripe** (`@stripe/stripe-js` + `@stripe/react-stripe-js`) — procesamiento de pagos real (Story 4.2), modo test en desarrollo. Checkout Sessions con `ui_mode: 'elements'` + Payment Element (no PaymentIntent crudo, no Checkout hospedado — el formulario vive embebido en la propia pantalla, como pide `Payment.dc.html`). Sin route handlers de Next.js: Supabase Edge Functions para crear la Checkout Session, para el webhook (única fuente de verdad del estado del pago) y, desde Story 8.1, para reembolsar un cargo real (`stripe-refund-payment`). Datos de tarjeta solo tocan Stripe.js/Elements en el cliente, nunca nuestro servidor (PCI DSS SAQ A). Detalle en "Supabase Local Development" §Procesamiento de pagos (Stripe) y §Reembolso real
+- **pg_cron** — tres jobs programados reales: `dispatch_booking_reminders()` (Story 5.3, primero del proyecto, cada 30 min, recordatorio de 24h), `dispatch_morning_notifications()`/`dispatch_partner_morning_digest()`/`dispatch_account_deletions()` (Story 6.2/6.3/7.2) y `dispatch_scheduled_reports()` (Story 8.2, cada 15 min — la cadencia más corta, porque un reporte diario/semanal/mensual necesita revisar seguido si ya le toca). Todos vía Database Webhook (`pg_net`) hacia su Edge Function, disparados por tiempo, no por evento. Detalle en "Supabase Local Development" §Recordatorio de reserva (pg_cron) y §Reportes programados reales
 - **Supabase Realtime** — canal `postgres_changes` sobre `bookings` (Story 7.1, `/partner`, primer uso del proyecto): sustituye la simulación de temporizadores del mockup para "real-time updates when new bookings are made". Detalle en "Supabase Local Development" §Rol de partner real
 - **Vitest + Testing Library** — tests sobre jsdom, con `next/navigation` mockeado. jsdom no trae `WebSocket`; el que Node expone globalmente (`undici`) revienta al usarse desde `@supabase/realtime-js` dentro de jsdom — `vitest.setup.ts` lo sustituye por un stub inerte, mismo criterio que el relleno de `IntersectionObserver`
 - **Playwright** — navegador automatizado para verificación visual (uso puntual, no suite e2e masiva)
@@ -941,3 +941,128 @@ ningún epic.** `join_waitlist` (Epic 4) aparca la reserva en
 `confirmed` cuando se libera un hueco — construirlo expandiría el
 alcance del Epic 4 (dueño real de `bookings`), no del 7. Documentado
 como hueco real en `docs/PENDIENTES.md` §2.11, no simulado.
+
+### Reembolso real (Stripe, Story 8.1)
+
+Decisión de alcance (22 sept 2026, tomada con el usuario antes de
+implementar — revierte la nota de `docs/DATA-MODEL-MAP.md` que daba esto
+por fuera de alcance): "Refund processing interface" reembolsa de verdad
+un cargo real de Stripe (`payments.status = 'succeeded'`) vía la Edge
+Function `stripe-refund-payment` (`stripe.refunds.create`), llamada
+directamente por el cliente admin (no por un cron) tras verificar
+`has_role('admin')` contra el llamador. `payments` se actualiza de forma
+optimista en la misma respuesta (Stripe confirma un reembolso en modo
+test al instante) — el webhook (`stripe-webhook`, caso `charge.refunded`
+ya añadido) es la defensa en profundidad, mismo principio que el resto de
+Story 4.2.
+
+**Una tarifa de no-show/cancelación tardía (Story 6.1) nunca se cobró de
+verdad, así que no pasa por aquí.** "Waive and refund" en ese caso solo
+limpia `bookings.cancellation_fee_cents`/`no_show`
+(`admin_waive_booking_fee`, `supabase/schemas/support_tickets.sql`) — no
+hay nada que reversar en Stripe para un cargo que nunca existió. El
+`RefundModal` (lenguaje de "cargo"/tarjeta/reembolso a 5-10 días) solo se
+muestra cuando el caso trae un pago real `succeeded` ligado a la reserva.
+
+### Reportes programados reales (pg_cron, Story 8.2)
+
+Decisión de alcance (22 sept 2026, misma fecha y mismo criterio que el
+reembolso de arriba — revierte la nota de `docs/DATA-MODEL-MAP.md`):
+"Automated daily/weekly report generation" + "Scheduled email delivery of
+reports" son reales, mismo mecanismo de Database Webhook/`pg_cron` que
+Story 5.3/6.2/7.2 (secreto compartido en Supabase Vault, `pg_net`, sin
+`verify_jwt`). Tabla `scheduled_reports` (nace aquí,
+`supabase/schemas/admin_reports.sql`) + `dispatch_scheduled_reports()`
+(pg_cron cada 15 min — la cadencia más corta de los tres cron del
+proyecto, porque un reporte "diario"/"semanal"/"mensual" necesita que el
+propio cron revise seguido si ya le toca, a diferencia de un evento puntual
+como el recordatorio de 24h) → Edge Function `send-admin-report`, que
+manda el CSV como adjunto real de Brevo (`sendBrevoEmailWithAttachment`,
+nueva en `_shared/brevo.ts`) — no en el cuerpo del email.
+
+**El CSV se genera en SQL, no en el cliente.**
+`admin_generate_report_csv(dataset, from, to)` reutiliza las mismas RPC
+`admin_export_*` que usa "Download CSV" en `/admin/reports`, así que el
+reporte programado y la descarga manual nunca pueden desincronizarse en
+qué columnas trae cada dataset.
+
+**Bug real encontrado y corregido con TDD**: `admin_generate_report_csv`
+y las `admin_export_*` de las que depende exigían `has_role('admin')`
+igual que el resto de RPC de este epic — pero el cron las llama desde
+Postgres, sin sesión (`auth.uid()` es `null` ahí), así que
+`dispatch_scheduled_reports()` fallaba con "Not authorized" en cada
+corrida. El guard de esas funciones pasó a
+`if auth.uid() is not null and not has_role('admin') then raise
+exception`: sigue rechazando a un autenticado sin el rol, pero deja pasar
+la llamada interna sin sesión — mismo criterio que ya usan las RPC "de
+kiosco" de recepción (Epic 5) al no exigir sesión en absoluto.
+
+"Email it to me" en `/admin/reports` usa el mismo `send-admin-report`,
+llamado directamente por el cliente (sin pasar por el cron) con el email
+del propio admin como único destinatario.
+
+Alta de los 2 secretos de Vault, una vez por proyecto (local/dev/prod):
+```sql
+select vault.create_secret(
+  'http://host.docker.internal:54331/functions/v1/send-admin-report', -- local; staging/prod: la URL pública del proyecto
+  'admin_report_webhook_url', 'URL de send-admin-report'
+);
+select vault.create_secret(
+  '<mismo valor que ADMIN_REPORT_WEBHOOK_SECRET en supabase/functions/.env>',
+  'admin_report_webhook_secret', 'Secreto compartido hacia send-admin-report'
+);
+```
+Sin los 2 secretos dados de alta, `dispatch_scheduled_reports()` no hace
+nada (mismo guard que el resto de este patrón).
+
+**Verificado de punta a punta**: `select
+public.dispatch_scheduled_reports();` disparado a mano contra un reporte
+de prueba, con `200` confirmado en `net._http_response` tras el envío
+real por Brevo — a diferencia del recordatorio de reserva (Story 5.3) o
+el aviso de las 6 AM (Story 6.2), este cron **sí** se pudo ejercitar de
+punta a punta en local: la ventana de datos que reporta (`v_to` fijo en
+`TODAY`, no el reloj real) no depende de que `lounge_availability` tenga
+reservas en el "hoy" real, solo de que existan reservas en el "hoy" de
+mockup — que sí las hay.
+
+### Gestión de contenido real (Story 8.3)
+
+`lounges` gana `content_status` (`live`/`draft`/`archived`) — la policy
+`select lounges` (Epic 2) se actualizó para que un miembro solo vea
+`content_status = 'live'`; un admin (`has_role('admin')`) sigue viendo
+todo. Este estado es **ortogonal** a si el lounge tiene un cambio de
+contenido pendiente de aprobar: un lounge `live` con una edición en
+revisión sigue mostrando su contenido publicado a los miembros hasta que
+se apruebe — "pending-approval" en la UI del admin (`LoungeStatusChip`)
+sale de si existe una fila pendiente en `lounge_content_submissions`
+(nace aquí, `supabase/schemas/admin_content.sql`), no de
+`lounges.content_status`.
+
+**"Content approval workflow" es real y genérico, no solo para The
+Vestry como dibujaba el mock.** Un cambio (`admin_submit_lounge_content_
+change`, cualquier combinación de amenities/horario/capacidad/
+restricciones/fotos/publicación en un jsonb `proposed`) nunca toca
+`lounges` directamente — solo se aplica al aprobarse
+(`admin_approve_lounge_submission`) o se descarta sin aplicar al
+rechazarse (`admin_reject_lounge_submission`). `lib/admin-content.ts`
+expone `diffLoungeChanges`, un diff genérico campo por campo que
+reemplaza al `VESTRY_PENDING_CHANGES` literal del mock.
+
+**"Upload and manage lounge images" es real vía un bucket de Storage
+nuevo, `lounge-images` (público a diferencia de `profile-photos`, que es
+privado por usuario — una foto de lounge la ve cualquiera en `/explore`).**
+Solo un admin puede escribir en él (policy `admin manages lounge images
+bucket`, `has_role('admin')`); cualquiera puede leer. "Image optimization
+and resizing" que el artboard anuncia **no** es real — no hay librería de
+procesamiento de imágenes en el stack ni precedente de transformación de
+imágenes en este proyecto.
+
+**De la barra de acción masiva de `/admin/lounges`, solo "Archive" es
+real** (`admin_archive_lounges`, directo, sin pasar por revisión — no es
+contenido nuevo que aprobar, es su retiro). "Update hours", "Add an
+amenity" y "Set closure dates" siguen inertes, mismo criterio que "New
+case" en Story 8.1: ningún artboard dibuja su modal de edición masiva.
+
+**"Add lounge" sigue sin llevar a ningún sitio propio.** Ningún artboard
+de la Fase 8 dibuja el alta de un lounge nuevo — se paró antes de
+inventarlo, ver `docs/PENDIENTES.md` §2.10.

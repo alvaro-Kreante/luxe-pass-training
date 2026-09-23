@@ -1,131 +1,294 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import { amenityLabel, type AmenityId } from "@/lib/amenities";
+import { TODAY, parseDate } from "@/lib/availability";
+import { formatCurrency } from "@/lib/admin";
+
 /**
  * Epic 8 — Admin & Support. Story 8.2 (Fase 2, `epic-8-admin-support/`):
  * analítica de red, popularidad, export y reportes programados.
  *
- * El período de toda la analítica es el 1–14 de septiembre (`DESIGN-SYSTEM.md`
- * §6 Fase 8): las catorce barras de `BOOKINGS_PER_DAY` suman las 1,208
- * reservas de `NETWORK_METRICS`, que se reparten en 1,102 asistidas + 62
- * no-shows + 44 cancelaciones; el rail de ingresos suma $336,250.00 brutos
- * menos $53,913.00 de atribución a partners = $282,337.00 netos; y las ocho
- * filas de `LOUNGE_POPULARITY` más `OTHER_CITIES_FOLD` suman el 100% de las
- * 1,208. Las 187 reservas de The Ainsworth y sus $8,616.50 son exactamente
- * los que muestra el Partner Dashboard del Epic 7 (`lib/partner.ts`).
+ * Backend real (22 sept 2026, ver CLAUDE.md §Alcance y
+ * docs/design/COMPONENT-MAP.md): RPC de `supabase/schemas/admin_reports.sql`
+ * sobre TODA la red (nunca un lounge elegido). El rango de fechas es
+ * siempre relativo a `TODAY` (`src/lib/availability.ts`, 2025-09-09) — el
+ * dominio de reservas del proyecto vive sobre ese "hoy" de mockup fijo, no
+ * el reloj real, mismo criterio que el resto de la app.
+ *
+ * La narrativa fija del mock ("1,208 bookings", "$336,250.00 brutos"...) se
+ * retira: los números que se muestren ahora son los que de verdad haya en
+ * la base. "Revenue by partner" solo suma cargos reales de Stripe
+ * (`payments.status = 'succeeded'`) — la facturación de membresía (Epic 9,
+ * sin conectar) no es un dato real todavía. Desviación anotada en
+ * `docs/design/COMPONENT-MAP.md`.
  */
-
-import { formatCurrency } from "@/lib/admin";
 
 export { formatCurrency };
 
-export const ANALYTICS_PERIOD_LABEL = "September 1 – 14";
+export type AnalyticsPeriod = "14d" | "month" | "quarter";
 
-export const NETWORK_METRICS = {
-  bookings: 1208,
-  attended: 1102,
-  noShows: 62,
-  cancelled: 44,
-  activeMembers: 1842,
-  joined: 58,
-  left: 21,
-  noShowRatePct: 5.1,
-  noShowRatePrevPct: 5.8,
-  grossRevenue: 336250,
-  partnerAttribution: 53913,
-  netRevenue: 282337,
-};
+const PERIOD_DAYS: Record<AnalyticsPeriod, number> = { "14d": 14, month: 30, quarter: 90 };
 
-export const BOOKINGS_PER_DAY: { label: string; count: number }[] = [
-  { label: "Sun 1", count: 71 },
-  { label: "Mon 2", count: 92 },
-  { label: "Tue 3", count: 96 },
-  { label: "Wed 4", count: 95 },
-  { label: "Thu 5", count: 88 },
-  { label: "Fri 6", count: 84 },
-  { label: "Sat 7", count: 79 },
-  { label: "Sun 8", count: 78 },
-  { label: "Mon 9", count: 97 },
-  { label: "Tue 10", count: 95 },
-  { label: "Wed 11", count: 93 },
-  { label: "Thu 12", count: 90 },
-  { label: "Fri 13", count: 81 },
-  { label: "Sat 14", count: 69 },
+export interface DateRange {
+  from: string;
+  to: string;
+}
+
+export function dateRangeForPeriod(period: AnalyticsPeriod, today: string = TODAY): DateRange {
+  const days = PERIOD_DAYS[period];
+  const to = parseDate(today);
+  const from = new Date(to);
+  from.setUTCDate(from.getUTCDate() - (days - 1));
+  return { from: from.toISOString().slice(0, 10), to: today };
+}
+
+function formatShortDate(iso: string): string {
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(parseDate(iso));
+}
+
+export function formatDateRangeLabel(range: DateRange): string {
+  return `${formatShortDate(range.from)} – ${formatShortDate(range.to)}`;
+}
+
+/** "Last 7 days" / "Last month" / "Quarter to date" — mismos presets de `Export.dc.html`, sobre `TODAY`. */
+export const DATE_RANGE_PRESETS: { label: string; days: number }[] = [
+  { label: "Last 7 days", days: 7 },
+  { label: "Last month", days: 30 },
+  { label: "Quarter to date", days: 90 },
 ];
 
-export const MEMBER_ACQUISITION = {
-  joined: 58,
-  cancelled: 21,
-  netChange: 37,
-  churnPct: 1.1,
-  retentionPct: 87,
-};
+export function dateRangeForPreset(days: number, today: string = TODAY): DateRange {
+  const to = parseDate(today);
+  const from = new Date(to);
+  from.setUTCDate(from.getUTCDate() - (days - 1));
+  return { from: from.toISOString().slice(0, 10), to: today };
+}
 
-export const REVENUE_LINES: { label: string; detail: string; amount: number }[] = [
-  { label: "Membership billings", detail: "129 × $2,400.00 · 58 new, 71 renewals", amount: 309600 },
-  { label: "Day passes", detail: "318 × $75.00 · tax excluded", amount: 23850 },
-  { label: "No-show fees", detail: "62 × $35.00", amount: 2170 },
-  { label: "Late cancellation fees", detail: "18 of the 44 cancellations × $35.00", amount: 630 },
-];
+export function noShowRatePct(noShows: number, bookings: number): number {
+  if (bookings === 0) return 0;
+  return Math.round((noShows / bookings) * 1000) / 10;
+}
 
-export const PARTNER_ATTRIBUTION_NOTE =
-  "296 day passes, 806 membership visits, half of each fee";
+export function sharePct(count: number, total: number): number {
+  if (total === 0) return 0;
+  return Math.round((count / total) * 1000) / 10;
+}
+
+/* ------------------------------------------------------------------ */
+/* "How the network is doing" (Analytics.dc.html)                      */
+/* ------------------------------------------------------------------ */
+
+export interface NetworkSummary {
+  bookings: number;
+  attended: number;
+  noShows: number;
+  cancelled: number;
+  joined: number;
+  left: number;
+  activeMembers: number;
+}
+
+interface NetworkSummaryRow {
+  bookings: number;
+  attended: number;
+  no_shows: number;
+  cancelled: number;
+  joined: number;
+  left_count: number;
+  active_members: number;
+}
+
+export async function getNetworkSummary(
+  supabase: SupabaseClient,
+  range: DateRange,
+): Promise<NetworkSummary> {
+  const { data, error } = await supabase
+    .rpc("admin_network_summary", { p_from: range.from, p_to: range.to })
+    .single();
+  if (error) throw error;
+  const row = data as NetworkSummaryRow;
+  return {
+    bookings: row.bookings,
+    attended: row.attended,
+    noShows: row.no_shows,
+    cancelled: row.cancelled,
+    joined: row.joined,
+    left: row.left_count,
+    activeMembers: row.active_members,
+  };
+}
+
+export interface BookingsByDayPoint {
+  label: string;
+  count: number;
+}
+
+interface BookingsByDayRow {
+  day: string;
+  bookings: number;
+}
+
+function formatBarLabel(iso: string): string {
+  return new Intl.DateTimeFormat("en-US", { weekday: "short", day: "numeric", timeZone: "UTC" }).format(
+    parseDate(iso),
+  );
+}
+
+export async function getBookingsByDay(
+  supabase: SupabaseClient,
+  range: DateRange,
+): Promise<BookingsByDayPoint[]> {
+  const { data, error } = await supabase.rpc("admin_bookings_by_day", { p_from: range.from, p_to: range.to });
+  if (error) throw error;
+  return (data as BookingsByDayRow[]).map((row) => ({
+    label: formatBarLabel(row.day),
+    count: row.bookings,
+  }));
+}
+
+/* ------------------------------------------------------------------ */
+/* "Revenue reporting by partner and time period"                     */
+/* ------------------------------------------------------------------ */
+
+export interface RevenueByPartnerRow {
+  loungeId: string;
+  loungeName: string;
+  bookings: number;
+  grossRevenueCents: number;
+}
+
+interface AdminRevenueByPartnerRow {
+  lounge_id: string;
+  lounge_name: string;
+  bookings: number;
+  gross_revenue_cents: number;
+}
+
+export async function getRevenueByPartner(
+  supabase: SupabaseClient,
+  range: DateRange,
+): Promise<RevenueByPartnerRow[]> {
+  const { data, error } = await supabase.rpc("admin_revenue_by_partner", { p_from: range.from, p_to: range.to });
+  if (error) throw error;
+  return (data as AdminRevenueByPartnerRow[]).map((row) => ({
+    loungeId: row.lounge_id,
+    loungeName: row.lounge_name,
+    bookings: row.bookings,
+    grossRevenueCents: row.gross_revenue_cents,
+  }));
+}
+
+export function totalGrossRevenueCents(rows: RevenueByPartnerRow[]): number {
+  return rows.reduce((sum, row) => sum + row.grossRevenueCents, 0);
+}
+
+/* ------------------------------------------------------------------ */
+/* "Most popular lounges and amenities report" + "Geographic usage"    */
+/* ------------------------------------------------------------------ */
 
 export interface LoungePopularity {
+  loungeId: string;
   name: string;
   area: string;
+  bookings: number;
   noShows: number;
+  sharePct: number;
+}
+
+interface AdminLoungePopularityRow {
+  lounge_id: string;
+  lounge_name: string;
+  area: string;
+  bookings: number;
+  no_shows: number;
+}
+
+export async function getLoungePopularity(
+  supabase: SupabaseClient,
+  range: DateRange,
+): Promise<LoungePopularity[]> {
+  const { data, error } = await supabase.rpc("admin_lounge_popularity", { p_from: range.from, p_to: range.to });
+  if (error) throw error;
+  const rows = data as AdminLoungePopularityRow[];
+  const total = rows.reduce((sum, row) => sum + row.bookings, 0);
+  return rows.map((row) => ({
+    loungeId: row.lounge_id,
+    name: row.lounge_name,
+    area: row.area,
+    bookings: row.bookings,
+    noShows: row.no_shows,
+    sharePct: sharePct(row.bookings, total),
+  }));
+}
+
+export interface AmenityDemand {
+  id: string;
+  label: string;
   bookings: number;
   sharePct: number;
 }
 
-/** Las 8 de Nueva York que muestra `Popularity.dc.html` — 4 más en Miami/LA se pliegan en `OTHER_CITIES_FOLD`. */
-export const LOUNGE_POPULARITY: LoungePopularity[] = [
-  { name: "The Ainsworth", area: "Midtown East, New York", noShows: 9, bookings: 187, sharePct: 15.5 },
-  { name: "Bergdorf Lounge", area: "Midtown, New York", noShows: 7, bookings: 164, sharePct: 13.6 },
-  { name: "The Vestry", area: "Tribeca, New York", noShows: 6, bookings: 148, sharePct: 12.3 },
-  { name: "Aurelia House", area: "NoMad, New York", noShows: 5, bookings: 121, sharePct: 10.0 },
-  { name: "The Winslow Club", area: "Flatiron, New York", noShows: 4, bookings: 96, sharePct: 7.9 },
-  { name: "Belmont Terrace", area: "Bryant Park, New York", noShows: 4, bookings: 88, sharePct: 7.3 },
-  { name: "The Meridian Salon", area: "Upper East Side, New York", noShows: 3, bookings: 71, sharePct: 5.9 },
-  { name: "The Gramercy Reading Room", area: "Gramercy, New York", noShows: 2, bookings: 63, sharePct: 5.2 },
-];
+interface AdminAmenityDemandRow {
+  amenity: string;
+  bookings: number;
+}
 
-export const OTHER_CITIES_FOLD = {
-  label: "4 more lounges in Miami and Los Angeles",
-  bookings: 270,
-  sharePct: 22.4,
-};
+export async function getAmenityDemand(
+  supabase: SupabaseClient,
+  range: DateRange,
+): Promise<AmenityDemand[]> {
+  const { data, error } = await supabase.rpc("admin_amenity_demand", { p_from: range.from, p_to: range.to });
+  if (error) throw error;
+  const rows = data as AdminAmenityDemandRow[];
+  const total = Math.max(...rows.map((r) => r.bookings), 1);
+  return rows.map((row) => ({
+    id: row.amenity,
+    label: amenityLabel(row.amenity as AmenityId),
+    bookings: row.bookings,
+    sharePct: sharePct(row.bookings, total),
+  }));
+}
 
-export const AMENITY_DEMAND: { label: string; pct: number }[] = [
-  { label: "Showers", pct: 62 },
-  { label: "High-speed WiFi", pct: 58 },
-  { label: "Co-working", pct: 47 },
-  { label: "Day rooms", pct: 31 },
-  { label: "Luggage storage", pct: 24 },
-  { label: "Lounge and bar", pct: 19 },
-];
+export interface CityDemand {
+  city: string;
+  lounges: number;
+  bookings: number;
+  sharePct: number;
+}
 
-export const CITY_DEMAND: { city: string; lounges: number; bookings: number; sharePct: number; note?: string }[] = [
-  { city: "New York", lounges: 8, bookings: 938, sharePct: 77.6 },
-  { city: "Miami", lounges: 2, bookings: 152, sharePct: 12.6, note: "opened in May" },
-  { city: "Los Angeles", lounges: 2, bookings: 118, sharePct: 9.8, note: "opened in July" },
-];
+interface AdminCityDemandRow {
+  city: string;
+  lounges: number;
+  bookings: number;
+}
+
+export async function getCityDemand(
+  supabase: SupabaseClient,
+  range: DateRange,
+): Promise<CityDemand[]> {
+  const { data, error } = await supabase.rpc("admin_city_demand", { p_from: range.from, p_to: range.to });
+  if (error) throw error;
+  const rows = data as AdminCityDemandRow[];
+  const total = rows.reduce((sum, row) => sum + row.bookings, 0);
+  return rows.map((row) => ({
+    city: row.city,
+    lounges: row.lounges,
+    bookings: row.bookings,
+    sharePct: sharePct(row.bookings, total),
+  }));
+}
+
+/* ------------------------------------------------------------------ */
+/* "Data export in CSV format" (Export.dc.html)                        */
+/* ------------------------------------------------------------------ */
 
 export type ExportDataset = "bookings" | "members" | "revenue-by-partner" | "no-shows-cancellations";
 
-export const EXPORT_DATASETS: { value: ExportDataset; label: string; note: string; rows: number }[] = [
-  { value: "bookings", label: "Bookings", note: "one row per reservation", rows: NETWORK_METRICS.bookings },
-  { value: "members", label: "Members", note: "anonymised by default", rows: NETWORK_METRICS.activeMembers },
-  {
-    value: "revenue-by-partner",
-    label: "Revenue by partner",
-    note: "one row per lounge and period",
-    rows: LOUNGE_POPULARITY.length + 4,
-  },
-  {
-    value: "no-shows-cancellations",
-    label: "No-shows and cancellations",
-    note: "with the fee charged on each",
-    rows: NETWORK_METRICS.noShows + NETWORK_METRICS.cancelled,
-  },
+export const EXPORT_DATASETS: { value: ExportDataset; label: string; note: string }[] = [
+  { value: "bookings", label: "Bookings", note: "one row per reservation" },
+  { value: "members", label: "Members", note: "anonymised by default" },
+  { value: "revenue-by-partner", label: "Revenue by partner", note: "one row per lounge and period" },
+  { value: "no-shows-cancellations", label: "No-shows and cancellations", note: "with the fee charged on each" },
 ];
 
 export interface ExportColumn {
@@ -134,108 +297,272 @@ export interface ExportColumn {
   personal?: boolean;
 }
 
-export const EXPORT_COLUMNS: ExportColumn[] = [
-  { id: "reference", label: "Booking reference" },
-  { id: "memberId", label: "Member ID" },
-  { id: "memberName", label: "Member name", personal: true },
-  { id: "lounge", label: "Lounge" },
-  { id: "city", label: "City" },
-  { id: "email", label: "Email address", personal: true },
-  { id: "bookedDate", label: "Booked date" },
-  { id: "arrivalTime", label: "Arrival time" },
-  { id: "phone", label: "Phone number", personal: true },
-  { id: "status", label: "Status" },
-  { id: "amountCharged", label: "Amount charged" },
-  { id: "paymentMethod", label: "Payment method" },
-];
+export const EXPORT_COLUMNS: Record<ExportDataset, ExportColumn[]> = {
+  bookings: [
+    { id: "reference", label: "Booking reference" },
+    { id: "memberId", label: "Member ID" },
+    { id: "memberName", label: "Member name", personal: true },
+    { id: "email", label: "Email address", personal: true },
+    { id: "phone", label: "Phone number", personal: true },
+    { id: "lounge", label: "Lounge" },
+    { id: "city", label: "City" },
+    { id: "date", label: "Date" },
+    { id: "time", label: "Arrival time" },
+    { id: "status", label: "Status" },
+    { id: "amount", label: "Amount charged" },
+    { id: "paymentMethod", label: "Payment method" },
+  ],
+  members: [
+    { id: "memberId", label: "Member ID" },
+    { id: "memberName", label: "Member name", personal: true },
+    { id: "email", label: "Email address", personal: true },
+    { id: "phone", label: "Phone number", personal: true },
+    { id: "status", label: "Status" },
+    { id: "memberSince", label: "Member since" },
+  ],
+  "revenue-by-partner": [
+    { id: "lounge", label: "Lounge" },
+    { id: "bookings", label: "Bookings" },
+    { id: "revenue", label: "Gross revenue" },
+  ],
+  "no-shows-cancellations": [
+    { id: "reference", label: "Booking reference" },
+    { id: "memberName", label: "Member name", personal: true },
+    { id: "lounge", label: "Lounge" },
+    { id: "date", label: "Date" },
+    { id: "status", label: "Status" },
+    { id: "fee", label: "Fee" },
+  ],
+};
 
-export const DEFAULT_SELECTED_COLUMN_IDS = EXPORT_COLUMNS.filter((c) => !c.personal).map((c) => c.id);
+export function defaultSelectedColumns(dataset: ExportDataset): string[] {
+  return EXPORT_COLUMNS[dataset].filter((c) => !c.personal).map((c) => c.id);
+}
 
-export const DATE_RANGE_PRESETS: { label: string; rangeLabel: string }[] = [
-  { label: "Last 7 days", rangeLabel: "September 8 – September 14" },
-  { label: "Last month", rangeLabel: "August 1 – August 31" },
-  { label: "Quarter to date", rangeLabel: "July 1 – September 14" },
-];
+/** Fila cruda de `admin_export_bookings`. */
+export interface AdminExportBookingRow {
+  confirmation_code: string;
+  member_id: string;
+  member_name: string;
+  member_email: string;
+  member_phone: string | null;
+  lounge_name: string;
+  city: string;
+  date: string;
+  slot_time: string;
+  status: string;
+  amount_charged_cents: number;
+  payment_method: string;
+}
 
-export type DeliveryMethod = "download" | "email" | "schedule";
+export async function fetchExportBookings(
+  supabase: SupabaseClient,
+  range: DateRange,
+): Promise<AdminExportBookingRow[]> {
+  const { data, error } = await supabase.rpc("admin_export_bookings", { p_from: range.from, p_to: range.to });
+  if (error) throw error;
+  return data as AdminExportBookingRow[];
+}
+
+/** Fila cruda de `admin_export_members`. */
+export interface AdminExportMemberRow {
+  member_id: string;
+  full_name: string;
+  email: string;
+  phone: string | null;
+  membership_status: string;
+  member_since: string;
+  deleted_at: string | null;
+}
+
+export async function fetchExportMembers(supabase: SupabaseClient): Promise<AdminExportMemberRow[]> {
+  const { data, error } = await supabase.rpc("admin_export_members");
+  if (error) throw error;
+  return data as AdminExportMemberRow[];
+}
+
+/** Fila cruda de `admin_export_no_shows_cancellations`. */
+export interface AdminExportNoShowRow {
+  confirmation_code: string;
+  member_name: string;
+  lounge_name: string;
+  date: string;
+  status: string;
+  no_show: boolean;
+  fee_cents: number;
+}
+
+export async function fetchExportNoShowsCancellations(
+  supabase: SupabaseClient,
+  range: DateRange,
+): Promise<AdminExportNoShowRow[]> {
+  const { data, error } = await supabase.rpc("admin_export_no_shows_cancellations", {
+    p_from: range.from,
+    p_to: range.to,
+  });
+  if (error) throw error;
+  return data as AdminExportNoShowRow[];
+}
+
+function csvCell(value: string): string {
+  return `"${value.replace(/"/g, '""')}"`;
+}
+
+/**
+ * Arma el CSV real de descarga inmediata, columna a columna según lo que el
+ * formulario dejó marcado — "anonymized by default": una columna personal
+ * (`memberName`/`email`/`phone`) que no esté marcada simplemente no
+ * aparece; el `memberId` estable siempre está disponible como alternativa.
+ */
+export function buildExportCsv(
+  dataset: ExportDataset,
+  selectedColumnIds: string[],
+  rows: AdminExportBookingRow[] | AdminExportMemberRow[] | AdminExportNoShowRow[],
+): string {
+  const columns = EXPORT_COLUMNS[dataset].filter((c) => selectedColumnIds.includes(c.id));
+  const header = columns.map((c) => csvCell(c.label)).join(",");
+
+  const cellFor = (row: Record<string, unknown>, columnId: string): string => {
+    if (dataset === "bookings") {
+      const r = row as unknown as AdminExportBookingRow;
+      const cell: Record<string, string> = {
+        reference: r.confirmation_code,
+        memberId: r.member_id,
+        memberName: r.member_name,
+        email: r.member_email,
+        phone: r.member_phone ?? "",
+        lounge: r.lounge_name,
+        city: r.city,
+        date: r.date,
+        time: r.slot_time,
+        status: r.status,
+        amount: formatCurrency(r.amount_charged_cents / 100),
+        paymentMethod: r.payment_method,
+      };
+      return cell[columnId] ?? "";
+    }
+    if (dataset === "members") {
+      const r = row as unknown as AdminExportMemberRow;
+      const cell: Record<string, string> = {
+        memberId: r.member_id,
+        memberName: r.full_name,
+        email: r.email,
+        phone: r.phone ?? "",
+        status: r.deleted_at ? "deleted" : r.membership_status,
+        memberSince: r.member_since,
+      };
+      return cell[columnId] ?? "";
+    }
+    if (dataset === "no-shows-cancellations") {
+      const r = row as unknown as AdminExportNoShowRow;
+      const cell: Record<string, string> = {
+        reference: r.confirmation_code,
+        memberName: r.member_name,
+        lounge: r.lounge_name,
+        date: r.date,
+        status: r.no_show ? "no-show" : r.status,
+        fee: formatCurrency(r.fee_cents / 100),
+      };
+      return cell[columnId] ?? "";
+    }
+    const r = row as unknown as RevenueByPartnerRow;
+    const cell: Record<string, string> = {
+      lounge: r.loungeName,
+      bookings: String(r.bookings),
+      revenue: formatCurrency(r.grossRevenueCents / 100),
+    };
+    return cell[columnId] ?? "";
+  };
+
+  const body = (rows as unknown as Record<string, unknown>[]).map((row) =>
+    columns.map((c) => csvCell(cellFor(row, c.id))).join(","),
+  );
+
+  return [header, ...body].join("\n");
+}
+
+/* ------------------------------------------------------------------ */
+/* "Automated daily/weekly report generation" + "Scheduled email       */
+/* delivery of reports" (ScheduledReports.dc.html) — pg_cron real       */
+/* ------------------------------------------------------------------ */
+
+export type ReportCadence = "daily" | "weekly" | "monthly";
 
 export interface ScheduledReport {
   id: string;
   name: string;
-  detail: string;
-  cadenceLabel: string;
-  format: string;
-  nextRunLabel: string;
-  lastRunLabel: string;
+  dataset: ExportDataset;
+  recipients: string[];
+  cadence: ReportCadence;
   enabled: boolean;
+  lastRunAt: string | null;
+  nextRunAt: string;
 }
 
-export const SCHEDULED_REPORTS: ScheduledReport[] = [
-  {
-    id: "daily-ops-digest",
-    name: "Daily operations digest",
-    detail: "Bookings, arrivals and no-shows of the day · ops@ensoleil.co and 3 others",
-    cadenceLabel: "Every day 7:00 AM",
-    format: "CSV",
-    nextRunLabel: "Tomorrow 7:00 AM",
-    lastRunLabel: "sent today 7:00 AM",
-    enabled: true,
-  },
-  {
-    id: "revenue-by-partner",
-    name: "Revenue by partner",
-    detail: "Gross, attribution and net for each lounge · finance@ensoleil.co",
-    cadenceLabel: "Mondays 6:00 AM",
-    format: "CSV",
-    nextRunLabel: "Sep 23, 6:00 AM",
-    lastRunLabel: "sent today 6:02 AM",
-    enabled: true,
-  },
-  {
-    id: "acquisition-churn",
-    name: "Member acquisition and churn",
-    detail: "Joined, cancelled, retention by cohort · leadership@ensoleil.co",
-    cadenceLabel: "1st of month",
-    format: "CSV",
-    nextRunLabel: "Oct 1, 8:00 AM",
-    lastRunLabel: "sent Sep 1, 8:00 AM",
-    enabled: true,
-  },
-  {
-    id: "no-show-watchlist",
-    name: "No-show watchlist",
-    detail: "Members at two no-shows in twelve months · support@ensoleil.co",
-    cadenceLabel: "Mondays 9:00 AM",
-    format: "CSV",
-    nextRunLabel: "Sep 23, 9:00 AM",
-    lastRunLabel: "sent today 9:00 AM · 11 members",
-    enabled: true,
-  },
-  {
-    id: "partner-payout",
-    name: "Partner payout statement",
-    detail: "One statement per lounge · finance@ensoleil.co and the 12 partners",
-    cadenceLabel: "1st and 16th",
-    format: "PDF + CSV",
-    nextRunLabel: "Oct 1, 6:15 AM",
-    lastRunLabel: "sent today 6:15 AM",
-    enabled: true,
-  },
-  {
-    id: "amenity-demand",
-    name: "Amenity demand",
-    detail: "Which filters members search with · product@ensoleil.co",
-    cadenceLabel: "Quarterly",
-    format: "CSV",
-    nextRunLabel: "Paused",
-    lastRunLabel: "last sent Jul 1",
-    enabled: false,
-  },
-];
+interface ScheduledReportRow {
+  id: string;
+  name: string;
+  dataset: ExportDataset;
+  recipients: string[];
+  cadence: ReportCadence;
+  enabled: boolean;
+  last_run_at: string | null;
+  next_run_at: string;
+}
 
-export const RECENT_DELIVERIES: { reportName: string; detail: string; failed?: boolean }[] = [
-  { reportName: "No-show watchlist", detail: "Today 9:00 AM · 1 recipient · 11 rows" },
-  { reportName: "Daily operations digest", detail: "Today 7:00 AM · 4 recipients · 96 rows" },
-  { reportName: "Partner payout statement", detail: "Today 6:15 AM · retried once, then delivered to all 13", failed: true },
-  { reportName: "Revenue by partner", detail: "Today 6:02 AM · 1 recipient · 12 rows" },
-];
+function mapScheduledReportRow(row: ScheduledReportRow): ScheduledReport {
+  return {
+    id: row.id,
+    name: row.name,
+    dataset: row.dataset,
+    recipients: row.recipients,
+    cadence: row.cadence,
+    enabled: row.enabled,
+    lastRunAt: row.last_run_at,
+    nextRunAt: row.next_run_at,
+  };
+}
+
+export async function listScheduledReports(supabase: SupabaseClient): Promise<ScheduledReport[]> {
+  const { data, error } = await supabase
+    .from("scheduled_reports")
+    .select("*")
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data as ScheduledReportRow[]).map(mapScheduledReportRow);
+}
+
+export async function createScheduledReport(
+  supabase: SupabaseClient,
+  input: { name: string; dataset: ExportDataset; recipients: string[]; cadence: ReportCadence },
+): Promise<void> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const { error } = await supabase.from("scheduled_reports").insert({
+    name: input.name,
+    dataset: input.dataset,
+    recipients: input.recipients,
+    cadence: input.cadence,
+    created_by: user?.id,
+  });
+  if (error) throw error;
+}
+
+export async function toggleScheduledReport(
+  supabase: SupabaseClient,
+  id: string,
+  enabled: boolean,
+): Promise<void> {
+  const { error } = await supabase
+    .from("scheduled_reports")
+    .update({ enabled, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export function cadenceLabel(cadence: ReportCadence): string {
+  if (cadence === "daily") return "Every day";
+  if (cadence === "weekly") return "Every week";
+  return "Every month";
+}

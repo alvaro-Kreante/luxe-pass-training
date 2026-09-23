@@ -1,21 +1,73 @@
 "use client";
 
 import * as React from "react";
-import { CalendarDays, ChevronDown, Download } from "lucide-react";
+import { CalendarDays, Download } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { AdminShell } from "@/components/patterns/admin-shell";
-import { ADMIN_CASE_COUNTS } from "@/lib/admin";
-import { AMENITY_DEMAND, CITY_DEMAND, LOUNGE_POPULARITY, OTHER_CITIES_FOLD } from "@/lib/admin-analytics";
+import { RequireAdminSession } from "@/components/admin/require-admin-session";
+import { createClient } from "@/lib/supabase/client";
+import { getTicketCounts, type TicketCounts } from "@/lib/admin";
+import {
+  type AmenityDemand,
+  type CityDemand,
+  type LoungePopularity,
+  dateRangeForPeriod,
+  formatDateRangeLabel,
+  getAmenityDemand,
+  getCityDemand,
+  getLoungePopularity,
+} from "@/lib/admin-analytics";
 
 /**
  * Story 8.2 — "Most popular lounges and amenities report" y "Geographic
  * usage patterns". Artboard: docs/design/epic-8-admin-support/Popularity.dc.html.
+ *
+ * Backend real (22 sept 2026): `admin_lounge_popularity`/
+ * `admin_amenity_demand`/`admin_city_demand`
+ * (`supabase/schemas/admin_reports.sql`), sobre el rango de la quincena
+ * (`dateRangeForPeriod("14d")`) relativo a `TODAY`.
  */
 export default function DemandPage() {
+  return (
+    <RequireAdminSession>
+      <DemandScreen />
+    </RequireAdminSession>
+  );
+}
+
+function DemandScreen() {
   const router = useRouter();
-  const maxBookings = LOUNGE_POPULARITY[0]?.bookings ?? 1;
+  const supabase = React.useMemo(() => createClient(), []);
+  const range = React.useMemo(() => dateRangeForPeriod("14d"), []);
+  const [lounges, setLounges] = React.useState<LoungePopularity[]>([]);
+  const [amenities, setAmenities] = React.useState<AmenityDemand[]>([]);
+  const [cities, setCities] = React.useState<CityDemand[]>([]);
+  const [counts, setCounts] = React.useState<TicketCounts | null>(null);
+
+  React.useEffect(() => {
+    let active = true;
+    Promise.all([
+      getLoungePopularity(supabase, range),
+      getAmenityDemand(supabase, range),
+      getCityDemand(supabase, range),
+    ]).then(([loungeRows, amenityRows, cityRows]) => {
+      if (!active) return;
+      setLounges(loungeRows);
+      setAmenities(amenityRows);
+      setCities(cityRows);
+    });
+    getTicketCounts(supabase).then((row) => {
+      if (active) setCounts(row);
+    });
+    return () => {
+      active = false;
+    };
+  }, [supabase, range]);
+
+  const maxBookings = lounges[0]?.bookings ?? 1;
+  const totalBookings = lounges.reduce((sum, l) => sum + l.bookings, 0);
 
   return (
     <AdminShell
@@ -31,19 +83,19 @@ export default function DemandPage() {
           <span className="text-[13.5px] font-bold text-fg">Demand</span>
         </>
       }
-      supportBadge={ADMIN_CASE_COUNTS.open}
+      supportBadge={counts?.open}
     >
       <div className="flex items-center gap-6">
         <div className="min-w-0 flex-1">
           <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">
-            September 1 – 14 · 1,208 bookings
+            {formatDateRangeLabel(range)} · {totalBookings.toLocaleString("en-US")} bookings
           </p>
           <h1 className="mt-2 font-display text-[34px] text-fg">Where the demand is</h1>
         </div>
         <div className="flex items-center gap-2.5">
           <span className="flex h-11 items-center gap-2.5 rounded-[11px] border-[1.5px] border-line px-4">
             <CalendarDays size={17} strokeWidth={1.7} className="text-accent" aria-hidden />
-            <span className="text-[13.5px] font-semibold text-fg">Sep 1 – Sep 14</span>
+            <span className="text-[13.5px] font-semibold text-fg">{formatDateRangeLabel(range)}</span>
           </span>
           <button
             type="button"
@@ -69,9 +121,9 @@ export default function DemandPage() {
               <Th className="text-right">Share</Th>
             </div>
 
-            {LOUNGE_POPULARITY.map((lounge) => (
+            {lounges.map((lounge) => (
               <div
-                key={lounge.name}
+                key={lounge.loungeId}
                 className="grid grid-cols-[1fr_246px_74px_66px] items-center gap-3.5 border-b border-[rgba(58,50,42,0.6)] px-5.5 last:border-b-0"
                 style={{ height: 54 }}
               >
@@ -92,18 +144,10 @@ export default function DemandPage() {
               </div>
             ))}
 
-            <div className="flex items-center gap-2.5 px-5.5" style={{ height: 34 }}>
-              <ChevronDown size={15} strokeWidth={1.9} className="text-fg-subtle" aria-hidden />
-              <span className="text-xs font-semibold text-fg-subtle">
-                {OTHER_CITIES_FOLD.label} · {OTHER_CITIES_FOLD.bookings} bookings · {OTHER_CITIES_FOLD.sharePct}%
-              </span>
-            </div>
+            {lounges.length === 0 ? (
+              <p className="px-5.5 py-6 text-[13px] text-fg-subtle">No bookings in this window yet.</p>
+            ) : null}
           </div>
-
-          <p className="mt-3.5 text-xs text-fg-subtle">
-            Every share on this screen is counted against the 1,208 bookings of the period, so the eight rows and the
-            folded line add up to 100%. Geography is grouped by lounge, never by a member&apos;s own location history.
-          </p>
         </div>
 
         <div className="flex w-[344px] shrink-0 flex-col gap-3.5">
@@ -111,38 +155,30 @@ export default function DemandPage() {
             <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">
               Amenities members filter for
             </p>
-            <p className="m-0 mt-2 text-[11.5px] text-fg-subtle">
-              Share of searches that include the filter — a search can carry several.
-            </p>
 
             <div className="mt-3.5 flex flex-col gap-2.5">
-              {AMENITY_DEMAND.map((amenity) => (
-                <div key={amenity.label}>
+              {amenities.map((amenity) => (
+                <div key={amenity.id}>
                   <div className="flex items-center gap-2.5">
                     <p className="m-0 flex-1 text-[12.5px] font-bold text-fg">{amenity.label}</p>
-                    <p className="m-0 text-xs font-bold text-fg-muted">{amenity.pct}%</p>
+                    <p className="m-0 text-xs font-bold text-fg-muted">{amenity.sharePct}%</p>
                   </div>
                   <div className="mt-1.5 h-2.5 overflow-hidden rounded-pill bg-panel-black">
-                    <div className="h-2.5 rounded-pill bg-accent" style={{ width: `${amenity.pct}%` }} />
+                    <div className="h-2.5 rounded-pill bg-accent" style={{ width: `${amenity.sharePct}%` }} />
                   </div>
                 </div>
               ))}
             </div>
-
-            <p className="mt-3.5 text-[11.5px] text-fg-subtle">
-              Showers lead every month and only four lounges have them — the clearest case for the next partner
-              conversation.
-            </p>
           </div>
 
           <div className="rounded-content border border-line bg-dark-card px-5.5 py-5">
             <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">Cities</p>
-            {CITY_DEMAND.map((city) => (
+            {cities.map((city) => (
               <div key={city.city} className="flex items-center gap-3 border-t border-[rgba(58,50,42,0.6)] py-3.5 first:mt-2.5">
                 <div className="min-w-0 flex-1">
                   <p className="m-0 text-[13px] font-bold text-fg">{city.city}</p>
                   <p className="m-0 mt-0.5 text-[11px] text-fg-subtle">
-                    {city.lounges} lounges · {city.bookings} bookings{city.note ? ` · ${city.note}` : ""}
+                    {city.lounges} lounges · {city.bookings} bookings
                   </p>
                 </div>
                 <p className="m-0 text-[13px] font-bold text-fg">{city.sharePct}%</p>

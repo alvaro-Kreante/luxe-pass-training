@@ -6,34 +6,78 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { AdminShell } from "@/components/patterns/admin-shell";
+import { RequireAdminSession } from "@/components/admin/require-admin-session";
+import { ApprovalDiff } from "@/components/ui/approval-diff";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ADMIN_CASE_COUNTS } from "@/lib/admin";
+import { createClient } from "@/lib/supabase/client";
+import { getTicketCounts, type TicketCounts } from "@/lib/admin";
 import {
-  VESTRY_APPROVAL_COMPARISON,
-  VESTRY_APPROVAL_IMPACT,
-  VESTRY_QUEUE_ITEMS,
-  VESTRY_SUBMITTED_BY,
-  VESTRY_SUBMITTED_TIME_LABEL,
+  approveLoungeSubmission,
+  listPendingApprovals,
+  rejectLoungeSubmission,
+  type PendingApproval,
 } from "@/lib/admin-content";
 import { cn } from "@/lib/utils";
 
-const VESTRY_ID = "the-vestry";
-
 /**
- * Story 8.3 — "Content approval workflow". DESIGN-SYSTEM.md §5 patrón 24 —
- * la única pantalla donde conviven las dos mitades del tema: las previews
- * "Live now"/"Proposed" van en tema claro (lo que ve el miembro) dentro del
- * shell oscuro del admin. Artboard:
+ * Story 8.3 — "Content approval workflow". Artboard:
  * docs/design/epic-8-admin-support/Approval.dc.html.
  *
- * Solo The Vestry tiene cambios pendientes en el catálogo de muestra — la
- * cola siempre trae sus 3 entradas o queda vacía tras resolverlas, nunca
- * una segunda solicitud de otro lounge.
+ * Backend real (22 sept 2026): recorre `admin_lounge_list`/
+ * `admin_lounge_detail` (`supabase/schemas/admin_content.sql`) por cada
+ * lounge con un cambio pendiente — el mock solo dibujaba The Vestry con
+ * cambios; aquí la cola es real y puede traer cualquier lounge.
  */
 export default function ApprovalsPage() {
+  return (
+    <RequireAdminSession>
+      <ApprovalsScreen />
+    </RequireAdminSession>
+  );
+}
+
+function ApprovalsScreen() {
   const router = useRouter();
-  const [resolved, setResolved] = React.useState(false);
+  const supabase = React.useMemo(() => createClient(), []);
+  const [approvals, setApprovals] = React.useState<PendingApproval[] | null>(null);
+  const [selectedIndex, setSelectedIndex] = React.useState(0);
+  const [counts, setCounts] = React.useState<TicketCounts | null>(null);
+
+  const load = React.useCallback(async () => {
+    const rows = await listPendingApprovals(supabase);
+    setApprovals(rows);
+    setSelectedIndex(0);
+  }, [supabase]);
+
+  React.useEffect(() => {
+    let active = true;
+    listPendingApprovals(supabase).then((rows) => {
+      if (!active) return;
+      setApprovals(rows);
+      setSelectedIndex(0);
+    });
+    getTicketCounts(supabase).then((row) => {
+      if (active) setCounts(row);
+    });
+    return () => {
+      active = false;
+    };
+  }, [supabase]);
+
+  const current = approvals?.[selectedIndex];
+
+  async function approve() {
+    if (!current) return;
+    await approveLoungeSubmission(supabase, current.submissionId);
+    await load();
+  }
+
+  async function reject() {
+    if (!current) return;
+    await rejectLoungeSubmission(supabase, current.submissionId, "");
+    await load();
+  }
 
   return (
     <AdminShell
@@ -49,15 +93,15 @@ export default function ApprovalsPage() {
           <span className="text-[13.5px] font-bold text-fg">Approvals</span>
         </>
       }
-      supportBadge={ADMIN_CASE_COUNTS.open}
-      loungesBadge={resolved ? 0 : 1}
+      supportBadge={counts?.open}
+      loungesBadge={approvals?.length ?? 0}
     >
-      {resolved ? (
+      {approvals && approvals.length === 0 ? (
         <EmptyState icon={CheckCheck} title="All caught up" description="No content changes are waiting for approval right now." />
-      ) : (
+      ) : current ? (
         <>
           <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">
-            3 changes · The Vestry · submitted {VESTRY_SUBMITTED_TIME_LABEL} by {VESTRY_SUBMITTED_BY}
+            {approvals!.length} {approvals!.length === 1 ? "change" : "changes"} waiting
           </p>
           <h1 className="mt-2 font-display text-[34px] text-fg">Approve before members see it</h1>
 
@@ -67,38 +111,40 @@ export default function ApprovalsPage() {
                 <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">The queue</p>
               </div>
 
-              {VESTRY_QUEUE_ITEMS.map((item, index) => (
-                <div
-                  key={item.id}
+              {approvals!.map((approval, index) => (
+                <button
+                  key={approval.submissionId}
+                  type="button"
+                  onClick={() => setSelectedIndex(index)}
                   className={cn(
-                    "flex items-center gap-3 border-b border-[rgba(58,50,42,0.6)] px-5.5 py-3.5 last:border-b-0",
-                    index === 0 && "bg-[rgba(201,168,118,0.09)] shadow-[inset_3px_0_0_var(--gold-500)]",
+                    "flex w-full items-center gap-3 border-b border-[rgba(58,50,42,0.6)] px-5.5 py-3.5 text-left last:border-b-0",
+                    index === selectedIndex && "bg-[rgba(201,168,118,0.09)] shadow-[inset_3px_0_0_var(--gold-500)]",
                   )}
                 >
                   <span
                     className={cn(
                       "flex size-9 shrink-0 items-center justify-center rounded-[10px] border",
-                      index === 0 ? "border-gold-600 bg-[rgba(201,168,118,0.16)]" : "border-line bg-panel-black",
+                      index === selectedIndex ? "border-gold-600 bg-[rgba(201,168,118,0.16)]" : "border-line bg-panel-black",
                     )}
                   />
                   <div className="min-w-0 flex-1">
-                    <p className={cn("m-0 text-[13px] font-bold", index === 0 ? "text-fg" : "text-fg-muted")}>
-                      {item.title}
+                    <p className={cn("m-0 text-[13px] font-bold", index === selectedIndex ? "text-fg" : "text-fg-muted")}>
+                      {approval.loungeName}
                     </p>
-                    <p className="m-0 mt-0.5 text-[11.5px] text-fg-subtle">{item.detail}</p>
+                    <p className="m-0 mt-0.5 text-[11.5px] text-fg-subtle">
+                      {approval.changes.length} {approval.changes.length === 1 ? "change" : "changes"} ·{" "}
+                      {approval.submittedAtLabel}
+                    </p>
                   </div>
-                </div>
+                </button>
               ))}
 
               <div className="px-5.5 py-4">
-                <p className="m-0 text-[11.5px] text-fg-subtle">
-                  Approving all three at once publishes them together, so members never see half a change.
-                </p>
                 <Button
                   variant="ghost"
                   block
-                  className="mt-3 normal-case"
-                  onClick={() => router.push(`/admin/lounges/${VESTRY_ID}`)}
+                  className="normal-case"
+                  onClick={() => router.push(`/admin/lounges/${current.loungeId}`)}
                 >
                   Open the lounge editor
                 </Button>
@@ -106,138 +152,30 @@ export default function ApprovalsPage() {
             </div>
 
             <div className="min-w-0 flex-1">
-              <div className="flex gap-4">
-                <ComparisonCard
-                  eyebrow="Live now"
-                  dimmed
-                  amenities={VESTRY_APPROVAL_COMPARISON.live.amenities}
-                  highlightedAmenity={null}
-                  hoursLabel={VESTRY_APPROVAL_COMPARISON.live.fridayHoursLabel}
-                  photoCount={VESTRY_APPROVAL_COMPARISON.live.photoCount}
-                  statusLabel={VESTRY_APPROVAL_COMPARISON.live.statusLabel}
-                />
-                <ComparisonCard
-                  eyebrow="Proposed"
-                  amenities={VESTRY_APPROVAL_COMPARISON.proposed.amenities}
-                  highlightedAmenity="Showers"
-                  hoursLabel={VESTRY_APPROVAL_COMPARISON.proposed.fridayHoursLabel}
-                  photoCount={VESTRY_APPROVAL_COMPARISON.proposed.photoCount}
-                  statusLabel={VESTRY_APPROVAL_COMPARISON.proposed.statusLabel}
-                />
-              </div>
-
-              <div className="mt-4 rounded-content border border-line bg-dark-card px-5.5 py-4.5">
+              <div className="rounded-content border border-line bg-dark-card px-5.5 py-4.5">
                 <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">
-                  What approving does
+                  {current.loungeName}
                 </p>
-                <div className="mt-3 grid grid-cols-3 gap-3">
-                  {VESTRY_APPROVAL_IMPACT.map((impact) => (
-                    <div key={impact.label} className="rounded-2xl border border-line bg-panel-black px-3.5 py-3">
-                      <p className="m-0 text-[11px] text-fg-subtle">{impact.label}</p>
-                      <p className="m-0 mt-1.5 text-[15px] font-extrabold text-fg">{impact.value}</p>
-                      <p className="m-0 mt-1 text-[11px] text-fg-subtle">{impact.note}</p>
-                    </div>
-                  ))}
-                </div>
+                {current.submittedBy ? (
+                  <p className="mt-1 text-[11.5px] text-fg-subtle">Submitted by {current.submittedBy}</p>
+                ) : null}
+
+                {current.changes.map((change) => (
+                  <ApprovalDiff key={change.id} change={change} />
+                ))}
 
                 <div className="mt-4 flex items-center gap-3">
-                  <Button variant="ghost" className="border-dashed normal-case" onClick={() => setResolved(true)}>
+                  <Button variant="ghost" className="border-dashed normal-case" onClick={reject}>
                     Send back with a note
                   </Button>
                   <div className="flex-1" />
-                  <p className="m-0 text-[11.5px] text-fg-subtle">
-                    Approved by you · {VESTRY_SUBMITTED_BY.split(" ")[0]} is told either way
-                  </p>
-                  <Button onClick={() => setResolved(true)}>Approve and publish</Button>
+                  <Button onClick={approve}>Approve and publish</Button>
                 </div>
               </div>
             </div>
           </div>
         </>
-      )}
+      ) : null}
     </AdminShell>
-  );
-}
-
-function ComparisonCard({
-  eyebrow,
-  amenities,
-  highlightedAmenity,
-  hoursLabel,
-  photoCount,
-  statusLabel,
-  dimmed,
-}: {
-  eyebrow: string;
-  amenities: string[];
-  highlightedAmenity: string | null;
-  hoursLabel: string;
-  photoCount: number;
-  statusLabel: string;
-  dimmed?: boolean;
-}) {
-  return (
-    <div className="min-w-0 flex-1">
-      <div className="flex items-center gap-2">
-        <span
-          aria-hidden
-          className={cn(
-            "size-1.5 rounded-full",
-            dimmed ? "bg-fg-subtle" : "bg-accent shadow-[0_0_0_3px_rgba(201,168,118,0.28)]",
-          )}
-        />
-        <p
-          className={cn(
-            "m-0 text-[11px] font-bold uppercase tracking-[0.1em]",
-            dimmed ? "text-fg-subtle" : "text-accent",
-          )}
-        >
-          {eyebrow}
-        </p>
-      </div>
-
-      <div
-        data-theme="light"
-        className={cn(
-          "surface-blush mt-2.5 rounded-content p-4",
-          dimmed ? "opacity-72" : "border-[1.5px] border-accent shadow-ring",
-        )}
-      >
-        <div className="overflow-hidden rounded-panel bg-white shadow-[0_10px_30px_-14px_rgba(34,26,20,0.14)]">
-          <div className="surface-night dot-pattern h-26 w-full" />
-          <div className="px-4.5 py-4">
-            <h2 className="m-0 font-display text-lg text-ink-900">The Vestry</h2>
-            <p className="m-0 mt-1.5 text-xs text-ink-400">
-              Tribeca · New York · <span>{statusLabel}</span>
-            </p>
-            <div className="mt-3 flex flex-wrap gap-1.5">
-              {amenities.map((amenity) => (
-                <span
-                  key={amenity}
-                  className={cn(
-                    "rounded-pill px-3 py-1.5 text-[11px] font-bold",
-                    amenity === highlightedAmenity ? "bg-accent text-white" : "bg-accent-soft text-ink-900",
-                  )}
-                >
-                  {amenity}
-                </span>
-              ))}
-            </div>
-            <div className="mt-3.5 flex justify-between border-t border-line pt-2.5">
-              <span className="text-xs text-ink-700">Friday</span>
-              <span className={cn("text-xs font-bold", dimmed ? "text-ink-900" : "text-accent-strong")}>
-                {hoursLabel}
-              </span>
-            </div>
-            <div className="mt-2.5 flex justify-between">
-              <span className="text-xs text-ink-700">Photos</span>
-              <span className={cn("text-xs font-bold", dimmed ? "text-ink-900" : "text-accent-strong")}>
-                {photoCount}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   );
 }

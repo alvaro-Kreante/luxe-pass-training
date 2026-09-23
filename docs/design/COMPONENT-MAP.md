@@ -208,6 +208,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `/partner/analytics` | `Analytics.dc.html` | 7.3 |
 | `/partner/guests` | `RepeatGuests.dc.html` | 7.3 |
 | `/partner/reports` | `Reports.dc.html` | 7.3 |
+| `/admin/login` | — (sin artboard propio, reutiliza el layout de `/partner/login`) | 8.1 |
 | `/admin/support` | `Main.dc.html` | 8.1 |
 | `/admin/support/[id]` | `CaseDetail` + `Refund` | 8.1 |
 | `/admin/members` | `MemberSearch.dc.html` | 8.1 |
@@ -690,6 +691,59 @@ Desviaciones conscientes de esta parte:
 - **Sin selector de venue para un partner que gestione varios lounges.** La decisión de 1 partner : N lounges (`partner_lounges`) ya generaliza el modelo, pero ningún artboard de esta fase diseña un selector — las tres RPC de `partner_analytics.sql` agregan sobre *todos* los lounges del partner autenticado a propósito, para no bloquear el caso multi-lounge sin inventar una pantalla.
 - **`send-partner-booking-event`/`send-partner-digest` sí se verificaron de punta a punta contra el edge runtime local** (`curl` directo con el secreto compartido real, ambas responden `200`), tras un `supabase stop && supabase start` que resolvió una caída puntual de `supabase_edge_runtime` — ver `docs/PENDIENTES.md` §4.5.
 - **El digest matutino (`dispatch_partner_morning_digest`, pg_cron 6:30 AM) tiene el mismo gap conocido que Story 5.3/6.2**: `lounge_availability` está sembrada en una ventana fija desde 2025-09-09, así que el `current_date` real que este cron usa a propósito no tiene reservas — no ejercitable de punta a punta en local/CI todavía.
+
+---
+
+## Backend real (Supabase local) — Epic 8 (Stories 8.1, 8.2, 8.3)
+
+Octavo epic con backend real, y el último en conectarse (22 sept 2026). Las
+11 pantallas de `/admin/**` ya existían como mockup navegable (Fase 8) —
+esta conexión no crea pantallas nuevas salvo `/admin/login` (sin artboard
+propio, decisión confirmada con el usuario: reutiliza el layout de
+`/partner/login`), sustituye sus datos de muestra por Supabase. `user_roles`
+ya existía desde Epic 7 (rol `admin`, sin fila nueva que crear en esa
+tabla); `support_tickets`/`support_ticket_messages` y
+`lounge_content_submissions` nacen en este epic; `scheduled_reports`
+también. El CRUD de contenido (Story 8.3) extiende `lounges`/`lounge_images`
+(Epic 2/3), y la analítica/exportación (Story 8.2) agrega sobre
+`bookings`/`payments`/`profiles` ya reales de epics anteriores.
+
+Dos decisiones de alcance se tomaron con el usuario antes de implementar,
+revirtiendo la nota original de `docs/DATA-MODEL-MAP.md` (válida solo hasta
+que este epic se conectara): el reembolso (Story 8.1) es real vía Stripe, y
+los reportes programados (Story 8.2) son reales vía `pg_cron` + Brevo —
+mismo nivel de realismo que el resto del proyecto a esta altura.
+
+| Módulo | Qué resuelve |
+|---|---|
+| `supabase/schemas/support_tickets.sql` | Story 8.1 — `support_tickets`/`support_ticket_messages` (nacen aquí, solo `has_role('admin')`); trigger `booking_no_show_opens_ticket` (un no-show reportado por un partner abre un caso automáticamente); RPC `admin_search_members`/`admin_member_profile`/`admin_member_bookings`/`admin_member_payments`/`admin_list_support_tickets`/`admin_ticket_counts`/`admin_get_ticket`; `admin_reschedule_booking`/`admin_cancel_booking` (modificación de reserva con override explícito) y `admin_waive_booking_fee` (la mitad "waive" de un reembolso cuando la tarifa nunca se cobró de verdad) |
+| `supabase/functions/stripe-refund-payment` | Story 8.1 — reembolso real vía Stripe (`stripe.refunds.create`) para un cargo `succeeded`; actualiza `payments` de forma optimista, el webhook (`charge.refunded`, ampliado en `stripe-webhook`) es la defensa en profundidad |
+| `app/admin/login/page.tsx` + `components/admin/require-admin-session.tsx` | Sin artboard propio (la Fase 8 nunca dibujó el nodo "Admin login" del flow) — mismo patrón que `/partner/login`: Supabase Auth real + `has_role('admin')` |
+| `components/admin/booking-override-drawer.tsx` | Reescrito sobre los 5 horarios reales del dominio de `bookings.slot_time` (`SLOT_DEFS`, `lib/booking.ts`, ahora exportado) — el artboard dibuja horas ficticias ajenas a ese dominio; plazas consultadas en vivo contra `lounge_availability` para la fecha elegida |
+| `components/admin/refund-modal.tsx` | Ahora solo cubre un cargo real de Stripe — la tarifa registrada (nunca cobrada) se "waives" directamente desde `CaseDetailPage`, sin pasar por este modal |
+| `supabase/schemas/admin_reports.sql` | Story 8.2 — `admin_network_summary`/`admin_bookings_by_day`/`admin_revenue_by_partner`/`admin_lounge_popularity`/`admin_amenity_demand`/`admin_city_demand` (agregan sobre TODA la red, nunca un lounge elegido); `admin_export_bookings`/`admin_export_members`/`admin_export_no_shows_cancellations`; tabla `scheduled_reports` + `dispatch_scheduled_reports()` (pg_cron cada 15 min, tercer uso de este mecanismo tras Story 5.3/6.2 y Story 7.2) + `admin_generate_report_csv` |
+| `supabase/functions/send-admin-report` | Story 8.2 — Edge Function del reporte programado, adjunto CSV real vía Brevo (`sendBrevoEmailWithAttachment`, nueva en `_shared/brevo.ts`); también atiende "Email it to me" (mismo mecanismo, sin pasar por el cron) |
+| `lib/admin-analytics.ts` | Reescrito: `dateRangeForPeriod`/`dateRangeForPreset` (relativos a `TODAY`, nunca al reloj real — mismo criterio que el resto del dominio de reservas), `buildExportCsv` (columna a columna según lo marcado, anonimizado por defecto) |
+| `supabase/schemas/admin_content.sql` | Story 8.3 — `lounges.content_status` (live/draft/archived, ortogonal a si hay un cambio pendiente de aprobar) + policy `select lounges` actualizada (un miembro solo ve `content_status='live'`); tabla `lounge_content_submissions` (nace aquí); `admin_lounge_list`/`admin_lounge_detail`; `admin_submit_lounge_content_change`/`admin_approve_lounge_submission`/`admin_reject_lounge_submission` ("Content approval workflow" real y genérico, no solo para The Vestry como el mock); `admin_archive_lounges` (el único botón real de la barra de acción masiva) |
+| Bucket de Storage `lounge-images` (público) | Story 8.3 — "Upload and manage lounge images" real (`uploadLoungeImage`, `lib/admin-content.ts`); solo un admin puede escribir, cualquiera puede leer (a diferencia de `profile-photos`, que es privado por usuario) |
+| `lib/admin-content.ts` — `diffLoungeChanges` | Diff genérico caso por caso (amenities/horario/capacidad/restricciones/fotos/publicación) para la cola de aprobación — generaliza el `VESTRY_PENDING_CHANGES` literal del mock a cualquier lounge real |
+| `scripts/seed-admin-account.mjs` | Alta operativa (no self-service) de la cuenta de muestra de Priya Raghunathan en Supabase local — mismo patrón que `seed-partner-account.mjs` |
+
+Desviaciones conscientes de esta parte:
+
+- **"Refund processing interface" cubre dos caminos reales distintos, no uno.** Un cargo real de Stripe (`succeeded`) se reembolsa de verdad vía `stripe-refund-payment`; una tarifa de no-show/cancelación tardía (Story 6.1) nunca se cobró de verdad, así que "waive" solo limpia `bookings.cancellation_fee_cents` — no hay nada que reversar en Stripe para esa. El `RefundModal` (lenguaje de "cargo"/"tarjeta") solo aparece en el primer caso.
+- **"Escalation to manager functionality" sigue sin una bandeja de manager real.** `DUTY_MANAGER` (Dana Mbeki) sigue siendo un dato de muestra fijo — escalar cambia `status` en `support_tickets` de verdad, pero no hay notificación real a nadie; mismo criterio que la campana de notificaciones del admin (inerte desde la Fase 8).
+- **"Every action logged" (chip de la topbar) sigue sin un registro de auditoría real detrás.** Ninguna historia de Epic 8 lo pide como AC propio (es un chip de la topbar del patrón 21, no un criterio de aceptación) — queda como texto fijo.
+- **El rail "Opened by you today" de `MemberSearch.dc.html` se retira.** Dependía de horas propias de sesión sin contraparte real sencilla; ninguna historia lo exige y el buscador ya cubre el AC de "member search" sin él.
+- **El rail "Membership" de la ficha de miembro se simplifica a lo que `profiles.membership_status` (Story 6.3) sí modela de verdad (Active/Inactive/Account deleted).** El mock mostraba plan, fecha de renovación, visitas del mes y referidos — todo eso depende de un plan de membresía real que Epic 9 todavía no conecta; inventar esos números habría sido una regresión de realismo, no un avance.
+- **"Revenue by partner"/"Net revenue" ya no restan una "atribución a partners" inventada.** El mock narraba una facturación de membresía completa ($336,250.00 brutos, $53,913.00 atribuidos); real solo existen cargos succeeded de Stripe (day passes) — el panel muestra el ingreso bruto real de esos cargos, sin la resta ficticia.
+- **Las columnas de export ya no son una lista plana única.** Cada dataset (`bookings`/`members`/`revenue-by-partner`/`no-shows-cancellations`) trae su propio catálogo de columnas (`EXPORT_COLUMNS` pasa a ser un `Record<ExportDataset, ExportColumn[]>`) — el dataset "Revenue by partner", por ejemplo, no tiene ninguna columna personal que anonimizar.
+- **"Delivery history"/"Delivered in the last 24 hours" (`ScheduledReports.dc.html`) se retira.** No hay tabla de historial de entregas real — `scheduled_reports.last_run_at` es lo único que hay, y ya se muestra en la propia fila del reporte.
+- **El catálogo de amenities del editor de lounge es el de `lib/amenities.ts` (Story 2.2, 6 amenities), no la lista propia del mock.** El mock incluía "Showers" como protagonista de The Vestry, pero esa amenity nunca existió en el catálogo real compartido con Epic 2/3 — usar un catálogo aparte solo para Epic 8 habría duplicado la fuente de verdad de amenities del proyecto.
+- **"Image optimization and resizing" no es real.** La subida a Storage sí lo es (bucket `lounge-images`); el redimensionado a 1600/800/400 px que el artboard anuncia sigue sin tener nada detrás — no hay librería de procesamiento de imágenes en el stack ni precedente de transformación de imágenes en este proyecto.
+- **De la barra de acción masiva, solo "Archive" es real.** "Update hours", "Add an amenity" y "Set closure dates" siguen inertes — ningún artboard dibuja su modal de edición masiva, mismo criterio que "New case" en Story 8.1.
+- **"Add lounge" sigue sin llevar a ningún sitio propio.** Ningún artboard dibuja el formulario de alta de un lounge nuevo — se documentó como pregunta abierta antes de implementar y sigue sin resolverse por la misma razón (`docs/PENDIENTES.md`).
+- **El reembolso real, los reportes programados reales y el CRUD de contenido se verificaron de punta a punta contra el entorno local**: `stripe-refund-payment` con un cargo real de la sandbox de Stripe (tarjeta guardada, `pm_card_visa`); `dispatch_scheduled_reports` disparado a mano (`select public.dispatch_scheduled_reports();`) con un reporte de prueba, confirmando `200` en `net._http_response` tras el envío real por Brevo; `admin_approve_lounge_submission`/`admin_submit_lounge_content_change` con una llamada real a las RPC desde un cliente autenticado como admin.
 
 ---
 

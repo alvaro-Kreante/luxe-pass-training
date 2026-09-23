@@ -1,11 +1,15 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 /**
  * Epic 8 — Admin & Support. Story 8.1 (Fase 2, `epic-8-admin-support/`):
  * consola de soporte, ficha de miembro y caso con log de comunicación.
  *
- * Continúa la línea temporal del Epic 7: lunes 16 de septiembre por la
- * mañana, dos días después del turno de The Ainsworth. El caso central es
- * el no-show de Camille Duforest en The Ainsworth (LP-840388, $35.00),
- * ya visto desde el partner en `lib/partner.ts`.
+ * Backend real (22 sept 2026, ver CLAUDE.md §Alcance y
+ * docs/DATA-MODEL-MAP.md): tabla `support_tickets`/`support_ticket_messages`
+ * (nace aquí) y las RPC de `supabase/schemas/support_tickets.sql`. Las
+ * funciones puras de este módulo convierten esas filas reales a lo que ya
+ * consumen `/admin/support`, `/admin/support/[id]`, `/admin/members` y
+ * `/admin/members/[id]` — mismo criterio que `lib/partner.ts` (Epic 7).
  */
 
 export function formatCurrency(amount: number): string {
@@ -16,163 +20,162 @@ export function formatCurrency(amount: number): string {
   });
 }
 
-export const ADMIN_STAFF = {
-  name: "Priya Raghunathan",
-  initials: "P",
-  roleLabel: "Support lead · En Soleil",
-};
-
-export const DUTY_MANAGER = {
-  name: "Dana Mbeki",
-  initials: "DM",
-  roleLabel: "Duty manager today · 3 open escalations",
-};
-
 /** Story 8.1 — "Escalation to manager functionality": el límite sin manager. */
 export const MANAGER_APPROVAL_LIMIT = 100;
 
+/**
+ * DESIGN-SYSTEM.md §6 (Fase 8) fija a Dana Mbeki como el manager de turno.
+ * Sin historia de gestión de personal (Epic 8 no la tiene), sigue siendo un
+ * dato de muestra fijo — "escalar" es real (cambia `status` en
+ * `support_tickets`), pero no hay una bandeja de manager real que recibirlo,
+ * mismo criterio ya anotado en `docs/design/COMPONENT-MAP.md` para la
+ * campana de notificaciones del admin.
+ */
+export const DUTY_MANAGER = {
+  name: "Dana Mbeki",
+  initials: "DM",
+  roleLabel: "Duty manager today",
+};
+
+function initialsFromName(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const first = parts[0]?.[0] ?? "";
+  const last = parts.length > 1 ? parts[parts.length - 1]?.[0] : "";
+  return `${first}${last ?? ""}`.toUpperCase();
+}
+
+/** "Priya Raghunathan" a partir de "priya.raghunathan@ensoleil.co" — sin perfil de admin propio (Epic 8 no lo pide). */
+export function displayNameFromEmail(email: string): string {
+  const localPart = email.split("@")[0] ?? "";
+  return localPart
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((word) => word[0].toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
+/** "Today" / "Sep 15" — relativo a `now` (inyectable para tests), mismo criterio que `bookedAgoLabel` (Epic 7). */
+export function formatOpenedDateLabel(createdAtIso: string, now: Date = new Date()): string {
+  const created = new Date(createdAtIso);
+  const sameDay =
+    created.getUTCFullYear() === now.getUTCFullYear() &&
+    created.getUTCMonth() === now.getUTCMonth() &&
+    created.getUTCDate() === now.getUTCDate();
+  if (sameDay) return "Today";
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(created);
+}
+
+export function formatOpenedTimeLabel(createdAtIso: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "UTC",
+  }).format(new Date(createdAtIso));
+}
+
+/* ------------------------------------------------------------------ */
+/* Mesa de soporte ("Main.dc.html")                                    */
+/* ------------------------------------------------------------------ */
+
 export type CaseStatus = "new" | "open" | "waiting" | "escalated" | "resolved";
 
+/** Fila cruda de `admin_list_support_tickets` (`supabase/schemas/support_tickets.sql`). */
+export interface SupportTicketRow {
+  id: string;
+  case_number: string;
+  member_id: string;
+  member_name: string;
+  status: CaseStatus;
+  subject: string;
+  note: string;
+  assigned_admin_id: string | null;
+  assigned_admin_name: string | null;
+  created_at: string;
+}
+
 export interface SupportCase {
+  /** uuid real de `support_tickets.id` — lo que reciben las mutaciones. */
+  ticketId: string;
+  /** "CS-4417" — lo que ya muestra la UI y lo que trae la URL de `/admin/support/[id]`. */
   id: string;
   memberId: string;
   memberName: string;
   memberInitials: string;
-  membershipLabel: string;
   subject: string;
   note: string;
   openedLabel: string;
   openedTimeLabel: string;
   status: CaseStatus;
   assignee: string | null;
-  bookingReference?: string;
 }
 
-/**
- * Las 8 filas de `Main.dc.html`, de las 30 que anuncia el pie de la lista.
- * Los recuentos (`ADMIN_CASE_COUNTS`) son los que cita el propio artboard,
- * no una suma de este array — como ya hacía `PARTNER_GUESTS` con su turno.
- */
-export const SUPPORT_CASES: SupportCase[] = [
-  {
-    id: "CS-4417",
-    memberId: "camille-duforest",
-    memberName: "Camille Duforest",
-    memberInitials: "CD",
-    membershipLabel: "Annual member",
-    subject: "No-show fee disputed — LP-840388",
-    note: "Opened by the no-show report from The Ainsworth",
-    openedLabel: "Today",
-    openedTimeLabel: "9:12 AM",
-    status: "new",
-    assignee: null,
-    bookingReference: "LP-840388",
-  },
-  {
-    id: "CS-4416",
-    memberId: "marcus-deyn",
-    memberName: "Marcus Deyn",
-    memberInitials: "MD",
-    membershipLabel: "Annual member",
-    subject: "Card declined on renewal",
-    note: "Membership lapses in 4 days",
-    openedLabel: "Today",
-    openedTimeLabel: "8:47 AM",
-    status: "open",
-    assignee: "Priya R.",
-  },
-  {
-    id: "CS-4415",
-    memberId: "alexandra-rivas",
-    memberName: "Alexandra Rivas",
-    memberInitials: "AR",
-    membershipLabel: "Annual member",
-    subject: "Receipt not received — LP-842193",
-    note: "Resent Sunday · asked her to check spam",
-    openedLabel: "Sep 15",
-    openedTimeLabel: "6:31 PM",
-    status: "waiting",
-    assignee: "Priya R.",
-    bookingReference: "LP-842193",
-  },
-  {
-    id: "CS-4412",
-    memberId: "harriet-osei",
-    memberName: "Harriet Osei",
-    memberInitials: "HO",
-    membershipLabel: "Annual member",
-    subject: "Cancelled inside 24 hours — asks for a waiver",
-    note: "Second waiver request in twelve months",
-    openedLabel: "Sep 15",
-    openedTimeLabel: "2:05 PM",
-    status: "escalated",
-    assignee: "Dana M.",
-  },
-  {
-    id: "CS-4409",
-    memberId: "jonah-whitfield",
-    memberName: "Jonah Whitfield",
-    memberInitials: "JW",
-    membershipLabel: "Annual member",
-    subject: "Wants Thursday moved to Bergdorf Lounge",
-    note: "Bergdorf is fully booked at 10:00 AM",
-    openedLabel: "Sep 15",
-    openedTimeLabel: "11:20 AM",
-    status: "open",
-    assignee: "Theo B.",
-  },
-  {
-    id: "CS-4404",
-    memberId: "naomi-feldstein",
-    memberName: "Naomi Feldstein",
-    memberInitials: "NF",
-    membershipLabel: "Annual member",
-    subject: "Showers out of service on arrival",
-    note: "The Ainsworth · amenity flagged for review",
-    openedLabel: "Sep 14",
-    openedTimeLabel: "4:58 PM",
-    status: "open",
-    assignee: "Dana M.",
-  },
-  {
-    id: "CS-4398",
-    memberId: "elena-vasquez",
-    memberName: "Elena Vasquez",
-    memberInitials: "EV",
-    membershipLabel: "Day pass",
-    subject: "Day pass charged twice — $163.32",
-    note: "Duplicate authorisation confirmed by Stripe",
-    openedLabel: "Sep 14",
-    openedTimeLabel: "1:12 PM",
-    status: "escalated",
-    assignee: "Priya R.",
-  },
-  {
-    id: "CS-4391",
-    memberId: "rowan-achebe",
-    memberName: "Rowan Achebe",
-    memberInitials: "RA",
-    membershipLabel: "Annual member",
-    subject: "Membership pause request",
-    note: "Paused until November 1 · confirmed by email",
-    openedLabel: "Sep 13",
-    openedTimeLabel: "5:40 PM",
-    status: "resolved",
-    assignee: "Theo B.",
-  },
-];
+export function mapSupportCaseRow(row: SupportTicketRow, now: Date = new Date()): SupportCase {
+  return {
+    ticketId: row.id,
+    id: row.case_number,
+    memberId: row.member_id,
+    memberName: row.member_name,
+    memberInitials: initialsFromName(row.member_name),
+    subject: row.subject,
+    note: row.note,
+    openedLabel: formatOpenedDateLabel(row.created_at, now),
+    openedTimeLabel: formatOpenedTimeLabel(row.created_at),
+    status: row.status,
+    assignee: row.assigned_admin_name ? displayNameFromEmail(row.assigned_admin_name) : null,
+  };
+}
 
-export const ADMIN_CASE_COUNTS = {
-  open: 22,
-  waitingOnMember: 5,
-  escalated: 3,
-  resolvedToday: 9,
-  totalCases: 30,
-  shown: SUPPORT_CASES.length,
-};
+export interface TicketCounts {
+  open: number;
+  waitingOnMember: number;
+  escalated: number;
+  resolvedToday: number;
+  totalCases: number;
+}
 
-export function getSupportCase(id: string): SupportCase | undefined {
-  return SUPPORT_CASES.find((supportCase) => supportCase.id === id);
+export async function listSupportCases(supabase: SupabaseClient): Promise<SupportCase[]> {
+  const { data, error } = await supabase.rpc("admin_list_support_tickets");
+  if (error) throw error;
+  return (data as SupportTicketRow[]).map((row) => mapSupportCaseRow(row));
+}
+
+interface TicketCountsRow {
+  open_count: number;
+  waiting_count: number;
+  escalated_count: number;
+  resolved_today_count: number;
+  total_count: number;
+}
+
+export async function getTicketCounts(supabase: SupabaseClient): Promise<TicketCounts> {
+  const { data, error } = await supabase.rpc("admin_ticket_counts").single();
+  if (error) throw error;
+  const row = data as TicketCountsRow;
+  return {
+    open: row.open_count,
+    waitingOnMember: row.waiting_count,
+    escalated: row.escalated_count,
+    resolvedToday: row.resolved_today_count,
+    totalCases: row.total_count,
+  };
+}
+
+/* ------------------------------------------------------------------ */
+/* "Member search by email, phone, or name"                            */
+/* ------------------------------------------------------------------ */
+
+/** Fila cruda de `admin_search_members`/`admin_member_profile`. */
+export interface AdminMemberRow {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string | null;
+  membership_status: "active" | "inactive";
+  deleted_at: string | null;
+  member_since: string | null;
+  open_cases_count: number;
+  last_visit_date: string | null;
+  last_visit_lounge: string | null;
 }
 
 export interface AdminMember {
@@ -181,122 +184,101 @@ export interface AdminMember {
   initials: string;
   email: string;
   phone: string;
-  membershipLabel: "Annual" | "Day pass";
-  status: "active" | "no-membership";
+  /** "Active member" / "Inactive" / "Account deleted" — ver nota de `admin_member_profile` sobre por qué no hay Annual/Day pass real todavía. */
+  membershipLabel: string;
+  status: "active" | "inactive" | "deleted";
   memberSinceLabel: string;
   openCasesCount: number;
   lastVisitLabel: string;
   lastVisitNote: string;
 }
 
-/**
- * Los 3 resultados de `MemberSearch.dc.html` para "duforest": coinciden en
- * nombre y email — la ficha de nota fija por qué Renée no lleva chip de
- * caso abierto ni membresía.
- */
-export const ADMIN_MEMBERS: AdminMember[] = [
-  {
-    id: "camille-duforest",
-    name: "Camille Duforest",
-    initials: "CD",
-    email: "camille.duforest@example.com",
-    phone: "+1 (555) 668-4172",
-    membershipLabel: "Annual",
-    status: "active",
-    memberSinceLabel: "member since March 2025",
-    openCasesCount: 1,
-    lastVisitLabel: "Sep 14",
-    lastVisitNote: "no-show",
-  },
-  {
-    id: "theo-duforest-marin",
-    name: "Théo Duforest-Marin",
-    initials: "TD",
-    email: "theo.duforest@example.com",
-    phone: "+1 (555) 668-9930",
-    membershipLabel: "Annual",
-    status: "active",
-    memberSinceLabel: "member since January 2026",
-    openCasesCount: 0,
-    lastVisitLabel: "Aug 30",
-    lastVisitNote: "The Vestry",
-  },
-  {
-    id: "renee-duforest",
-    name: "Renée Duforest",
-    initials: "RD",
-    email: "renee.duforest@example.com",
-    phone: "+1 (555) 204-1188",
-    membershipLabel: "Day pass",
-    status: "no-membership",
-    memberSinceLabel: "day passes only, never subscribed",
-    openCasesCount: 0,
-    lastVisitLabel: "Jul 22",
-    lastVisitNote: "Aurelia House",
-  },
-];
+function formatMemberSinceLabel(memberSinceIso: string | null): string {
+  if (!memberSinceIso) return "member since —";
+  const label = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric", timeZone: "UTC" }).format(
+    new Date(memberSinceIso),
+  );
+  return `member since ${label}`;
+}
 
-/**
- * Story 8.1 — "Member search by email, phone, or name". Reglas fijadas por
- * `DESIGN-SYSTEM.md` §6 (Fase 8): coincidencia parcial por palabra en nombre
- * o email, los últimos cuatro dígitos del teléfono bastan (sin formato), y
- * una referencia de reserva ("LP-840388") va directa al miembro dueño de esa
- * reserva a través de `SUPPORT_CASES`.
- */
-export function searchMembers(query: string): AdminMember[] {
-  const trimmed = query.trim();
-  if (!trimmed) return [];
-
-  const bookingRefMatch = trimmed.toUpperCase();
-  if (/^LP-\d+$/.test(bookingRefMatch)) {
-    const matchingCase = SUPPORT_CASES.find((c) => c.bookingReference === bookingRefMatch);
-    if (matchingCase) {
-      const member = ADMIN_MEMBERS.find((m) => m.id === matchingCase.memberId);
-      return member ? [member] : [];
-    }
-    return [];
-  }
-
-  const digitsOnly = trimmed.replace(/\D/g, "");
-  const q = trimmed.toLowerCase();
-
-  return ADMIN_MEMBERS.filter((member) => {
-    const haystack = `${member.name} ${member.email}`.toLowerCase();
-    if (haystack.includes(q)) return true;
-
-    if (digitsOnly.length >= 4) {
-      const memberDigits = member.phone.replace(/\D/g, "");
-      if (memberDigits.endsWith(digitsOnly)) return true;
-    }
-
-    return false;
-  });
+function formatShortDate(dateIso: string): string {
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(
+    new Date(`${dateIso}T00:00:00Z`),
+  );
 }
 
 /**
- * Rail "Opened by you today" de `MemberSearch.dc.html` — sus horas propias
- * (cuándo Priya entró a mirar la ficha) no coinciden con `openedTimeLabel`
- * de `SUPPORT_CASES` (cuándo se abrió el caso), así que quedan aparte en vez
- * de forzar un único campo a significar las dos cosas.
+ * "Annual"/"Day pass" del mock asumía un plan real (Epic 9, sin conectar) —
+ * `profiles.membership_status` (Story 6.3) solo distingue Active/Inactive
+ * para cualquier miembro con perfil. Desviación anotada en
+ * `docs/design/COMPONENT-MAP.md`.
  */
-export const OPENED_BY_YOU_TODAY: {
-  caseId: string;
-  memberName: string;
-  memberInitials: string;
-  timeLabel: string;
-}[] = [
-  { caseId: "CS-4416", memberName: "Marcus Deyn", memberInitials: "MD", timeLabel: "9:58 AM" },
-  { caseId: "CS-4398", memberName: "Elena Vasquez", memberInitials: "EV", timeLabel: "9:31 AM" },
-  { caseId: "CS-4415", memberName: "Alexandra Rivas", memberInitials: "AR", timeLabel: "8:52 AM" },
-];
+export function mapAdminMemberRow(row: AdminMemberRow): AdminMember {
+  const status = row.deleted_at ? "deleted" : row.membership_status;
+  const membershipLabel =
+    status === "deleted" ? "Account deleted" : status === "active" ? "Active member" : "Inactive";
 
-export function getAdminMember(id: string): AdminMember | undefined {
-  return ADMIN_MEMBERS.find((member) => member.id === id);
+  return {
+    id: row.id,
+    name: row.full_name,
+    initials: initialsFromName(row.full_name),
+    email: row.email,
+    phone: row.phone ?? "",
+    membershipLabel,
+    status,
+    memberSinceLabel: formatMemberSinceLabel(row.member_since),
+    openCasesCount: row.open_cases_count,
+    lastVisitLabel: row.last_visit_date ? formatShortDate(row.last_visit_date) : "No visits yet",
+    lastVisitNote: row.last_visit_lounge ?? "",
+  };
 }
+
+export async function searchMembers(supabase: SupabaseClient, query: string): Promise<AdminMember[]> {
+  const { data, error } = await supabase.rpc("admin_search_members", { p_query: query });
+  if (error) throw error;
+  return (data as AdminMemberRow[]).map(mapAdminMemberRow);
+}
+
+export async function getAdminMember(
+  supabase: SupabaseClient,
+  memberId: string,
+): Promise<AdminMember | undefined> {
+  const { data, error } = await supabase.rpc("admin_member_profile", { p_member_id: memberId });
+  if (error) throw error;
+  const row = (data as AdminMemberRow[])[0];
+  return row ? mapAdminMemberRow(row) : undefined;
+}
+
+/* ------------------------------------------------------------------ */
+/* "Complete booking history view"                                     */
+/* ------------------------------------------------------------------ */
 
 export type BookingHistoryStatus = "confirmed" | "no-show" | "completed" | "cancelled";
 
+/** Fila cruda de `admin_member_bookings`. */
+export interface AdminBookingRow {
+  id: string;
+  confirmation_code: string;
+  lounge_id: string;
+  lounge_name: string;
+  lounge_area: string;
+  date: string;
+  band: string;
+  slot_time: string;
+  status: string;
+  no_show: boolean;
+  checked_in_at: string | null;
+  cancelled_at: string | null;
+  cancellation_fee_cents: number | null;
+  created_at: string;
+}
+
 export interface BookingHistoryRow {
+  bookingId: string;
+  loungeId: string;
+  date: string;
+  band: string;
+  slotTime: string;
   dateLabel: string;
   dayLabel: string;
   lounge: string;
@@ -306,182 +288,226 @@ export interface BookingHistoryRow {
   charged: string;
 }
 
-export interface PaymentRow {
-  title: string;
-  detail: string;
-  amount: string;
+export function bookingHistoryStatusFrom(row: Pick<AdminBookingRow, "status" | "no_show">): BookingHistoryStatus {
+  if (row.status === "cancelled") return "cancelled";
+  if (row.no_show) return "no-show";
+  if (row.status === "confirmed" || row.status === "waitlisted") return "confirmed";
+  return "completed";
 }
 
-export interface UpcomingBooking {
-  lounge: string;
-  area: string;
-  detail: string;
-  reference: string;
+function formatDayLabel(dateIso: string): string {
+  return new Intl.DateTimeFormat("en-US", { weekday: "long", timeZone: "UTC" }).format(
+    new Date(`${dateIso}T00:00:00Z`),
+  );
 }
 
-export interface MemberProfile extends AdminMember {
-  visits: number;
-  visitsNote: string;
-  noShows: number;
-  noShowsNote: string;
-  paidToDate: string;
-  paidNote: string;
-  openCasesNote: string;
-  membershipPriceLabel: string;
-  renewsLabel: string;
-  visitsThisMonthLabel: string;
-  referralsLabel: string;
-  bookingHistory: BookingHistoryRow[];
-  bookingHistorySummary: string;
-  payments: PaymentRow[];
-  paidToDateNote: string;
-  upcomingBooking: UpcomingBooking | null;
-}
-
-/**
- * Camille Duforest es la única ficha literal de `MemberProfile.dc.html` — el
- * resto del catálogo (`ADMIN_MEMBERS`) deriva un perfil mínimo de sus propios
- * datos de búsqueda en `getMemberProfile`, mismo criterio que ya fija
- * `lounge-profile.ts` para el contacto y las reseñas del Epic 3.
- */
-const LITERAL_MEMBER_PROFILES: Record<string, MemberProfile> = {
-  "camille-duforest": {
-    ...ADMIN_MEMBERS[0],
-    visits: 6,
-    visitsNote: "across 4 lounges since March",
-    noShows: 1,
-    noShowsNote: "of 3 in twelve months before a pause",
-    paidToDate: formatCurrency(2516.66),
-    paidNote: "membership, one day pass, one fee",
-    openCasesNote: "CS-4417 · opened today 9:12 AM",
-    membershipPriceLabel: `${formatCurrency(2400)} per year`,
-    renewsLabel: "March 3 · auto-renew on",
-    visitsThisMonthLabel: "2 of 8 used",
-    referralsLabel: "1 joined",
-    bookingHistorySummary:
-      "Showing 6 of 9 bookings since March 2025 · 6 attended, 1 no-show, 1 cancelled, 1 upcoming",
-    paidToDateNote: "Paid to date · no refunds yet",
-    upcomingBooking: {
-      lounge: "Aurelia House",
-      area: "NoMad",
-      detail: "Friday, September 20 · arrive 9:30 AM · admission for one",
-      reference: "LP-844021",
-    },
-    bookingHistory: [
-      {
-        dateLabel: "Sep 20",
-        dayLabel: "Friday",
-        lounge: "Aurelia House",
-        detail: "NoMad · arrive 9:30 AM",
-        reference: "LP-844021",
-        status: "confirmed",
-        charged: "Included",
-      },
-      {
-        dateLabel: "Sep 14",
-        dayLabel: "Saturday",
-        lounge: "The Ainsworth",
-        detail: "Midtown East · booked 10:30 AM · window closed 2:30 PM",
-        reference: "LP-840388",
-        status: "no-show",
-        charged: `${formatCurrency(35)} fee`,
-      },
-      {
-        dateLabel: "Sep 6",
-        dayLabel: "Friday",
-        lounge: "Bergdorf Lounge",
-        detail: "Midtown · arrived 10:04 AM",
-        reference: "LP-839114",
-        status: "completed",
-        charged: "Included",
-      },
-      {
-        dateLabel: "Aug 28",
-        dayLabel: "Wednesday",
-        lounge: "The Vestry",
-        detail: "Tribeca · arrived 2:12 PM",
-        reference: "LP-836902",
-        status: "completed",
-        charged: "Included",
-      },
-      {
-        dateLabel: "Aug 19",
-        dayLabel: "Monday",
-        lounge: "Aurelia House",
-        detail: "NoMad · cancelled 3 days ahead",
-        reference: "LP-834517",
-        status: "cancelled",
-        charged: "No charge",
-      },
-      {
-        dateLabel: "Aug 11",
-        dayLabel: "Sunday",
-        lounge: "The Ainsworth",
-        detail: "Midtown East · 9th visit of the month, bought as a day pass",
-        reference: "LP-832240",
-        status: "completed",
-        charged: formatCurrency(81.66),
-      },
-    ],
-    payments: [
-      {
-        title: "No-show fee — The Ainsworth",
-        detail: "Sep 14 · Visa 4242 · ch_3PkR2f8Q",
-        amount: formatCurrency(35),
-      },
-      {
-        title: "Day pass — The Ainsworth",
-        detail: "Aug 11 · Visa 4242 · $75.00 + $6.66 tax",
-        amount: formatCurrency(81.66),
-      },
-      {
-        title: "Annual membership",
-        detail: "Mar 3 · Visa 4242 · tax included",
-        amount: formatCurrency(2400),
-      },
-    ],
-  },
-};
-
-export function getMemberProfile(id: string): MemberProfile | undefined {
-  const literal = LITERAL_MEMBER_PROFILES[id];
-  if (literal) return literal;
-
-  const member = getAdminMember(id);
-  if (!member) return undefined;
+export function mapBookingRow(row: AdminBookingRow): BookingHistoryRow {
+  const status = bookingHistoryStatusFrom(row);
+  const charged =
+    status === "no-show" && row.cancellation_fee_cents
+      ? `${formatCurrency(row.cancellation_fee_cents / 100)} fee`
+      : status === "cancelled"
+        ? "No charge"
+        : "Included";
 
   return {
-    ...member,
-    visits: 1,
-    visitsNote: `at ${member.lastVisitNote}`,
-    noShows: 0,
-    noShowsNote: "none on file",
-    paidToDate: member.status === "no-membership" ? formatCurrency(0) : member.membershipLabel,
-    paidNote: "no other bookings on file",
-    openCasesNote: member.openCasesCount > 0 ? "open case on file" : "no open cases",
-    membershipPriceLabel: member.status === "no-membership" ? "Not a subscriber" : "Annual member",
-    renewsLabel: "—",
-    visitsThisMonthLabel: "—",
-    referralsLabel: "—",
-    bookingHistorySummary: `Showing the 1 booking on file · last visit ${member.lastVisitLabel}`,
-    paidToDateNote: "No refunds on file",
-    upcomingBooking: null,
-    bookingHistory: [
-      {
-        dateLabel: member.lastVisitLabel,
-        dayLabel: "",
-        lounge: member.lastVisitNote,
-        detail: "",
-        reference: "—",
-        status: "completed",
-        charged: "—",
-      },
-    ],
-    payments: [],
+    bookingId: row.id,
+    loungeId: row.lounge_id,
+    date: row.date,
+    band: row.band,
+    slotTime: row.slot_time,
+    dateLabel: formatShortDate(row.date),
+    dayLabel: formatDayLabel(row.date),
+    lounge: row.lounge_name,
+    detail: `${row.lounge_area} · ${row.slot_time}`,
+    reference: row.confirmation_code,
+    status,
+    charged,
   };
 }
 
+export async function getMemberBookings(
+  supabase: SupabaseClient,
+  memberId: string,
+): Promise<BookingHistoryRow[]> {
+  const { data, error } = await supabase.rpc("admin_member_bookings", { p_member_id: memberId });
+  if (error) throw error;
+  return (data as AdminBookingRow[]).map(mapBookingRow);
+}
+
+/** La próxima reserva confirmada (para "Modify booking" / `BookingOverrideDrawer`). */
+export function upcomingBookingFrom(
+  bookings: BookingHistoryRow[],
+  today: string,
+): BookingHistoryRow | null {
+  return (
+    bookings
+      .filter((b) => b.status === "confirmed" && b.date >= today)
+      .sort((a, b) => a.date.localeCompare(b.date))[0] ?? null
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* "Payment transaction details"                                       */
+/* ------------------------------------------------------------------ */
+
+/** Fila cruda de `admin_member_payments` — une cargos reales de Stripe y tarifas solo registradas. */
+export interface AdminPaymentRow {
+  kind: "payment" | "fee";
+  id: string;
+  booking_id: string | null;
+  title: string;
+  detail: string;
+  amount_cents: number;
+  status: string;
+  stripe_payment_intent_id: string | null;
+  created_at: string;
+}
+
+export interface PaymentRow {
+  id: string;
+  kind: "payment" | "fee";
+  title: string;
+  detail: string;
+  amount: string;
+  amountCents: number;
+  /** Un cargo real (`succeeded`) puede reembolsarse de verdad vía Stripe. */
+  refundable: boolean;
+  /** Una tarifa solo registrada (nunca cobrada) se "waives", no se reembolsa. */
+  waivable: boolean;
+}
+
+export function mapPaymentRow(row: AdminPaymentRow): PaymentRow {
+  return {
+    id: row.id,
+    kind: row.kind,
+    title: row.title,
+    detail: row.detail,
+    amount: formatCurrency(row.amount_cents / 100),
+    amountCents: row.amount_cents,
+    refundable: row.kind === "payment" && row.status === "succeeded",
+    waivable: row.kind === "fee",
+  };
+}
+
+export async function getMemberPayments(
+  supabase: SupabaseClient,
+  memberId: string,
+): Promise<PaymentRow[]> {
+  const { data, error } = await supabase.rpc("admin_member_payments", { p_member_id: memberId });
+  if (error) throw error;
+  return (data as AdminPaymentRow[]).map(mapPaymentRow);
+}
+
+/** "Paid to date" — solo dinero real recibido (cargos `succeeded`), nunca tarifas solo registradas. */
+export function totalPaidToDateCents(payments: PaymentRow[]): number {
+  return payments.filter((p) => p.refundable).reduce((sum, p) => sum + p.amountCents, 0);
+}
+
+/* ------------------------------------------------------------------ */
+/* Caso con log de comunicación ("CaseDetail.dc.html")                 */
+/* ------------------------------------------------------------------ */
+
+/** Fila cruda de `admin_get_ticket`. */
+export interface TicketDetailRow {
+  id: string;
+  case_number: string;
+  member_id: string;
+  member_name: string;
+  member_email: string;
+  status: CaseStatus;
+  subject: string;
+  note: string;
+  assigned_admin_id: string | null;
+  assigned_admin_name: string | null;
+  resolution_reason: string | null;
+  resolution_note: string;
+  created_at: string;
+  resolved_at: string | null;
+  booking_id: string | null;
+  booking_confirmation_code: string | null;
+  booking_fee_cents: number | null;
+  payment_id: string | null;
+  payment_amount_cents: number | null;
+  payment_status: string | null;
+  payment_intent_id: string | null;
+}
+
+export interface CaseDetail {
+  ticketId: string;
+  id: string;
+  memberId: string;
+  memberName: string;
+  memberEmail: string;
+  memberInitials: string;
+  subject: string;
+  note: string;
+  openedLabel: string;
+  openedTimeLabel: string;
+  status: CaseStatus;
+  assignee: string | null;
+  resolutionReason: string | null;
+  resolutionNote: string;
+  bookingReference: string | null;
+  /** Presente cuando hay una tarifa solo registrada (nunca cobrada) que "waive". */
+  waivableFee?: { bookingId: string; amountCents: number };
+  /** Presente cuando hay un cargo real de Stripe (`succeeded`) que reembolsar. */
+  refundablePayment?: { paymentId: string; amountCents: number };
+}
+
+const DEFAULT_RESOLUTION_REASONS = ["Goodwill exception", "Technical error", "Lounge was at capacity", "Not applicable"];
+
+export function mapTicketDetailRow(row: TicketDetailRow, now: Date = new Date()): CaseDetail {
+  return {
+    ticketId: row.id,
+    id: row.case_number,
+    memberId: row.member_id,
+    memberName: row.member_name,
+    memberEmail: row.member_email,
+    memberInitials: initialsFromName(row.member_name),
+    subject: row.subject,
+    note: row.note,
+    openedLabel: formatOpenedDateLabel(row.created_at, now),
+    openedTimeLabel: formatOpenedTimeLabel(row.created_at),
+    status: row.status,
+    assignee: row.assigned_admin_name ? displayNameFromEmail(row.assigned_admin_name) : null,
+    resolutionReason: row.resolution_reason,
+    resolutionNote: row.resolution_note,
+    bookingReference: row.booking_confirmation_code,
+    waivableFee:
+      row.booking_id && row.booking_fee_cents
+        ? { bookingId: row.booking_id, amountCents: row.booking_fee_cents }
+        : undefined,
+    refundablePayment:
+      row.payment_id && row.payment_status === "succeeded" && row.payment_amount_cents
+        ? { paymentId: row.payment_id, amountCents: row.payment_amount_cents }
+        : undefined,
+  };
+}
+
+export async function getCaseDetail(
+  supabase: SupabaseClient,
+  caseNumber: string,
+): Promise<CaseDetail | undefined> {
+  const { data, error } = await supabase.rpc("admin_get_ticket", { p_case_number: caseNumber });
+  if (error) throw error;
+  const row = (data as TicketDetailRow[])[0];
+  return row ? mapTicketDetailRow(row) : undefined;
+}
+
+export const RESOLUTION_REASONS = DEFAULT_RESOLUTION_REASONS;
+
 export type CommLogEntryKind = "system" | "email-auto" | "member" | "internal-note" | "partner" | "staff-reply";
+
+/** Fila cruda de `support_ticket_messages`. */
+export interface SupportTicketMessageRow {
+  id: string;
+  ticket_id: string;
+  kind: CommLogEntryKind;
+  author: string;
+  body: string;
+  created_at: string;
+}
 
 export interface CommLogEntryData {
   id: string;
@@ -491,100 +517,136 @@ export interface CommLogEntryData {
   body: string;
 }
 
-export interface CaseDetail extends SupportCase {
-  commLog: CommLogEntryData[];
-  resolutionReasons: string[];
-  defaultResolutionReason: string;
-  defaultResolutionNote: string;
-  /** Solo CS-4417 modela un reembolso concreto — ver desviaciones en el mapa. */
-  refundableAmount?: number;
-  chargeDetail?: { title: string; cardLabel: string; dateLabel: string; chargeId: string };
-  partnerShareAmount?: number;
+export function mapMessageRow(row: SupportTicketMessageRow, now: Date = new Date()): CommLogEntryData {
+  return {
+    id: row.id,
+    kind: row.kind,
+    author: row.author,
+    timestampLabel: `${formatOpenedDateLabel(row.created_at, now)} · ${formatOpenedTimeLabel(row.created_at)}`,
+    body: row.body,
+  };
 }
 
-const LITERAL_CASE_DETAILS: Record<string, Omit<CaseDetail, keyof SupportCase>> = {
-  "CS-4417": {
-    commLog: [
-      {
-        id: "c1",
-        kind: "system",
-        author: "System · no-show reported",
-        timestampLabel: "Sat Sep 14 · 4:02 PM",
-        body:
-          "The Ainsworth (Dana O.) reported the 10:30 AM arrival as a no-show. The admission window closed at 2:30 PM. The flat fee of $35.00 was charged to the card on file, Visa 4242.",
-      },
-      {
-        id: "c2",
-        kind: "email-auto",
-        author: "Email sent to member · automatic",
-        timestampLabel: "Sat Sep 14 · 4:03 PM",
-        body: '"No-show recorded — The Ainsworth, September 14"',
-      },
-      {
-        id: "c3",
-        kind: "member",
-        author: "Camille Duforest · by email",
-        timestampLabel: "Today · 9:12 AM",
-        body:
-          "I did go. I was at the door at 10:35 and the person at reception told me they were at capacity and to come back later. I came back a little after 1 PM and got the same answer. I would rather not be charged for a visit the lounge could not take.",
-      },
-      {
-        id: "c4",
-        kind: "internal-note",
-        author: "Priya Raghunathan",
-        timestampLabel: "Today · 9:40 AM",
-        body:
-          "Partner list confirms the 10:30 AM slot and no tick against her name. Asked The Ainsworth whether front of house turned people away around 10:35.",
-      },
-      {
-        id: "c5",
-        kind: "partner",
-        author: "Dana O. · The Ainsworth",
-        timestampLabel: "Today · 10:08 AM",
-        body:
-          "We were full from about 10:20 to 11:15 on Saturday and did turn a few people away at the door. If she was one of them we would not have ticked her in — the fee should not stand.",
-      },
-    ],
-    resolutionReasons: [
-      "Lounge was at capacity",
-      "Member cancelled in time",
-      "Technical error",
-      "Goodwill exception",
-    ],
-    defaultResolutionReason: "Lounge was at capacity",
-    defaultResolutionNote:
-      "Partner confirms the door was closed between 10:20 and 11:15. Fee waived and the no-show removed from her record.",
-    refundableAmount: 35,
-    chargeDetail: {
-      title: "No-show fee — The Ainsworth, September 14",
-      cardLabel: "Visa 4242",
-      dateLabel: "Charged Sat Sep 14, 4:02 PM",
-      chargeId: "ch_3PkR2f8Q",
-    },
-    partnerShareAmount: 17.5,
-  },
-};
+export async function listTicketMessages(
+  supabase: SupabaseClient,
+  ticketId: string,
+): Promise<CommLogEntryData[]> {
+  const { data, error } = await supabase
+    .from("support_ticket_messages")
+    .select("*")
+    .eq("ticket_id", ticketId)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data as SupportTicketMessageRow[]).map((row) => mapMessageRow(row));
+}
 
-export function getCaseDetail(id: string): CaseDetail | undefined {
-  const supportCase = getSupportCase(id);
-  if (!supportCase) return undefined;
+export async function addTicketMessage(
+  supabase: SupabaseClient,
+  ticketId: string,
+  kind: CommLogEntryKind,
+  author: string,
+  body: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("support_ticket_messages")
+    .insert({ ticket_id: ticketId, kind, author, body });
+  if (error) throw error;
+}
 
-  const literal = LITERAL_CASE_DETAILS[id];
-  if (literal) return { ...supportCase, ...literal };
+/* ------------------------------------------------------------------ */
+/* Mutaciones de un caso                                                */
+/* ------------------------------------------------------------------ */
 
-  return {
-    ...supportCase,
-    commLog: [
-      {
-        id: `${id}-system`,
-        kind: "system",
-        author: "System · case opened",
-        timestampLabel: `${supportCase.openedLabel} · ${supportCase.openedTimeLabel}`,
-        body: supportCase.note,
-      },
-    ],
-    resolutionReasons: ["Goodwill exception", "Technical error", "Not applicable"],
-    defaultResolutionReason: "Goodwill exception",
-    defaultResolutionNote: "",
-  };
+export async function assignTicketToMe(supabase: SupabaseClient, ticketId: string): Promise<void> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { error } = await supabase
+    .from("support_tickets")
+    .update({ assigned_admin_id: user.id, updated_at: new Date().toISOString() })
+    .eq("id", ticketId);
+  if (error) throw error;
+}
+
+export async function escalateTicket(supabase: SupabaseClient, ticketId: string): Promise<void> {
+  const { error } = await supabase
+    .from("support_tickets")
+    .update({ status: "escalated", updated_at: new Date().toISOString() })
+    .eq("id", ticketId);
+  if (error) throw error;
+}
+
+export async function resolveTicket(
+  supabase: SupabaseClient,
+  ticketId: string,
+  resolutionReason: string,
+  resolutionNote: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("support_tickets")
+    .update({
+      status: "resolved",
+      resolution_reason: resolutionReason,
+      resolution_note: resolutionNote,
+      resolved_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", ticketId);
+  if (error) throw error;
+}
+
+/** "Waive and refund" cuando la tarifa nunca se cobró de verdad — ver `admin_waive_booking_fee`. */
+export async function waiveBookingFee(supabase: SupabaseClient, bookingId: string): Promise<void> {
+  const { error } = await supabase.rpc("admin_waive_booking_fee", { p_booking_id: bookingId });
+  if (error) throw error;
+}
+
+/** "Waive and refund" cuando hay un cargo real de Stripe detrás — Edge Function `stripe-refund-payment`. */
+export async function refundPayment(
+  supabase: SupabaseClient,
+  paymentId: string,
+  amountCents?: number,
+  reason?: string,
+): Promise<{ refundId: string; status: string; amountCents: number }> {
+  const { data, error } = await supabase.functions.invoke("stripe-refund-payment", {
+    body: { paymentId, amountCents, reason },
+  });
+  if (error) throw error;
+  return data;
+}
+
+/* ------------------------------------------------------------------ */
+/* "Booking modification capabilities" — override explícito incluido   */
+/* ------------------------------------------------------------------ */
+
+export interface UpcomingBooking {
+  lounge: string;
+  area: string;
+  detail: string;
+  reference: string;
+}
+
+export async function rescheduleBooking(
+  supabase: SupabaseClient,
+  bookingId: string,
+  date: string,
+  band: string,
+  slotTime: string,
+  override: boolean,
+): Promise<void> {
+  const { error } = await supabase.rpc("admin_reschedule_booking", {
+    p_booking_id: bookingId,
+    p_date: date,
+    p_band: band,
+    p_slot_time: slotTime,
+    p_override: override,
+  });
+  if (error) throw error;
+}
+
+export async function cancelBookingAsAdmin(supabase: SupabaseClient, bookingId: string): Promise<void> {
+  const { error } = await supabase.rpc("admin_cancel_booking", { p_booking_id: bookingId });
+  if (error) throw error;
 }

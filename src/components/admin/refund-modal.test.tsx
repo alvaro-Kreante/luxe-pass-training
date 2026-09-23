@@ -1,15 +1,15 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { RefundModal } from "./refund-modal";
 
 const charge = {
-  title: "No-show fee — The Ainsworth, September 14",
+  title: "Day pass — The Ainsworth, September 14",
   amount: 35,
   cardLabel: "Visa 4242",
   dateLabel: "Charged Sat Sep 14, 4:02 PM",
-  chargeId: "ch_3PkR2f8Q",
+  chargeId: "pi_3PkR2f8Q",
 };
 
 describe("RefundModal", () => {
@@ -51,6 +51,20 @@ describe("RefundModal", () => {
     await user.click(screen.getByRole("button", { name: "Refund $35.00" }));
 
     expect(onConfirm).toHaveBeenCalledWith(35);
-    expect(onOpenChange).toHaveBeenCalledWith(false);
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+  });
+
+  it("shows the error and keeps the modal open when the refund fails", async () => {
+    const user = userEvent.setup({ delay: null });
+    const onConfirm = vi.fn().mockRejectedValue(new Error("Only a succeeded Stripe payment can be refunded"));
+    const onOpenChange = vi.fn();
+    render(<RefundModal open onOpenChange={onOpenChange} charge={charge} onConfirm={onConfirm} />);
+
+    await user.click(screen.getByRole("button", { name: "Refund $35.00" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("Only a succeeded Stripe payment can be refunded")).toBeVisible(),
+    );
+    expect(onOpenChange).not.toHaveBeenCalled();
   });
 });

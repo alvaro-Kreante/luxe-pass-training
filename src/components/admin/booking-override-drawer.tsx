@@ -7,22 +7,17 @@ import { Drawer } from "@/components/patterns/drawer";
 import { Button } from "@/components/ui/button";
 import { PaymentOptionRow } from "@/components/ui/payment-option-row";
 import { Switch } from "@/components/ui/switch";
+import { SLOT_DEFS } from "@/lib/booking";
 import type { UpcomingBooking } from "@/lib/admin";
+import { createClient } from "@/lib/supabase/client";
+import { cancelBookingAsAdmin, rescheduleBooking } from "@/lib/admin";
 import { cn } from "@/lib/utils";
 
 type ChangeType = "reschedule" | "move" | "cancel";
 
-const ARRIVAL_SLOTS = [
-  { time: "9:00 AM", note: "4 left", full: false },
-  { time: "10:00 AM", note: "full", full: true },
-  { time: "11:00 AM", note: "2 left", full: false },
-  { time: "12:00 PM", note: "full", full: true },
-] as const;
-
-export interface BookingOverrideResult {
-  changeType: ChangeType;
-  newTime?: string;
-  overrideApplied: boolean;
+interface AvailabilityRow {
+  band: string;
+  seats_left: number;
 }
 
 /**
@@ -30,9 +25,17 @@ export interface BookingOverrideResult {
  * de las restricciones del local que fija DESIGN-SYSTEM.md §6 (Fase 8).
  * Artboard: docs/design/epic-8-admin-support/BookingOverride.dc.html.
  *
- * "Move to another lounge" no expande ningún formulario propio: el artboard
- * solo dibuja la opción colapsada, sin una segunda pantalla de qué lounge
- * elegir — no se inventa una.
+ * Backend real (22 sept 2026): `admin_reschedule_booking`/
+ * `admin_cancel_booking` (`supabase/schemas/support_tickets.sql`). El
+ * artboard dibuja cuatro horarios ficticios ("9:00 AM"–"12:00 PM") que no
+ * existen en el dominio real de `bookings.slot_time` — se sustituyen por los
+ * cinco horarios reales (`SLOT_DEFS`, `src/lib/booking.ts`), con las plazas
+ * de cada uno consultadas en vivo contra `lounge_availability` para la
+ * fecha elegida. Desviación anotada en `docs/design/COMPONENT-MAP.md`.
+ *
+ * "Move to another lounge" sigue sin expandir ningún formulario propio: el
+ * artboard solo dibuja la opción colapsada, sin una segunda pantalla de qué
+ * lounge elegir — no se inventa una.
  */
 export function BookingOverrideDrawer({
   open,
@@ -44,25 +47,59 @@ export function BookingOverrideDrawer({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   memberName: string;
-  booking: UpcomingBooking;
-  onApply: (result: BookingOverrideResult) => void;
+  booking: UpcomingBooking & { bookingId: string; loungeId: string; date: string; band: string; slotTime: string };
+  onApply: () => void | Promise<void>;
 }) {
+  const supabase = React.useMemo(() => createClient(), []);
   const [changeType, setChangeType] = React.useState<ChangeType>("reschedule");
-  const [selectedTime, setSelectedTime] = React.useState("9:00 AM");
+  const [newDate, setNewDate] = React.useState(booking.date);
+  const [selectedSlot, setSelectedSlot] = React.useState(SLOT_DEFS.find((s) => s.time === booking.slotTime) ?? SLOT_DEFS[0]);
   const [overrideEnabled, setOverrideEnabled] = React.useState(false);
+  const [seatsByBand, setSeatsByBand] = React.useState<Record<string, number>>({});
+  const [submitting, setSubmitting] = React.useState(false);
+  const [error, setError] = React.useState("");
 
-  function selectSlot(slot: (typeof ARRIVAL_SLOTS)[number]) {
-    if (slot.full && !overrideEnabled) return;
-    setSelectedTime(slot.time);
+  React.useEffect(() => {
+    if (!open) return;
+    let active = true;
+    supabase
+      .from("lounge_availability")
+      .select("band, seats_left")
+      .eq("lounge_id", booking.loungeId)
+      .eq("date", newDate)
+      .then(({ data }) => {
+        if (!active) return;
+        const rows = (data ?? []) as AvailabilityRow[];
+        setSeatsByBand(Object.fromEntries(rows.map((r) => [r.band, r.seats_left])));
+      });
+    return () => {
+      active = false;
+    };
+  }, [supabase, open, booking.loungeId, newDate]);
+
+  function selectSlot(slot: (typeof SLOT_DEFS)[number]) {
+    const seats = seatsByBand[slot.band];
+    const full = typeof seats === "number" && seats <= 0;
+    if (full && !overrideEnabled) return;
+    setSelectedSlot(slot);
   }
 
-  function applyChange() {
-    onApply({
-      changeType,
-      newTime: changeType === "reschedule" ? selectedTime : undefined,
-      overrideApplied: changeType === "reschedule" && overrideEnabled,
-    });
-    onOpenChange(false);
+  async function applyChange() {
+    setSubmitting(true);
+    setError("");
+    try {
+      if (changeType === "reschedule") {
+        await rescheduleBooking(supabase, booking.bookingId, newDate, selectedSlot.band, selectedSlot.time, overrideEnabled);
+      } else if (changeType === "cancel") {
+        await cancelBookingAsAdmin(supabase, booking.bookingId);
+      }
+      await onApply();
+      onOpenChange(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not apply this change");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -78,8 +115,8 @@ export function BookingOverrideDrawer({
           <Button variant="ghost" className="normal-case" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button block onClick={applyChange}>
-            Apply change
+          <Button block onClick={applyChange} disabled={submitting || changeType === "move"}>
+            {submitting ? "Applying…" : "Apply change"}
           </Button>
         </div>
       }
@@ -108,22 +145,30 @@ export function BookingOverrideDrawer({
       {changeType === "reschedule" ? (
         <>
           <p className="mb-2.5 mt-4 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">New date</p>
-          <div className="flex h-[50px] items-center gap-3 rounded-xl border-[1.5px] border-accent bg-panel-black px-4 shadow-ring">
+          <label className="flex h-[50px] items-center gap-3 rounded-xl border-[1.5px] border-accent bg-panel-black px-4 shadow-ring">
             <CalendarDays size={18} strokeWidth={1.7} className="text-accent" aria-hidden />
-            <span className="flex-1 text-[13.5px] font-bold text-fg">Saturday, September 21</span>
-          </div>
+            <input
+              type="date"
+              aria-label="New date"
+              value={newDate}
+              onChange={(event) => setNewDate(event.target.value)}
+              className="flex-1 bg-transparent text-[13.5px] font-bold text-fg focus:outline-none"
+            />
+          </label>
 
           <p className="mb-2.5 mt-4.5 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">Arrival time</p>
-          <div className="grid grid-cols-4 gap-2.5">
-            {ARRIVAL_SLOTS.map((slot) => {
-              const selected = selectedTime === slot.time;
-              const blocked = slot.full && !overrideEnabled;
+          <div className="grid grid-cols-3 gap-2.5">
+            {SLOT_DEFS.map((slot) => {
+              const selected = selectedSlot.time === slot.time;
+              const seats = seatsByBand[slot.band];
+              const full = typeof seats === "number" && seats <= 0;
+              const blocked = full && !overrideEnabled;
               return (
                 <button
                   key={slot.time}
                   type="button"
                   aria-pressed={selected}
-                  aria-label={`${slot.time} · ${slot.note}`}
+                  aria-label={`${slot.time} · ${full ? "full" : typeof seats === "number" ? `${seats} left` : "—"}`}
                   onClick={() => selectSlot(slot)}
                   className={cn(
                     "rounded-xl border px-2 py-2.5 text-center transition-colors duration-150",
@@ -135,7 +180,7 @@ export function BookingOverrideDrawer({
                     {slot.time}
                   </p>
                   <p className={cn("m-0 mt-0.5 text-[11.5px]", selected ? "text-on-accent/85" : "text-fg-subtle")}>
-                    {slot.note}
+                    {full ? "full" : typeof seats === "number" ? `${seats} left` : "—"}
                   </p>
                 </button>
               );
@@ -146,8 +191,7 @@ export function BookingOverrideDrawer({
             <div className="min-w-0 flex-1">
               <p className="m-0 text-[13px] font-bold text-fg">Override the lounge&apos;s rules</p>
               <p className="m-0 mt-1.5 text-[11.5px] leading-[1.5] text-fg-muted">
-                {booking.lounge} caps this slot and asks for notice. The lounge sees the override, your name and this
-                case number on their list.
+                {booking.lounge} caps this slot. Overriding books the member in even without a free seat on record.
               </p>
             </div>
             <Switch checked={overrideEnabled} onCheckedChange={setOverrideEnabled} label="Override the lounge's rules" />
@@ -160,6 +204,15 @@ export function BookingOverrideDrawer({
           This cancels {booking.reference} immediately and notifies the member.
         </p>
       ) : null}
+
+      {changeType === "move" ? (
+        <p className="mt-4 text-[13px] text-fg-muted">
+          Moving to another lounge is not available from this console yet — cancel this booking and start a new one
+          instead.
+        </p>
+      ) : null}
+
+      {error ? <p className="mt-4 text-[12.5px] font-bold text-accent-strong">{error}</p> : null}
 
       <p className="mt-5 flex items-start gap-2.5 text-[11.5px] text-fg-subtle">
         <Info size={15} strokeWidth={1.8} className="mt-px shrink-0" aria-hidden />

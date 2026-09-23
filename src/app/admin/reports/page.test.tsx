@@ -1,15 +1,29 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { TODAY } from "@/lib/availability";
+import { createClient } from "@/lib/supabase/client";
+import { signUpConfirmedAdminAndSignIn } from "@/lib/testing/confirmed-user";
 
 import ExportPage from "./page";
+
+/**
+ * Story 8.2 — "User data export (anonymized for privacy)", "Booking data
+ * export with date range selection" y "Data export in CSV format". Backend
+ * real (22 sept 2026): `admin_export_*` (`supabase/schemas/admin_reports.sql`).
+ * Un lounge/reserva efímeros propios de este archivo para poder afirmar que
+ * el CSV descargado trae de verdad esa fila, sin depender de cuántas otras
+ * reservas existan en la base.
+ */
 
 const push = vi.fn();
 let searchParams = new URLSearchParams();
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/admin/reports",
-  useRouter: () => ({ push }),
+  useRouter: () => ({ push, replace: vi.fn() }),
   useSearchParams: () => searchParams,
 }));
 
@@ -19,52 +33,99 @@ vi.mock("@/lib/download", () => ({
 
 import { downloadTextFile } from "@/lib/download";
 
-describe("Export data (/admin/reports)", () => {
-  it("defaults to the Bookings dataset with its row count in the rail", () => {
-    render(<ExportPage />);
+const admin = createAdminClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+);
 
-    expect(screen.getByRole("heading", { name: "Export data" })).toBeInTheDocument();
-    expect(screen.getByRole("radio", { name: /Bookings/ })).toHaveAttribute("aria-checked", "true");
-    expect(screen.getByText("1,208 bookings")).toBeInTheDocument();
+let loungeId: string;
+let confirmationCode: string;
+
+beforeAll(async () => {
+  const stamp = Date.now();
+  loungeId = `test-lounge-export-${stamp}`;
+
+  await admin.from("lounges").insert({
+    id: loungeId,
+    name: "Export Test Lounge",
+    neighborhood: "Test",
+    city: "Test City",
+    city_id: "test-city",
+    lat: 0,
+    lng: 0,
+    hours: "Open 24 hours",
   });
 
-  it("updates the row count when a different dataset is chosen", async () => {
+  const { data: created, error } = await admin.auth.admin.createUser({
+    email: `export-member-${stamp}@ensoleil-test.com`,
+    password: "EnSoleil!2026",
+    email_confirm: true,
+  });
+  if (error) throw error;
+
+  const { data: booking } = await admin
+    .from("bookings")
+    .insert({
+      member_id: created.user.id,
+      lounge_id: loungeId,
+      date: TODAY,
+      band: "morning",
+      slot_time: "8:00 AM",
+      status: "confirmed",
+    })
+    .select("confirmation_code")
+    .single();
+  confirmationCode = booking!.confirmation_code;
+
+  const adminClient = createClient();
+  await signUpConfirmedAdminAndSignIn(adminClient, `export-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
+});
+
+afterAll(async () => {
+  await admin.from("lounges").delete().eq("id", loungeId);
+});
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+describe("Export data (/admin/reports)", () => {
+  it("defaults to the Bookings dataset with 9 columns selected and no personal data", async () => {
+    render(<ExportPage />);
+
+    expect(await screen.findByRole("heading", { name: "Export data" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /Bookings/ })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByText(/9 of 12 selected/)).toBeInTheDocument();
+  });
+
+  it("resets the column selection when a different dataset is chosen", async () => {
     const user = userEvent.setup({ delay: null });
     render(<ExportPage />);
 
+    await screen.findByRole("heading", { name: "Export data" });
     await user.click(screen.getByRole("radio", { name: /^Members/ }));
 
-    expect(screen.getByText("1,842 members")).toBeInTheDocument();
+    expect(screen.getByText(/3 of 6 selected/)).toBeInTheDocument();
   });
 
-  it("preselects the dataset from the ?dataset= query param", () => {
+  it("preselects the dataset from the ?dataset= query param", async () => {
     searchParams = new URLSearchParams("dataset=revenue-by-partner");
     render(<ExportPage />);
+
+    // `RequireAdminSession` no monta `ExportScreen` (y su lectura de
+    // `useSearchParams()`) hasta que la comprobación async de rol resuelve
+    // — resetear `searchParams` antes de eso hacía que el mount real ya no
+    // viera el "?dataset=" (mismo bug real ya encontrado en `/admin/members`).
+    await screen.findByRole("heading", { name: "Export data" });
     searchParams = new URLSearchParams();
-
     expect(screen.getByRole("radio", { name: /Revenue by partner/ })).toHaveAttribute("aria-checked", "true");
-  });
-
-  it("removes a filter chip when its close button is activated", async () => {
-    const user = userEvent.setup({ delay: null });
-    render(<ExportPage />);
-
-    expect(screen.getByText("New York")).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Remove New York" }));
-
-    expect(screen.queryByText("New York")).not.toBeInTheDocument();
-  });
-
-  it("shows 9 columns selected by default with no personal data", () => {
-    render(<ExportPage />);
-
-    expect(screen.getByText("9 · no personal data")).toBeInTheDocument();
   });
 
   it("requires a reason before a personal column can be included", async () => {
     const user = userEvent.setup({ delay: null });
     render(<ExportPage />);
 
+    await screen.findByRole("heading", { name: "Export data" });
     await user.click(screen.getByRole("checkbox", { name: "Member name" }));
 
     expect(screen.getByRole("textbox", { name: /reason/i })).toBeInTheDocument();
@@ -75,22 +136,25 @@ describe("Export data (/admin/reports)", () => {
     expect(screen.getByRole("button", { name: "Download CSV" })).toBeEnabled();
   });
 
-  it("downloads a CSV for the current dataset and columns", async () => {
+  it("downloads a real CSV that includes the ephemeral booking's reference", async () => {
     const user = userEvent.setup({ delay: null });
     render(<ExportPage />);
 
+    await screen.findByRole("heading", { name: "Export data" });
     await user.click(screen.getByRole("button", { name: "Download CSV" }));
 
-    expect(downloadTextFile).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(downloadTextFile).toHaveBeenCalledTimes(1));
     const [filename, csv] = vi.mocked(downloadTextFile).mock.calls[0];
     expect(filename).toContain("bookings");
     expect(csv).toContain("Booking reference");
+    expect(csv).toContain(confirmationCode);
   });
 
   it("changes the primary action label with the delivery method", async () => {
     const user = userEvent.setup({ delay: null });
     render(<ExportPage />);
 
+    await screen.findByRole("heading", { name: "Export data" });
     await user.click(screen.getByRole("radio", { name: /Email it to me/ }));
     expect(screen.getByRole("button", { name: "Email me the CSV" })).toBeInTheDocument();
 
@@ -98,11 +162,27 @@ describe("Export data (/admin/reports)", () => {
     expect(screen.getByRole("button", { name: "Save scheduled report" })).toBeInTheDocument();
   });
 
-  it("preselects Save as a scheduled report from ?delivery=schedule", () => {
+  it("preselects Save as a scheduled report from ?delivery=schedule", async () => {
     searchParams = new URLSearchParams("delivery=schedule");
     render(<ExportPage />);
-    searchParams = new URLSearchParams();
 
+    await screen.findByRole("heading", { name: "Export data" });
+    searchParams = new URLSearchParams();
     expect(screen.getByRole("radio", { name: /Save as a scheduled report/ })).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("saves a real scheduled report and navigates to the scheduled list", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ExportPage />);
+
+    await screen.findByRole("heading", { name: "Export data" });
+    await user.click(screen.getByRole("radio", { name: /Save as a scheduled report/ }));
+    await user.click(screen.getByRole("button", { name: "Save scheduled report" }));
+
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/admin/reports/scheduled"));
+
+    const { data } = await admin.from("scheduled_reports").select("id, dataset, cadence").eq("dataset", "bookings");
+    expect(data!.length).toBeGreaterThan(0);
+    await admin.from("scheduled_reports").delete().eq("dataset", "bookings");
   });
 });

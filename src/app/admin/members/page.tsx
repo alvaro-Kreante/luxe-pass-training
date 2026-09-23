@@ -5,17 +5,24 @@ import { CheckCircle2, ChevronRight, CreditCard, Info, Search } from "lucide-rea
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { AdminShell } from "@/components/patterns/admin-shell";
+import { RequireAdminSession } from "@/components/admin/require-admin-session";
 import { StatusChip } from "@/components/ui/status-chip";
-import { ADMIN_CASE_COUNTS, OPENED_BY_YOU_TODAY, searchMembers, type AdminMember } from "@/lib/admin";
+import { createClient } from "@/lib/supabase/client";
+import { getTicketCounts, searchMembers, type AdminMember, type TicketCounts } from "@/lib/admin";
 import { cn } from "@/lib/utils";
 
 /**
  * Story 8.1 — "Member search by email, phone, or name". Artboard:
  * docs/design/epic-8-admin-support/MemberSearch.dc.html.
  *
+ * Backend real (22 sept 2026): `admin_search_members`
+ * (`supabase/schemas/support_tickets.sql`) — busca por subcadena de
+ * nombre/email, últimos 4+ dígitos de teléfono, o "LP-######" directo a la
+ * reserva. Reglas más simples que el mock (que tokenizaba por palabra), ver
+ * desviación en `docs/design/COMPONENT-MAP.md`.
+ *
  * Las tres sugerencias de "Not the person you are looking for?" no llevan a
- * ningún sitio propio: las tres capacidades que describen (buscar por
- * referencia, por cargo de Stripe, listar cuentas cerradas) ya las cubre el
+ * ningún sitio propio: las tres capacidades que describen ya las cubre el
  * mismo cuadro de búsqueda de arriba — quedan como leyenda, no como botones.
  *
  * `useSearchParams` obliga a un límite de Suspense para poder prerenderizar
@@ -23,29 +30,52 @@ import { cn } from "@/lib/utils";
  */
 export default function MemberSearchPage() {
   return (
-    <React.Suspense>
-      <MemberSearchScreen />
-    </React.Suspense>
+    <RequireAdminSession>
+      <React.Suspense>
+        <MemberSearchScreen />
+      </React.Suspense>
+    </RequireAdminSession>
   );
 }
 
 function MemberSearchScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const supabase = React.useMemo(() => createClient(), []);
   const [query, setQuery] = React.useState(searchParams.get("q") ?? "");
-
-  const results = React.useMemo(() => searchMembers(query), [query]);
+  const [fetchedResults, setFetchedResults] = React.useState<AdminMember[]>([]);
+  const [counts, setCounts] = React.useState<TicketCounts | null>(null);
   const hasQuery = query.trim().length > 0;
+  const results = hasQuery ? fetchedResults : [];
+
+  React.useEffect(() => {
+    let active = true;
+    getTicketCounts(supabase).then((row) => {
+      if (active) setCounts(row);
+    });
+    return () => {
+      active = false;
+    };
+  }, [supabase]);
+
+  React.useEffect(() => {
+    if (!hasQuery) return;
+    let active = true;
+    searchMembers(supabase, query).then((rows) => {
+      if (active) setFetchedResults(rows);
+    });
+    return () => {
+      active = false;
+    };
+  }, [supabase, query, hasQuery]);
 
   return (
     <AdminShell
       topbarLabel={<span className="text-[13.5px] font-bold text-fg">Members</span>}
-      topbarMeta="· Search · Monday, September 16 · 10:26 AM"
-      supportBadge={ADMIN_CASE_COUNTS.open}
+      topbarMeta="· Search"
+      supportBadge={counts?.open}
     >
-      <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">
-        1,842 active members · 12 lounges
-      </p>
+      <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">Find a member</p>
       <h1 className="mt-2 font-display text-[34px] text-fg">Find a member</h1>
 
       <label className="mt-4 flex h-16 items-center gap-3.5 rounded-2xl border-[1.5px] border-accent bg-panel-black px-5 shadow-ring">
@@ -68,7 +98,7 @@ function MemberSearchScreen() {
           <StatusChip available outlined>
             {results.length} {results.length === 1 ? "match" : "matches"}
           </StatusChip>
-          <span className="text-[12.5px] font-bold text-fg-muted">Matched on name and email</span>
+          <span className="text-[12.5px] font-bold text-fg-muted">Matched on name, email, phone or LP#</span>
         </div>
       ) : null}
 
@@ -101,37 +131,12 @@ function MemberSearchScreen() {
             <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">How search matches</p>
             <div className="mt-3.5 flex flex-col gap-3">
               <MatchHint>
-                Partial names and emails match from any word — <b>duforest</b> finds Duforest-Marin too.
+                Any part of a name or email matches — <b>duforest</b> finds Duforest-Marin too.
               </MatchHint>
               <MatchHint>The last four digits of a phone number are enough — formatting is ignored.</MatchHint>
               <MatchHint>
                 A booking reference like <b>LP-840388</b> goes straight to that member.
               </MatchHint>
-            </div>
-          </div>
-
-          <div className="rounded-content border border-line bg-dark-card px-5.5 py-5">
-            <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">Opened by you today</p>
-            <div className="mt-2 flex flex-col">
-              {OPENED_BY_YOU_TODAY.map((item) => (
-                <button
-                  key={item.caseId}
-                  type="button"
-                  onClick={() => router.push(`/admin/support/${item.caseId}`)}
-                  className="flex items-center gap-2.5 border-b border-[rgba(58,50,42,0.6)] py-3 text-left last:border-b-0"
-                >
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent font-display text-xs font-bold text-on-accent">
-                    {item.memberInitials}
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[13px] font-bold text-fg">{item.memberName}</span>
-                    <span className="mt-0.5 block text-[11.5px] text-fg-subtle">
-                      {item.caseId} · {item.timeLabel}
-                    </span>
-                  </span>
-                  <ChevronRight size={16} strokeWidth={1.8} className="text-fg-subtle" aria-hidden />
-                </button>
-              ))}
             </div>
           </div>
         </div>
@@ -199,7 +204,7 @@ function MemberResultsTable({
                 Active
               </StatusChip>
             ) : (
-              <StatusChip available={false}>No membership</StatusChip>
+              <StatusChip available={false}>{member.status === "deleted" ? "Deleted" : "Inactive"}</StatusChip>
             )}
           </span>
           <span>

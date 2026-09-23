@@ -1,82 +1,176 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+
+import { createClient } from "@/lib/supabase/client";
+import { signUpConfirmedAdminAndSignIn } from "@/lib/testing/confirmed-user";
 
 import LoungeEditPage from "./page";
 
-let currentId = "the-vestry";
+/**
+ * Story 8.3 — "Update amenities...", "Set booking availability and
+ * restrictions", "Upload and manage lounge images" y "Content approval
+ * workflow". Backend real (22 sept 2026): `admin_lounge_detail`/
+ * `admin_submit_lounge_content_change`/`admin_approve_lounge_submission`/
+ * `admin_reject_lounge_submission` (`supabase/schemas/admin_content.sql`).
+ */
+
+let currentId = "";
+const params = { get id() { return currentId; } };
 
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/admin/lounges/the-vestry",
-  useRouter: () => ({ push: vi.fn() }),
-  useParams: () => ({ id: currentId }),
+  usePathname: () => "/admin/lounges/x",
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useParams: () => ({ id: params.id }),
   notFound: () => {
     throw new Error("NEXT_NOT_FOUND");
   },
 }));
 
+const admin = createAdminClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+);
+
+async function createLounge(name: string, extra: Record<string, unknown> = {}) {
+  const id = `test-lounge-edit-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+  const { error } = await admin.from("lounges").insert({
+    id,
+    name,
+    neighborhood: "Test",
+    city: "Test City",
+    city_id: "test-city",
+    lat: 0,
+    lng: 0,
+    hours: "Open 24 hours",
+    amenities: ["wifi"],
+    weekly_hours: ["Closed", "8 AM – 9 PM", "8 AM – 9 PM", "8 AM – 9 PM", "8 AM – 9 PM", "8 AM – 9 PM", "9 AM – 10 PM"],
+    capacity: 20,
+    ...extra,
+  });
+  if (error) throw error;
+  return id;
+}
+
+const loungeIds: string[] = [];
+
+beforeAll(async () => {
+  const stamp = Date.now();
+  const adminClient = createClient();
+  await signUpConfirmedAdminAndSignIn(adminClient, `lounge-edit-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
+});
+
+afterAll(async () => {
+  await admin.from("lounges").delete().in("id", loungeIds);
+});
+
 describe("Lounge editor (/admin/lounges/[id])", () => {
-  it("shows the pending approval chip and the three changes waiting", () => {
+  it("shows the lounge's real amenities, hours and photo count", async () => {
+    const id = await createLounge(`Editor Test Lounge ${Date.now()}`);
+    loungeIds.push(id);
+    currentId = id;
+
     render(<LoungeEditPage />);
 
-    expect(screen.getByRole("heading", { name: "The Vestry" })).toBeInTheDocument();
-    expect(screen.getByText("3 changes waiting for approval")).toBeInTheDocument();
-    expect(screen.getByText("Amenity added")).toBeInTheDocument();
-    expect(screen.getByText("Friday hours extended")).toBeInTheDocument();
-    expect(screen.getByText("Photo added")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /Editor Test Lounge/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "WiFi" })).toHaveAttribute("aria-pressed", "true");
+    expect(screen.getByRole("button", { name: "Spa" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByDisplayValue("9 AM – 10 PM")).toBeInTheDocument();
   });
 
-  it("shows the amenity being added and the photo waiting for approval", () => {
+  it("submits a real change for review when an amenity is toggled", async () => {
+    const user = userEvent.setup({ delay: null });
+    const id = await createLounge(`Submit Test Lounge ${Date.now()}`);
+    loungeIds.push(id);
+    currentId = id;
+
     render(<LoungeEditPage />);
 
-    expect(screen.getByText("Showers · being added")).toBeInTheDocument();
-    expect(screen.getByText("Shower suite · 3024 × 2016")).toBeInTheDocument();
+    await screen.findByRole("heading", { name: /Submit Test Lounge/ });
+    await user.click(screen.getByRole("button", { name: "Spa" }));
+    await user.click(screen.getByRole("button", { name: "Submit for review" }));
+
+    await waitFor(() => expect(screen.getByText(/waiting for approval/)).toBeInTheDocument());
+
+    const { data } = await admin
+      .from("lounge_content_submissions")
+      .select("proposed, status")
+      .eq("lounge_id", id)
+      .single();
+    expect(data?.status).toBe("pending");
+    expect(data?.proposed.amenities).toEqual(expect.arrayContaining(["wifi", "spa"]));
+
+    // El contenido real todavía no cambió — solo se aplica al aprobar.
+    const { data: loungeRow } = await admin.from("lounges").select("amenities").eq("id", id).single();
+    expect(loungeRow?.amenities).toEqual(["wifi"]);
   });
 
-  it("approves all three changes at once", async () => {
+  it("approves a pending change and applies it to the real lounge row", async () => {
+    const id = await createLounge(`Approve Test Lounge ${Date.now()}`);
+    loungeIds.push(id);
+    await admin.from("lounge_content_submissions").insert({ lounge_id: id, proposed: { capacity: 55 } });
+    currentId = id;
+
     const user = userEvent.setup({ delay: null });
     render(<LoungeEditPage />);
 
-    await user.click(screen.getByRole("button", { name: "Approve all three" }));
+    await screen.findByRole("heading", { name: /Approve Test Lounge/ });
+    expect(await screen.findByText("Capacity updated")).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Approve and publish" }));
 
-    expect(screen.queryByText("3 changes waiting for approval")).not.toBeInTheDocument();
-    expect(screen.getByText(/Published/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/Published/)).toBeInTheDocument());
+
+    const { data } = await admin.from("lounges").select("capacity").eq("id", id).single();
+    expect(data?.capacity).toBe(55);
   });
 
-  it("approves changes one by one", async () => {
+  it("rejects a pending change without applying it", async () => {
+    const id = await createLounge(`Reject Test Lounge ${Date.now()}`);
+    loungeIds.push(id);
+    await admin.from("lounge_content_submissions").insert({ lounge_id: id, proposed: { capacity: 99 } });
+    currentId = id;
+
     const user = userEvent.setup({ delay: null });
     render(<LoungeEditPage />);
 
-    await user.click(screen.getByRole("button", { name: "Approve one by one" }));
-    expect(screen.getByText("2 changes waiting for approval")).toBeInTheDocument();
+    await screen.findByRole("heading", { name: /Reject Test Lounge/ });
+    await screen.findByText("Capacity updated");
+    await user.type(screen.getByRole("textbox", { name: /note for sending back/i }), "Not this quarter");
+    await user.click(screen.getByRole("button", { name: "Send back with a note" }));
 
-    await user.click(screen.getByRole("button", { name: "Approve one by one" }));
-    expect(screen.getByText("1 change waiting for approval")).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/Sent back/)).toBeInTheDocument());
+
+    const { data: submission } = await admin
+      .from("lounge_content_submissions")
+      .select("status, resolution_note")
+      .eq("lounge_id", id)
+      .single();
+    expect(submission?.status).toBe("rejected");
+    expect(submission?.resolution_note).toBe("Not this quarter");
+
+    const { data: loungeRow } = await admin.from("lounges").select("capacity").eq("id", id).single();
+    expect(loungeRow?.capacity).toBe(20);
   });
 
-  it("sends the changes back to their author", async () => {
+  it("uploads a real photo to the lounge-images bucket", async () => {
     const user = userEvent.setup({ delay: null });
+    const id = await createLounge(`Photo Test Lounge ${Date.now()}`);
+    loungeIds.push(id);
+    currentId = id;
+
     render(<LoungeEditPage />);
 
-    await user.click(screen.getByRole("button", { name: "Send back to Theo" }));
+    await screen.findByRole("heading", { name: /Photo Test Lounge/ });
+    const file = new File(["fake-image-bytes"], "day-room.jpg", { type: "image/jpeg" });
+    await user.upload(screen.getByLabelText("Add lounge photo"), file);
 
-    expect(screen.queryByText("3 changes waiting for approval")).not.toBeInTheDocument();
-    expect(screen.getByText(/Sent back to Theo/)).toBeInTheDocument();
-  });
+    await waitFor(() => expect(screen.getByText("day-room.jpg")).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "Submit for review" }));
 
-  it("shows no approval rail for a lounge without pending changes", () => {
-    currentId = "the-ainsworth";
-    render(<LoungeEditPage />);
-    currentId = "the-vestry";
-
-    expect(screen.getByRole("heading", { name: "The Ainsworth" })).toBeInTheDocument();
-    expect(screen.queryByText(/\d+ changes? waiting for approval$/)).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Approve all three" })).not.toBeInTheDocument();
-  });
-
-  it("calls notFound for an unknown lounge id", () => {
-    currentId = "no-such-lounge";
-    expect(() => render(<LoungeEditPage />)).toThrow("NEXT_NOT_FOUND");
-    currentId = "the-vestry";
+    await waitFor(async () => {
+      const { data } = await admin.from("lounge_content_submissions").select("proposed").eq("lounge_id", id).single();
+      expect(data?.proposed.photos?.[0]?.caption).toBe("day-room.jpg");
+    });
   });
 });

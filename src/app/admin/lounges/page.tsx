@@ -1,15 +1,17 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, ChevronRight, Plus, Search, SlidersHorizontal } from "lucide-react";
+import { ChevronRight, Plus, Search, SlidersHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 import { AdminShell } from "@/components/patterns/admin-shell";
+import { RequireAdminSession } from "@/components/admin/require-admin-session";
 import { LoungeStatusChip } from "@/components/admin/lounge-status-chip";
 import { BulkActionBar, BulkActionButton } from "@/components/ui/bulk-action-bar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ADMIN_CASE_COUNTS } from "@/lib/admin";
-import { ADMIN_LOUNGES, OTHER_CITIES_LOUNGES_FOLD } from "@/lib/admin-content";
+import { createClient } from "@/lib/supabase/client";
+import { getTicketCounts, type TicketCounts } from "@/lib/admin";
+import { archiveLounges, listAdminLounges, type AdminLoungeRow } from "@/lib/admin-content";
 import { cn } from "@/lib/utils";
 
 const GRID = "grid-cols-[32px_1fr_158px_92px_106px_128px_30px]";
@@ -19,28 +21,68 @@ const GRID = "grid-cols-[32px_1fr_158px_92px_106px_128px_30px]";
  * capabilities" (la barra de acción masiva). Artboard:
  * docs/design/epic-8-admin-support/Lounges.dc.html.
  *
- * "Add lounge", "Search lounges", "All cities" y los botones de la barra
- * masiva no llevan a ningún sitio propio — ningún artboard dibuja el
- * formulario de alta, el panel de filtro por ciudad ni el modal de edición
- * masiva; quedan inertes, igual que "New case" en la Story 8.1.
+ * Backend real (22 sept 2026): `admin_lounge_list`
+ * (`supabase/schemas/admin_content.sql`). "Add lounge" sigue sin llevar a
+ * ningún sitio propio (ningún artboard dibuja el formulario de alta); de
+ * la barra masiva, solo "Archive" es real ahora — retira el lounge del
+ * catálogo de miembro de inmediato, sin pasar por revisión. El resto
+ * ("Update hours", "Add an amenity", "Set closure dates") sigue inerte:
+ * ningún artboard dibuja su modal.
  */
 export default function LoungesPage() {
-  const router = useRouter();
-  const [selected, setSelected] = React.useState<string[]>([]);
+  return (
+    <RequireAdminSession>
+      <LoungesScreen />
+    </RequireAdminSession>
+  );
+}
 
-  const pendingApprovalCount = ADMIN_LOUNGES.filter((l) => l.status === "pending-approval").length;
-  const draftCount = ADMIN_LOUNGES.filter((l) => l.status === "draft").length;
-  const liveCount = ADMIN_LOUNGES.filter((l) => l.status === "live").length;
+function LoungesScreen() {
+  const router = useRouter();
+  const supabase = React.useMemo(() => createClient(), []);
+  const [lounges, setLounges] = React.useState<AdminLoungeRow[] | null>(null);
+  const [selected, setSelected] = React.useState<string[]>([]);
+  const [query, setQuery] = React.useState("");
+  const [counts, setCounts] = React.useState<TicketCounts | null>(null);
+  const [reloadToken, setReloadToken] = React.useState(0);
+  const reload = React.useCallback(() => setReloadToken((t) => t + 1), []);
+
+  React.useEffect(() => {
+    let active = true;
+    listAdminLounges(supabase).then((rows) => {
+      if (active) setLounges(rows);
+    });
+    getTicketCounts(supabase).then((row) => {
+      if (active) setCounts(row);
+    });
+    return () => {
+      active = false;
+    };
+  }, [supabase, reloadToken]);
+
+  const visible = (lounges ?? []).filter((l) => l.contentStatus !== "archived");
+  const filtered = query.trim()
+    ? visible.filter((l) => l.name.toLowerCase().includes(query.trim().toLowerCase()))
+    : visible;
+  const pendingApprovalCount = visible.filter((l) => l.pendingCount > 0).length;
+  const draftCount = visible.filter((l) => l.contentStatus === "draft").length;
+  const liveCount = visible.filter((l) => l.contentStatus === "live" && l.pendingCount === 0).length;
 
   function toggle(id: string, checked: boolean) {
     setSelected((current) => (checked ? [...current, id] : current.filter((i) => i !== id)));
   }
 
+  async function archiveSelected() {
+    await archiveLounges(supabase, selected);
+    setSelected([]);
+    reload();
+  }
+
   return (
     <AdminShell
       topbarLabel={<span className="text-[13.5px] font-bold text-fg">Lounges</span>}
-      topbarMeta="· All cities · Monday, September 16 · 10:41 AM"
-      supportBadge={ADMIN_CASE_COUNTS.open}
+      topbarMeta="· All cities"
+      supportBadge={counts?.open}
       loungesBadge={pendingApprovalCount}
     >
       <div className="flex items-center gap-6">
@@ -57,6 +99,8 @@ export default function LoungesPage() {
               type="search"
               aria-label="Search lounges"
               placeholder="Search lounges"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
               className="w-full bg-transparent text-[13.5px] text-fg placeholder:text-fg-subtle focus:outline-none"
             />
           </label>
@@ -83,7 +127,9 @@ export default function LoungesPage() {
             <BulkActionButton>Update hours</BulkActionButton>
             <BulkActionButton>Add an amenity</BulkActionButton>
             <BulkActionButton>Set closure dates</BulkActionButton>
-            <BulkActionButton destructive>Archive</BulkActionButton>
+            <BulkActionButton destructive onClick={archiveSelected}>
+              Archive
+            </BulkActionButton>
           </BulkActionBar>
         </div>
       ) : null}
@@ -99,13 +145,13 @@ export default function LoungesPage() {
           <span />
         </div>
 
-        {ADMIN_LOUNGES.map((lounge) => (
+        {filtered.map((lounge) => (
           <div
             key={lounge.id}
             className={cn(
               "grid items-center gap-3.5 border-b border-[rgba(58,50,42,0.6)] px-5.5 last:border-b-0",
               GRID,
-              lounge.status === "pending-approval" && "shadow-[inset_3px_0_0_var(--gold-500)]",
+              lounge.pendingCount > 0 && "shadow-[inset_3px_0_0_var(--gold-500)]",
             )}
             style={{ height: 54 }}
           >
@@ -124,21 +170,15 @@ export default function LoungesPage() {
               <span className="min-w-0">
                 <span className="block truncate text-[13.5px] font-bold text-fg">{lounge.name}</span>
                 <span className="block truncate text-[11.5px] text-fg-subtle">
-                  {lounge.area}
-                  {lounge.capacity ? ` · capacity ${lounge.capacity}` : ""}
-                  {lounge.editedNote ? ` · ${lounge.editedNote}` : ""}
+                  {lounge.area} · capacity {lounge.capacity}
                 </span>
               </span>
             </button>
             <div>
               <LoungeStatusChip lounge={lounge} />
             </div>
-            <p className="m-0 text-[12.5px] text-fg-muted">
-              {lounge.photosApproved} of {lounge.photosTotal}
-            </p>
-            <p className="m-0 text-[12.5px] text-fg-muted">
-              {lounge.amenitiesApproved} of {lounge.amenitiesTotal}
-            </p>
+            <p className="m-0 text-[12.5px] text-fg-muted">{lounge.photosCount}</p>
+            <p className="m-0 text-[12.5px] text-fg-muted">{lounge.amenitiesCount}</p>
             <p className="m-0 text-[12.5px] font-bold text-fg-muted">{lounge.updatedLabel}</p>
             <button
               type="button"
@@ -151,10 +191,9 @@ export default function LoungesPage() {
           </div>
         ))}
 
-        <div className="flex items-center gap-2.5 px-5.5" style={{ height: 34 }}>
-          <ChevronDown size={15} strokeWidth={1.9} className="text-fg-subtle" aria-hidden />
-          <span className="text-xs font-semibold text-fg-subtle">{OTHER_CITIES_LOUNGES_FOLD}</span>
-        </div>
+        {lounges && filtered.length === 0 ? (
+          <p className="px-5.5 py-6 text-[13px] text-fg-subtle">No lounges match this search.</p>
+        ) : null}
       </div>
 
       <p className="mt-3 text-xs text-fg-subtle">
