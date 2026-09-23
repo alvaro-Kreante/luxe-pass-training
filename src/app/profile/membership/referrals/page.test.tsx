@@ -10,6 +10,9 @@ import { insertSucceededTestPayment } from "@/lib/testing/membership-fixture";
 
 import ReferralsPage from "./page";
 
+/** La pantalla hace varias llamadas reales (Supabase + Stripe); bajo la suite completa en paralelo 1 s no alcanza. */
+const LOAD = { timeout: 10000 };
+
 /**
  * Story 9.2 — "Referral Program", backend real (`referrals`,
  * `referral_shares`, `profiles.referral_code`). `Referrals.dc.html`;
@@ -64,7 +67,7 @@ describe("AC 'Unique referral code generation'", () => {
     const code = await ensureReferralCode(supabase);
     render(<ReferralsPage />);
 
-    expect(await screen.findByText(code)).toBeInTheDocument();
+    expect(await screen.findByText(code, {}, LOAD)).toBeInTheDocument();
   });
 });
 
@@ -73,7 +76,7 @@ describe("AC 'Referral tracking and status updates'", () => {
     await freshReferrer("empty");
     render(<ReferralsPage />);
 
-    expect(await screen.findByText("No one has joined with your code yet.")).toBeInTheDocument();
+    expect(await screen.findByText("No one has joined with your code yet.", {}, LOAD)).toBeInTheDocument();
   });
 
   it("un amigo que se registra con el código aparece con el premio pendiente", async () => {
@@ -81,7 +84,7 @@ describe("AC 'Referral tracking and status updates'", () => {
     await friendJoinsWithCode(await ensureReferralCode(supabase));
     render(<ReferralsPage />);
 
-    expect(await screen.findByText("Daniel Okonjo")).toBeInTheDocument();
+    expect(await screen.findByText("Daniel Okonjo", {}, LOAD)).toBeInTheDocument();
     expect(screen.getByText("Reward pending")).toBeInTheDocument();
   });
 
@@ -91,7 +94,7 @@ describe("AC 'Referral tracking and status updates'", () => {
     await insertSucceededTestPayment(friendId);
     render(<ReferralsPage />);
 
-    expect(await screen.findByText("Day pass credited")).toBeInTheDocument();
+    expect(await screen.findByText("Day pass credited", {}, LOAD)).toBeInTheDocument();
     expect(screen.getByText("$75.00 · nothing pending")).toBeInTheDocument();
   });
 });
@@ -102,7 +105,7 @@ describe("AC 'Easy sharing via social media, email, SMS'", () => {
     const user = userEvent.setup({ delay: null });
     render(<ReferralsPage />);
 
-    await user.click(await screen.findByRole("button", { name: "Share your code" }));
+    await user.click(await screen.findByRole("button", { name: "Share your code" }, LOAD));
 
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByRole("link", { name: "Messages" })).toHaveAttribute("href", expect.stringMatching(/^sms:/));
@@ -118,7 +121,7 @@ describe("AC 'Easy sharing via social media, email, SMS'", () => {
     const user = userEvent.setup({ delay: null });
     render(<ReferralsPage />);
 
-    await user.click(await screen.findByRole("button", { name: "Share your code" }));
+    await user.click(await screen.findByRole("button", { name: "Share your code" }, LOAD));
     await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Copy" }));
 
     await waitFor(async () => expect((await fetchReferralOverview(supabase)).stats.sentCount).toBe(1));
@@ -131,7 +134,7 @@ describe("AC 'Referral bonus terms and conditions'", () => {
     const user = userEvent.setup({ delay: null });
     render(<ReferralsPage />);
 
-    await user.click(await screen.findByRole("button", { name: "Referral terms" }));
+    await user.click(await screen.findByRole("button", { name: "Referral terms" }, LOAD));
 
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText("48 hours")).toBeInTheDocument();

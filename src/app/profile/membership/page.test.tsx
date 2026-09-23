@@ -9,6 +9,9 @@ import { giveTestMemberSavedCard, grantTestMembership } from "@/lib/testing/memb
 
 import MembershipPage from "./page";
 
+/** La pantalla hace varias llamadas reales (Supabase + Stripe); bajo la suite completa en paralelo 1 s no alcanza. */
+const LOAD = { timeout: 10000 };
+
 /**
  * Story 9.1 — "Clear membership display in profile (active/inactive)",
  * "Benefits explanation", "Upgrade options to monthly subscribers and
@@ -35,7 +38,7 @@ describe("AC 'Clear membership display in profile (active/inactive)'", () => {
     await freshMember("inactive");
     render(<MembershipPage />);
 
-    expect(await screen.findByText("Inactive", {}, { timeout: 8000 })).toBeInTheDocument();
+    expect(await screen.findByText("Inactive", {}, LOAD)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Compare plans" })).toHaveAttribute("href", "/profile/membership/plans");
   });
 
@@ -48,7 +51,7 @@ describe("AC 'Clear membership display in profile (active/inactive)'", () => {
     });
     render(<MembershipPage />);
 
-    expect(await screen.findByText("Active")).toBeInTheDocument();
+    expect(await screen.findByText("Active", {}, LOAD)).toBeInTheDocument();
     expect(screen.getByText("Annual")).toBeInTheDocument();
     expect(screen.getByText("Member since November 2025")).toBeInTheDocument();
     expect(screen.getByText("November 3, 2099")).toBeInTheDocument();
@@ -58,7 +61,7 @@ describe("AC 'Clear membership display in profile (active/inactive)'", () => {
     await freshMember("code");
     render(<MembershipPage />);
 
-    expect(await screen.findByText(/^NF-SOLEIL-\d{2,4}$/)).toBeInTheDocument();
+    expect(await screen.findByText(/^NF-SOLEIL-\d{2,4}$/, {}, LOAD)).toBeInTheDocument();
   });
 });
 
@@ -67,7 +70,7 @@ describe("AC 'Benefits explanation'", () => {
     await freshMember("benefits");
     render(<MembershipPage />);
 
-    await screen.findByText("Inactive");
+    await screen.findByText("Inactive", {}, LOAD);
     for (const benefit of MEMBERSHIP_BENEFITS) {
       expect(screen.getByText(benefit.title)).toBeInTheDocument();
     }
@@ -84,14 +87,14 @@ describe("AC 'Upgrade options to monthly subscribers and pricing (monthly → ye
     const userEvents = userEvent.setup({ delay: null });
     render(<MembershipPage />);
 
-    expect(await screen.findByText(/Save \$588\.00 a year/)).toBeInTheDocument();
+    expect(await screen.findByText(/Save \$588\.00 a year/, {}, LOAD)).toBeInTheDocument();
     expect(screen.getByText(/credits the 22 days you have not used/)).toBeInTheDocument();
     expect(screen.queryByText("October 3")).not.toBeInTheDocument();
     await userEvents.click(screen.getByRole("button", { name: "Switch to annual" }));
 
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await screen.findByRole("dialog", {}, LOAD);
     expect(within(dialog).getByText("Confirm your new plan")).toBeInTheDocument();
-    expect(await within(dialog).findByText("Credit for 22 unused days on monthly")).toBeInTheDocument();
+    expect(await within(dialog).findByText("Credit for 22 unused days on monthly", {}, LOAD)).toBeInTheDocument();
     expect(within(dialog).getAllByText("$2,217.40").length).toBeGreaterThan(0);
   });
 
@@ -102,13 +105,13 @@ describe("AC 'Upgrade options to monthly subscribers and pricing (monthly → ye
     const userEvents = userEvent.setup({ delay: null });
     render(<MembershipPage />);
 
-    await userEvents.click(await screen.findByRole("button", { name: "Switch to annual" }));
-    const pay = await screen.findByRole("button", { name: /^Pay \$[\d,.]+ and switch$/ });
+    await userEvents.click(await screen.findByRole("button", { name: "Switch to annual" }, LOAD));
+    const pay = await screen.findByRole("button", { name: /^Pay \$[\d,.]+ and switch$/ }, LOAD);
     await waitFor(() => expect(pay).toBeEnabled());
     await userEvents.click(pay);
 
     await waitFor(async () => expect((await fetchMembership(supabase)).plan).toBe("annual"), { timeout: 15000 });
-    expect(await screen.findByText("Annual")).toBeInTheDocument();
+    expect(await screen.findByText("Annual", {}, LOAD)).toBeInTheDocument();
   }, 30000);
 });
 
@@ -119,7 +122,7 @@ describe("AC 'Renewal date and auto-renewal settings'", () => {
     const userEvents = userEvent.setup({ delay: null });
     render(<MembershipPage />);
 
-    await userEvents.click(await screen.findByRole("button", { name: "Manage renewal" }));
+    await userEvents.click(await screen.findByRole("button", { name: "Manage renewal" }, LOAD));
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText("Turn off auto-renewal?")).toBeInTheDocument();
     await userEvents.click(within(dialog).getByRole("button", { name: "Turn it off" }));
@@ -136,7 +139,7 @@ describe("AC 'Renewal date and auto-renewal settings'", () => {
     const userEvents = userEvent.setup({ delay: null });
     render(<MembershipPage />);
 
-    const toggle = await screen.findByRole("switch", { name: "Auto-renewal" });
+    const toggle = await screen.findByRole("switch", { name: "Auto-renewal" }, LOAD);
     await waitFor(() => expect(toggle).toHaveAttribute("aria-checked", "false"));
     await userEvents.click(toggle);
 

@@ -9,6 +9,9 @@ import { giveTestMemberSavedCard, grantTestMembership } from "@/lib/testing/memb
 
 import PlansPage from "./page";
 
+/** La pantalla hace varias llamadas reales (Supabase + Stripe); bajo la suite completa en paralelo 1 s no alcanza. */
+const LOAD = { timeout: 10000 };
+
 /**
  * Story 9.1 — "Upgrade options to monthly subscribers and pricing (monthly →
  * yearly price)". `Plans.dc.html`, backend real. Sin membresía, la misma
@@ -36,7 +39,7 @@ describe("comparación de planes", () => {
     await freshMember("compare");
     render(<PlansPage />);
 
-    expect(await screen.findByText("$249.00")).toBeInTheDocument();
+    expect(await screen.findByText("$249.00", {}, LOAD)).toBeInTheDocument();
     expect(screen.getAllByText("$2,400.00").length).toBeGreaterThan(0);
     expect(screen.getByText("What twelve months costs")).toBeInTheDocument();
   });
@@ -47,7 +50,7 @@ describe("sin membresía — elegir plan", () => {
     await freshMember("choose");
     render(<PlansPage />);
 
-    expect(await screen.findByRole("button", { name: "Choose monthly" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Choose monthly" }, LOAD)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Choose annual" })).toBeInTheDocument();
     expect(screen.queryByText("Your plan")).not.toBeInTheDocument();
   });
@@ -57,11 +60,11 @@ describe("sin membresía — elegir plan", () => {
     const user = userEvent.setup({ delay: null });
     render(<PlansPage />);
 
-    await user.click(await screen.findByRole("button", { name: "Choose annual" }));
+    await user.click(await screen.findByRole("button", { name: "Choose annual" }, LOAD));
 
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await screen.findByRole("dialog", {}, LOAD);
     expect(within(dialog).getByText("Confirm your new plan")).toBeInTheDocument();
-    expect(await within(dialog).findByRole("button", { name: "Pay $2,400.00 and join" })).toBeInTheDocument();
+    expect(await within(dialog).findByRole("button", { name: "Pay $2,400.00 and join" }, LOAD)).toBeInTheDocument();
     expect(within(dialog).queryByText(/unused days/)).not.toBeInTheDocument();
   });
 
@@ -71,8 +74,8 @@ describe("sin membresía — elegir plan", () => {
     const userEvents = userEvent.setup({ delay: null });
     render(<PlansPage />);
 
-    await userEvents.click(await screen.findByRole("button", { name: "Choose monthly" }));
-    const pay = await screen.findByRole("button", { name: "Pay $249.00 and join" });
+    await userEvents.click(await screen.findByRole("button", { name: "Choose monthly" }, LOAD));
+    const pay = await screen.findByRole("button", { name: "Pay $249.00 and join" }, LOAD);
     await waitFor(() => expect(pay).toBeEnabled());
     await userEvents.click(pay);
 
@@ -89,7 +92,7 @@ describe("con membresía", () => {
     await grantTestMembership(user.id, "annual");
     render(<PlansPage />);
 
-    expect(await screen.findByText("Your plan")).toBeInTheDocument();
+    expect(await screen.findByText("Your plan", {}, LOAD)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Current plan" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Switch to monthly" })).toBeInTheDocument();
   });
@@ -100,9 +103,9 @@ describe("con membresía", () => {
     const userEvents = userEvent.setup({ delay: null });
     render(<PlansPage />);
 
-    await userEvents.click(await screen.findByRole("button", { name: "Switch to annual" }));
+    await userEvents.click(await screen.findByRole("button", { name: "Switch to annual" }, LOAD));
 
-    const dialog = await screen.findByRole("dialog");
-    expect(await within(dialog).findByRole("button", { name: /^Pay \$[\d,.]+ and switch$/ })).toBeInTheDocument();
+    const dialog = await screen.findByRole("dialog", {}, LOAD);
+    expect(await within(dialog).findByRole("button", { name: /^Pay \$[\d,.]+ and switch$/ }, LOAD)).toBeInTheDocument();
   });
 });
