@@ -275,6 +275,11 @@ el amigo llega por `/join/[code]` → `/signup?ref=` (metadatos de Auth).
   concreto (`Share.dc.html` no lo pide).
 - `referral_shares` (**nace aquí**, dueño, ya real) — cada vez que el
   miembro comparte su código ("Invitations sent").
+- `day_pass_redemptions` (**nace aquí**, dueño, ya real) — qué day pass de
+  regalo (cumpleaños/referido) pagó qué reserva (FK única a `bookings`, de
+  Epic 4). Los disponibles se derivan (referidos acreditados + cumpleaños)
+  menos los gastados aquí. `confirm_booking` (Epic 4) decide con
+  `booking_coverage_for` quién paga cada reserva.
 - `profiles.referral_code` (columna nueva en una tabla de Epic 1) — código
   único "AR-SOLEIL-24", junto a `membership_status`/`stripe_customer_id`
   protegido contra escritura del propio miembro
@@ -282,9 +287,8 @@ el amigo llega por `/join/[code]` → `/signup?ref=` (metadatos de Auth).
 - Cruces: `bookings`/`payments` (visitas del mes y crédito del premio),
   `notifications` (Epic 6). `lounge_availability` (restricciones por plan)
   no llegó a cruzarse — los dos planes dan el mismo acceso
-  (`DESIGN-SYSTEM.md` §6 Fase 9). Day passes sin tabla propia: se derivan de
-  `referrals` + `profiles.birth_month`, y aún no se gastan (ver
-  `docs/PENDIENTES.md` §2.12).
+  (`DESIGN-SYSTEM.md` §6 Fase 9). Day passes: se derivan de `referrals` +
+  `profiles.birth_month` y se gastan al reservar (`day_pass_redemptions`).
 
 ---
 

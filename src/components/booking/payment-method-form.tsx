@@ -10,13 +10,10 @@ import { Notice } from "@/components/ui/notice";
 import { PaymentOptionRow } from "@/components/ui/payment-option-row";
 import {
   MEMBERSHIP_ANNUAL_PRICE,
-  MEMBERSHIP_RENEWAL_MONTH_DAY,
-  MEMBERSHIP_VISITS_INCLUDED,
+  MEMBERSHIP_MONTHLY_PRICE,
   NEW_CARD_OPTION_ID,
-  SAMPLE_PAYMENT_METHODS,
   formatCurrency,
   formatWholeCurrency,
-  pricingFor,
 } from "@/lib/booking";
 import {
   createCheckoutSession,
@@ -225,9 +222,37 @@ function PayableBody() {
   );
 }
 
+/**
+ * `MembershipCovered.dc.html`, con los datos reales del miembro (Epic 9):
+ * plan, renovación y visitas del mes salen de `booking_coverage`, y la
+ * tarjeta de la de Stripe. Cuando lo que paga la visita es un day pass de
+ * regalo (Terms §4, se gasta antes que las visitas incluidas), la misma
+ * anatomía lo dice y deja claro que las visitas incluidas no se tocan — el
+ * artboard solo dibuja el caso de la visita incluida.
+ */
 function MembershipCoveredBody() {
-  const pricing = pricingFor(true);
-  const defaultMethod = SAMPLE_PAYMENT_METHODS.find((method) => method.isDefault)!;
+  const { coverage } = useBooking();
+  const [card, setCard] = React.useState<SavedPaymentMethod | null>(null);
+
+  React.useEffect(() => {
+    let active = true;
+    listSavedPaymentMethods(createClient())
+      .then((methods) => {
+        if (active) setCard(methods.find((method) => method.isDefault) ?? methods[0] ?? null);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  if (!coverage) return null;
+
+  const usesCredit = coverage.kind === "day_pass_credit";
+  const annual = coverage.plan === "annual";
+  const visitsShown = usesCredit ? coverage.visitsUsed : coverage.visitsUsed + 1;
+  const cardLabel = card ? `${cardBrandName(card.brand)} ending in ${card.last4}` : null;
+  const creditLabel = coverage.creditSource === "birthday" ? "for your birthday month" : "from a referral";
 
   return (
     <>
@@ -243,7 +268,9 @@ function MembershipCoveredBody() {
         <div className="flex-1">
           <h3 className="m-0 text-[27px] text-fg">This visit is included</h3>
           <p className="m-0 mt-2 text-[13.5px] leading-[1.55] text-fg-muted">
-            Your annual membership covers this booking, so nothing is charged today.
+            {usesCredit
+              ? `A complimentary day pass ${creditLabel} covers this booking, so nothing is charged today.`
+              : `Your ${annual ? "annual" : "monthly"} membership covers this booking, so nothing is charged today.`}{" "}
             You will still receive a confirmation email with your booking reference.
           </p>
         </div>
@@ -255,7 +282,7 @@ function MembershipCoveredBody() {
       <div className="mt-4.5 rounded-2xl border border-line bg-surface p-5.5">
         <div className="flex items-center justify-between">
           <p className="m-0 text-[15px] font-bold text-fg">Your membership</p>
-          <a href="#" className="text-xs font-semibold text-accent-strong">
+          <a href="/profile/membership" className="text-xs font-semibold text-accent-strong">
             Manage plan
           </a>
         </div>
@@ -265,19 +292,18 @@ function MembershipCoveredBody() {
             <Snowflake size={20} strokeWidth={1.8} className="text-accent-strong" aria-hidden />
           </span>
           <div className="flex-1">
-            <p className="m-0 text-[15px] font-bold text-fg">Annual · En Soleil</p>
+            <p className="m-0 text-[15px] font-bold text-fg">{annual ? "Annual" : "Monthly"} · En Soleil</p>
             <p className="m-0 mt-0.5 text-[12.5px] text-fg-subtle">
-              Renews {MEMBERSHIP_RENEWAL_MONTH_DAY} · billed to{" "}
-              {defaultMethod.brand === "visa" ? "Visa" : "Mastercard"} ending in{" "}
-              {defaultMethod.last4}
+              {coverage.renewalDate ? `Renews ${formatRenewalDate(coverage.renewalDate)}` : "Active"}
+              {cardLabel ? ` · billed to ${cardLabel}` : null}
             </p>
           </div>
           <div className="shrink-0 text-right">
             <p className="m-0 text-lg font-extrabold text-fg">
-              {formatWholeCurrency(MEMBERSHIP_ANNUAL_PRICE)}
+              {formatWholeCurrency(annual ? MEMBERSHIP_ANNUAL_PRICE : MEMBERSHIP_MONTHLY_PRICE)}
             </p>
             <p className="m-0 mt-0.5 text-[11.5px] text-fg-subtle">
-              per year · tax included
+              per {annual ? "year" : "month"} · tax included
             </p>
           </div>
         </div>
@@ -288,46 +314,60 @@ function MembershipCoveredBody() {
               Visits included this month
             </span>
             <span className="text-[13px] font-bold text-accent-strong">
-              {pricing.visitsUsed} of {pricing.visitsIncluded} used
+              {visitsShown} of {coverage.visitsIncluded} used
             </span>
           </div>
           <div className="flex gap-1.5" aria-hidden>
-            {Array.from({ length: MEMBERSHIP_VISITS_INCLUDED }, (_, index) => (
+            {Array.from({ length: coverage.visitsIncluded }, (_, index) => (
               <span
                 key={index}
                 className="h-2 flex-1 rounded-full"
                 style={{
-                  background:
-                    index < pricing.visitsUsed ? "var(--gold-500)" : "var(--border)",
+                  background: index < visitsShown ? "var(--gold-500)" : "var(--border)",
                 }}
               />
             ))}
           </div>
           <p className="m-0 mt-2.5 text-[11.5px] leading-[1.5] text-fg-subtle">
-            This booking is visit {pricing.visitsUsed}. Once the{" "}
-            {pricing.visitsIncluded} included visits are used, extra visits are
+            {usesCredit
+              ? "This booking uses a day pass, so your included visits stay as they are."
+              : `This booking is visit ${visitsShown}.`}{" "}
+            Once the {coverage.visitsIncluded} included visits are used, extra visits are
             charged as a {formatCurrency(75)} day pass plus tax.
           </p>
         </div>
       </div>
 
-      <div className="mt-4.5 flex items-center gap-3.5 rounded-2xl border border-line bg-surface px-4 py-3.5">
-        <CardBrandBadge brand={defaultMethod.brand} />
-        <div className="min-w-0 flex-1">
-          <p className="m-0 truncate text-[13.5px] font-bold text-fg">
-            {defaultMethod.brand === "visa" ? "Visa" : "Mastercard"} ending in{" "}
-            {defaultMethod.last4} kept on file
-          </p>
-          <p className="m-0 mt-0.5 text-xs text-fg-subtle">
-            Used for renewals and day passes. Stored by Stripe, never on LuxePass
-            servers.
-          </p>
+      {card && cardLabel ? (
+        <div className="mt-4.5 flex items-center gap-3.5 rounded-2xl border border-line bg-surface px-4 py-3.5">
+          <CardBrandBadge brand={card.brand} />
+          <div className="min-w-0 flex-1">
+            <p className="m-0 truncate text-[13.5px] font-bold text-fg">{cardLabel} kept on file</p>
+            <p className="m-0 mt-0.5 text-xs text-fg-subtle">
+              Used for renewals and day passes. Stored by Stripe, never on LuxePass
+              servers.
+            </p>
+          </div>
+          <a href="#" className="shrink-0 text-xs font-semibold text-accent-strong">
+            Change
+          </a>
         </div>
-        <a href="#" className="shrink-0 text-xs font-semibold text-accent-strong">
-          Change
-        </a>
-      </div>
+      ) : null}
     </>
+  );
+}
+
+function cardBrandName(brand: string) {
+  if (brand === "visa") return "Visa";
+  if (brand === "mastercard") return "Mastercard";
+  if (brand === "amex") return "American Express";
+  return brand.charAt(0).toUpperCase() + brand.slice(1);
+}
+
+/** "March 3, 2027" — UTC, como el resto de fechas de membresía. */
+function formatRenewalDate(iso: string) {
+  return new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" }).format(
+    new Date(iso),
   );
 }
 

@@ -44,7 +44,7 @@ interface TestGuest {
 async function createTestGuest(name: string, band: WeekBandId, slotTime: string): Promise<TestGuest> {
   const email = `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}@ensoleil-test.com`;
   const member = createClient();
-  await signUpConfirmedMemberAndSignIn(member, email, "EnSoleil!2026");
+  await signUpConfirmedMemberAndSignIn(member, email, "EnSoleil!2026", { membership: "annual" });
 
   const {
     data: { user },

@@ -47,6 +47,7 @@ async function bookTodayForReception(label: number) {
     memberSupabase,
     `reception-${Date.now()}-${label}@ensoleil-test.com`,
     "EnSoleil!2026",
+    { membership: "annual" },
   );
 
   const request: BookingRequest = {

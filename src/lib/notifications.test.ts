@@ -50,6 +50,7 @@ async function signUpFreshMember(label: string) {
     supabase,
     `notifications-${Date.now()}-${label}@ensoleil-test.com`,
     "EnSoleil!2026",
+    { membership: "annual" },
   );
   return supabase;
 }

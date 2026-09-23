@@ -4,7 +4,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 import { BookingProvider, useBooking } from "./booking-context";
 import { PaymentMethodForm } from "./payment-method-form";
-import { NEW_CARD_OPTION_ID, SAMPLE_PAYMENT_METHODS } from "@/lib/booking";
+import { NEW_CARD_OPTION_ID } from "@/lib/booking";
 import type { LoungeProfile } from "@/lib/lounge-profile";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
@@ -118,8 +118,6 @@ describe("camino por defecto — day pass", () => {
 });
 
 describe("visita cubierta por la membresía", () => {
-  const defaultMethod = SAMPLE_PAYMENT_METHODS.find((method) => method.isDefault)!;
-
   it("no exige método de pago y explica que no se cobra nada", () => {
     renderForm(true);
 
@@ -131,14 +129,14 @@ describe("visita cubierta por la membresía", () => {
     expect(screen.getByText("$0.00")).toBeInTheDocument();
   });
 
-  it("muestra el plan, la renovación y el importe anual", () => {
+  it("muestra el plan, la renovación y el importe anual, con la tarjeta real del miembro", async () => {
     renderForm(true);
 
     expect(screen.getByText("Annual · En Soleil")).toBeInTheDocument();
-    expect(screen.getByText(/Renews March 3/)).toBeInTheDocument();
-    expect(screen.getByText(`billed to Visa ending in ${defaultMethod.last4}`, { exact: false })).toBeInTheDocument();
+    expect(screen.getByText(/Renews March 3, 2027/)).toBeInTheDocument();
+    expect(await screen.findByText(/billed to Visa ending in 4242/)).toBeInTheDocument();
     expect(screen.getByText("$2,400")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Manage plan" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Manage plan" })).toHaveAttribute("href", "/profile/membership");
   });
 
   it("muestra las visitas incluidas usadas este mes y qué pasa al agotarlas", () => {
@@ -149,13 +147,38 @@ describe("visita cubierta por la membresía", () => {
     expect(screen.getByText(/This booking is visit 4/)).toBeInTheDocument();
   });
 
-  it("muestra la tarjeta guardada que respalda renovaciones y day passes", () => {
+  it("muestra la tarjeta guardada que respalda renovaciones y day passes", async () => {
     renderForm(true);
 
-    expect(
-      screen.getByText(`Visa ending in ${defaultMethod.last4} kept on file`),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Visa ending in 4242 kept on file")).toBeInTheDocument();
     expect(screen.getByText(/Stored by Stripe/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Change" })).toBeInTheDocument();
+  });
+});
+
+describe("visita pagada con un day pass de regalo (Epic 9)", () => {
+  it("dice qué day pass la cubre y que las visitas incluidas no se tocan", () => {
+    render(
+      <BookingProvider
+        lounge={ainsworth}
+        covered={{
+          kind: "day_pass_credit",
+          plan: "annual",
+          visitsUsed: 2,
+          visitsIncluded: 8,
+          creditSource: "referral",
+          creditsAvailable: 1,
+          renewalDate: "2027-03-03T00:00:00Z",
+        }}
+        initialDraft={{ dateIso: "2025-09-01", time: "1:00 PM", band: "afternoon" }}
+      >
+        <PaymentMethodForm />
+      </BookingProvider>,
+    );
+
+    expect(screen.getByText("This visit is included")).toBeInTheDocument();
+    expect(screen.getByText(/complimentary day pass from a referral covers this booking/)).toBeInTheDocument();
+    expect(screen.getByText("2 of 8 used")).toBeInTheDocument();
+    expect(screen.getByText(/your included visits stay as they are/)).toBeInTheDocument();
   });
 });

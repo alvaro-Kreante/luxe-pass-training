@@ -37,6 +37,7 @@ beforeAll(async () => {
     supabase,
     `my-pass-page-${Date.now()}@ensoleil-test.com`,
     "EnSoleil!2026",
+    { membership: "annual" },
   );
   const kiosk = createClient();
 

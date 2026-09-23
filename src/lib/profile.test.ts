@@ -26,6 +26,7 @@ import {
 } from "./profile";
 import { createClient } from "./supabase/client";
 import { signUpConfirmedMemberAndSignIn } from "./testing/confirmed-user";
+import { grantTestMembership } from "./testing/membership-fixture";
 
 /**
  * Story 6.3 (Member Profile & Preferences). Criterios en
@@ -193,6 +194,8 @@ describe("exportMemberData", () => {
 describe("requestAccountDeletion / reactivateAccountIfDeleted", () => {
   it("AC 'Account deletion option with confirmation' — marca deleted_at, cancela reservas futuras y reactiva al volver a entrar", async () => {
     const { supabase, user } = await signUpFreshMember("delete");
+    // Desde Epic 9 una reserva sin pago exige un plan activo real.
+    await grantTestMembership(user.id, "annual");
     const futureDate = addDays(TODAY, 3);
     const booking = await confirmBooking(supabase, {
       loungeId: "the-cordelia",

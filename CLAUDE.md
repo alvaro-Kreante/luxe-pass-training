@@ -74,7 +74,7 @@ La tabla completa ruta → artboard → story vive en `docs/design/COMPONENT-MAP
 
 Varias pantallas reúnen varios artboards de una fase como estados de la misma
 vista, alcanzados por query param cuando dependen del sistema o de una lógica
-que aquí no existe (`?covered=1`, `?map=error`, `?state=today`…). El detalle de
+que aquí no existe (`?map=error`, `?state=today`…). El detalle de
 qué estado usa qué param está en `docs/PENDIENTES.md` §2.2 (estados de
 `/explore`) y en la tabla de desviaciones de `COMPONENT-MAP.md` (estados de
 `/my-pass/[reference]`, de `/lounges/[id]/book`, etc.).
@@ -1065,9 +1065,18 @@ antes de cobrar (409 si la auto-renovación se apagó o el término no ha
 vencido) y el cron marca `renewal_attempted_at` antes de llamarla, para no
 cobrar dos veces la misma renovación.
 
+**Quién paga una reserva** (Epic 9 × Epic 4, `supabase/schemas/booking_coverage.sql`):
+con plan activo, primero un day pass de regalo, luego una de las 8 visitas
+incluidas del mes de la reserva, y si no, el day pass pagado; sin plan,
+siempre se paga. `confirm_booking` lo hace cumplir: sin `p_payment_id` exige
+cobertura real, y con él valida que el pago sea del propio miembro, de un
+day pass y no pague ya otra reserva. `?covered=1` ya no existe.
+
 **Tests:** `memberships` se siembra con el service role
-(`grantTestMembership`, `src/lib/testing/membership-fixture.ts`), igual que
-el alta operativa de un partner/admin; `giveTestMemberSavedCard` crea un
+(`grantTestMembership`, `src/lib/testing/membership-fixture.ts`, o la opción
+`{ membership: "annual" }` de `signUpConfirmedMemberAndSignIn` — cualquier
+test que cree una reserva sin pago la necesita), igual que el alta operativa
+de un partner/admin; `giveTestMemberSavedCard` crea un
 Customer real de Stripe con `pm_card_visa`. El cliente de navegador de
 Supabase es un singleton en jsdom — el "amigo" de los tests de referidos se
 crea con el service role, sin iniciar sesión.

@@ -253,14 +253,11 @@ alcance tomadas con el usuario, no simulaciones:
   Stripe Billing (Smart Retries), ni email del fallo. Tampoco se gestiona
   una tarjeta que exija autenticación 3DS off-session — cuenta como fallo.
   **Desbloquea:** decidir una política de reintentos/gracia.
-- **Los day passes (referido, bienvenida, cumpleaños) no se gastan.** Se
-  cuentan y se muestran de verdad, pero "Use a day pass" sigue inerte y el
-  flujo de reserva (Epic 4) no los consume — la variante "cubierta por la
-  membresía" (`?covered=1`) tampoco mira si hay membresía activa o visitas
-  libres. El límite de 10 day passes por año (Terms §5) no se aplica.
-  **Desbloquea:** una decisión de cómo el booking decide "cubierta / day
-  pass / pagada" a partir de `memberships` + visitas del mes + day passes,
-  que es alcance de Epic 4.
+- **El límite de 10 day passes de referido por año (Terms §5) no se
+  aplica.** Los day passes ya se gastan de verdad al reservar
+  (`booking_coverage.sql`), pero no hay tope anual. "Use a day pass" en
+  `/profile/membership/referrals` sigue sin destino propio — se gastan solos
+  al reservar, sin elegir cuál.
 - **Un pago reembolsado no retira el premio de referido** (Terms §3: "If
   that payment fails or is refunded, the pending reward is withdrawn") —
   un pago fallido nunca lo acredita, pero un reembolso posterior (Story
@@ -271,11 +268,13 @@ alcance tomadas con el usuario, no simulaciones:
 - **Cuentas creadas antes de Epic 9** (staging/prod) conservan
   `profiles.membership_status = 'active'` sin fila en `memberships` — el
   cambio de default a `'inactive'` solo afecta a perfiles nuevos, y una
-  migración declarativa no hace backfill de datos. `/profile/membership`
-  las muestra inactivas (lee `memberships`); el admin las seguiría viendo
-  "Active" hasta que tengan un plan real o se corrija a mano.
-  **Desbloquea:** decidir si se les regala una membresía o se las deja
-  inactivas, y un `UPDATE` puntual en cada proyecto remoto.
+  migración declarativa no hace backfill de datos. Decidido con el usuario
+  (opción A): dejarlas sin plan — siguen usando la app y pagan cada visita
+  como day pass. **Pendiente: ejecutar a mano
+  `scripts/sql/epic9-backfill-membership-status.sql`** en Studio → SQL
+  Editor de `luxepass-dev` y `luxepass-prod`, después de que CI aplique las
+  migraciones de Epic 9 (idempotente; probado en local dentro de una
+  transacción).
 - **El seed de notificaciones de Epic 6 sigue sembrando "Your membership
   renews soon"** a todo perfil nuevo, aunque ahora nazca sin membresía.
   Retirarla rompe los tests de Story 6.2 que la usan como muestra; queda

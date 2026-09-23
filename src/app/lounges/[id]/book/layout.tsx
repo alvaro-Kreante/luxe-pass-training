@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { notFound, useParams, useSearchParams } from "next/navigation";
+import { notFound, useParams } from "next/navigation";
 
 import { BookingProvider } from "@/components/booking/booking-context";
 import { StripeCheckoutBridge } from "@/components/booking/stripe-checkout-bridge";
@@ -13,14 +13,9 @@ import { createClient } from "@/lib/supabase/client";
 /**
  * Story 4.1/4.2 — el borrador de reserva es compartido por los tres pasos
  * (`/book`, `/book/payment`, `/book/summary`) y por `/book/confirmed`, que lo
- * lee para pintar la confirmación. `?covered=1` alcanza la variante
- * "MembershipCovered.dc.html" sin backend real de membresía, igual que los
- * query params de `/explore`.
- *
- * `covered` se fija solo en el primer render de este layout, no en cada uno:
- * los enlaces internos del flujo (`/book` → `/book/payment` → `/book/summary`)
- * no repiten el query string, y si se releyera en cada navegación la variante
- * "cubierto por membresía" se perdería a mitad de flujo.
+ * lee para pintar la confirmación. La variante "MembershipCovered.dc.html"
+ * ya no se alcanza con `?covered=1`: desde Epic 9 la decide el servidor
+ * según el plan real del miembro (ver `BookingProvider`).
  *
  * Backend real (Epic 4): el lounge ya no sale de `LOUNGES` (catálogo mock) —
  * `fetchLoungeProfile` contra Supabase, mismo patrón que `/lounges/[id]` y
@@ -40,11 +35,9 @@ export default function BookLayout({
 
 function BookLayoutContent({ children }: { children: React.ReactNode }) {
   const { id } = useParams<{ id: string }>();
-  const searchParams = useSearchParams();
   const [lounge, setLounge] = React.useState<LoungeProfile | null | undefined>(
     undefined,
   );
-  const [covered] = React.useState(() => searchParams.get("covered") === "1");
 
   React.useEffect(() => {
     const supabase = createClient();
@@ -69,7 +62,7 @@ function BookLayoutContent({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <BookingProvider lounge={lounge} covered={covered}>
+    <BookingProvider lounge={lounge}>
       <StripeCheckoutBridge>{children}</StripeCheckoutBridge>
     </BookingProvider>
   );

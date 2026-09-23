@@ -146,9 +146,32 @@ declare
   v_member_id uuid := auth.uid();
   v_seats smallint;
   v_booking public.bookings;
+  v_coverage record;
 begin
   if v_member_id is null then
     raise exception 'Not authenticated';
+  end if;
+
+  -- Epic 9 — quién paga (ver booking_coverage.sql). Antes, sin
+  -- `p_payment_id`, la reserva salía gratis sin comprobar nada.
+  if p_payment_id is null then
+    select * into v_coverage from public.booking_coverage_for(v_member_id, p_date);
+    if v_coverage.kind = 'none' then
+      raise exception 'Payment required for this booking';
+    end if;
+  else
+    -- Un pago del propio miembro, de un day pass (no de membresía), que aún
+    -- no pague otra reserva. 'pending' vale: con tarjeta nueva el webhook de
+    -- Stripe puede llegar después de esta llamada (ver summary/page.tsx).
+    perform 1 from public.payments p
+    where p.id = p_payment_id
+      and p.member_id = v_member_id
+      and p.booking_id is null
+      and p.membership_plan is null
+      and p.status in ('pending', 'succeeded');
+    if not found then
+      raise exception 'Invalid payment for this booking';
+    end if;
   end if;
 
   select la.seats_left into v_seats
@@ -178,6 +201,9 @@ begin
     update public.payments p
       set booking_id = v_booking.id, updated_at = now()
       where p.id = p_payment_id and p.member_id = v_member_id;
+  elsif v_coverage.kind = 'day_pass_credit' then
+    insert into public.day_pass_redemptions (member_id, booking_id, source)
+    values (v_member_id, v_booking.id, v_coverage.credit_source);
   end if;
 
   return query

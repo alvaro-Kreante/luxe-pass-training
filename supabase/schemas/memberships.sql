@@ -357,6 +357,11 @@ as $$
     and not exists (
       select 1 from public.payments p
       where p.booking_id = b.id and p.status = 'succeeded'
+    )
+    -- Pagada con un day pass de regalo: no gasta visita incluida
+    -- (booking_coverage.sql).
+    and not exists (
+      select 1 from public.day_pass_redemptions r where r.booking_id = b.id
     );
 $$;
 

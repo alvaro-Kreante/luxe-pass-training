@@ -29,7 +29,7 @@ import {
   type LoungeProfile,
 } from "./lounge-profile";
 import { createClient } from "./supabase/client";
-import { signUpConfirmedAndSignIn } from "./testing/confirmed-user";
+import { signUpConfirmedMemberAndSignIn } from "./testing/confirmed-user";
 import { fetchAinsworthProfile, findPredictedSlot } from "./testing/lounge-fixture";
 
 /**
@@ -286,10 +286,11 @@ describe("confirmBooking / joinWaitlist — chequeo final de disponibilidad (Sup
   let ainsworthProfile: LoungeProfile;
 
   beforeAll(async () => {
-    await signUpConfirmedAndSignIn(
+    await signUpConfirmedMemberAndSignIn(
       supabase,
       `booking-actions-${Date.now()}@ensoleil-test.com`,
       "EnSoleil!2026",
+      { membership: "annual" },
     );
     ainsworthProfile = await fetchAinsworthProfile(supabase);
   });
