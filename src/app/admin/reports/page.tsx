@@ -38,10 +38,12 @@ type DeliveryMethod = "download" | "email" | "schedule";
  * docs/design/epic-8-admin-support/Export.dc.html.
  *
  * Backend real (22 sept 2026): `admin_export_*`
- * (`supabase/schemas/admin_reports.sql`) — "Download CSV" descarga filas
- * reales; "Email it to me" y "Save as a scheduled report" también son
- * reales ahora (Edge Function `send-admin-report` / tabla
- * `scheduled_reports` + `pg_cron`), ver `docs/design/COMPONENT-MAP.md`.
+ * (`supabase/schemas/admin_reports.sql`) — "Download CSV" y "Save as a
+ * scheduled report" son reales. "Email it to me" queda deshabilitado a
+ * propósito: `send-admin-report` solo acepta `x-webhook-secret` (el secreto
+ * de Vault que también usa el cron), y ese secreto no puede vivir en el
+ * cliente — visible pero inerte hasta que se decida una vía de invocación
+ * segura para el admin autenticado, ver `docs/PENDIENTES.md` §4.7.
  */
 export default function ExportPage() {
   return (
@@ -95,7 +97,6 @@ function ExportScreen() {
 
   function primaryLabel() {
     if (submitting) return "Working…";
-    if (delivery === "email") return "Email me the CSV";
     if (delivery === "schedule") return "Save scheduled report";
     return "Download CSV";
   }
@@ -117,22 +118,7 @@ function ExportScreen() {
 
       const rows = await fetchRows();
       const csv = buildExportCsv(dataset, selectedColumns, rows as never);
-
-      if (delivery === "download") {
-        downloadTextFile(`${dataset}-export.csv`, csv);
-        return;
-      }
-
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      await supabase.functions.invoke("send-admin-report", {
-        body: {
-          report_name: `${dataset}-export`,
-          recipients: user?.email ? [user.email] : [],
-          csv,
-        },
-      });
+      downloadTextFile(`${dataset}-export.csv`, csv);
     } finally {
       setSubmitting(false);
     }
@@ -257,7 +243,8 @@ function ExportScreen() {
                 selected={delivery === "email"}
                 onSelect={() => setDelivery("email")}
                 title="Email it to me"
-                subtitle="sent to your own admin address"
+                subtitle="Coming soon — pending secure delivery setup"
+                disabled
               />
               <PaymentOptionRow
                 selected={delivery === "schedule"}
