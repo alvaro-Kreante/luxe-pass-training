@@ -133,13 +133,6 @@ export interface TicketCounts {
   totalCases: number;
 }
 
-/**
- * @deprecated Placeholder temporal para las pantallas de Story 8.2/8.3 que
- * todavía no se han conectado a `admin_ticket_counts` en esta misma pasada
- * de Epic 8 — se retira en cuanto esas historias se conecten.
- */
-export const ADMIN_CASE_COUNTS = { open: 0 };
-
 export async function listSupportCases(supabase: SupabaseClient): Promise<SupportCase[]> {
   const { data, error } = await supabase.rpc("admin_list_support_tickets");
   if (error) throw error;

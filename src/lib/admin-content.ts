@@ -1,149 +1,243 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import { amenityLabel, type AmenityId } from "@/lib/amenities";
+
 /**
  * Epic 8 — Admin & Support. Story 8.3 (Fase 2, `epic-8-admin-support/`):
  * gestión de contenido de lounges y su flujo de aprobación.
  *
- * La red son 12 lounges en 3 ciudades — 8 en Nueva York (los mismos de las
- * Fases 3 y 4), 2 en Miami y 2 en Los Ángeles, más un draft en Brooklyn
- * (`DESIGN-SYSTEM.md` §6 Fase 8). The Vestry es el único lounge con cambios
- * pendientes de aprobación, tal como lo fija `LoungeEdit.dc.html`/`Approval.dc.html`.
+ * Backend real (22 sept 2026, ver CLAUDE.md §Alcance y
+ * docs/design/COMPONENT-MAP.md): CRUD real sobre `lounges`/`lounge_images`
+ * (Epic 2/3) vía las RPC de `supabase/schemas/admin_content.sql`. El estado
+ * de publicación (`lounges.content_status`) es ortogonal a si hay un
+ * cambio pendiente de aprobar (`lounge_content_submissions`, nace aquí) —
+ * un lounge "live" con una edición en revisión sigue mostrando su
+ * contenido publicado a los miembros hasta que se apruebe.
+ *
+ * "Add lounge" sigue sin llevar a ningún sitio propio (ningún artboard
+ * dibuja el formulario de alta) — desviación ya anotada antes de conectar
+ * esta historia, sigue vigente. "Image optimization and resizing" tampoco
+ * es real: la subida a Storage sí lo es, pero no hay redimensionado de
+ * verdad detrás — desviación anotada en `docs/design/COMPONENT-MAP.md`.
  */
 
-export type LoungeContentStatus = "live" | "draft" | "pending-approval";
+export type LoungeContentStatus = "live" | "draft" | "archived";
+
+/** Fila cruda de `admin_lounge_list`. */
+export interface AdminLoungeListRow {
+  id: string;
+  name: string;
+  area: string;
+  capacity: number;
+  content_status: LoungeContentStatus;
+  pending_count: number;
+  photos_count: number;
+  amenities_count: number;
+  updated_at: string;
+}
 
 export interface AdminLoungeRow {
   id: string;
   name: string;
   area: string;
   capacity: number;
-  status: LoungeContentStatus;
-  pendingCount?: number;
-  photosApproved: number;
-  photosTotal: number;
-  amenitiesApproved: number;
-  amenitiesTotal: number;
+  contentStatus: LoungeContentStatus;
+  pendingCount: number;
+  photosCount: number;
+  amenitiesCount: number;
   updatedLabel: string;
-  editedNote?: string;
 }
 
-export const ADMIN_LOUNGES: AdminLoungeRow[] = [
-  {
-    id: "the-ainsworth",
-    name: "The Ainsworth",
-    area: "Midtown East, New York",
-    capacity: 32,
-    status: "live",
-    photosApproved: 3,
-    photosTotal: 3,
-    amenitiesApproved: 6,
-    amenitiesTotal: 6,
-    updatedLabel: "Sep 12",
-  },
-  {
-    id: "bergdorf-lounge",
-    name: "Bergdorf Lounge",
-    area: "Midtown, New York",
-    capacity: 28,
-    status: "live",
-    photosApproved: 3,
-    photosTotal: 3,
-    amenitiesApproved: 5,
-    amenitiesTotal: 6,
-    updatedLabel: "Sep 9",
-  },
-  {
-    id: "the-vestry",
-    name: "The Vestry",
-    area: "Tribeca, New York",
-    capacity: 24,
-    status: "pending-approval",
-    pendingCount: 3,
-    editedNote: "edited by Theo B. this morning",
-    photosApproved: 3,
-    photosTotal: 3,
-    amenitiesApproved: 6,
-    amenitiesTotal: 6,
-    updatedLabel: "9:52 AM",
-  },
-  {
-    id: "aurelia-house",
-    name: "Aurelia House",
-    area: "NoMad, New York",
-    capacity: 20,
-    status: "live",
-    photosApproved: 3,
-    photosTotal: 3,
-    amenitiesApproved: 4,
-    amenitiesTotal: 6,
-    updatedLabel: "Aug 30",
-  },
-  {
-    id: "the-winslow-club",
-    name: "The Winslow Club",
-    area: "Flatiron, New York",
-    capacity: 18,
-    status: "live",
-    photosApproved: 2,
-    photosTotal: 3,
-    amenitiesApproved: 4,
-    amenitiesTotal: 6,
-    updatedLabel: "Aug 22",
-  },
-  {
-    id: "belmont-terrace",
-    name: "Belmont Terrace",
-    area: "Bryant Park, New York",
-    capacity: 22,
-    status: "live",
-    photosApproved: 3,
-    photosTotal: 3,
-    amenitiesApproved: 5,
-    amenitiesTotal: 6,
-    updatedLabel: "Aug 18",
-  },
-  {
-    id: "the-meridian-salon",
-    name: "The Meridian Salon",
-    area: "Upper East Side, New York",
-    capacity: 16,
-    status: "live",
-    photosApproved: 3,
-    photosTotal: 3,
-    amenitiesApproved: 4,
-    amenitiesTotal: 6,
-    updatedLabel: "Aug 11",
-  },
-  {
-    id: "the-gramercy-reading-room",
-    name: "The Gramercy Reading Room",
-    area: "Gramercy, New York",
-    capacity: 14,
-    status: "live",
-    photosApproved: 3,
-    photosTotal: 3,
-    amenitiesApproved: 3,
-    amenitiesTotal: 6,
-    updatedLabel: "Aug 4",
-  },
-  {
-    id: "the-calloway",
-    name: "The Calloway",
-    area: "Williamsburg, Brooklyn",
-    capacity: 0,
-    status: "draft",
-    editedNote: "opening in October · never published",
-    photosApproved: 1,
-    photosTotal: 3,
-    amenitiesApproved: 3,
-    amenitiesTotal: 6,
-    updatedLabel: "Sep 15",
-  },
-];
-
-export const OTHER_CITIES_LOUNGES_FOLD = "4 more lounges · Miami and Los Angeles · all live";
-
-export function getAdminLounge(id: string): AdminLoungeRow | undefined {
-  return ADMIN_LOUNGES.find((lounge) => lounge.id === id);
+function formatShortDate(iso: string): string {
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone: "UTC" }).format(new Date(iso));
 }
+
+export function mapLoungeListRow(row: AdminLoungeListRow): AdminLoungeRow {
+  return {
+    id: row.id,
+    name: row.name,
+    area: row.area,
+    capacity: row.capacity,
+    contentStatus: row.content_status,
+    pendingCount: row.pending_count,
+    photosCount: row.photos_count,
+    amenitiesCount: row.amenities_count ?? 0,
+    updatedLabel: formatShortDate(row.updated_at),
+  };
+}
+
+export async function listAdminLounges(supabase: SupabaseClient): Promise<AdminLoungeRow[]> {
+  const { data, error } = await supabase.rpc("admin_lounge_list");
+  if (error) throw error;
+  return (data as AdminLoungeListRow[]).map(mapLoungeListRow);
+}
+
+export async function archiveLounges(supabase: SupabaseClient, loungeIds: string[]): Promise<void> {
+  const { error } = await supabase.rpc("admin_archive_lounges", { p_lounge_ids: loungeIds });
+  if (error) throw error;
+}
+
+/* ------------------------------------------------------------------ */
+/* Ficha de contenido de un lounge (LoungeEdit.dc.html)                 */
+/* ------------------------------------------------------------------ */
+
+export interface LoungeImage {
+  id: string;
+  url: string;
+  caption: string;
+  position: number;
+}
+
+export interface LoungeClosure {
+  id: string;
+  startsOn: string;
+  endsOn: string;
+  reason: string;
+  reopensLabel: string;
+}
+
+/** Lo que puede llevar una propuesta de cambio — todas las claves opcionales, solo se aplican las presentes. */
+export interface ProposedLoungeContent {
+  amenities?: string[];
+  bands?: string[];
+  closed_weekdays?: number[];
+  weekly_hours?: string[];
+  booking_restrictions?: string[];
+  capacity?: number;
+  photos?: { url: string; caption: string }[];
+  publish?: boolean;
+}
+
+export interface LoungeContentDetail {
+  id: string;
+  name: string;
+  area: string;
+  capacity: number;
+  contentStatus: LoungeContentStatus;
+  amenities: string[];
+  bands: string[];
+  closedWeekdays: number[];
+  weeklyHours: string[];
+  bookingRestrictions: string[];
+  images: LoungeImage[];
+  closures: LoungeClosure[];
+  pendingSubmissionId: string | null;
+  pendingProposed: ProposedLoungeContent | null;
+  pendingSubmittedBy: string | null;
+  pendingSubmittedAt: string | null;
+}
+
+interface AdminLoungeDetailRow {
+  id: string;
+  name: string;
+  area: string;
+  capacity: number;
+  content_status: LoungeContentStatus;
+  amenities: string[];
+  bands: string[];
+  closed_weekdays: number[];
+  weekly_hours: string[];
+  booking_restrictions: string[];
+  images: { id: string; url: string; caption: string; position: number }[];
+  closures: { id: string; starts_on: string; ends_on: string; reason: string; reopens_label: string }[];
+  pending_submission_id: string | null;
+  pending_proposed: ProposedLoungeContent | null;
+  pending_submitted_by: string | null;
+  pending_submitted_at: string | null;
+}
+
+function mapLoungeDetailRow(row: AdminLoungeDetailRow): LoungeContentDetail {
+  return {
+    id: row.id,
+    name: row.name,
+    area: row.area,
+    capacity: row.capacity,
+    contentStatus: row.content_status,
+    amenities: row.amenities,
+    bands: row.bands,
+    closedWeekdays: row.closed_weekdays,
+    weeklyHours: row.weekly_hours,
+    bookingRestrictions: row.booking_restrictions,
+    images: row.images.map((i) => ({ id: i.id, url: i.url, caption: i.caption, position: i.position })),
+    closures: row.closures.map((c) => ({
+      id: c.id,
+      startsOn: c.starts_on,
+      endsOn: c.ends_on,
+      reason: c.reason,
+      reopensLabel: c.reopens_label,
+    })),
+    pendingSubmissionId: row.pending_submission_id,
+    pendingProposed: row.pending_proposed,
+    pendingSubmittedBy: row.pending_submitted_by,
+    pendingSubmittedAt: row.pending_submitted_at,
+  };
+}
+
+export async function getLoungeContentDetail(
+  supabase: SupabaseClient,
+  loungeId: string,
+): Promise<LoungeContentDetail | undefined> {
+  const { data, error } = await supabase.rpc("admin_lounge_detail", { p_lounge_id: loungeId });
+  if (error) throw error;
+  const row = (data as AdminLoungeDetailRow[])[0];
+  return row ? mapLoungeDetailRow(row) : undefined;
+}
+
+export async function submitLoungeContentChange(
+  supabase: SupabaseClient,
+  loungeId: string,
+  proposed: ProposedLoungeContent,
+): Promise<string> {
+  const { data, error } = await supabase.rpc("admin_submit_lounge_content_change", {
+    p_lounge_id: loungeId,
+    p_proposed: proposed,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+export async function approveLoungeSubmission(supabase: SupabaseClient, submissionId: string): Promise<void> {
+  const { error } = await supabase.rpc("admin_approve_lounge_submission", { p_submission_id: submissionId });
+  if (error) throw error;
+}
+
+export async function rejectLoungeSubmission(
+  supabase: SupabaseClient,
+  submissionId: string,
+  note: string,
+): Promise<void> {
+  const { error } = await supabase.rpc("admin_reject_lounge_submission", {
+    p_submission_id: submissionId,
+    p_note: note,
+  });
+  if (error) throw error;
+}
+
+/** Story 8.3 — "Upload and manage lounge images". Sube el archivo al bucket público `lounge-images` y devuelve su URL pública. */
+export async function uploadLoungeImage(
+  supabase: SupabaseClient,
+  loungeId: string,
+  file: File,
+): Promise<string> {
+  const path = `${loungeId}/${Date.now()}-${file.name}`;
+  // `file` directamente como body deja que el propio Blob decida su
+  // Content-Type (en jsdom, con `userEvent.upload`, siempre resuelve a
+  // "text/plain" sin importar `file.type`) — se manda como bytes crudos
+  // para que el único Content-Type real sea el que se pasa aquí.
+  const bytes = await file.arrayBuffer();
+  const { error } = await supabase.storage
+    .from("lounge-images")
+    .upload(path, bytes, { contentType: file.type || "image/jpeg" });
+  if (error) throw error;
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from("lounge-images").getPublicUrl(path);
+  return publicUrl;
+}
+
+/* ------------------------------------------------------------------ */
+/* Diff genérico para la cola de aprobación (Approval.dc.html)         */
+/* ------------------------------------------------------------------ */
 
 export interface PendingChange {
   id: string;
@@ -153,93 +247,137 @@ export interface PendingChange {
   note?: string;
 }
 
-/** Solo The Vestry trae los 3 cambios literales de `LoungeEdit.dc.html`/`Approval.dc.html`. */
-export const VESTRY_PENDING_CHANGES: PendingChange[] = [
-  { id: "amenity-showers", title: "Amenity added", fromLabel: "5 amenities", toLabel: "Showers" },
-  {
-    id: "friday-hours",
-    title: "Friday hours extended",
-    fromLabel: "8 AM – 9 PM",
-    toLabel: "8 AM – 11 PM",
-    note: "Adds a Late slot of 10 seats on Fridays",
-  },
-  { id: "photo-shower-suite", title: "Photo added", fromLabel: "2 photos", toLabel: "Shower suite" },
-];
+const WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+function safeAmenityLabel(id: string): string {
+  try {
+    return amenityLabel(id as AmenityId);
+  } catch {
+    return id;
+  }
+}
 
 /**
- * Las mismas 3 entradas de `VESTRY_PENDING_CHANGES`, vistas desde la cola de
- * `Approval.dc.html`: título y detalle propios de esa pantalla, no los del
- * diff de `LoungeEdit.dc.html` — el mismo cambio se describe distinto según
- * si se mira desde el editor o desde la cola.
+ * Compara la ficha actual de un lounge contra su propuesta pendiente y
+ * arma una línea de diff por campo cambiado — generaliza el
+ * `VESTRY_PENDING_CHANGES` literal del mock a cualquier lounge real.
  */
-export const VESTRY_QUEUE_ITEMS = [
-  { id: "amenity-showers", title: "Showers added", detail: "The Vestry · amenity list · 9:52 AM" },
-  { id: "friday-hours", title: "Friday hours to 11 PM", detail: "The Vestry · opening hours · 9:52 AM" },
-  { id: "photo-shower-suite", title: "Shower suite photo", detail: "The Vestry · gallery · 9:52 AM" },
-];
+export function diffLoungeChanges(current: LoungeContentDetail, proposed: ProposedLoungeContent): PendingChange[] {
+  const changes: PendingChange[] = [];
 
-export const VESTRY_SUBMITTED_BY = "Theo Baptiste";
-export const VESTRY_SUBMITTED_TIME_LABEL = "9:52 AM";
+  if (proposed.amenities) {
+    const before = current.amenities.map(safeAmenityLabel);
+    const after = proposed.amenities.map(safeAmenityLabel);
+    if (JSON.stringify([...before].sort()) !== JSON.stringify([...after].sort())) {
+      changes.push({
+        id: "amenities",
+        title: "Amenities updated",
+        fromLabel: before.length > 0 ? before.join(", ") : "none",
+        toLabel: after.length > 0 ? after.join(", ") : "none",
+      });
+    }
+  }
 
-export const VESTRY_PHOTOS = [
-  { label: "Main room", state: "live" as const },
-  { label: "Day room", state: "live" as const },
-  { label: "Shower suite · 3024 × 2016", state: "new-waiting" as const },
-];
+  if (proposed.weekly_hours) {
+    proposed.weekly_hours.forEach((hours, index) => {
+      if (hours !== current.weeklyHours[index]) {
+        changes.push({
+          id: `hours-${index}`,
+          title: `${WEEKDAY_NAMES[index]} hours changed`,
+          fromLabel: current.weeklyHours[index] ?? "—",
+          toLabel: hours,
+        });
+      }
+    });
+  }
 
-export const VESTRY_AMENITIES = [
-  { label: "High-speed WiFi", state: "live" as const },
-  { label: "Co-working", state: "live" as const },
-  { label: "Lounge and bar", state: "live" as const },
-  { label: "Showers", state: "being-added" as const },
-  { label: "Luggage storage", state: "live" as const },
-  { label: "Day rooms", state: "live" as const },
-];
+  if (typeof proposed.capacity === "number" && proposed.capacity !== current.capacity) {
+    changes.push({
+      id: "capacity",
+      title: "Capacity updated",
+      fromLabel: `${current.capacity} seats`,
+      toLabel: `${proposed.capacity} seats`,
+    });
+  }
 
-export const VESTRY_HOURS = [
-  { day: "Mon", label: "8 AM – 9 PM" },
-  { day: "Tue", label: "8 AM – 9 PM" },
-  { day: "Wed", label: "8 AM – 9 PM" },
-  { day: "Thu", label: "8 AM – 9 PM" },
-  { day: "Fri", label: "8 AM – 11 PM", highlighted: true },
-  { day: "Sat", label: "9 AM – 10 PM" },
-  { day: "Sun", label: "Closed", closed: true },
-];
+  if (proposed.booking_restrictions) {
+    const before = current.bookingRestrictions.join("; ") || "none";
+    const after = proposed.booking_restrictions.join("; ") || "none";
+    if (before !== after) {
+      changes.push({ id: "restrictions", title: "Booking restrictions updated", fromLabel: before, toLabel: after });
+    }
+  }
 
-export const VESTRY_AVAILABILITY = [
-  { label: "Morning · 8–12", seats: 12 },
-  { label: "Afternoon · 12–5", seats: 24 },
-  { label: "Evening · 5–9", seats: 18 },
-  { label: "Late · 9–11 · Fridays", seats: 10, highlighted: true },
-];
+  if (proposed.photos) {
+    changes.push({
+      id: "photos",
+      title: "Photos updated",
+      fromLabel: `${current.images.length} photos`,
+      toLabel: `${proposed.photos.length} photos`,
+    });
+  }
 
-export const VESTRY_RESTRICTIONS = [
-  "Two hours' notice to book",
-  "Annual members and day passes",
-  "Admission for one · no guests",
-];
+  if (proposed.publish === true && current.contentStatus !== "live") {
+    changes.push({ id: "publish", title: "Publish", fromLabel: "Draft", toLabel: "Live" });
+  }
 
-export const VESTRY_SEASONAL_CLOSURE = "Closed Nov 27–28 · Thanksgiving";
+  return changes;
+}
 
-export const VESTRY_LAST_PUBLISHED_NOTE = "September 3 · address corrected by Priya R.";
+export function loungeStatusLabel(lounge: Pick<AdminLoungeRow, "contentStatus" | "pendingCount">): string {
+  if (lounge.pendingCount > 0) return `${lounge.pendingCount} to approve`;
+  if (lounge.contentStatus === "draft") return "Draft";
+  if (lounge.contentStatus === "archived") return "Archived";
+  return "Live";
+}
 
-export const VESTRY_APPROVAL_COMPARISON = {
-  live: {
-    amenities: ["WiFi", "Co-working", "Bar", "Luggage", "Day rooms"],
-    fridayHoursLabel: "8 AM – 9 PM",
-    photoCount: 2,
-    statusLabel: "Open until 9 PM",
-  },
-  proposed: {
-    amenities: ["WiFi", "Co-working", "Bar", "Showers", "Luggage", "Day rooms"],
-    fridayHoursLabel: "8 AM – 11 PM",
-    photoCount: 3,
-    statusLabel: "Open until 11 PM",
-  },
-};
+/* ------------------------------------------------------------------ */
+/* Cola de aprobación (Approval.dc.html) — global, no un solo lounge    */
+/* ------------------------------------------------------------------ */
 
-export const VESTRY_APPROVAL_IMPACT = [
-  { label: "Appears in", value: "62% of searches", note: "the Showers filter" },
-  { label: "Opens", value: "10 more seats", note: "Fridays, 9–11 PM" },
-  { label: "Reaches members", value: "Immediately", note: "no notification is sent" },
-];
+export interface PendingApproval {
+  submissionId: string;
+  loungeId: string;
+  loungeName: string;
+  submittedBy: string | null;
+  submittedAtLabel: string;
+  changes: PendingChange[];
+}
+
+function formatSubmittedAt(iso: string): string {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "UTC",
+  }).format(new Date(iso));
+}
+
+/**
+ * Recorre todos los lounges con un cambio pendiente y arma su diff — no hay
+ * una RPC dedicada a "todas las propuestas pendientes" porque
+ * `admin_lounge_list`/`admin_lounge_detail` ya bastan para componerla en el
+ * cliente, mismo criterio que el resto de listados derivados de este
+ * proyecto.
+ */
+export async function listPendingApprovals(supabase: SupabaseClient): Promise<PendingApproval[]> {
+  const lounges = await listAdminLounges(supabase);
+  const withPending = lounges.filter((l) => l.pendingCount > 0);
+
+  const details = await Promise.all(withPending.map((l) => getLoungeContentDetail(supabase, l.id)));
+
+  return details.flatMap((detail, index) => {
+    if (!detail || !detail.pendingSubmissionId || !detail.pendingProposed) return [];
+    return [
+      {
+        submissionId: detail.pendingSubmissionId,
+        loungeId: detail.id,
+        loungeName: withPending[index].name,
+        submittedBy: detail.pendingSubmittedBy,
+        submittedAtLabel: detail.pendingSubmittedAt ? formatSubmittedAt(detail.pendingSubmittedAt) : "",
+        changes: diffLoungeChanges(detail, detail.pendingProposed),
+      },
+    ];
+  });
+}

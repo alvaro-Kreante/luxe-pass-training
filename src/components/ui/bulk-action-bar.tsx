@@ -37,15 +37,28 @@ export function BulkActionBar({
   );
 }
 
-export function BulkActionButton({ children, destructive }: { children: ReactNode; destructive?: boolean }) {
-  return (
-    <span
-      className={cn(
-        "flex h-9 items-center gap-2 rounded-[10px] border-[1.5px] px-3.5 text-xs font-bold text-fg",
-        destructive ? "border-dashed border-fg-subtle text-fg-muted" : "border-gold-600",
-      )}
-    >
-      {children}
-    </span>
+export function BulkActionButton({
+  children,
+  destructive,
+  onClick,
+}: {
+  children: ReactNode;
+  destructive?: boolean;
+  /** Story 8.3 — real solo para "Archive"; el resto de botones de esta barra siguen inertes (ningún artboard dibuja su destino). */
+  onClick?: () => void;
+}) {
+  const className = cn(
+    "flex h-9 items-center gap-2 rounded-[10px] border-[1.5px] px-3.5 text-xs font-bold text-fg",
+    destructive ? "border-dashed border-fg-subtle text-fg-muted" : "border-gold-600",
   );
+
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={className}>
+        {children}
+      </button>
+    );
+  }
+
+  return <span className={className}>{children}</span>;
 }

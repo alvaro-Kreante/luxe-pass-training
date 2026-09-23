@@ -6,9 +6,9 @@ import type { AdminLoungeRow } from "@/lib/admin-content";
  * approve / Draft)" — DESIGN-SYSTEM.md §4, nota del chip de estado de caso.
  */
 export function LoungeStatusChip({ lounge }: { lounge: AdminLoungeRow }) {
-  if (lounge.status === "pending-approval")
-    return <StatusChip emphasis>{lounge.pendingCount} to approve</StatusChip>;
-  if (lounge.status === "draft") return <StatusChip dashed>Draft</StatusChip>;
+  if (lounge.pendingCount > 0) return <StatusChip emphasis>{lounge.pendingCount} to approve</StatusChip>;
+  if (lounge.contentStatus === "draft") return <StatusChip dashed>Draft</StatusChip>;
+  if (lounge.contentStatus === "archived") return <StatusChip available={false}>Archived</StatusChip>;
   return (
     <StatusChip available outlined>
       Live
