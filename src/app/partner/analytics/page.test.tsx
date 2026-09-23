@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TODAY } from "@/lib/availability";
 import { createClient } from "@/lib/supabase/client";
@@ -38,13 +38,23 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+let loungeId: string;
+const admin = createAdminClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+);
+
+afterAll(async () => {
+  // El lounge efímero es una fila real en el catálogo compartido de Epic 2
+  // (`public.lounges`) — sin borrarlo, `lounge-directory.test.ts` (que
+  // cuenta el catálogo completo) ve una fila de más y falla. `on delete
+  // cascade` en `bookings`/`partner_lounges` limpia el resto solo.
+  if (loungeId) await admin.from("lounges").delete().eq("id", loungeId);
+});
+
 beforeAll(async () => {
   const stamp = Date.now();
-  const loungeId = `test-lounge-analytics-${stamp}`;
-  const admin = createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  );
+  loungeId = `test-lounge-analytics-${stamp}`;
 
   const { error: loungeError } = await admin.from("lounges").insert({
     id: loungeId,

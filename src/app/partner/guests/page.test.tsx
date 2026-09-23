@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { TODAY, addDays } from "@/lib/availability";
 import { createClient } from "@/lib/supabase/client";
@@ -37,14 +37,22 @@ beforeEach(() => {
 let regularName: string;
 let returningName: string;
 let firstVisitName: string;
+let loungeId: string;
+const admin = createAdminClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+);
+
+afterAll(async () => {
+  // Mismo motivo que en analytics/page.test.tsx: sin borrar el lounge
+  // efímero, `lounge-directory.test.ts` cuenta una fila de más en el
+  // catálogo compartido de Epic 2.
+  if (loungeId) await admin.from("lounges").delete().eq("id", loungeId);
+});
 
 beforeAll(async () => {
   const stamp = Date.now();
-  const loungeId = `test-lounge-guests-${stamp}`;
-  const admin = createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  );
+  loungeId = `test-lounge-guests-${stamp}`;
 
   const { error: loungeError } = await admin.from("lounges").insert({
     id: loungeId,
