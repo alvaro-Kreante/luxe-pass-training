@@ -12,18 +12,25 @@ import VerifyEmailPage from "./page";
  */
 
 const EMAIL = `verificar-${Date.now()}@ensoleil-test.com`;
+const EMAIL_FROM_LOGIN = `verificar-login-${Date.now()}@ensoleil-test.com`;
+// Auth rechaza (429) un segundo correo al mismo email antes de
+// `max_frequency` (1s en config.toml) — el signup ya mandó el primero.
+const AUTH_EMAIL_MAX_FREQUENCY_MS = 1100;
 const push = vi.fn();
+const replace = vi.fn();
 
 let searchParams = new URLSearchParams({ email: EMAIL });
 
 vi.mock("next/navigation", () => ({
   useSearchParams: () => searchParams,
-  useRouter: () => ({ push }),
+  useRouter: () => ({ push, replace }),
 }));
 
 beforeAll(async () => {
   const supabase = createClient();
   await supabase.auth.signUp({ email: EMAIL, password: "EnSoleil!2026" });
+  await supabase.auth.signUp({ email: EMAIL_FROM_LOGIN, password: "EnSoleil!2026" });
+  await new Promise((resolve) => setTimeout(resolve, AUTH_EMAIL_MAX_FREQUENCY_MS));
 });
 
 describe("verify-email", () => {
@@ -61,6 +68,32 @@ describe("verify-email", () => {
       "href",
       "/login",
     );
+  });
+
+  it("reenvía solo al llegar desde el login con resend=1", async () => {
+    searchParams = new URLSearchParams({ email: EMAIL_FROM_LOGIN, resend: "1" });
+    render(<VerifyEmailPage />);
+    searchParams = new URLSearchParams({ email: EMAIL });
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /Resend in \d+s/ }),
+      ).toBeDisabled(),
+    );
+  });
+
+  it("avisa si el reenvío falla en vez de arrancar el cooldown", async () => {
+    searchParams = new URLSearchParams({ email: "no-es-un-email" });
+    const user = userEvent.setup({ delay: null });
+    render(<VerifyEmailPage />);
+    searchParams = new URLSearchParams({ email: EMAIL });
+
+    await user.click(screen.getByRole("button", { name: "Resend email" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      /could not resend/i,
+    );
+    expect(screen.getByRole("button", { name: "Resend email" })).toBeEnabled();
   });
 
   it("deshabilita el reenvío si no llegó un email por query param", () => {

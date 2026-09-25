@@ -162,6 +162,21 @@ describe("email sin confirmar", () => {
     expect(screen.queryByText(/attempts? left/)).not.toBeInTheDocument();
     expect(push).not.toHaveBeenCalled();
   });
+
+  it("el enlace de reenvío pide el reenvío al llegar a /verify-email", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<LoginPage />);
+
+    await user.type(emailField(), UNCONFIRMED_EMAIL);
+    await user.type(passwordField(), PASSWORD);
+    await user.click(submitButton());
+
+    const link = await screen.findByRole("link", { name: "Resend the link" });
+    const href = new URL(link.getAttribute("href")!, "http://x");
+    expect(href.pathname).toBe("/verify-email");
+    expect(href.searchParams.get("email")).toBe(UNCONFIRMED_EMAIL);
+    expect(href.searchParams.get("resend")).toBe("1");
+  });
 });
 
 describe("credenciales incorrectas y bloqueo", () => {

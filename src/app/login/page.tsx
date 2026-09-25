@@ -93,7 +93,7 @@ export default function LoginPage() {
         setCredentialsError(
           <>
             Confirm your email before logging in.{" "}
-            <Link href={`/verify-email?email=${encodeURIComponent(trimmedEmail)}`} className="font-bold">
+            <Link href={`/verify-email?email=${encodeURIComponent(trimmedEmail)}&resend=1`} className="font-bold">
               Resend the link
             </Link>
             .
