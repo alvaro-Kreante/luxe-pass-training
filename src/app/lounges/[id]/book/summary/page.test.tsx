@@ -7,7 +7,7 @@ import type { LoungeProfile } from "@/lib/lounge-profile";
 import { LOUNGES } from "@/lib/lounges";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
-import { fetchAinsworthProfile, findPredictedSlot } from "@/lib/testing/lounge-fixture";
+import { fetchAinsworthProfile, fillSlot, findPredictedSlot } from "@/lib/testing/lounge-fixture";
 import { grantTestMembership } from "@/lib/testing/membership-fixture";
 import { attachTestCard } from "@/lib/testing/stripe-fixture";
 
@@ -119,6 +119,7 @@ describe("camino feliz — tarjeta guardada real", () => {
 describe("chequeo final — slot completo", () => {
   it("abre la waitlist en vez de confirmar", async () => {
     const slot = findPredictedSlot(ainsworthMock, "full");
+    await fillSlot(ainsworth.id, slot.dateIso, slot.band);
 
     render(
       <BookingProvider

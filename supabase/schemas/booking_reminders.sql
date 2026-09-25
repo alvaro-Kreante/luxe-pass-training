@@ -11,13 +11,12 @@
 -- A diferencia de las funciones de recepción (bookings.sql), aquí `now()`
 -- SÍ es el reloj real de Postgres a propósito: "24 horas antes de la
 -- reserva" es un intervalo de verdad, no el "hoy" de mockup de la app. Gap
--- conocido en este entorno: `lounge_availability` está sembrada en una
--- ventana fija de 18 semanas desde 2025-09-09 (ver
--- docs/DATA-MODEL-MAP.md), así que ninguna reserva real posible hoy cae
--- dentro de "ahora + 24h" del reloj real — el mecanismo es correcto, pero
--- no se puede ejercitar de punta a punta en local/CI hasta que ese seed se
--- vuelva a anclar al `current_date` real (fuera de alcance de Epic 5, ver
--- docs/PENDIENTES.md).
+-- conocido en este entorno: la disponibilidad ya se calcula en vivo para
+-- cualquier fecha, pero el calendario de reserva parte del `TODAY` fijo de
+-- la app (2025-09-09, `src/lib/availability.ts`), así que ninguna reserva
+-- hecha desde la UI cae dentro de "ahora + 24h" del reloj real — el
+-- mecanismo es correcto, pero no se puede ejercitar de punta a punta desde
+-- la app (ver docs/PENDIENTES.md).
 create extension if not exists pg_cron with schema extensions;
 
 -- `slot_time` es texto tipo "3:30 PM" (ver bookings.sql) — Postgres acepta

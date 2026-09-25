@@ -45,10 +45,10 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
   real fuera de alcance, ver `docs/PENDIENTES.md` §2.3), 2.3 (vista de lista,
   paginada en cliente sobre el catálogo ya traído).
 - Cruce resuelto: el filtro "by availability" de 2.2 sigue siendo una
-  aproximación por `bands`/`closed_weekdays` de `lounges` (no consulta
-  `lounge_availability` fila a fila para el filtro, desproporcionado para
-  un filtro de catálogo) — `lounge_availability` ya existe (Epic 3,
-  implementada), pero 2.2 no se tocó al conectar Epic 3.
+  aproximación por `bands`/`closed_weekdays` de `lounges` (no consulta la
+  disponibilidad en vivo, `lounge_availability_range`, lounge a lounge —
+  desproporcionado para un filtro de catálogo); 2.2 no se tocó al conectar
+  Epic 3 ni al pasar la disponibilidad a cálculo en vivo.
 
 ### Epic 3 — Lounge Profiles & Details *(implementado — Supabase local, sept 2026)*
 
@@ -63,15 +63,21 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
   la gestionará desde admin, de ahí tabla propia en vez de array. La
   fotografía sigue sin ser real (bloques de marca, ver `DESIGN-SYSTEM.md`
   §6 Fase 4) — lo real es que la fila viene de Supabase, no el contenido.
-- `lounge_availability` (implementada, dueño Epic 3) — plazas por
-  `(lounge_id, date, band)`, con horizonte finito sembrado (18 semanas desde
-  `TODAY`), no calendario infinito. Referenciada por Epic 2 (el filtro de
-  disponibilidad sigue siendo una aproximación, ver `COMPONENT-MAP.md`),
-  Epic 4 (flujo de booking, todavía sobre el mock), Epic 9 (el tier de
-  membresía condiciona restricciones, todavía no implementado).
+- Disponibilidad (dueño Epic 3) — **sin tabla desde el 25 sept 2026**: la
+  tabla `lounge_availability` (seed de 18 semanas desde `TODAY`) se eliminó
+  y las plazas se calculan en vivo con la RPC `lounge_availability_range`
+  (`supabase/schemas/lounge_availability.sql`): `lounges.capacity` (aforo
+  por franja) − `bookings` que ocupan plaza, con `bands`/`closed_weekdays`
+  de `lounges` + `lounge_closures` para decidir qué franjas abren. Sirve
+  para cualquier fecha y cualquier lounge, nuevo o viejo. Referenciada por
+  Epic 2 (el filtro de disponibilidad sigue siendo una aproximación, ver
+  `COMPONENT-MAP.md`), Epic 4 (`confirm_booking`), Epic 8
+  (`admin_reschedule_booking`, drawer de override), Epic 9 (el tier de
+  membresía no condiciona restricciones — los dos planes dan el mismo
+  acceso).
 - `lounge_closures` (implementada, dueño Epic 3, **no anticipada por nombre
   en la primera versión de este mapa** — se documentó aquí como parte de
-  "cierres especiales" de `lounge_availability`, pero se implementó como
+  "cierres especiales" de la disponibilidad, pero se implementó como
   tabla separada porque es un evento por rango de fechas con sus propios
   metadatos, no una propiedad por celda día/franja).
 
@@ -204,15 +210,10 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
   disponibles: `lounges.bands`/`closed_weekdays`/`capacity`/`weekly_hours` y
   `lounge_closures` (Epic 3) sí son reutilizables tal cual — son la
   plantilla recurrente y los cierres puntuales, y un formulario de partner
-  puede escribirlos directo. `lounge_availability` (Epic 3) **no** lo es
-  todavía: hoy es un seed estático de filas por fecha (18 semanas desde
-  `TODAY`, generado una sola vez por migración, ver su fila más abajo) —
-  dar de alta un lounge nuevo no generaría sus propias filas de
-  disponibilidad. Antes de apoyarse en ella, evaluar reemplazarla por un
-  cálculo al vuelo desde la plantilla recurrente (decisión ya planteada y
-  conscientemente aplazada el 17 sept 2026, ver `docs/PENDIENTES.md`) o
-  esperar a que Epic 4 (`bookings`) exista y de ahí sí derivar plazas en
-  vivo.
+  puede escribirlos directo. La disponibilidad ya no necesita filas
+  propias: desde el 25 sept 2026 se calcula en vivo desde esa plantilla y
+  `bookings` (ver "Epic 3"), así que un lounge dado de alta es reservable
+  sin sembrar nada (`docs/PENDIENTES.md` §2.10).
 
 ### Epic 8 — Admin & Support *(implementado — Supabase local, sept 2026)*
 
@@ -244,10 +245,9 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
 - 8.2 (export/analytics) es vistas/operaciones agregadas sobre
   `bookings`/`payments`/`profiles`/`lounges` ya reales, sin tabla propia
   (salvo `scheduled_reports` arriba). El CRUD real de 8.3 es sobre
-  `lounges`/`lounge_images` (Epic 2/3) — `lounge_availability` (Epic 3) no
-  se conectó a un editor de disponibilidad propio en esta pasada (sigue
-  siendo el seed estático de 18 semanas, ver su fila en "Epic 3" y
-  `docs/PENDIENTES.md`).
+  `lounges`/`lounge_images` (Epic 2/3). La disponibilidad no tiene editor
+  propio ni lo necesita: se deriva en vivo de `capacity`/`bands`/
+  `closed_weekdays`/`lounge_closures` y `bookings` (ver "Epic 3").
 
 ### Epic 9 — Membership & Referrals
 
@@ -285,7 +285,7 @@ el amigo llega por `/join/[code]` → `/signup?ref=` (metadatos de Auth).
   protegido contra escritura del propio miembro
   (`guard_profile_managed_columns`).
 - Cruces: `bookings`/`payments` (visitas del mes y crédito del premio),
-  `notifications` (Epic 6). `lounge_availability` (restricciones por plan)
+  `notifications` (Epic 6). La disponibilidad (restricciones por plan)
   no llegó a cruzarse — los dos planes dan el mismo acceso
   (`DESIGN-SYSTEM.md` §6 Fase 9). Day passes: se derivan de `referrals` +
   `profiles.birth_month` y se gastan al reservar (`day_pass_redemptions`).
@@ -298,7 +298,7 @@ el amigo llega por `/join/[code]` → `/signup?ref=` (metadatos de Auth).
 |---|---|---|
 | `profiles` | 1 | 3, 4, 5, 6, 7, 8, 9 |
 | `lounges` | 2 (nace) / 3 (detalle) | 4, 5, 6, 7, 8 |
-| `lounge_availability` | 3 | 2, 4, 9 |
+| disponibilidad en vivo (`lounge_availability_range`, sin tabla) | 3 | 2, 4, 8 |
 | `lounge_images` | 3 | 8 (gestión) |
 | `lounge_closures` | 3 | 4 (booking, sin conectar) |
 | `bookings` | 4 | 5, 6, 7, 8, 9 |
@@ -327,7 +327,7 @@ Story 5.3 (pg_cron) salió el 21 sept 2026; Story 8.1 (reembolso real) y
 Story 8.2 (reportes programados reales) salieron el 22 sept 2026 al
 implementar Epic 8 — ver sus filas arriba. Sigue habiendo gaps puntuales
 documentados epic por epic (p. ej. Story 5.3/6.2/7.2 sin poder ejercitarse
-de punta a punta en local/CI mientras `lounge_availability` siga anclada a
-una fecha fija, o "image optimization and resizing" de Story 8.3 sin
+de punta a punta desde la app mientras su calendario parta del `TODAY`
+fijo, o "image optimization and resizing" de Story 8.3 sin
 redimensionado real) — ver `docs/PENDIENTES.md` y
 `docs/design/COMPONENT-MAP.md`.

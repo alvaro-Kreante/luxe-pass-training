@@ -79,19 +79,18 @@ async function seedCreditedReferral(referrerId: string) {
   await insertSucceededTestPayment(data.user.id);
 }
 
-/** Fechas de `lounge_availability` (seed) con plazas reales en la franja de noche de Belmont Terrace. */
+/** Fechas con plazas reales (disponibilidad en vivo) en la franja de noche de Belmont Terrace. */
 async function datesWithSeats(count: number): Promise<string[]> {
-  const { data, error } = await admin()
-    .from("lounge_availability")
-    .select("date")
-    .eq("lounge_id", "belmont-terrace")
-    .eq("band", "late")
-    .gte("date", addDays(TODAY, 20))
-    .gt("seats_left", 2)
-    .order("date")
-    .limit(count);
+  const { data, error } = await admin().rpc("lounge_availability_range", {
+    p_lounge_id: "belmont-terrace",
+    p_from: addDays(TODAY, 20),
+    p_to: addDays(TODAY, 80),
+  });
   if (error) throw error;
-  return (data as { date: string }[]).map((row) => row.date);
+  return (data as { date: string; band: string; seats_left: number }[])
+    .filter((row) => row.band === "late" && row.seats_left > 2)
+    .slice(0, count)
+    .map((row) => row.date);
 }
 
 const bookingOn = (dateIso: string): BookingRequest => ({

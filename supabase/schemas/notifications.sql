@@ -102,11 +102,10 @@ create extension if not exists pg_cron with schema extensions;
 -- el reloj real de Postgres a propósito — mismo criterio que
 -- `dispatch_booking_reminders` (Story 5.3, `booking_reminders.sql`): "la
 -- mañana de la visita" es un instante de verdad, no el "hoy" de mockup.
--- Mismo gap conocido que esa función: `lounge_availability` está sembrada en
--- una ventana fija de 18 semanas desde 2025-09-09, así que ninguna reserva
--- real posible hoy cae en el `current_date` real — el mecanismo es correcto
--- pero no se puede ejercitar de punta a punta en local/CI todavía (ver
--- docs/PENDIENTES.md).
+-- Mismo gap conocido que esa función: el calendario de reserva parte del
+-- `TODAY` fijo de la app (2025-09-09), así que ninguna reserva hecha desde
+-- la UI cae en el `current_date` real — el mecanismo es correcto pero no se
+-- puede ejercitar de punta a punta desde la app (ver docs/PENDIENTES.md).
 create or replace function public.dispatch_morning_notifications()
 returns void
 language plpgsql

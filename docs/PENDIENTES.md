@@ -182,37 +182,27 @@ existe ningún artboard con un hueco de mapa en esa pantalla.
 
 **Desbloquea:** que una historia futura diseñe ese hueco en el artboard.
 
-### 2.10 `lounge_availability` (Epic 3) es un seed estático, no una agenda que un partner pueda alimentar
+### 2.10 `lounge_availability` (Epic 3) era un seed estático — **resuelto (25 sept 2026)**
 
-Señalado por el usuario al revisar Epic 3 (17 sept 2026): las filas de
-`lounge_availability` (`seats_left` por lounge/fecha/franja) no se calculan
-solas — son un seed escrito una vez por
-`supabase/migrations/..._seed_lounge_profiles_story_3.sql`, con una ventana
-fija de 18 semanas desde `TODAY` (ver `docs/design/COMPONENT-MAP.md`
-"Backend real — Epic 3"). Es real en el sentido de que la app la consulta
-de verdad contra Supabase (no está hardcodeada en el frontend), pero el
-*contenido* es una foto fija: nada la mantiene creciendo hacia el futuro, y
-un partner que diera de alta un lounge nuevo (Epic 7/8.3) no tendría forma
-de generar sus propias filas sin, en la práctica, correr otra migración.
+Señalado por el usuario al revisar Epic 3 (17 sept 2026): las plazas por
+lounge/fecha/franja eran un seed escrito una vez por
+`supabase/migrations/..._seed_lounge_profiles_story_3.sql` (18 semanas
+desde `TODAY`), así que un lounge dado de alta después no tendría
+disponibilidad sin otra migración. Se dejó como deuda consciente hasta que
+el alta de lounges (Story 8.3) lo necesitó.
 
-Se planteó reemplazarla por un cálculo al vuelo desde la plantilla
-recurrente que ya vive en `lounges` (`bands`/`closed_weekdays`/`capacity`) +
-`lounge_closures` — sin tabla de filas por fecha, disponibilidad real
-"hoy" para cualquier lounge que exista, alta o viejo. **Se decidió
-conscientemente no hacerlo ahora** (17 sept 2026): se deja como deuda
-explícita en vez de tocar otra vez el schema recién mergeado de Epic 3.
+Resuelto en `refactor/live-lounge-availability`: la tabla se eliminó y la
+disponibilidad se calcula en vivo (`lounge_availability_range`, ver
+`docs/design/COMPONENT-MAP.md` "Backend real — Epic 3"): `capacity` (aforo
+**por franja**, confirmado por el usuario) − reservas que ocupan plaza,
+con la plantilla de `lounges` (`bands`/`closed_weekdays`) +
+`lounge_closures` para decidir qué franjas abren. Cualquier lounge, nuevo
+o viejo, es reservable sin sembrar nada. Consecuencia visible: los estados
+"Full"/"Filling fast" del demo ya no salen de valores sembrados, solo de
+reservas reales (aforo sembrado: 40 por franja).
 
-**Desbloquea:** antes de que Epic 7/8.3 permita dar de alta un lounge con
-sus propios días, resolver esto — o el rediseño de arriba, o esperar a que
-Epic 4 (`bookings`) exista y derivar de ahí las plazas en vivo (ver
-`docs/DATA-MODEL-MAP.md` §Epic 7). Epic 7 ya se conectó (22 sept 2026) sin
-tocar esto — el partner de muestra se dio de alta contra un lounge ya
-existente (`the-ainsworth`), nunca ejercitó el alta de uno nuevo. Epic 8
-tampoco lo tocó (22 sept 2026): "Add lounge" en `/admin/lounges` sigue sin
-abrir un formulario (ningún artboard lo dibuja, ver
-`docs/design/COMPONENT-MAP.md` "Backend real — Epic 8"), así que dar de
-alta un lounge nuevo con disponibilidad propia sigue sin ejercitarse por
-ningún camino real del producto.
+"Add lounge" (Story 8.3) ya no está bloqueado por disponibilidad; sigue
+sin formulario por falta de artboard (ver §3, fila 8.3).
 
 ### 2.11 La promoción automática de la waitlist no tiene mecanismo real en ningún epic
 
@@ -230,17 +220,16 @@ habría expandido el alcance del Epic 4 (dueño real de `bookings`), no del 7
 **Desbloquea:** que una historia futura (probablemente una extensión de
 Epic 4, "Waitlist management") defina y construya esa promoción automática.
 
-Misma ventana fija explica por qué el cron de recordatorios de la Story 5.3
-(`dispatch_booking_reminders()`, ver `docs/design/COMPONENT-MAP.md`
-"Backend real — Epic 5") no se puede ejercitar de punta a punta en este
-entorno: usa el reloj real (`now()`) para "24 horas antes", pero ninguna
-reserva real posible hoy cae en esa ventana mientras `lounge_availability`
-siga anclada a 2025-09-09. Resolver esto también desbloquea eso.
-
-Mismo motivo bloquea el aviso de las 6 AM de la Story 6.2
-(`dispatch_morning_notifications()`) — ninguna reserva real cae en el
-`current_date` real que ese cron usa a propósito, ver
-`docs/design/COMPONENT-MAP.md` "Backend real — Epic 6".
+El cron de recordatorios de la Story 5.3 (`dispatch_booking_reminders()`,
+ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 5") sigue sin
+poder ejercitarse de punta a punta en este entorno: usa el reloj real
+(`now()`) para "24 horas antes", y aunque la disponibilidad ya se calcula
+en vivo para cualquier fecha, el calendario de reserva parte del `TODAY`
+fijo de la app (2025-09-09, `src/lib/availability.ts`) — ninguna reserva
+hecha desde la UI cae en esa ventana. Lo mismo el aviso de las 6 AM de la
+Story 6.2 (`dispatch_morning_notifications()`), el digest del partner
+(7.2) y los reportes programados (8.2). El único ancla que queda es ese
+`TODAY` fijo.
 
 ### 2.12 Epic 9: day passes sin gastar y otros huecos reales
 
@@ -314,7 +303,7 @@ nada los hace cumplir.
 
 | 8.1 | Escalation to manager functionality | **Sigue igual tras conectar Epic 8 (22 sept 2026).** "Escalate" cambia `support_tickets.status` a `escalated` de verdad, pero Dana Mbeki (`DUTY_MANAGER`) sigue siendo un dato de muestra fijo — no hay bandeja de manager real ni notificación |
 | 8.1 | Every action logged (audit trail) | **Sigue igual tras conectar Epic 8.** El chip "Every action logged" de la topbar es constante; no es un AC propio de ninguna historia (es chrome del patrón 21), así que no se construyó un registro de auditoría aparte — cada acción real (reembolso, cambio de reserva, mensaje) ya queda escrita en su propia tabla, solo no hay un log unificado que las muestre juntas |
-| 8.3 | Add lounge profile | **Resuelto a medias tras conectar Epic 8 (22 sept 2026).** Editar y archivar un lounge ya son reales (`admin_submit_lounge_content_change`/`admin_archive_lounges`); "Add lounge" en `/admin/lounges` sigue sin abrir ningún formulario — ningún artboard de la Fase 8 dibuja el alta de un lounge nuevo, se paró antes de inventarlo (ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 8") |
+| 8.3 | Add lounge profile | **Resuelto a medias tras conectar Epic 8 (22 sept 2026).** Editar y archivar un lounge ya son reales (`admin_submit_lounge_content_change`/`admin_archive_lounges`); "Add lounge" en `/admin/lounges` sigue sin abrir ningún formulario — ningún artboard de la Fase 8 dibuja el alta de un lounge nuevo, se paró antes de inventarlo (ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 8"). Desde el 25 sept 2026 ya no lo bloquea la disponibilidad (calculada en vivo, §2.10); falta el artboard del formulario |
 | 8.3 | Image optimization and resizing | **Resuelto a medias tras conectar Epic 8.** La subida de foto ya es real (bucket de Storage `lounge-images`); el redimensionado a 1600/800/400 px que el artboard anuncia sigue sin tener nada detrás — no hay librería de procesamiento de imágenes en el stack |
 
 | 9.1 | Renewal date and auto-renewal settings — aviso por email un mes antes | **Resuelto tras conectar Epic 9 (23 sept 2026).** `dispatch_membership_renewals()` (pg_cron diario) inserta la notificación en la app y llama a `membership-renewal` (Brevo) para los anuales con auto-renovación en su último mes. La renovación en sí también cobra de verdad (misma function, `type: "charge"`) |
@@ -547,8 +536,19 @@ queda fuera. Con una base limpia (`supabase db reset`) probablemente pasa.
 
 Opciones: que el test filtre por un rango de fechas propio, que el export no
 dependa del límite de PostgREST, o limpiar los datos de prueba entre corridas.
-Relacionado con la nota de recursos compartidos (Stripe / `lounge_availability`):
-la suite deja datos reales en la base local.
+Relacionado con la nota de recursos compartidos (Stripe): la suite deja
+datos reales en la base local (las reservas de usuarios de test sí se
+borran antes de cada corrida, en `vitest.global-setup.ts`).
+
+### 4.10 Auth local falla de forma intermitente con la suite completa en paralelo
+
+Visto el 25 sept 2026 tras un `supabase db reset` + `supabase stop && supabase start`:
+al correr los 110 archivos de `npm test` a la vez, el contenedor de Auth
+falla al conectar con Postgres (`failed to connect to host=supabase_db_Luxe_Pass ...`,
+timeouts de DNS/SASL) y los tests caen con `AuthRetryableFetchError: fetch failed`
+en archivos distintos en cada corrida; `supabase_vector` queda en bucle de
+reinicio. Los mismos archivos pasan al correrlos con menos workers
+(`npx vitest run --maxWorkers=2 <archivos>`). **Causa sin confirmar.**
 
 ## 5. Decisiones abiertas
 
@@ -663,3 +663,4 @@ de la tarifa de no-show.
 | Epic 7 (Partner Dashboard) era mockup puro: `/partner/login` validaba credenciales en el cliente, `/partner`/`/partner/analytics`/`/partner/guests`/`/partner/reports` corrían sobre datos de muestra fijos, y la decisión de rol member/partner/admin (`docs/DATA-MODEL-MAP.md`) seguía pospuesta | 22 sept 2026 | Conectado a Supabase local real, decisiones de arquitectura tomadas con el usuario antes de implementar: tabla `user_roles` (no custom claim ni esquema separado) para el rol, `partner_lounges` como tabla puente many-to-many (no FK directa en `lounges`). Story 7.1: `partner_guest_list`/`partner_checkin_booking`/`partner_report_no_show` (RPC autenticadas, no "de kiosco") + suscripción de Supabase Realtime en `/partner` reemplazando los temporizadores deterministas. Story 7.2: dos triggers (Database Webhook) + un `pg_cron` (digest 6:30 AM), mismo mecanismo que Story 4.2/5.1/5.3 — decisión consciente de **no** usar la tabla `notifications` de Epic 6 (el AC es "recibir un email", no una fila en el centro de notificaciones del miembro). Story 7.3: `partner_analytics_summary`/`partner_bookings_by_day`/`partner_repeat_guests`, agregando sobre todos los lounges reales del partner. **Bug real encontrado y corregido corriendo la suite localmente**: `partner_bookings_by_day` devolvía `timestamp with time zone` donde la función declaraba `date` (`generate_series` sobre un rango de fechas produce timestamps, no fechas) — Postgres lo rechazaba con "structure of query does not match function result type"; corregido con un cast `::date` explícito. Las dos Edge Functions nuevas se verificaron de punta a punta con un `curl` directo contra el edge runtime local (200 en ambas) tras resolver una caída puntual del contenedor con `supabase stop && supabase start` (§4.5). Ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 7" y `docs/DATA-MODEL-MAP.md` §Epic 7. |
 | Epic 8 (Admin & Support) era mockup puro: las 11 pantallas de `/admin/**` corrían sobre datos de muestra fijos (`SUPPORT_CASES`, `ADMIN_MEMBERS`, `NETWORK_METRICS`, `ADMIN_LOUNGES`...), sin login de admin ni forma de tocar Supabase | 22 sept 2026 | Conectado a Supabase local real, dos decisiones de alcance tomadas con el usuario antes de implementar que revierten la nota original de `docs/DATA-MODEL-MAP.md`: el reembolso (Story 8.1) es real vía Stripe (`stripe-refund-payment`) para un cargo `succeeded`, y los reportes programados (Story 8.2) son reales vía `pg_cron` + Brevo (`send-admin-report`, adjunto CSV real) — mismo nivel de realismo que el resto del proyecto. `/admin/login` nace sin artboard propio (la Fase 8 nunca dibujó ese nodo del flow) — decisión confirmada con el usuario: reutiliza el layout de `/partner/login`. Story 8.1: `support_tickets`/`support_ticket_messages` (nacen aquí), un no-show reportado por un partner abre un caso automáticamente; `BookingOverrideDrawer` reescrito sobre los 5 horarios reales del dominio (el artboard dibujaba horas ficticias). Story 8.2: analítica real sobre TODA la red (no un lounge elegido), export por dataset con columnas anonimizadas por defecto. Story 8.3: `lounges.content_status` (live/draft/archived) + `lounge_content_submissions` (nace aquí) generalizan el "Content approval workflow" a cualquier lounge, no solo The Vestry como el mock; bucket de Storage real `lounge-images`; de la barra de acción masiva, solo "Archive" quedó real. **Dos bugs reales encontrados y corregidos con TDD**: (1) `admin_search_members` trataba "4+ dígitos en la consulta" como rama excluyente de la búsqueda por nombre, así que un query con nombre y unos dígitos (p. ej. un email de test con timestamp) dejaba de buscar por nombre — la condición pasó a ser inclusiva (OR); (2) las RPC que reutiliza el cron de reportes (`admin_generate_report_csv` y las `admin_export_*`) rechazaban la llamada con "Not authorized" porque el guard exigía `has_role('admin')` incluso cuando el cron las llama sin sesión (`auth.uid()` nulo) — el guard pasó a `auth.uid() is not null and not has_role('admin')`, que sigue rechazando a un autenticado sin el rol pero deja pasar la llamada interna sin sesión. Verificado de punta a punta: `stripe-refund-payment` con un cargo real de la sandbox, `dispatch_scheduled_reports` disparado a mano con `200` confirmado en `net._http_response`. Ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 8" y `docs/DATA-MODEL-MAP.md` §Epic 8. |
 | Epic 9 (Membership & Referrals) era mockup puro: `/profile/membership/**` corría sobre las cuentas de muestra de Alexandra/Naomi (`?plan=monthly`, `?state=credited`), el código de referido era determinista sin persistir y "Pay … and switch" solo cerraba el modal | 23 sept 2026 | Conectado a Supabase local real + Stripe en modo test, decisiones de producto tomadas con el usuario antes de implementar: un miembro nace sin membresía hasta elegir plan (elección de plan sobre `Plans.dc.html` + el modal de `Upgrade.dc.html`, sin artboard propio); alta y subida mensual→anual son un cobro puntual real (no Stripe Billing), con tarjeta guardada o `<PaymentElement>` embebido; el premio de referido se acredita con el primer pago real liquidado del amigo; el amigo entra por `/join/[code]` → `/signup?ref=` (metadatos de Auth, sin campo nuevo). Nacen `memberships`, `referrals`, `referral_shares`; `profiles.membership_status` pasa a espejo de `memberships` y el miembro ya no puede escribirlo (ni `referral_code`/`stripe_customer_id`, `guard_profile_managed_columns`). Cuarto uso de `pg_cron` (`dispatch_membership_renewals`, aviso de un mes antes + vencimientos). Ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 9" y §2.12/§4.8 de este archivo para lo que queda abierto. |
+| La disponibilidad de los lounges (`lounge_availability`) era un seed estático de 18 semanas desde `TODAY`: un lounge nuevo no tenía plazas sin otra migración, y cancelar una reserva como miembro (`cancel_booking`) nunca devolvía la plaza | 25 sept 2026 | Tabla eliminada; disponibilidad en vivo con `lounge_availability_range` (`capacity` por franja − reservas `confirmed`/`in_progress`/`completed`), `confirm_booking`/`admin_reschedule_booking` serializados con `pg_advisory_xact_lock` por lounge/fecha/franja. Cancelar libera la plaza sola. Tests: `fillSlot` (`src/lib/testing/lounge-fixture.ts`) llena una franja con reservas reales y `vitest.global-setup.ts` borra las reservas de usuarios de test antes de cada corrida. Ver §2.10 y `docs/design/COMPONENT-MAP.md` "Backend real — Epic 3" |

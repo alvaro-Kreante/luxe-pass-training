@@ -84,6 +84,10 @@ alter table public.bookings
 
 create index if not exists bookings_confirmation_code_idx on public.bookings (confirmation_code);
 
+-- Disponibilidad en vivo (`lounge_availability.sql`) cuenta reservas por
+-- lounge/fecha/franja en cada consulta.
+create index if not exists bookings_lounge_date_band_idx on public.bookings (lounge_id, date, band);
+
 alter table public.bookings enable row level security;
 
 -- Una sola policy (no dos OR'd por Postgres) para evitar el warning de
@@ -101,20 +105,18 @@ using (
   or lounge_id in (select public.partner_lounge_ids())
 );
 
--- Sin policies de insert/update/delete: la tabla solo se toca vía las dos
+-- Sin policies de insert/update/delete: la tabla solo se toca vía las
 -- funciones de abajo (SECURITY DEFINER), igual que `login_attempts` en la
--- Story 1.2 — `confirm_booking` necesita decrementar
--- `lounge_availability.seats_left` en la misma transacción que inserta la
--- reserva, y un miembro no tiene (ni debe tener) permiso de escritura
--- directo sobre esa tabla de Epic 3.
+-- Story 1.2.
 
--- AC "Final availability check before one-tap confirmation". Bloquea la
--- fila de `lounge_availability` con `for update` para que dos
--- confirmaciones concurrentes sobre el mismo lounge/fecha/franja no
--- decrementen ambas la misma última plaza. Si no quedan plazas, no inserta
--- nada y devuelve cero filas — el cliente lo lee como "full" y ofrece la
--- waitlist (AC "If full, option to be on the waitlist") sin crear una
--- reserva que el miembro todavía no pidió.
+-- AC "Final availability check before one-tap confirmation". Las plazas se
+-- calculan en vivo (`lounge_seats_left`, ver `lounge_availability.sql`). Un
+-- `pg_advisory_xact_lock` por lounge/fecha/franja serializa las
+-- confirmaciones concurrentes sobre la misma franja, para que dos no cuenten
+-- a la vez la misma última plaza. Si no quedan plazas, no inserta nada y
+-- devuelve cero filas — el cliente lo lee como "full" y ofrece la waitlist
+-- (AC "If full, option to be on the waitlist") sin crear una reserva que el
+-- miembro todavía no pidió.
 --
 -- `p_payment_id` (Story 4.2) — se pasa cuando el pago ya se cobró de verdad
 -- (Stripe confirmado en el cliente antes de esta llamada, ver
@@ -144,7 +146,6 @@ set search_path = ''
 as $$
 declare
   v_member_id uuid := auth.uid();
-  v_seats smallint;
   v_booking public.bookings;
   v_coverage record;
 begin
@@ -174,22 +175,15 @@ begin
     end if;
   end if;
 
-  select la.seats_left into v_seats
-  from public.lounge_availability la
-  where la.lounge_id = p_lounge_id and la.date = p_date and la.band = p_band
-  for update;
-
-  if v_seats is null then
+  if not public.lounge_band_is_open(p_lounge_id, p_date, p_band) then
     raise exception 'No availability window for % on % (%)', p_lounge_id, p_date, p_band;
   end if;
 
-  if v_seats <= 0 then
+  perform pg_advisory_xact_lock(hashtext(p_lounge_id || '|' || p_date::text || '|' || p_band));
+
+  if public.lounge_seats_left(p_lounge_id, p_date, p_band) <= 0 then
     return;
   end if;
-
-  update public.lounge_availability la
-    set seats_left = la.seats_left - 1, updated_at = now()
-    where la.lounge_id = p_lounge_id and la.date = p_date and la.band = p_band;
 
   insert into public.bookings as b
     (member_id, lounge_id, date, band, slot_time, special_requests, status)
@@ -216,9 +210,9 @@ $$;
 grant execute on function public.confirm_booking(text, date, text, text, text, uuid) to authenticated;
 
 -- Solo se llama cuando el miembro elige "Join the waitlist" en
--- `Waitlist.dc.html` tras un `confirm_booking` que devolvió cero filas — no
--- consume plaza de `lounge_availability` (la waitlist no reserva inventario
--- real, ninguna historia lo pide).
+-- `Waitlist.dc.html` tras un `confirm_booking` que devolvió cero filas — una
+-- reserva 'waitlisted' no ocupa plaza (`booking_occupies_seat`; la waitlist
+-- no reserva inventario real, ninguna historia lo pide).
 create or replace function public.join_waitlist(
   p_lounge_id text,
   p_date date,

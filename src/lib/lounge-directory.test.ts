@@ -22,7 +22,8 @@ describe("fetchLounges (Supabase local)", () => {
 
     const lounges = await fetchLounges(supabase);
 
-    expect(lounges.length).toBe(17);
+    // Otros archivos crean lounges efímeros (`test-lounge-*`) en paralelo.
+    expect(lounges.filter((lounge) => !lounge.id.startsWith("test-lounge-")).length).toBe(17);
 
     const ainsworth = lounges.find((lounge) => lounge.id === "the-ainsworth");
     expect(ainsworth).toMatchObject({

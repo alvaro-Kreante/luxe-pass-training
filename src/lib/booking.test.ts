@@ -30,7 +30,7 @@ import {
 } from "./lounge-profile";
 import { createClient } from "./supabase/client";
 import { signUpConfirmedMemberAndSignIn } from "./testing/confirmed-user";
-import { fetchAinsworthProfile, findPredictedSlot } from "./testing/lounge-fixture";
+import { fetchAinsworthProfile, fillSlot, findPredictedSlot } from "./testing/lounge-fixture";
 
 /**
  * Story 4.1 (Seamless Booking Flow) y Story 4.2 (Payment Processing).
@@ -326,6 +326,7 @@ describe("confirmBooking / joinWaitlist — chequeo final de disponibilidad (Sup
 
   it("no confirma (devuelve null) cuando el slot ya está lleno", async () => {
     const target = findPredictedSlot(ainsworth, "full", 1);
+    await fillSlot(ainsworth.id, target.dateIso, target.band);
 
     const booking = await confirmBooking(supabase, requestFor(target));
 

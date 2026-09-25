@@ -1,4 +1,3 @@
-import { readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -6,28 +5,18 @@ import { createClient } from "@supabase/supabase-js";
 import { loadEnv } from "vite";
 
 /**
- * Cada test que confirma una reserva real descuenta una plaza de
- * `lounge_availability` en el Supabase local, y nadie la devuelve: tras
- * varias corridas de la suite, las bandas de `TODAY` quedan a 0 y fallan
- * los tests de reservas, pase, recepción y partner sin que haya un bug.
- * Antes de cada corrida se restauran los `seats_left` sembrados — leídos
- * de la propia migración de seed, para no duplicar los valores.
+ * Las plazas de un lounge se calculan en vivo (`capacity` − reservas, ver
+ * `supabase/schemas/lounge_availability.sql`). Cada test que confirma una
+ * reserva real ocupa una plaza en el Supabase local y nadie la libera: tras
+ * varias corridas de la suite las franjas de los lounges sembrados se
+ * llenarían y fallarían los tests de reservas, pase, recepción y partner sin
+ * que haya un bug. Antes de cada corrida se borran las reservas que dejaron
+ * los usuarios de test de corridas anteriores — solo las suyas, identificadas
+ * por los dominios de email que usan los tests.
  */
-const SEED_MIGRATION = "supabase/migrations/20260917161600_seed_lounge_profiles_story_3.sql";
+const TEST_EMAIL = /@([a-z-]+-test\.com|example\.com)$/;
 
-function seededAvailability(root: string) {
-  const sql = readFileSync(path.join(root, SEED_MIGRATION), "utf8");
-  const start = sql.indexOf("insert into public.lounge_availability");
-  const block = sql.slice(start, sql.indexOf(";", start));
-  return [...block.matchAll(/\('([^']+)', '([^']+)', '([^']+)', (\d+)\)/g)].map(([, lounge_id, date, band, seats]) => ({
-    lounge_id,
-    date,
-    band,
-    seats_left: Number(seats),
-  }));
-}
-
-export default async function restoreSeededAvailability() {
+export default async function clearTestBookings() {
   const root = path.dirname(fileURLToPath(import.meta.url));
   const env = loadEnv("development", root, "");
   const url = env.NEXT_PUBLIC_SUPABASE_URL;
@@ -35,12 +24,18 @@ export default async function restoreSeededAvailability() {
     throw new Error(`Los tests solo corren contra Supabase local, no contra ${url}`);
   }
 
-  const rows = seededAvailability(root);
-  if (rows.length === 0) throw new Error(`No se encontró el seed de lounge_availability en ${SEED_MIGRATION}`);
-
   const admin = createClient(url, env.SUPABASE_SERVICE_ROLE_KEY!);
-  const { error } = await admin
-    .from("lounge_availability")
-    .upsert(rows, { onConflict: "lounge_id,date,band" });
-  if (error) throw error;
+  const testUserIds: string[] = [];
+
+  for (let page = 1; ; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error) throw error;
+    testUserIds.push(...data.users.filter((u) => u.email && TEST_EMAIL.test(u.email)).map((u) => u.id));
+    if (data.users.length < 1000) break;
+  }
+
+  for (let i = 0; i < testUserIds.length; i += 200) {
+    const { error } = await admin.from("bookings").delete().in("member_id", testUserIds.slice(i, i + 200));
+    if (error) throw error;
+  }
 }

@@ -426,10 +426,10 @@ $$;
 
 -- `now()`/`current_date` reales a propósito (paso del tiempo, no el "hoy" de
 -- mockup) — igual criterio que `dispatch_partner_morning_digest`. La
--- ventana de datos que reporta cada corrida sigue ancланda a `TODAY`
+-- ventana de datos que reporta cada corrida sigue anclada a `TODAY`
 -- (2025-09-09 + el tamaño de la cadencia), mismo gap conocido que Story 5.3:
--- no ejercitable de punta a punta en este entorno hasta que
--- `lounge_availability` deje de estar anclada a esa fecha fija.
+-- no ejercitable de punta a punta en este entorno mientras el "hoy" de la
+-- app sea esa fecha fija.
 create or replace function public.dispatch_scheduled_reports()
 returns void
 language plpgsql
