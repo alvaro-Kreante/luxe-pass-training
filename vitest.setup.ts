@@ -1,6 +1,12 @@
 import "@testing-library/jest-dom/vitest";
+import { configure } from "@testing-library/react";
 
 import { installGoogleMapsStub } from "@/test/google-maps-stub";
+
+// `findBy*`/`waitFor` esperan 1s por defecto. Las pantallas cargan de
+// Supabase local real y la suite corre en paralelo: con 1s, cada corrida
+// completa fallaba en tests distintos esperando una recarga que sí llegaba.
+configure({ asyncUtilTimeout: 5000 });
 
 /**
  * jsdom no implementa IntersectionObserver, que el scroll infinito de la lista

@@ -20,6 +20,12 @@ export default defineConfig({
     environment: "jsdom",
     globals: true,
     setupFiles: ["./vitest.setup.ts"],
+    globalSetup: ["./vitest.global-setup.ts"],
+    // La suite corre contra Supabase local y el sandbox de Stripe reales, en
+    // paralelo: con los 5s/10s por defecto, cada corrida completa fallaba por
+    // timeout en tests distintos (Stripe, altas de usuario en hooks).
+    testTimeout: 20000,
+    hookTimeout: 30000,
     include: ["src/**/*.test.{ts,tsx}"],
     // Story 1.1 — los tests que llaman a Supabase local necesitan las
     // mismas variables que `npm run dev`. Vite no carga `.env.local` en
