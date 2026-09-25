@@ -12,7 +12,7 @@ import { AccountShell } from "@/components/patterns/account-shell";
 import { Button } from "@/components/ui/button";
 import { MetricTile } from "@/components/ui/metric-tile";
 import { ReferralCode } from "@/components/ui/referral-code";
-import { SAMPLE_MEMBER } from "@/lib/member";
+import { useCurrentMember } from "@/lib/current-member";
 import { REFERRAL_CODE } from "@/lib/profile";
 import { cn } from "@/lib/utils";
 import {
@@ -48,8 +48,9 @@ function ReferralsScreen() {
   const { invitations, stats, dayPasses } = referralViewState(state);
   const [shareOpen, setShareOpen] = React.useState(false);
   const [termsOpen, setTermsOpen] = React.useState(false);
+  const member = useCurrentMember();
 
-  const memberFirstName = SAMPLE_MEMBER.name.split(" ")[0];
+  const memberFirstName = member.name.split(" ")[0];
 
   return (
     <AccountShell

@@ -15,7 +15,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { addDays } from "@/lib/availability";
 import { bookingReferenceFromId } from "@/lib/booking";
 import { formatWeekdayDate } from "@/lib/lounge-profile";
-import { SAMPLE_MEMBER } from "@/lib/member";
+import { useCurrentMember } from "@/lib/current-member";
 import { cn } from "@/lib/utils";
 
 /**
@@ -27,6 +27,7 @@ import { cn } from "@/lib/utils";
 export default function ConfirmedPage() {
   const router = useRouter();
   const { lounge, draft } = useBooking();
+  const member = useCurrentMember();
   const [calendarOpen, setCalendarOpen] = React.useState(false);
   const [shareOpen, setShareOpen] = React.useState(false);
 
@@ -81,7 +82,7 @@ export default function ConfirmedPage() {
                 <h1 className="m-0 text-[34px] text-fg">Your visit is confirmed</h1>
                 <p className="m-0 mt-2 text-[13.5px] text-fg-muted">
                   A confirmation with your reference number is on its way to{" "}
-                  {SAMPLE_MEMBER.email}. You can{" "}
+                  {member.email}. You can{" "}
                   <Link
                     href={`/lounges/${lounge.id}/book/receipt`}
                     className="font-semibold text-accent-strong"
@@ -131,7 +132,7 @@ export default function ConfirmedPage() {
             reference={reference}
             footnote="Screenshot-friendly. Your digital pass also lives in My Pass."
             rows={[
-              { label: "Member", value: SAMPLE_MEMBER.name },
+              { label: "Member", value: member.name },
               { label: "Lounge", value: lounge.name },
               { label: "Date", value: formatWeekdayDate(draft.dateIso) },
               { label: "Arrival", value: draft.time },

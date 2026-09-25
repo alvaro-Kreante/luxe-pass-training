@@ -27,12 +27,13 @@ beforeEach(() => {
 });
 
 let ainsworth: LoungeProfile;
+const memberEmail = `book-receipt-${Date.now()}@ensoleil-test.com`;
 
 beforeAll(async () => {
   const supabase = createClient();
   await signUpConfirmedAndSignIn(
     supabase,
-    `book-receipt-${Date.now()}@ensoleil-test.com`,
+    memberEmail,
     "EnSoleil!2026",
   );
   ainsworth = await fetchAinsworthProfile(supabase);
@@ -90,5 +91,28 @@ describe("con una reserva confirmada", () => {
     renderReceipt(true);
 
     expect(screen.getByText(/Included in your membership/)).toBeInTheDocument();
+  });
+});
+
+describe("destinatario del recibo", () => {
+  it("dirige el recibo al email real del miembro con sesión, no al de muestra", async () => {
+    render(
+      <BookingProvider
+        lounge={ainsworth}
+        covered={false}
+        initialDraft={{
+          dateIso: "2025-09-14",
+          time: "3:30 PM",
+          specialRequests: "",
+          bookingId: "11111111-1111-1111-1111-111111111111",
+          bookingStatus: "confirmed",
+        }}
+      >
+        <ReceiptPage />
+      </BookingProvider>,
+    );
+
+    expect(await screen.findByText(new RegExp(memberEmail))).toBeInTheDocument();
+    expect(screen.queryByText(/alexandra\.rivas@example\.com/)).not.toBeInTheDocument();
   });
 });
