@@ -53,7 +53,7 @@ export interface AppShellProps {
    * dice" (`DESIGN-SYSTEM.md` §6 Fase 9). Por defecto, el miembro con sesión
    * (`useCurrentMember`).
    */
-  member?: { name: string; initials: string; tier: string };
+  member?: { name: string; initials: string; tier: string; photoUrl?: string | null };
 }
 
 export function AppShell({
@@ -65,6 +65,8 @@ export function AppShell({
 }: AppShellProps) {
   const currentMember = useCurrentMember();
   const member = memberOverride ?? currentMember;
+  /** Las vistas que pasan `member` no traen foto: es la del miembro con sesión. */
+  const photoUrl = member.photoUrl ?? currentMember.photoUrl;
   const pathname = usePathname();
 
   /**
@@ -134,9 +136,14 @@ export function AppShell({
         <div className="hidden items-center gap-2.5 border-t border-line px-3.5 pt-5 lg:flex">
           <span
             aria-hidden
-            className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent font-display text-[13px] font-bold text-on-accent"
+            className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent font-display text-[13px] font-bold text-on-accent"
           >
-            {member.initials}
+            {photoUrl ? (
+              /* eslint-disable-next-line @next/next/no-img-element -- URL firmada del bucket privado, no un <Image> con loader remoto */
+              <img src={photoUrl} alt={member.name} className="size-full object-cover" />
+            ) : (
+              member.initials
+            )}
           </span>
           <span className="flex-1 overflow-hidden">
             <span className="block truncate text-[13px] font-bold text-fg">
