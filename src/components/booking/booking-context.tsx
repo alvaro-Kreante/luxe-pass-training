@@ -2,17 +2,32 @@
 
 import * as React from "react";
 
-import { SLOT_HOLD_SECONDS } from "@/lib/booking";
+import { TODAY } from "@/lib/availability";
+import {
+  MEMBERSHIP_COVERAGE_FIXTURE,
+  NOT_COVERED,
+  SLOT_HOLD_SECONDS,
+  fetchBookingCoverage,
+  type BookingCoverage,
+} from "@/lib/booking";
 import type { LoungeProfile, WeekBandId } from "@/lib/lounge-profile";
+import { createClient } from "@/lib/supabase/client";
 
 /**
  * Story 4.1 / 4.2 — el borrador de reserva vive por encima de los tres pasos
  * (`/book`, `/book/payment`, `/book/summary`): el layout de la ruta no se
  * remonta al navegar entre ellos, así que "atrás" conserva la selección.
  *
- * `lounge` y `covered` (visita cubierta por la membresía, `?covered=1`) son
- * fijos para todo el flujo; solo `draft` cambia paso a paso. Sin
- * persistencia: recargar empieza de cero, como el resto del mockup.
+ * `lounge` es fijo para todo el flujo; `draft` cambia paso a paso. Sin
+ * persistencia: recargar empieza de cero.
+ *
+ * Epic 9 — `coverage` (quién paga: day pass de regalo, visita incluida de la
+ * membresía, o day pass pagado) lo decide el servidor (`booking_coverage`)
+ * para el mes de la fecha elegida, con la misma regla que luego aplica
+ * `confirm_booking`. Se recalcula al cambiar la fecha y se congela en cuanto
+ * la reserva existe (si no, la propia reserva recién hecha contaría como
+ * visita usada y `/book/confirmed` diría que se pagó). `covered` es el
+ * atajo booleano que ya usaban las pantallas.
  */
 export interface BookingDraft {
   dateIso: string | null;
@@ -50,7 +65,11 @@ export interface CheckoutSessionState {
 
 interface BookingContextValue {
   lounge: LoungeProfile;
+  /** `null` mientras el servidor no ha respondido. */
+  coverage: BookingCoverage | null;
   covered: boolean;
+  /** Vuelve a preguntar al servidor — p. ej. si `confirm_booking` rechazó una visita que parecía cubierta. */
+  refreshCoverage: () => void;
   draft: BookingDraft;
   update: (patch: Partial<BookingDraft>) => void;
   reset: () => void;
@@ -91,13 +110,19 @@ const BookingContext = React.createContext<BookingContextValue | null>(null);
 
 export function BookingProvider({
   lounge,
-  covered,
+  covered: coveredFixture,
   /** Solo para tests: arranca el borrador ya relleno para saltarse el paso 1. */
   initialDraft,
   children,
 }: {
   lounge: LoungeProfile;
-  covered: boolean;
+  /**
+   * Solo para tests de componente: fija la cobertura (visita incluida con
+   * las cifras de `MembershipCovered.dc.html`, o day pass pagado) sin
+   * preguntar al servidor — mismo criterio que la fixture `AINSWORTH_PASS`.
+   * `BookLayout` nunca la pasa: en la app la decide `booking_coverage`.
+   */
+  covered?: boolean | BookingCoverage;
   initialDraft?: Partial<BookingDraft>;
   children: React.ReactNode;
 }) {
@@ -116,6 +141,37 @@ export function BookingProvider({
     null,
   );
 
+  const [liveCoverage, setLiveCoverage] = React.useState<BookingCoverage | null>(null);
+  const [coverageRequest, setCoverageRequest] = React.useState(0);
+  const refreshCoverage = React.useCallback(() => setCoverageRequest((count) => count + 1), []);
+  const coverageDate = draft.dateIso ?? TODAY;
+  const bookingExists = draft.bookingId !== null;
+
+  React.useEffect(() => {
+    if (coveredFixture !== undefined || bookingExists) return;
+    let active = true;
+    fetchBookingCoverage(createClient(), coverageDate)
+      .then((next) => {
+        if (active) setLiveCoverage(next);
+      })
+      .catch(() => {
+        if (active) setLiveCoverage(NOT_COVERED);
+      });
+    return () => {
+      active = false;
+    };
+  }, [coveredFixture, coverageDate, bookingExists, coverageRequest]);
+
+  const coverage =
+    coveredFixture === undefined
+      ? liveCoverage
+      : typeof coveredFixture === "object"
+        ? coveredFixture
+        : coveredFixture
+          ? MEMBERSHIP_COVERAGE_FIXTURE
+          : NOT_COVERED;
+  const covered = coverage !== null && coverage.kind !== "none";
+
   const update = React.useCallback((patch: Partial<BookingDraft>) => {
     setDraft((prev) => ({ ...prev, ...patch }));
   }, []);
@@ -133,7 +189,9 @@ export function BookingProvider({
   const value = React.useMemo(
     () => ({
       lounge,
+      coverage,
       covered,
+      refreshCoverage,
       draft,
       update,
       reset,
@@ -147,7 +205,9 @@ export function BookingProvider({
     }),
     [
       lounge,
+      coverage,
       covered,
+      refreshCoverage,
       draft,
       update,
       reset,

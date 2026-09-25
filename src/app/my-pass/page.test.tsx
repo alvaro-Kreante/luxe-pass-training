@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { bookingReferenceFromId, confirmBooking, joinWaitlist } from "@/lib/booking";
 import { TODAY, addDays } from "@/lib/availability";
+import { fetchVisitsThisMonth } from "@/lib/membership";
 import { LATE_CANCELLATION_FEE_LABEL } from "@/lib/passes";
 import { checkInReceptionBooking, reportReceptionNoShow } from "@/lib/reception";
 import { createClient } from "@/lib/supabase/client";
@@ -36,6 +37,7 @@ beforeAll(async () => {
     supabase,
     `my-pass-page-${Date.now()}@ensoleil-test.com`,
     "EnSoleil!2026",
+    { membership: "annual" },
   );
   const kiosk = createClient();
 
@@ -98,6 +100,19 @@ describe("campana de notificaciones", () => {
     await waitFor(() =>
       expect(screen.getByRole("button", { name: /notifications/i })).toBeInTheDocument(),
     );
+  });
+});
+
+describe("Visits this month (Story 9.1, conectada en Epic 9)", () => {
+  it("cuenta las visitas reales de membresía del mes, no un número de muestra", async () => {
+    const visits = await fetchVisitsThisMonth(createClient());
+    render(<MyPassPage />);
+
+    const rail = await screen.findByText("Visits this month");
+    await waitFor(() =>
+      expect(within(rail.parentElement!).getByText(`${visits.used} of ${visits.included}`)).toBeInTheDocument(),
+    );
+    expect(visits.used).toBeGreaterThan(0);
   });
 });
 

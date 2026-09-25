@@ -30,6 +30,7 @@ beforeAll(async () => {
     member,
     `reception-page-${Date.now()}@ensoleil-test.com`,
     "EnSoleil!2026",
+    { membership: "annual" },
   );
   const {
     data: { user },

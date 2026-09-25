@@ -32,6 +32,7 @@ beforeAll(async () => {
     supabase,
     `reminder-page-${Date.now()}@ensoleil-test.com`,
     "EnSoleil!2026",
+    { membership: "annual" },
   );
 
   const booking = await confirmBooking(supabase, {

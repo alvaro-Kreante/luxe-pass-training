@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -8,6 +8,7 @@ import { LOUNGES } from "@/lib/lounges";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
 import { fetchAinsworthProfile, findPredictedSlot } from "@/lib/testing/lounge-fixture";
+import { grantTestMembership } from "@/lib/testing/membership-fixture";
 import { attachTestCard } from "@/lib/testing/stripe-fixture";
 
 import SummaryPage from "./page";
@@ -61,6 +62,9 @@ beforeAll(async () => {
     .eq("id", user.id)
     .single();
   workingCardId = await attachTestCard(profile!.stripe_customer_id as string);
+  // Epic 9 — `confirm_booking` solo acepta una reserva sin pago si la cubre
+  // la membresía real (`booking_coverage`); el camino "cubierta" lo necesita.
+  await grantTestMembership(user.id, "annual");
 });
 
 async function acceptTermsAndConfirm() {
@@ -189,5 +193,34 @@ describe("visita cubierta por la membresía", () => {
       () => expect(push).toHaveBeenCalledWith(`/lounges/${ainsworth.id}/book/confirmed`),
       { timeout: 10_000 },
     );
+  }, 15_000);
+});
+
+describe("el servidor manda sobre quién paga (Epic 9)", () => {
+  it("si la visita ya no está cubierta al confirmar, lo dice en vez de quedarse colgada", async () => {
+    // Un miembro SIN plan con la pantalla creyendo que la visita está
+    // cubierta — p. ej. las 8 visitas se agotaron en otra pestaña.
+    await signUpConfirmedMemberAndSignIn(
+      createClient(),
+      `book-summary-uncovered-${Date.now()}@ensoleil-test.com`,
+      "EnSoleil!2026",
+    );
+    const slot = findPredictedSlot(ainsworthMock, "available", 3);
+
+    render(
+      <BookingProvider
+        lounge={ainsworth}
+        covered
+        initialDraft={{ dateIso: slot.dateIso, time: slot.time, band: slot.band }}
+      >
+        <SummaryPage />
+      </BookingProvider>,
+    );
+
+    await acceptTermsAndConfirm();
+
+    const dialog = await screen.findByRole("dialog", {}, { timeout: 10_000 });
+    expect(within(dialog).getByText(/no longer covered/i)).toBeInTheDocument();
+    expect(push).not.toHaveBeenCalled();
   }, 15_000);
 });

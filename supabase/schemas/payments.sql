@@ -30,7 +30,12 @@ create table if not exists public.payments (
   refunded_amount_cents       integer check (refunded_amount_cents is null or refunded_amount_cents >= 0),
   refunded_at                 timestamptz,
   refund_reason               text,
-  stripe_refund_id            text unique
+  stripe_refund_id            text unique,
+  -- Story 9.1 (Epic 9) — el pago es la compra de un plan de membresía (alta
+  -- o subida mensual → anual), no un day pass. Cuando `status` pasa a
+  -- 'succeeded', el trigger `apply_membership_payment` (memberships.sql)
+  -- activa o cambia el plan — nunca el cliente.
+  membership_plan             text check (membership_plan in ('monthly', 'annual'))
 );
 
 alter table public.payments enable row level security;

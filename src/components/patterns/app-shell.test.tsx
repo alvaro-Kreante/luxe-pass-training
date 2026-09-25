@@ -114,7 +114,7 @@ describe("bloque de usuario de la sidebar", () => {
 
     await waitFor(() => expect(screen.getByText("Test Member")).toBeInTheDocument());
     expect(screen.getByText("TM")).toBeInTheDocument();
-    expect(screen.getByText(/^(Active|Free) member$/)).toBeInTheDocument();
+    expect(screen.getByText(/^(Annual|Monthly|Free) member$/)).toBeInTheDocument();
     expect(screen.queryByText("Alexandra Rivas")).not.toBeInTheDocument();
     expect(screen.queryByText("Annual member")).not.toBeInTheDocument();
   });

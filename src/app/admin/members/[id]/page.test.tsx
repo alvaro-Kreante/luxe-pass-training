@@ -6,6 +6,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { createClient } from "@/lib/supabase/client";
 import { chargeSavedPaymentMethod, listSavedPaymentMethods } from "@/lib/stripe-payments";
 import { signUpConfirmedAdminAndSignIn, signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
+import { grantTestMembership } from "@/lib/testing/membership-fixture";
 import { attachTestCard } from "@/lib/testing/stripe-fixture";
 
 import MemberProfilePage from "./page";
@@ -82,6 +83,9 @@ beforeAll(async () => {
     "EnSoleil!2026",
   );
   memberId = member.id;
+  // Desde Epic 9 un miembro nace sin membresía — "Active member" exige un
+  // plan real en `memberships` (espejo en `profiles.membership_status`).
+  await grantTestMembership(memberId, "annual");
 
   // Un pago real de Stripe (día pass, tarjeta guardada) — igual patrón que
   // stripe-payments.test.ts.

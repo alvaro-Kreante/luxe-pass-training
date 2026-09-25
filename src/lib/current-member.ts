@@ -3,6 +3,7 @@
 import * as React from "react";
 
 import { SAMPLE_MEMBER } from "./member";
+import { fetchMembership, initialsOf, type MemberMembership } from "./membership";
 import { createClient } from "./supabase/client";
 
 export interface ShellMember {
@@ -12,23 +13,17 @@ export interface ShellMember {
   email: string;
 }
 
-export function initialsFor(fullName: string): string {
-  return (
-    fullName
-      .trim()
-      .split(/\s+/)
-      .map((word) => word[0]?.toUpperCase() ?? "")
-      .join("")
-      .slice(0, 2) || "LP"
-  );
+/** Sin plan activo no se muestra "Inactive": suena a cuenta suspendida. */
+export function tierFor(membership: MemberMembership): string {
+  if (membership.status !== "active") return "Free member";
+  return membership.plan === "monthly" ? "Monthly member" : "Annual member";
 }
 
 /**
  * Miembro con sesión para el bloque de usuario del App shell, el saludo del
- * Home y el nombre/email de las pantallas de reserva y referidos. El plan (anual/mensual) sigue sin modelarse en `profiles` — solo
- * `membership_status` es real —, así que el tier dice "Active/Free
- * member" en vez de inventar un plan. Sin sesión (o sin perfil todavía) se
- * queda en `SAMPLE_MEMBER`, como el mockup.
+ * Home y el nombre/email de las pantallas de reserva. El tier sale de
+ * `memberships` (Epic 9). Sin sesión (o sin perfil todavía) se queda en
+ * `SAMPLE_MEMBER`, como el mockup.
  */
 export function useCurrentMember(): ShellMember {
   const [member, setMember] = React.useState<ShellMember>(SAMPLE_MEMBER);
@@ -45,17 +40,16 @@ export function useCurrentMember(): ShellMember {
       const email = user.email ?? SAMPLE_MEMBER.email;
       setMember((current) => ({ ...current, email }));
 
-      const { data } = await supabase
-        .from("profiles")
-        .select("full_name, membership_status")
-        .eq("id", user.id)
-        .maybeSingle();
+      const [{ data }, membership] = await Promise.all([
+        supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
+        fetchMembership(supabase),
+      ]);
       if (!data || cancelled) return;
 
       setMember({
         name: data.full_name,
-        initials: initialsFor(data.full_name),
-        tier: data.membership_status === "inactive" ? "Free member" : "Active member",
+        initials: initialsOf(data.full_name),
+        tier: tierFor(membership),
         email,
       });
     })();

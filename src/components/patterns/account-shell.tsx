@@ -7,7 +7,6 @@ import { Bell, Check, Heart, Shield, SlidersHorizontal, UserRound } from "lucide
 import { NotificationBellMenu } from "@/components/account/notification-bell-menu";
 import { AppShell } from "@/components/patterns/app-shell";
 import { cn } from "@/lib/utils";
-import type { NotificationItem } from "@/lib/notifications";
 
 /**
  * DESIGN-SYSTEM.md §5 patrón 13 — Sección de cuenta con sub-nav, dentro del
@@ -49,12 +48,10 @@ export function AccountShell({
    * campana. Mismo topbar, dos órdenes distintos.
    */
   actionAfterBell = false,
-  /** Notificaciones que solo aplican a un estado concreto de una pantalla (Story 9.2). */
-  notificationExtras,
   /**
-   * `MonthlyPlan.dc.html`/`Upgrade.dc.html` (Story 9.1) son la cuenta de Naomi
-   * Feldstein: el bloque de usuario de la sidebar debe reflejarlo, no quedarse
-   * en `SAMPLE_MEMBER` (Alexandra) — ver `AppShell`.
+   * Las vistas de Membership (Story 9.1/9.2, backend real) pasan el miembro
+   * con sesión y su plan: el bloque de usuario de la sidebar debe reflejarlo,
+   * no quedarse en `SAMPLE_MEMBER` (Alexandra) — ver `AppShell`.
    */
   member,
   children,
@@ -70,7 +67,6 @@ export function AccountShell({
   /** Botón "Save changes" (Profile) o el chip "Saved as you change them" (el resto). */
   topbarRight: React.ReactNode;
   actionAfterBell?: boolean;
-  notificationExtras?: NotificationItem[];
   member?: { name: string; initials: string; tier: string };
   children: React.ReactNode;
 }) {
@@ -98,13 +94,13 @@ export function AccountShell({
           <div className="flex-1" />
           {actionAfterBell ? (
             <>
-              <NotificationBellMenu extraItems={notificationExtras} />
+              <NotificationBellMenu />
               {topbarRight}
             </>
           ) : (
             <>
               {topbarRight}
-              <NotificationBellMenu extraItems={notificationExtras} />
+              <NotificationBellMenu />
             </>
           )}
         </div>

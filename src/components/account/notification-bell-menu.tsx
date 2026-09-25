@@ -31,15 +31,7 @@ const ICONS: Record<NotificationIcon, React.ComponentType<{ size?: number; strok
   offer: Tag,
 };
 
-/**
- * `extraItems` antepone notificaciones que solo aplican en un estado concreto
- * de una pantalla (Story 9.2 — "friend sign-up confirmation notification" en
- * `/profile/membership/referrals?state=credited`) a las notificaciones reales
- * del miembro — nunca se escriben en `notifications` (siguen siendo de
- * muestra, Story 9.2 sin conectar), así que "Mark all as read" solo llega de
- * verdad a Supabase para el resto.
- */
-export function NotificationBellMenu({ extraItems = [] }: { extraItems?: NotificationItem[] } = {}) {
+export function NotificationBellMenu() {
   const supabase = React.useMemo(() => createClient(), []);
   const [items, setItems] = React.useState<NotificationItem[]>([]);
   const [open, setOpen] = React.useState(false);
@@ -59,8 +51,7 @@ export function NotificationBellMenu({ extraItems = [] }: { extraItems?: Notific
     };
   }, [supabase]);
 
-  const combined = [...extraItems, ...items];
-  const unread = unreadNotificationCount(combined);
+  const unread = unreadNotificationCount(items);
 
   async function markAllRead() {
     mutatedRef.current = true;
@@ -91,7 +82,7 @@ export function NotificationBellMenu({ extraItems = [] }: { extraItems?: Notific
           </div>
 
           <div className="flex max-h-[380px] flex-col gap-2 overflow-y-auto p-3">
-            {combined.slice(0, 5).map((item) => {
+            {items.slice(0, 5).map((item) => {
               const Icon = ICONS[item.icon];
               return (
                 <NotificationRow

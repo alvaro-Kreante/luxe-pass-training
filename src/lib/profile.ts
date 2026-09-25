@@ -1,16 +1,13 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { AmenityId } from "./amenities";
-import { VISITS_THIS_MONTH } from "./passes";
 
 /**
  * Story 6.3 (Member Profile & Preferences) — conectada a Supabase real
  * (tabla `profiles`, extendida; `member_favorite_lounges`, nace aquí — ver
  * `supabase/schemas/profiles.sql`/`member_favorite_lounges.sql`). Plan,
- * renovación y visitas de `MEMBERSHIP_SUMMARY` siguen siendo dato de
- * muestra — dueño real `memberships` (Epic 9, todavía mockup); solo
- * `membership_status` (Active/Inactive) es un stub real, ver
- * `fetchMembershipStatus`.
+ * renovación y visitas viven en `lib/membership.ts` (Epic 9, `memberships`);
+ * el código de referido, en `lib/referrals.ts`.
  */
 
 /** Debe coincidir con `BIRTH_MONTHS` en `components/onboarding/profile-context.tsx`. */
@@ -145,23 +142,13 @@ export async function updateProfile(supabase: SupabaseClient, edits: ProfileEdit
   if (error) throw error;
 }
 
-/**
- * `memberSince`/`renews`/`plan`/`visitsThisMonth` siguen siendo dato de
- * muestra — dueño real `memberships` (Epic 9). No formaban un término de
- * doce meses ("March 2026" → "November 3, 2026"): se conserva la
- * renovación y se corrige el alta a "November 2025", ver `DESIGN-SYSTEM.md`
- * §6 Fase 9.
- */
-export const MEMBERSHIP_SUMMARY = {
-  plan: "Annual",
-  memberSince: "November 2025",
-  renews: "November 3, 2026",
-  visitsThisMonth: VISITS_THIS_MONTH,
-};
-
 export type MembershipStatus = "active" | "inactive";
 
-/** Story 6.3 — "Membership status Active/Inactive". Stub real en `profiles.membership_status`. */
+/**
+ * Story 6.3 — "Membership status Active/Inactive". `profiles.membership_status`
+ * es desde Epic 9 un espejo de `memberships` (ver memberships.sql) — el
+ * detalle del plan lo da `fetchMembership` en `lib/membership.ts`.
+ */
 export async function fetchMembershipStatus(supabase: SupabaseClient): Promise<MembershipStatus> {
   const user = await requireUser(supabase);
   const { data, error } = await supabase
@@ -171,25 +158,6 @@ export async function fetchMembershipStatus(supabase: SupabaseClient): Promise<M
     .single();
   if (error) throw error;
   return (data as { membership_status: MembershipStatus }).membership_status;
-}
-
-/** Story 9.1/9.2 (Epic 9, sin conectar) — código fijo de la cuenta de muestra de Alexandra Rivas, reutilizado por `lib/membership.ts`/`lib/referrals.ts`. No confundir con `referralCodeFor`, el código real por miembro de `/profile`. */
-export const REFERRAL_CODE = "AR-SOLEIL-24";
-
-/** "AR-SOLEIL-42" — determinista por miembro, sin tabla `referrals` propia (Epic 9 no está conectada). */
-export function referralCodeFor(fullName: string, memberId: string): string {
-  const initials =
-    fullName
-      .trim()
-      .split(/\s+/)
-      .map((word) => word[0]?.toUpperCase() ?? "")
-      .join("")
-      .slice(0, 2) || "LP";
-
-  let hash = 0;
-  for (const char of memberId) hash = (hash * 31 + char.charCodeAt(0)) % 90;
-
-  return `${initials}-SOLEIL-${String(10 + hash)}`;
 }
 
 /* ------------------------------------------------------------------ */

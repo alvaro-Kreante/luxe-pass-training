@@ -128,7 +128,7 @@ function SummaryScreenBody({
   chargePayment: () => Promise<PaymentOutcome>;
 }) {
   const router = useRouter();
-  const { lounge, draft, update, holdSecondsLeft } = useBooking();
+  const { lounge, draft, update, holdSecondsLeft, refreshCoverage } = useBooking();
   const [waitlistOpen, setWaitlistOpen] = React.useState(false);
   const [paymentError, setPaymentError] = React.useState<{ message: string; reference: string } | null>(
     null,
@@ -166,7 +166,23 @@ function SummaryScreenBody({
       return;
     }
 
-    const booking = await confirmBooking(createClient(), bookingRequest, outcome.paymentId);
+    let booking: Awaited<ReturnType<typeof confirmBooking>>;
+    try {
+      booking = await confirmBooking(createClient(), bookingRequest, outcome.paymentId);
+    } catch (error) {
+      // Epic 9 — `confirm_booking` decide quién paga: si la visita dejó de
+      // estar cubierta (p. ej. las visitas del mes se agotaron en otra
+      // pestaña) la rechaza sin crear nada. Se reutiliza el estado de error
+      // de pago y se vuelve a pedir la cobertura, para que el paso de pago
+      // ofrezca ya las opciones de pago.
+      console.error("confirmBooking failed", error);
+      refreshCoverage();
+      setPaymentError({
+        message: "This visit is no longer covered by your membership — choose how to pay on the Payment step.",
+        reference: errorReference(lounge.id, draft.dateIso!, draft.time!),
+      });
+      return;
+    }
 
     if (!booking) {
       setWaitlistOpen(true);

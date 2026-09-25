@@ -242,6 +242,44 @@ Mismo motivo bloquea el aviso de las 6 AM de la Story 6.2
 `current_date` real que ese cron usa a propósito, ver
 `docs/design/COMPONENT-MAP.md` "Backend real — Epic 6".
 
+### 2.12 Epic 9: day passes sin gastar y otros huecos reales
+
+Conectado Epic 9 (23 sept 2026), quedan huecos conscientes — decisiones de
+alcance tomadas con el usuario, no simulaciones:
+
+- **Un cobro de renovación rechazado no se reintenta.** Si la tarjeta
+  guardada falla al vencer el término, la membresía vence en el acto (y se
+  avisa en la app); no hay periodo de gracia ni reintentos como haría
+  Stripe Billing (Smart Retries), ni email del fallo. Tampoco se gestiona
+  una tarjeta que exija autenticación 3DS off-session — cuenta como fallo.
+  **Desbloquea:** decidir una política de reintentos/gracia.
+- **El límite de 10 day passes de referido por año (Terms §5) no se
+  aplica.** Los day passes ya se gastan de verdad al reservar
+  (`booking_coverage.sql`), pero no hay tope anual. "Use a day pass" en
+  `/profile/membership/referrals` sigue sin destino propio — se gastan solos
+  al reservar, sin elegir cuál.
+- **Un pago reembolsado no retira el premio de referido** (Terms §3: "If
+  that payment fails or is refunded, the pending reward is withdrawn") —
+  un pago fallido nunca lo acredita, pero un reembolso posterior (Story
+  8.1) no lo deshace.
+- **La ficha de miembro del admin (`/admin/members/[id]`) sigue mostrando
+  solo Active/Inactive/Account deleted**, aunque `memberships` ya tenga
+  plan y renovación reales — enriquecerla no es AC de Epic 9.
+- **Cuentas creadas antes de Epic 9** (staging/prod) conservan
+  `profiles.membership_status = 'active'` sin fila en `memberships` — el
+  cambio de default a `'inactive'` solo afecta a perfiles nuevos, y una
+  migración declarativa no hace backfill de datos. Decidido con el usuario
+  (opción A): dejarlas sin plan — siguen usando la app y pagan cada visita
+  como day pass. **Pendiente: ejecutar a mano
+  `scripts/sql/epic9-backfill-membership-status.sql`** en Studio → SQL
+  Editor de `luxepass-dev` y `luxepass-prod`, después de que CI aplique las
+  migraciones de Epic 9 (idempotente; probado en local dentro de una
+  transacción).
+- **El seed de notificaciones de Epic 6 sigue sembrando "Your membership
+  renews soon"** a todo perfil nuevo, aunque ahora nazca sin membresía.
+  Retirarla rompe los tests de Story 6.2 que la usan como muestra; queda
+  para una limpieza de Epic 6.
+
 ---
 
 ## 3. Criterios de aceptación cubiertos solo de forma declarativa
@@ -279,10 +317,10 @@ nada los hace cumplir.
 | 8.3 | Add lounge profile | **Resuelto a medias tras conectar Epic 8 (22 sept 2026).** Editar y archivar un lounge ya son reales (`admin_submit_lounge_content_change`/`admin_archive_lounges`); "Add lounge" en `/admin/lounges` sigue sin abrir ningún formulario — ningún artboard de la Fase 8 dibuja el alta de un lounge nuevo, se paró antes de inventarlo (ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 8") |
 | 8.3 | Image optimization and resizing | **Resuelto a medias tras conectar Epic 8.** La subida de foto ya es real (bucket de Storage `lounge-images`); el redimensionado a 1600/800/400 px que el artboard anuncia sigue sin tener nada detrás — no hay librería de procesamiento de imágenes en el stack |
 
-| 9.1 | Renewal date and auto-renewal settings — aviso por email un mes antes | El texto "We email you on October 3" en `Main.dc.html` es solo la promesa en pantalla; ningún correo se programa ni se envía |
-| 9.1 | Upgrade options to monthly subscribers and pricing | "Pay $2,217.40 and switch" (`UpgradeConfirmModal`) no llama a Stripe ni cambia el plan de verdad — el modal cierra sin dejar rastro, igual que `WaitlistModal` en el Epic 4 |
-| 9.2 | Reward crediting for successful referrals (pending) | El paso de "Reward pending" a "Day pass credited" (Daniel Okonjo) se alcanza por `?state=credited` en `/profile/membership/referrals`, no por el primer pago de un amigo liquidando de verdad |
-| 9.2 | Friend's sign up confirmation notification | Las dos notificaciones de `RewardCredited.dc.html` solo existen cuando se abre esa misma URL con `?state=credited` (`extraItems` de `NotificationBellMenu`); no hay evento real de alta que las dispare |
+| 9.1 | Renewal date and auto-renewal settings — aviso por email un mes antes | **Resuelto tras conectar Epic 9 (23 sept 2026).** `dispatch_membership_renewals()` (pg_cron diario) inserta la notificación en la app y llama a `membership-renewal` (Brevo) para los anuales con auto-renovación en su último mes. La renovación en sí también cobra de verdad (misma function, `type: "charge"`) |
+| 9.1 | Upgrade options to monthly subscribers and pricing | **Resuelto tras conectar Epic 9.** "Pay … and switch" cobra de verdad con Stripe (modo test) el importe prorrateado de `membership_change_quote` y el trigger sobre `payments` sube el plan |
+| 9.2 | Reward crediting for successful referrals (pending) | **Resuelto tras conectar Epic 9.** "Reward pending" desde el alta del amigo; "Day pass credited" con su primer pago real liquidado (trigger `credit_referral_on_first_payment`). Gastar el day pass sigue sin conectar — ver §2.12 |
+| 9.2 | Friend's sign up confirmation notification | **Resuelto tras conectar Epic 9.** `create_referral_from_signup` inserta la notificación real "… joined" en cuanto el amigo crea su perfil con el código |
 
 Los enlaces de las tiendas de `/welcome` apuntan a `#`: no existen todavía las
 fichas de App Store ni Google Play.
@@ -468,6 +506,29 @@ usa el cron, en vez de que el cliente invoque la Edge Function
 directamente) — no solo el alta de Vault de arriba. Ver
 `docs/design/COMPONENT-MAP.md` tabla de desviaciones.
 
+### 4.8 Epic 9 no tiene nada desplegado a `staging`/`main` todavía
+
+Mismo hueco que Epic 5–8 antes de sus PR de despliegue dedicados:
+`.github/workflows/deploy.yml` no conoce `stripe-membership-checkout` ni
+`membership-renewal`. `stripe-membership-checkout` no necesita
+secreto propio (reutiliza `STRIPE_SECRET_KEY`/`APP_URL`, ya presentes);
+`membership-renewal` necesita `STRIPE_SECRET_KEY` (ya presente) y `MEMBERSHIP_RENEWAL_WEBHOOK_SECRET`
+y los 2 secretos de Vault (`membership_renewal_webhook_url`/`_secret`),
+dados de alta solo en el Docker local de esta rama.
+
+**Desbloquea:** un PR aparte que amplíe `deploy.yml` con `supabase
+functions deploy stripe-membership-checkout` + `supabase secrets set
+MEMBERSHIP_RENEWAL_WEBHOOK_SECRET` + `supabase functions deploy
+membership-renewal --no-verify-jwt` en
+`migrate-dev`/`migrate-prod`, los secrets de GitHub
+`MEMBERSHIP_RENEWAL_WEBHOOK_SECRET_DEV`/`_PROD` y el alta manual de los 2
+secretos de Vault en `luxepass-dev`/`luxepass-prod` vía Studio (SQL en
+`CLAUDE.md` §"Membresía y referidos reales"). Hasta entonces el cron de
+renovación sí inserta la notificación en la app y vence los términos sin
+auto-renovación (no depende de Vault), pero **no cobra las renovaciones**
+ni manda el email — en staging/prod, un término vencido con
+auto-renovación seguiría activo sin cobrar hasta completar este paso.
+
 ---
 
 ## 5. Decisiones abiertas
@@ -582,3 +643,4 @@ de la tarifa de no-show.
 | Epic 6 (borrado de cuenta, Story 6.3) no tenía nada desplegado a `staging`/`main` — `deploy.yml` solo desplegaba las Edge Functions de Epic 4/5, sin `delete-account` ni sus secrets | 22 sept 2026 | `deploy.yml` ampliado (mismo patrón que Epic 4/5) con `supabase secrets set ACCOUNT_DELETION_WEBHOOK_SECRET` + `supabase functions deploy delete-account --no-verify-jwt` en `migrate-dev`/`migrate-prod`. Los 2 secrets de GitHub (`ACCOUNT_DELETION_WEBHOOK_SECRET_DEV`/`_PROD`) dados de alta, y el usuario confirmó haber creado los 2 secretos de Vault (`account_deletion_webhook_url`/`_secret`) en `luxepass-dev` y `luxepass-prod` a mano vía Studio. `delete-account` ya desplegada de verdad en `luxepass-dev` (confirmado en el run de `deploy.yml` del merge a `staging`); `luxepass-prod` la recibe en cuanto `staging` se promueva a `main`. Epic 6 queda listo para promoverse a `staging` (ya hecho) y eventualmente a `main`. |
 | Epic 7 (Partner Dashboard) era mockup puro: `/partner/login` validaba credenciales en el cliente, `/partner`/`/partner/analytics`/`/partner/guests`/`/partner/reports` corrían sobre datos de muestra fijos, y la decisión de rol member/partner/admin (`docs/DATA-MODEL-MAP.md`) seguía pospuesta | 22 sept 2026 | Conectado a Supabase local real, decisiones de arquitectura tomadas con el usuario antes de implementar: tabla `user_roles` (no custom claim ni esquema separado) para el rol, `partner_lounges` como tabla puente many-to-many (no FK directa en `lounges`). Story 7.1: `partner_guest_list`/`partner_checkin_booking`/`partner_report_no_show` (RPC autenticadas, no "de kiosco") + suscripción de Supabase Realtime en `/partner` reemplazando los temporizadores deterministas. Story 7.2: dos triggers (Database Webhook) + un `pg_cron` (digest 6:30 AM), mismo mecanismo que Story 4.2/5.1/5.3 — decisión consciente de **no** usar la tabla `notifications` de Epic 6 (el AC es "recibir un email", no una fila en el centro de notificaciones del miembro). Story 7.3: `partner_analytics_summary`/`partner_bookings_by_day`/`partner_repeat_guests`, agregando sobre todos los lounges reales del partner. **Bug real encontrado y corregido corriendo la suite localmente**: `partner_bookings_by_day` devolvía `timestamp with time zone` donde la función declaraba `date` (`generate_series` sobre un rango de fechas produce timestamps, no fechas) — Postgres lo rechazaba con "structure of query does not match function result type"; corregido con un cast `::date` explícito. Las dos Edge Functions nuevas se verificaron de punta a punta con un `curl` directo contra el edge runtime local (200 en ambas) tras resolver una caída puntual del contenedor con `supabase stop && supabase start` (§4.5). Ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 7" y `docs/DATA-MODEL-MAP.md` §Epic 7. |
 | Epic 8 (Admin & Support) era mockup puro: las 11 pantallas de `/admin/**` corrían sobre datos de muestra fijos (`SUPPORT_CASES`, `ADMIN_MEMBERS`, `NETWORK_METRICS`, `ADMIN_LOUNGES`...), sin login de admin ni forma de tocar Supabase | 22 sept 2026 | Conectado a Supabase local real, dos decisiones de alcance tomadas con el usuario antes de implementar que revierten la nota original de `docs/DATA-MODEL-MAP.md`: el reembolso (Story 8.1) es real vía Stripe (`stripe-refund-payment`) para un cargo `succeeded`, y los reportes programados (Story 8.2) son reales vía `pg_cron` + Brevo (`send-admin-report`, adjunto CSV real) — mismo nivel de realismo que el resto del proyecto. `/admin/login` nace sin artboard propio (la Fase 8 nunca dibujó ese nodo del flow) — decisión confirmada con el usuario: reutiliza el layout de `/partner/login`. Story 8.1: `support_tickets`/`support_ticket_messages` (nacen aquí), un no-show reportado por un partner abre un caso automáticamente; `BookingOverrideDrawer` reescrito sobre los 5 horarios reales del dominio (el artboard dibujaba horas ficticias). Story 8.2: analítica real sobre TODA la red (no un lounge elegido), export por dataset con columnas anonimizadas por defecto. Story 8.3: `lounges.content_status` (live/draft/archived) + `lounge_content_submissions` (nace aquí) generalizan el "Content approval workflow" a cualquier lounge, no solo The Vestry como el mock; bucket de Storage real `lounge-images`; de la barra de acción masiva, solo "Archive" quedó real. **Dos bugs reales encontrados y corregidos con TDD**: (1) `admin_search_members` trataba "4+ dígitos en la consulta" como rama excluyente de la búsqueda por nombre, así que un query con nombre y unos dígitos (p. ej. un email de test con timestamp) dejaba de buscar por nombre — la condición pasó a ser inclusiva (OR); (2) las RPC que reutiliza el cron de reportes (`admin_generate_report_csv` y las `admin_export_*`) rechazaban la llamada con "Not authorized" porque el guard exigía `has_role('admin')` incluso cuando el cron las llama sin sesión (`auth.uid()` nulo) — el guard pasó a `auth.uid() is not null and not has_role('admin')`, que sigue rechazando a un autenticado sin el rol pero deja pasar la llamada interna sin sesión. Verificado de punta a punta: `stripe-refund-payment` con un cargo real de la sandbox, `dispatch_scheduled_reports` disparado a mano con `200` confirmado en `net._http_response`. Ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 8" y `docs/DATA-MODEL-MAP.md` §Epic 8. |
+| Epic 9 (Membership & Referrals) era mockup puro: `/profile/membership/**` corría sobre las cuentas de muestra de Alexandra/Naomi (`?plan=monthly`, `?state=credited`), el código de referido era determinista sin persistir y "Pay … and switch" solo cerraba el modal | 23 sept 2026 | Conectado a Supabase local real + Stripe en modo test, decisiones de producto tomadas con el usuario antes de implementar: un miembro nace sin membresía hasta elegir plan (elección de plan sobre `Plans.dc.html` + el modal de `Upgrade.dc.html`, sin artboard propio); alta y subida mensual→anual son un cobro puntual real (no Stripe Billing), con tarjeta guardada o `<PaymentElement>` embebido; el premio de referido se acredita con el primer pago real liquidado del amigo; el amigo entra por `/join/[code]` → `/signup?ref=` (metadatos de Auth, sin campo nuevo). Nacen `memberships`, `referrals`, `referral_shares`; `profiles.membership_status` pasa a espejo de `memberships` y el miembro ya no puede escribirlo (ni `referral_code`/`stripe_customer_id`, `guard_profile_managed_columns`). Cuarto uso de `pg_cron` (`dispatch_membership_renewals`, aviso de un mes antes + vencimientos). Ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 9" y §2.12/§4.8 de este archivo para lo que queda abierto. |

@@ -70,7 +70,7 @@ beforeAll(async () => {
 
   const memberEmail = `analytics-member-${stamp}@ensoleil-test.com`;
   const member = createClient();
-  await signUpConfirmedMemberAndSignIn(member, memberEmail, "EnSoleil!2026");
+  await signUpConfirmedMemberAndSignIn(member, memberEmail, "EnSoleil!2026", { membership: "annual" });
   const {
     data: { user: memberUser },
   } = await member.auth.getUser();

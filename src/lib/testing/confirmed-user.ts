@@ -1,6 +1,9 @@
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import type { PlanId } from "../membership";
+import { grantTestMembership } from "./membership-fixture";
+
 /**
  * Solo para tests. Los tests de este proyecto no mockean Supabase (ver
  * CLAUDE.md §Metodología de test), así que las pantallas que necesitan una
@@ -14,6 +17,7 @@ export async function signUpConfirmedAndSignIn(
   supabase: SupabaseClient,
   email: string,
   password: string,
+  options: { userMetadata?: Record<string, unknown> } = {},
 ) {
   const admin = createAdminClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -23,6 +27,7 @@ export async function signUpConfirmedAndSignIn(
     email,
     password,
     email_confirm: true,
+    user_metadata: options.userMetadata,
   });
   if (createError) throw createError;
 
@@ -43,8 +48,15 @@ export async function signUpConfirmedMemberAndSignIn(
   supabase: SupabaseClient,
   email: string,
   password: string,
+  /**
+   * `membership`: desde Epic 9 un miembro nace sin plan, y `confirm_booking`
+   * solo acepta una reserva sin pago si la cubre la membresía real. Los tests
+   * que crean reservas "gratis" como escenario (pase digital, recepción,
+   * partner…) piden aquí un plan activo, sembrado con el service role.
+   */
+  options: { userMetadata?: Record<string, unknown>; fullName?: string; membership?: PlanId } = {},
 ) {
-  await signUpConfirmedAndSignIn(supabase, email, password);
+  await signUpConfirmedAndSignIn(supabase, email, password, options);
 
   const {
     data: { user },
@@ -53,13 +65,15 @@ export async function signUpConfirmedMemberAndSignIn(
 
   const { error } = await supabase.from("profiles").insert({
     id: user.id,
-    full_name: "Test Member",
+    full_name: options.fullName ?? "Test Member",
     phone: "+15555550100",
     city: "New York",
     industry: "Testing",
     terms_accepted_at: new Date().toISOString(),
   });
   if (error) throw error;
+
+  if (options.membership) await grantTestMembership(user.id, options.membership);
 
   return user;
 }

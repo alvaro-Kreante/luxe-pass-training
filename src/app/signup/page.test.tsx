@@ -13,9 +13,11 @@ import SignUpPage from "./page";
  */
 
 const push = vi.fn();
+let query = new URLSearchParams();
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
+  useSearchParams: () => query,
 }));
 
 type User = ReturnType<typeof userEvent.setup>;
@@ -34,7 +36,19 @@ beforeAll(async () => {
 
 beforeEach(() => {
   push.mockClear();
+  query = new URLSearchParams();
 });
+
+/** Metadatos de Auth del usuario recién dado de alta (API de administración, service role). */
+async function userMetadataFor(email: string): Promise<Record<string, unknown> | undefined> {
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_SUPABASE_URL}/auth/v1/admin/users?filter=${encodeURIComponent(email)}`,
+    { headers: { apikey: key, Authorization: `Bearer ${key}` } },
+  );
+  const { users } = (await res.json()) as { users: { email: string; user_metadata: Record<string, unknown> }[] };
+  return users.find((candidate) => candidate.email === email)?.user_metadata;
+}
 
 function submitButton() {
   return screen.getByRole("button", { name: "Create account" });
@@ -283,5 +297,34 @@ describe("mostrar contraseña", () => {
       "type",
       "text",
     );
+  });
+});
+
+describe("Story 9.2 — llegada desde /join/[code]", () => {
+  it("guarda el código de ?ref= en los metadatos del alta", async () => {
+    query = new URLSearchParams({ ref: "AR-SOLEIL-24" });
+    const email = `referida-${Date.now()}@ensoleil-test.com`;
+    const user = userEvent.setup({ delay: null });
+    render(<SignUpPage />);
+
+    await acceptTerms(user);
+    await fillForm(user, { email });
+    await user.click(submitButton());
+
+    await waitFor(() => expect(push).toHaveBeenCalled());
+    expect((await userMetadataFor(email))?.referral_code).toBe("AR-SOLEIL-24");
+  });
+
+  it("sin ?ref=, el alta no lleva código", async () => {
+    const email = `sin-codigo-${Date.now()}@ensoleil-test.com`;
+    const user = userEvent.setup({ delay: null });
+    render(<SignUpPage />);
+
+    await acceptTerms(user);
+    await fillForm(user, { email });
+    await user.click(submitButton());
+
+    await waitFor(() => expect(push).toHaveBeenCalled());
+    expect((await userMetadataFor(email))?.referral_code).toBeUndefined();
   });
 });

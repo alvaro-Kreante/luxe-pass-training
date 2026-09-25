@@ -1,11 +1,15 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import { TODAY } from "./availability";
+
 /**
- * Story 9.2 (Referral Program). Sin backend: las cinco invitaciones, las
- * stats, los day passes del rail y los términos del programa son datos de
- * muestra deterministas para Alexandra Rivas (`AR-SOLEIL-24`, ver
- * `lib/profile.ts`). `Referrals.dc.html` / `RewardCredited.dc.html` son dos
- * estados de la misma pantalla — el segundo es el que alcanza el nodo
- * "Reward crediting" → "Reward confirmation" del flow, sin un backend que lo
- * dispare de verdad.
+ * Story 9.2 (Referral Program) — conectada a Supabase real (`referrals`,
+ * `referral_shares` y `profiles.referral_code`, ver
+ * `supabase/schemas/referrals.sql`). El amigo llega por `/join/[code]` →
+ * `/signup?ref=` y su fila de `referrals` nace al crear el perfil; el premio
+ * pasa de "pending" a "credited" con su primer pago real liquidado (trigger
+ * sobre `payments`) — decisiones de producto del 23 sept 2026, ver
+ * `docs/design/COMPONENT-MAP.md` "Backend real — Epic 9".
  */
 
 export type ReferralStatus = "credited" | "pending" | "invited" | "expired";
@@ -17,62 +21,13 @@ export interface ReferralInvitation {
   email: string;
   sentLabel: string;
   status: ReferralStatus;
-  /** "1 day pass" · "Clears in 48 h" · "—" cuando aún no hay reserva de premio. */
+  /** "1 day pass" · "After their first payment" · "—" cuando aún no hay reserva de premio. */
   rewardLabel: string;
-  /** Rosalind Vane (expirada) se dibuja con el nombre atenuado. */
+  /** Una invitación expirada se dibuja con el nombre atenuado. */
   inactive?: boolean;
-  /** Daniel Okonjo en el estado "credited" — fila recién cambiada. */
+  /** Fila acreditada en las últimas 48 h — `RewardCredited.dc.html` la resalta. */
   recentlyChanged?: boolean;
 }
-
-export const REFERRAL_INVITATIONS: ReferralInvitation[] = [
-  {
-    id: "priya",
-    name: "Priya Raghavan",
-    initials: "PR",
-    email: "priya.raghavan@email.com",
-    sentLabel: "July 26",
-    status: "credited",
-    rewardLabel: "1 day pass",
-  },
-  {
-    id: "daniel",
-    name: "Daniel Okonjo",
-    initials: "DO",
-    email: "daniel.okonjo@email.com",
-    sentLabel: "August 30",
-    status: "pending",
-    rewardLabel: "Clears in 48 h",
-  },
-  {
-    id: "marta",
-    name: "Marta Ibarra",
-    initials: "MI",
-    email: "marta.ibarra@email.com",
-    sentLabel: "August 28",
-    status: "invited",
-    rewardLabel: "—",
-  },
-  {
-    id: "theo",
-    name: "Theo Lindqvist",
-    initials: "TL",
-    email: "theo.lindqvist@email.com",
-    sentLabel: "August 28",
-    status: "invited",
-    rewardLabel: "—",
-  },
-  {
-    id: "rosalind",
-    name: "Rosalind Vane",
-    initials: "RV",
-    email: "rosalind.vane@email.com",
-    sentLabel: "June 14",
-    status: "expired",
-    rewardLabel: "—",
-    inactive: true,
-  },
-];
 
 export interface ReferralStats {
   sentCount: number;
@@ -83,15 +38,6 @@ export interface ReferralStats {
   earnedNote: string;
 }
 
-export const REFERRAL_STATS: ReferralStats = {
-  sentCount: 5,
-  sentNote: "2 still open · 1 expired",
-  joinedCount: 2,
-  joinedNote: "Priya in August, Daniel this week",
-  earnedCount: 1,
-  earnedNote: "$75.00 · 1 more pending",
-};
-
 export interface DayPassEntry {
   id: string;
   title: string;
@@ -100,73 +46,199 @@ export interface DayPassEntry {
   pending?: boolean;
 }
 
-export const DAY_PASSES_DEFAULT: DayPassEntry[] = [
-  { id: "referral-priya", title: "1 referral day pass", subtitle: "From Priya · ready to use", icon: "referral" },
-  { id: "birthday", title: "1 birthday day pass", subtitle: "Yours all September", icon: "birthday" },
-  { id: "pending-daniel", title: "1 pending", subtitle: "From Daniel · clears in 48 h", icon: "pending", pending: true },
-];
-
-export const DAY_PASSES_CREDITED: DayPassEntry[] = [
-  { id: "referral-both", title: "2 referral day passes", subtitle: "From Priya and Daniel", icon: "referral" },
-  { id: "birthday", title: "1 birthday day pass", subtitle: "Yours all September", icon: "birthday" },
-];
-
 export const REFERRAL_INVITATION_EXPIRY_DAYS = 60;
+export const REFERRAL_DAY_PASS_VALUE = 75;
 
-/* ------------------------------------------------------------------ */
-/* Estado de la vista — "default" (Referrals.dc.html) vs "credited"     */
-/* (RewardCredited.dc.html)                                             */
-/* ------------------------------------------------------------------ */
+const REFERRAL_CODE_SHAPE = /^[A-Z]{1,2}-SOLEIL-\d{2,4}$/;
 
-export type ReferralViewStateId = "default" | "credited";
+/** El segmento de `/join/[code]` — normalizado, o `null` si no tiene forma de código. */
+export function normalizeReferralCode(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(raw);
+  } catch {
+    return null;
+  }
+  const code = decoded.trim().toUpperCase();
+  return REFERRAL_CODE_SHAPE.test(code) ? code : null;
+}
 
-export interface ReferralViewState {
+/** AC "Unique referral code generation" — persistido en `profiles.referral_code`. */
+export async function ensureReferralCode(supabase: SupabaseClient): Promise<string> {
+  const { data, error } = await supabase.rpc("my_referral_code");
+  if (error) throw error;
+  return data as string;
+}
+
+export type ReferralShareChannel = "messages" | "whatsapp" | "email" | "instagram" | "nearby" | "more" | "copy";
+
+/** "Invitations sent" — `Share.dc.html` no pide el email del amigo, así que cuenta las veces que se comparte. */
+export async function recordReferralShare(supabase: SupabaseClient, channel: ReferralShareChannel): Promise<void> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const { error } = await supabase.from("referral_shares").insert({ member_id: user.id, channel });
+  if (error) throw error;
+}
+
+interface ReferralRow {
+  id: string;
+  referrer_id: string;
+  referee_id: string;
+  referee_name: string;
+  referee_email: string;
+  status: "pending" | "credited";
+  joined_at: string;
+  credited_at: string | null;
+}
+
+export interface ReferralOverview {
   invitations: ReferralInvitation[];
   stats: ReferralStats;
   dayPasses: DayPassEntry[];
+  readyDayPassCount: number;
+  /** "1 from a referral, 1 for your birthday month." — `Main.dc.html`. */
+  dayPassesNote: string;
+  /** Algún premio se acreditó en las últimas 48 h (`RewardCredited.dc.html`). */
+  recentlyCredited: boolean;
 }
 
-export function referralViewState(state: ReferralViewStateId): ReferralViewState {
-  if (state !== "credited") {
-    return { invitations: REFERRAL_INVITATIONS, stats: REFERRAL_STATS, dayPasses: DAY_PASSES_DEFAULT };
+function initialsOf(fullName: string): string {
+  return (
+    fullName
+      .trim()
+      .split(/\s+/)
+      .map((word) => word[0]?.toUpperCase() ?? "")
+      .join("")
+      .slice(0, 2) || "?"
+  );
+}
+
+function formatMonthDay(iso: string): string {
+  return new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", timeZone: "UTC" }).format(new Date(iso));
+}
+
+function firstName(fullName: string): string {
+  return fullName.trim().split(/\s+/)[0] ?? fullName;
+}
+
+function listNames(names: string[]): string {
+  if (names.length <= 1) return names.join("");
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
+function formatUsd(amount: number): string {
+  return amount.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2 });
+}
+
+const RECENT_MS = 48 * 60 * 60 * 1000;
+
+/**
+ * AC "Referral tracking and status updates" + "Reward crediting". Day
+ * passes: uno por referido acreditado (como referidor, o como amigo que
+ * llegó con un código — "you each get a complimentary day pass") y el del
+ * mes de cumpleaños (`profiles.birth_month`, contra el "hoy" de mockup).
+ * Gastarlos al reservar no está conectado (ver PENDIENTES), así que no se
+ * descuentan.
+ */
+export async function fetchReferralOverview(
+  supabase: SupabaseClient,
+  { todayIso = TODAY, now = new Date() }: { todayIso?: string; now?: Date } = {},
+): Promise<ReferralOverview> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+
+  const [referralsResult, sharesResult, profileResult] = await Promise.all([
+    supabase
+      .from("referrals")
+      .select("id, referrer_id, referee_id, referee_name, referee_email, status, joined_at, credited_at")
+      .order("joined_at", { ascending: false }),
+    supabase.from("referral_shares").select("id", { count: "exact", head: true }).eq("member_id", user.id),
+    supabase.from("profiles").select("birth_month").eq("id", user.id).single(),
+  ]);
+  if (referralsResult.error) throw referralsResult.error;
+  if (sharesResult.error) throw sharesResult.error;
+  if (profileResult.error) throw profileResult.error;
+
+  const rows = referralsResult.data as ReferralRow[];
+  const mine = rows.filter((row) => row.referrer_id === user.id);
+  const welcome = rows.find((row) => row.referee_id === user.id && row.status === "credited");
+  const credited = mine.filter((row) => row.status === "credited");
+  const pending = mine.filter((row) => row.status === "pending");
+
+  const invitations: ReferralInvitation[] = mine.map((row) => ({
+    id: row.id,
+    name: row.referee_name,
+    initials: initialsOf(row.referee_name),
+    email: row.referee_email,
+    sentLabel: formatMonthDay(row.joined_at),
+    status: row.status,
+    rewardLabel: row.status === "credited" ? "1 day pass" : "After their first payment",
+    recentlyChanged: row.credited_at != null && now.getTime() - Date.parse(row.credited_at) < RECENT_MS,
+  }));
+
+  const sentCount = sharesResult.count ?? 0;
+  const stats: ReferralStats = {
+    sentCount,
+    sentNote: sentCount === 0 ? "Share your code to start" : "By message, email or link",
+    joinedCount: mine.length,
+    joinedNote: mine.length === 0 ? "No one yet" : listNames(mine.map((row) => firstName(row.referee_name))),
+    earnedCount: credited.length,
+    earnedNote: `${formatUsd(credited.length * REFERRAL_DAY_PASS_VALUE)} · ${
+      pending.length === 0 ? "nothing pending" : `${pending.length} more pending`
+    }`,
+  };
+
+  const birthMonth = (profileResult.data as { birth_month: number | null }).birth_month;
+  const today = new Date(`${todayIso}T00:00:00Z`);
+  const hasBirthdayPass = birthMonth === today.getUTCMonth() + 1;
+  const monthName = new Intl.DateTimeFormat("en-US", { month: "long", timeZone: "UTC" }).format(today);
+
+  const referralPassCount = credited.length + (welcome ? 1 : 0);
+  const referralSources = [...credited.map((row) => firstName(row.referee_name)), ...(welcome ? ["your welcome"] : [])];
+
+  const dayPasses: DayPassEntry[] = [];
+  if (referralPassCount > 0) {
+    dayPasses.push({
+      id: "referral",
+      title: referralPassCount === 1 ? "1 referral day pass" : `${referralPassCount} referral day passes`,
+      subtitle: `From ${listNames(referralSources)} · ready to use`,
+      icon: "referral",
+    });
+  }
+  if (hasBirthdayPass) {
+    dayPasses.push({ id: "birthday", title: "1 birthday day pass", subtitle: `Yours all ${monthName}`, icon: "birthday" });
+  }
+  if (pending.length > 0) {
+    dayPasses.push({
+      id: "pending",
+      title: `${pending.length} pending`,
+      subtitle: `From ${listNames(pending.map((row) => firstName(row.referee_name)))} · after their first payment`,
+      icon: "pending",
+      pending: true,
+    });
   }
 
+  const noteParts: string[] = [];
+  if (referralPassCount > 0) {
+    noteParts.push(`${referralPassCount} from ${referralPassCount === 1 ? "a referral" : "referrals"}`);
+  }
+  if (hasBirthdayPass) noteParts.push("1 for your birthday month");
+
   return {
-    invitations: REFERRAL_INVITATIONS.map((invitation) =>
-      invitation.id === "daniel"
-        ? { ...invitation, status: "credited", rewardLabel: "1 day pass", recentlyChanged: true }
-        : invitation,
-    ),
-    stats: { ...REFERRAL_STATS, earnedCount: 2, earnedNote: "$150.00 · nothing pending" },
-    dayPasses: DAY_PASSES_CREDITED,
+    invitations,
+    stats,
+    dayPasses,
+    readyDayPassCount: referralPassCount + (hasBirthdayPass ? 1 : 0),
+    dayPassesNote: noteParts.length ? `${noteParts.join(", ")}.` : "",
+    recentlyCredited: invitations.some((invitation) => invitation.recentlyChanged),
   };
 }
-
-/* ------------------------------------------------------------------ */
-/* Notificaciones de la Story 9.2 — solo se muestran en el estado       */
-/* "credited" (ver `NotificationBellMenu`'s prop `extraItems`)          */
-/* ------------------------------------------------------------------ */
-
-export const REFERRAL_CREDITED_NOTIFICATIONS = [
-  {
-    id: "n-referral-day-pass-ready",
-    category: "membership" as const,
-    icon: "membership" as const,
-    title: "Your referral day pass is ready",
-    body: "Daniel's first payment went through, so the pass is now in your account.",
-    time: "9:12 AM",
-    read: false,
-  },
-  {
-    id: "n-referral-friend-joined",
-    category: "membership" as const,
-    icon: "membership" as const,
-    title: "Daniel Okonjo joined",
-    body: "He signed up with AR-SOLEIL-24. That is your second friend on LuxePass.",
-    time: "Tuesday",
-    read: false,
-  },
-];
 
 /* ------------------------------------------------------------------ */
 /* Términos del programa — `Terms.dc.html`                              */

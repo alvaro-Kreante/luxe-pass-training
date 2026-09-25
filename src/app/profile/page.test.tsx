@@ -3,8 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { fetchProfile } from "@/lib/profile";
+import { ensureReferralCode } from "@/lib/referrals";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
+import { grantTestMembership } from "@/lib/testing/membership-fixture";
 
 import ProfilePage from "./page";
 
@@ -55,19 +57,48 @@ describe("detalles del perfil", () => {
     });
   });
 
-  it("AC 'Membership status Active/Inactive' — nace activa", async () => {
+  it("AC 'Membership status Active/Inactive' — nace inactiva hasta elegir plan (Epic 9)", async () => {
     await signUpFreshMember("membership-status");
+    render(<ProfilePage />);
+
+    await waitFor(() => expect(screen.getByText("Inactive")).toBeInTheDocument());
+    expect(screen.getByText("No active plan")).toBeInTheDocument();
+  });
+
+  it("AC 'Membership status Active/Inactive' — con un plan real, lo muestra activo", async () => {
+    const supabase = await signUpFreshMember("membership-active");
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    await grantTestMembership(user!.id, "annual", {
+      startedAt: new Date("2025-11-03T00:00:00Z"),
+      periodStart: new Date("2025-11-03T00:00:00Z"),
+      periodEnd: new Date("2099-11-03T00:00:00Z"),
+    });
     render(<ProfilePage />);
 
     await waitFor(() => expect(screen.getByText("Active")).toBeInTheDocument());
     expect(screen.getByText("Annual")).toBeInTheDocument();
+    expect(screen.getByText("November 3, 2099")).toBeInTheDocument();
   });
 
-  it("AC 'Referral code sharing functionality' — enseña un código real por miembro", async () => {
-    await signUpFreshMember("referral-code");
+  it("AC 'Referral code sharing functionality' — enseña el código persistido del miembro", async () => {
+    const supabase = await signUpFreshMember("referral-code");
+    const code = await ensureReferralCode(supabase);
     render(<ProfilePage />);
 
-    await waitFor(() => expect(screen.getByText(/^TM-SOLEIL-\d{2}$/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(code)).toBeInTheDocument());
+    expect(code).toMatch(/^TM-SOLEIL-\d{2,4}$/);
+  });
+
+  it('"Share your code" lleva al programa de referidos', async () => {
+    await signUpFreshMember("referral-share");
+    const user = userEvent.setup({ delay: null });
+    render(<ProfilePage />);
+
+    await user.click(await screen.findByRole("button", { name: "Share your code" }));
+
+    expect(push).toHaveBeenCalledWith("/profile/membership/referrals");
   });
 
   it("muestra el badge Verified junto al email y al teléfono (el de teléfono es visual — Story 1.1 nunca construyó esa verificación)", async () => {

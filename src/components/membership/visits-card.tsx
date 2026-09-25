@@ -1,18 +1,13 @@
+import Link from "next/link";
 import { CalendarClock } from "lucide-react";
 
 import { ConsumptionBar } from "@/components/ui/consumption-bar";
-import {
-  COMPLIMENTARY_DAY_PASSES_COUNT,
-  COMPLIMENTARY_DAY_PASSES_NOTE,
-  EXTRA_VISIT_PRICE_LABEL,
-  type MembershipAccount,
-} from "@/lib/membership";
+import { EXTRA_VISIT_PRICE_LABEL, type MembershipAccount } from "@/lib/membership";
 
 /**
  * "Visits this month" — `Main.dc.html` (`variant="full"`, con el aviso de day
- * passes complementarios) y `MonthlyPlan.dc.html` (`variant="compact"`, fila
- * más corta sin ese aviso — Naomi no tiene day passes complementarios porque
- * no ha enviado ninguna invitación).
+ * passes complementarios, solo si hay alguno real) y `MonthlyPlan.dc.html`
+ * (`variant="compact"`, fila más corta sin ese aviso).
  */
 export function VisitsCard({
   account,
@@ -62,18 +57,25 @@ export function VisitsCard({
         className="mt-2.5"
       />
 
-      <div className="mt-3.5 flex items-center gap-2.5 rounded-[12px] border border-line bg-blush-2 px-3.5 py-3">
-        <CalendarClock size={18} strokeWidth={1.7} className="text-accent-strong" aria-hidden />
-        <p className="m-0 flex-1 text-[12.5px] text-fg-muted">
-          <span className="font-bold text-fg">{COMPLIMENTARY_DAY_PASSES_COUNT} complimentary day passes</span>{" "}
-          available — {COMPLIMENTARY_DAY_PASSES_NOTE}
-        </p>
-        <a className="cursor-pointer text-[12.5px] font-bold text-accent-strong">View</a>
-      </div>
+      {account.complimentaryDayPassesCount > 0 ? (
+        <div className="mt-3.5 flex items-center gap-2.5 rounded-[12px] border border-line bg-blush-2 px-3.5 py-3">
+          <CalendarClock size={18} strokeWidth={1.7} className="text-accent-strong" aria-hidden />
+          <p className="m-0 flex-1 text-[12.5px] text-fg-muted">
+            <span className="font-bold text-fg">
+              {account.complimentaryDayPassesCount === 1
+                ? "1 complimentary day pass"
+                : `${account.complimentaryDayPassesCount} complimentary day passes`}
+            </span>{" "}
+            available — {account.complimentaryDayPassesNote}
+          </p>
+          <Link href="/profile/membership/referrals" className="text-[12.5px] font-bold text-accent-strong">
+            View
+          </Link>
+        </div>
+      ) : null}
 
       <p className="m-0 mt-2.5 text-[11.5px] leading-[1.55] text-fg-subtle">
-        Extra visits beyond the {account.visitsIncluded} are charged as a day pass — {EXTRA_VISIT_PRICE_LABEL} plus
-        tax.
+        Extra visits beyond the {account.visitsIncluded} are charged as a day pass — {EXTRA_VISIT_PRICE_LABEL} plus tax.
       </p>
     </div>
   );

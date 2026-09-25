@@ -17,7 +17,6 @@ import {
   isFavoriteLounge,
   parseDateOfBirth,
   reactivateAccountIfDeleted,
-  referralCodeFor,
   removeFavoriteLounge,
   requestAccountDeletion,
   updateInterests,
@@ -27,6 +26,7 @@ import {
 } from "./profile";
 import { createClient } from "./supabase/client";
 import { signUpConfirmedMemberAndSignIn } from "./testing/confirmed-user";
+import { grantTestMembership } from "./testing/membership-fixture";
 
 /**
  * Story 6.3 (Member Profile & Preferences). Criterios en
@@ -89,15 +89,7 @@ describe("fetchMembershipStatus", () => {
   it("AC 'Membership status Active/Inactive' — nace 'active'", async () => {
     const { supabase } = await signUpFreshMember("membership-status");
 
-    expect(await fetchMembershipStatus(supabase)).toBe("active");
-  });
-});
-
-describe("referralCodeFor", () => {
-  it("AC 'Referral code sharing functionality' — determinista y con las iniciales del miembro", () => {
-    const code = referralCodeFor("Jordan Reyes", "11111111-1111-1111-1111-111111111111");
-    expect(code).toMatch(/^JR-SOLEIL-\d{2}$/);
-    expect(referralCodeFor("Jordan Reyes", "11111111-1111-1111-1111-111111111111")).toBe(code);
+    expect(await fetchMembershipStatus(supabase)).toBe("inactive");
   });
 });
 
@@ -202,6 +194,8 @@ describe("exportMemberData", () => {
 describe("requestAccountDeletion / reactivateAccountIfDeleted", () => {
   it("AC 'Account deletion option with confirmation' — marca deleted_at, cancela reservas futuras y reactiva al volver a entrar", async () => {
     const { supabase, user } = await signUpFreshMember("delete");
+    // Desde Epic 9 una reserva sin pago exige un plan activo real.
+    await grantTestMembership(user.id, "annual");
     const futureDate = addDays(TODAY, 3);
     const booking = await confirmBooking(supabase, {
       loungeId: "the-cordelia",
