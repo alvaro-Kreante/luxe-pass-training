@@ -24,8 +24,8 @@ if (!supabaseUrl.includes("127.0.0.1") && !supabaseUrl.includes("localhost")) {
   process.exit(1);
 }
 
-const ADMIN_EMAIL = "priya.raghunathan@ensoleil.co";
-const ADMIN_PASSWORD = "SupportDesk!24";
+const ADMIN_EMAIL = "alvaro+admin@kreante.co";
+const ADMIN_PASSWORD = "Pa$$w0rd!";
 
 async function main() {
   const admin = createClient(supabaseUrl, serviceRoleKey);
