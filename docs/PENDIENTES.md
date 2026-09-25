@@ -531,6 +531,25 @@ auto-renovación seguiría activo sin cobrar hasta completar este paso.
 
 ---
 
+### 4.9 El test del CSV de `/admin/reports` falla con la base local acumulada
+
+`src/app/admin/reports/page.test.tsx` → *"downloads a real CSV that includes
+the ephemeral booking's reference"* falla en local (detectado el 25 sept 2026,
+durante el PR #33; falla igual en `staging` sin ese PR). El CSV descargado
+no contiene la referencia `LP-######` de la reserva que crea el propio test.
+
+Hipótesis, sin confirmar: `admin_export_bookings`
+(`supabase/schemas/admin_reports.sql`) ordena por `b.date, b.slot_time`
+ascendente, y la base local ya acumula ~1.500 `bookings` de corridas
+anteriores, muchas con fecha anterior al `TODAY` que usa el test. Si el export
+se corta en las 1.000 filas de `max_rows` (`config.toml`), la reserva nueva
+queda fuera. Con una base limpia (`supabase db reset`) probablemente pasa.
+
+Opciones: que el test filtre por un rango de fechas propio, que el export no
+dependa del límite de PostgREST, o limpiar los datos de prueba entre corridas.
+Relacionado con la nota de recursos compartidos (Stripe / `lounge_availability`):
+la suite deja datos reales en la base local.
+
 ## 5. Decisiones abiertas
 
 ### 5.1 El error de términos de `/signup` no se puede llegar a ver
