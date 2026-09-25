@@ -1,5 +1,8 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+
+import { createClient } from "@/lib/supabase/client";
+import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
 
 import { AppShell } from "./app-shell";
 
@@ -95,5 +98,24 @@ describe("navegación del área de miembro", () => {
     expect(
       screen.getByRole("heading", { name: "Hello, Alexandra" }),
     ).toBeInTheDocument();
+  });
+});
+
+describe("bloque de usuario de la sidebar", () => {
+  it("muestra el nombre real del miembro con sesión, no el de muestra", async () => {
+    const supabase = createClient();
+    await signUpConfirmedMemberAndSignIn(
+      supabase,
+      `app-shell-${Date.now()}@ensoleil-test.com`,
+      "EnSoleil!2026",
+    );
+
+    render(<AppShell>contenido</AppShell>);
+
+    await waitFor(() => expect(screen.getByText("Test Member")).toBeInTheDocument());
+    expect(screen.getByText("TM")).toBeInTheDocument();
+    expect(screen.getByText(/^(Active|Free) member$/)).toBeInTheDocument();
+    expect(screen.queryByText("Alexandra Rivas")).not.toBeInTheDocument();
+    expect(screen.queryByText("Annual member")).not.toBeInTheDocument();
   });
 });

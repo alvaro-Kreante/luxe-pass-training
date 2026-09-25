@@ -2,6 +2,8 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { featuredLounges } from "@/lib/lounges";
+import { createClient } from "@/lib/supabase/client";
+import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
 import HomePage from "./page";
 
 /**
@@ -44,5 +46,20 @@ describe("lounges destacados", () => {
     for (const lounge of featured) {
       expect(screen.getByText(lounge.name)).toBeInTheDocument();
     }
+  });
+});
+
+describe("saludo", () => {
+  it("saluda al miembro con sesión por su nombre real", async () => {
+    const supabase = createClient();
+    await signUpConfirmedMemberAndSignIn(
+      supabase,
+      `home-${Date.now()}@ensoleil-test.com`,
+      "EnSoleil!2026",
+    );
+
+    render(<HomePage />);
+
+    expect(await screen.findByRole("heading", { name: "Hello, Test" })).toBeInTheDocument();
   });
 });

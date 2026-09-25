@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { CardBrandBadge } from "@/components/ui/card-brand-badge";
 import { SelectableChip } from "@/components/ui/chip";
 import { DetailRow } from "@/components/ui/detail-row";
-import { SAMPLE_MEMBER } from "@/lib/member";
+import { useCurrentMember } from "@/lib/current-member";
 import { SAMPLE_PAYMENT_METHODS } from "@/lib/booking";
 import {
   LATE_CANCELLATION_FEE_LABEL,
@@ -39,6 +39,7 @@ export function CancelBookingModal({
   onConfirmCancel: () => void;
 }) {
   const [reason, setReason] = React.useState<string | null>(null);
+  const member = useCurrentMember();
   const free = booking.hoursUntilArrival !== null && isFreeCancellation(booking.hoursUntilArrival);
   const daysAhead = booking.hoursUntilArrival !== null ? Math.round(booking.hoursUntilArrival / 24) : 0;
 
@@ -108,7 +109,7 @@ export function CancelBookingModal({
               icon={<Mail size={16} strokeWidth={1.9} className="text-accent-strong" aria-hidden />}
               text={
                 <>
-                  We email a cancellation notice to <strong className="text-fg">{SAMPLE_MEMBER.email}</strong>
+                  We email a cancellation notice to <strong className="text-fg">{member.email}</strong>
                 </>
               }
             />

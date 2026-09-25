@@ -1,16 +1,18 @@
+"use client";
+
 import Link from "next/link";
 
 import { AppShell } from "@/components/patterns/app-shell";
 import { FeaturedLoungeCard } from "@/components/lounges/featured-lounge-card";
 import { featuredLounges } from "@/lib/lounges";
-import { SAMPLE_MEMBER } from "@/lib/member";
+import { useCurrentMember } from "@/lib/current-member";
 
 /**
  * Home del área de miembro.
  * Artboard: docs/design/epic-1-onboarding/Home.dc.html (App shell, patrón 3).
  */
 export default function HomePage() {
-  const [firstName] = SAMPLE_MEMBER.name.split(" ");
+  const [firstName] = useCurrentMember().name.split(" ");
 
   return (
     <AppShell>

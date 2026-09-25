@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Compass, House, LogOut, Ticket, UserRound } from "lucide-react";
 
-import { SAMPLE_MEMBER } from "@/lib/member";
+import { useCurrentMember } from "@/lib/current-member";
 import { cn } from "@/lib/utils";
 
 /**
@@ -50,8 +50,8 @@ export interface AppShellProps {
   /**
    * Story 9.1 — `MonthlyPlan.dc.html`/`Upgrade.dc.html` son la cuenta de Naomi
    * Feldstein, no la de Alexandra: "el bloque de usuario de la sidebar lo
-   * dice" (`DESIGN-SYSTEM.md` §6 Fase 9). Por defecto sigue siendo
-   * `SAMPLE_MEMBER` para el resto de la app.
+   * dice" (`DESIGN-SYSTEM.md` §6 Fase 9). Por defecto, el miembro con sesión
+   * (`useCurrentMember`).
    */
   member?: { name: string; initials: string; tier: string };
 }
@@ -61,8 +61,10 @@ export function AppShell({
   padded = true,
   blurred = false,
   className,
-  member = SAMPLE_MEMBER,
+  member: memberOverride,
 }: AppShellProps) {
+  const currentMember = useCurrentMember();
+  const member = memberOverride ?? currentMember;
   const pathname = usePathname();
 
   /**
