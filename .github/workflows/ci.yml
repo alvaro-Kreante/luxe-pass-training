@@ -134,12 +134,22 @@ jobs:
       # hook de email está desactivado arriba, y el webhook de recibo de
       # reserva es un no-op sin sus secretos de Vault, que este runner
       # tampoco crea — ver CLAUDE.md §Email de recibo de reserva).
+      # Epic 9 — `src/lib/membership.test.ts` invoca directamente la Edge
+      # Function `membership-renewal` (cobro de la renovación automática) con
+      # su secreto compartido, igual que lo haría el cron vía pg_net. En este
+      # runner todo es efímero (Supabase en Docker, functions servidas aquí
+      # mismo), así que el secreto se genera al vuelo en vez de ser un secret
+      # de GitHub: solo tiene que coincidir entre la function y los tests.
+      - name: Generar el secreto compartido de membership-renewal (Epic 9)
+        run: echo "MEMBERSHIP_RENEWAL_WEBHOOK_SECRET=$(openssl rand -hex 24)" >> "$GITHUB_ENV"
+
       - name: Servir las Edge Functions localmente (Story 4.2 — Stripe)
         env:
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
         run: |
           {
             echo "STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY"
+            echo "MEMBERSHIP_RENEWAL_WEBHOOK_SECRET=$MEMBERSHIP_RENEWAL_WEBHOOK_SECRET"
             # No sirve nada de verdad en este runner (no hay npm run dev) —
             # stripe-create-checkout-session solo necesita que sea una URL
             # absoluta válida para el `return_url` que le manda a Stripe.

@@ -31,11 +31,14 @@ export function CancelBookingModal({
   open,
   onOpenChange,
   booking,
+  visits = VISITS_THIS_MONTH,
   onConfirmCancel,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   booking: UpcomingBooking;
+  /** Story 9.1 — visitas reales del mes (`fetchVisitsThisMonth`); el valor de muestra queda solo para tests de componente. */
+  visits?: { used: number; included: number };
   onConfirmCancel: () => void;
 }) {
   const [reason, setReason] = React.useState<string | null>(null);
@@ -91,7 +94,7 @@ export function CancelBookingModal({
                 <>
                   The visit returns to your allowance —{" "}
                   <strong className="text-fg">
-                    {VISITS_THIS_MONTH.used - 1} of {VISITS_THIS_MONTH.included} used this month
+                    {Math.max(0, visits.used - 1)} of {visits.included} used this month
                   </strong>
                 </>
               }

@@ -162,13 +162,13 @@ export function slotsFor(cellsForDate: AvailabilityCell[]): BookingSlot[] {
 export const DAY_PASS_PRICE = 75;
 export const TAX_RATE = 0.08875;
 export const MEMBERSHIP_ANNUAL_PRICE = 2400;
+/** Debe coincidir con `MONTHLY_PRICE` de `lib/membership.ts` (Epic 9). */
+export const MEMBERSHIP_MONTHLY_PRICE = 249;
 export const MEMBERSHIP_VISITS_INCLUDED = 8;
 /** Camino por defecto: visitas agotadas, se factura como day pass (mayoría de artboards). */
 export const MEMBERSHIP_VISITS_USED_DEFAULT = 8;
-/** Camino `?covered=1`: la visita entra dentro de la membresía (`MembershipCovered.dc.html`). */
+/** Cifra de `MembershipCovered.dc.html` ("visit 4 of 8"), solo para la fixture de tests `MEMBERSHIP_COVERAGE_FIXTURE`. */
 export const MEMBERSHIP_VISITS_USED_COVERED = 4;
-/** "Renews March 3" (`MembershipCovered.dc.html`). */
-export const MEMBERSHIP_RENEWAL_MONTH_DAY = "March 3";
 
 export const CANCELLATION_POLICY = [
   "Free cancellation up to 24 hours before your arrival time.",
@@ -412,6 +412,81 @@ export async function confirmBooking(
   if (error) throw error;
 
   return data ? fromRpcRow(data as BookingRpcRow) : null;
+}
+
+/* ------------------------------------------------------------------ */
+/* Quién paga — Epic 9 × Epic 4 (`supabase/schemas/booking_coverage.sql`) */
+/* ------------------------------------------------------------------ */
+
+/**
+ * - `day_pass_credit`: un day pass de regalo (cumpleaños o referido) paga la
+ *   visita — Terms §4, se gasta antes que las visitas incluidas.
+ * - `membership`: una de las 8 visitas incluidas del mes de la reserva.
+ * - `none`: se paga el day pass (sin plan, o con las visitas agotadas).
+ */
+export type BookingCoverageKind = "day_pass_credit" | "membership" | "none";
+
+export interface BookingCoverage {
+  kind: BookingCoverageKind;
+  plan: "monthly" | "annual" | null;
+  /** Visitas incluidas ya usadas en el mes de la reserva, antes de esta. */
+  visitsUsed: number;
+  visitsIncluded: number;
+  creditSource: "birthday" | "referral" | null;
+  creditsAvailable: number;
+  renewalDate: string | null;
+}
+
+export const NOT_COVERED: BookingCoverage = {
+  kind: "none",
+  plan: null,
+  visitsUsed: 0,
+  visitsIncluded: MEMBERSHIP_VISITS_INCLUDED,
+  creditSource: null,
+  creditsAvailable: 0,
+  renewalDate: null,
+};
+
+/**
+ * Solo para tests de componente (sin Supabase): una visita cubierta por la
+ * membresía anual, con las cifras de `MembershipCovered.dc.html`.
+ */
+export const MEMBERSHIP_COVERAGE_FIXTURE: BookingCoverage = {
+  kind: "membership",
+  plan: "annual",
+  visitsUsed: MEMBERSHIP_VISITS_USED_COVERED - 1,
+  visitsIncluded: MEMBERSHIP_VISITS_INCLUDED,
+  creditSource: null,
+  creditsAvailable: 0,
+  renewalDate: "2027-03-03T00:00:00Z",
+};
+
+interface CoverageRow {
+  kind: BookingCoverageKind;
+  plan: "monthly" | "annual" | null;
+  visits_used: number;
+  visits_included: number;
+  credit_source: "birthday" | "referral" | null;
+  credits_available: number;
+  renewal_date: string | null;
+}
+
+/** La misma decisión que aplicará `confirm_booking` para esta fecha. */
+export async function fetchBookingCoverage(supabase: SupabaseClient, dateIso: string): Promise<BookingCoverage> {
+  const { data, error } = await supabase.rpc("booking_coverage", { p_date: dateIso });
+  if (error) throw error;
+
+  const row = (data as CoverageRow[])[0];
+  if (!row) return NOT_COVERED;
+  return {
+    kind: row.kind,
+    plan: row.plan,
+    visitsUsed: row.visits_used,
+    visitsIncluded: row.visits_included,
+    creditSource: row.credit_source,
+    creditsAvailable: row.credits_available,
+    renewalDate: row.renewal_date,
+  };
 }
 
 /** AC "If full, option to be on the waitlist" — solo tras elegir "Join the waitlist". */

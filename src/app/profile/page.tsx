@@ -12,14 +12,14 @@ import { Input } from "@/components/ui/input";
 import { RemovableChip, AddChip } from "@/components/ui/chip";
 import { ReferralCode } from "@/components/ui/referral-code";
 import {
-  MEMBERSHIP_SUMMARY,
-  fetchMembershipStatus,
-  fetchProfile,
-  referralCodeFor,
-  updateProfile,
-  type MembershipStatus,
-  type ProfileDraft,
-} from "@/lib/profile";
+  fetchMembership,
+  fetchVisitsThisMonth,
+  formatLongDate,
+  formatMonthYear,
+  type MemberMembership,
+} from "@/lib/membership";
+import { fetchProfile, updateProfile, type ProfileDraft } from "@/lib/profile";
+import { ensureReferralCode } from "@/lib/referrals";
 import { createClient } from "@/lib/supabase/client";
 
 const EMPTY_DRAFT: ProfileDraft = {
@@ -54,7 +54,9 @@ function ProfileScreen() {
   const supabase = React.useMemo(() => createClient(), []);
   const [draft, setDraft] = React.useState<ProfileDraft>(EMPTY_DRAFT);
   const [memberId, setMemberId] = React.useState<string | null>(null);
-  const [membershipStatus, setMembershipStatus] = React.useState<MembershipStatus>("active");
+  const [membership, setMembership] = React.useState<MemberMembership | null>(null);
+  const [visits, setVisits] = React.useState<{ used: number; included: number } | null>(null);
+  const [referralCode, setReferralCode] = React.useState("");
   const [photoFile, setPhotoFile] = React.useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
@@ -66,12 +68,16 @@ function ProfileScreen() {
     Promise.all([
       supabase.auth.getUser(),
       fetchProfile(supabase),
-      fetchMembershipStatus(supabase),
-    ]).then(([{ data: { user } }, profile, status]) => {
+      fetchMembership(supabase),
+      fetchVisitsThisMonth(supabase),
+      ensureReferralCode(supabase),
+    ]).then(([{ data: { user } }, profile, nextMembership, nextVisits, code]) => {
       if (!active) return;
       if (user) setMemberId(user.id);
       setDraft(profile);
-      setMembershipStatus(status);
+      setMembership(nextMembership);
+      setVisits(nextVisits);
+      setReferralCode(code);
     });
 
     return () => {
@@ -116,7 +122,8 @@ function ProfileScreen() {
   }
 
   const avatarSrc = photoPreview ?? draft.photoUrl;
-  const referralCode = memberId ? referralCodeFor(draft.fullName, memberId) : "";
+  const isActive = membership?.status === "active";
+  const memberSince = membership?.startedAt ? formatMonthYear(membership.startedAt) : null;
 
   return (
     <AccountShell
@@ -147,7 +154,7 @@ function ProfileScreen() {
             </span>
             <div className="min-w-0 flex-1">
               <p className="m-0 text-[15px] font-bold text-fg">{draft.fullName}</p>
-              <p className="m-0 mt-1 text-[12.5px] text-fg-subtle">Member since {MEMBERSHIP_SUMMARY.memberSince}</p>
+              {memberSince ? <p className="m-0 mt-1 text-[12.5px] text-fg-subtle">Member since {memberSince}</p> : null}
             </div>
             <Button variant="secondary" size="md" type="button" onClick={() => fileInputRef.current?.click()}>
               <Camera size={16} strokeWidth={1.8} className="text-gold-600" aria-hidden />
@@ -213,21 +220,41 @@ function ProfileScreen() {
           <div className="rounded-content border border-line bg-surface p-5 shadow-content">
             <div className="flex items-center justify-between">
               <p className="m-0 text-xs font-bold uppercase tracking-[0.1em] text-gold-600">Membership</p>
-              <span className="inline-flex items-center gap-1.5 rounded-pill bg-accent-soft px-3 py-1 text-[11.5px] font-bold text-fg">
-                <span aria-hidden className="size-1.5 rounded-full bg-accent" />
-                {membershipStatus === "active" ? "Active" : "Inactive"}
-              </span>
+              {membership ? (
+                <span
+                  className={
+                    isActive
+                      ? "inline-flex items-center gap-1.5 rounded-pill bg-accent-soft px-3 py-1 text-[11.5px] font-bold text-fg"
+                      : "inline-flex items-center gap-1.5 rounded-pill bg-blush-1 px-3 py-1 text-[11.5px] font-bold text-fg-muted"
+                  }
+                >
+                  <span aria-hidden className={isActive ? "size-1.5 rounded-full bg-accent" : "size-1.5 rounded-full bg-fg-subtle"} />
+                  {isActive ? "Active" : "Inactive"}
+                </span>
+              ) : null}
             </div>
-            <h2 className="mt-2.5 font-display text-[27px] text-fg">{MEMBERSHIP_SUMMARY.plan}</h2>
-            <div className="my-4 h-px bg-line" />
-            <div className="flex flex-col gap-2.5">
-              <SummaryRow label="Member since" value={MEMBERSHIP_SUMMARY.memberSince} />
-              <SummaryRow label="Renews" value={MEMBERSHIP_SUMMARY.renews} />
-              <SummaryRow
-                label="Visits this month"
-                value={`${MEMBERSHIP_SUMMARY.visitsThisMonth.used} of ${MEMBERSHIP_SUMMARY.visitsThisMonth.included}`}
-              />
-            </div>
+            {membership ? (
+              <>
+                <h2 className="mt-2.5 font-display text-[27px] text-fg">
+                  {!isActive ? "No active plan" : membership.plan === "annual" ? "Annual" : "Monthly"}
+                </h2>
+                {isActive ? (
+                  <>
+                    <div className="my-4 h-px bg-line" />
+                    <div className="flex flex-col gap-2.5">
+                      {memberSince ? <SummaryRow label="Member since" value={memberSince} /> : null}
+                      <SummaryRow
+                        label={membership.plan === "annual" ? "Renews" : "Next charge"}
+                        value={membership.currentPeriodEnd ? formatLongDate(membership.currentPeriodEnd) : "—"}
+                      />
+                      {visits ? (
+                        <SummaryRow label="Visits this month" value={`${visits.used} of ${visits.included}`} />
+                      ) : null}
+                    </div>
+                  </>
+                ) : null}
+              </>
+            ) : null}
             <Button
               variant="secondary"
               size="md"
@@ -246,7 +273,7 @@ function ProfileScreen() {
               Share your code. You each get a complimentary day pass when they join.
             </p>
             <ReferralCode code={referralCode} className="mt-3.5" />
-            <Button block className="mt-3" type="button">
+            <Button block className="mt-3" type="button" onClick={() => router.push("/profile/membership/referrals")}>
               Share your code
             </Button>
           </div>

@@ -2,11 +2,13 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 
+import { ScheduleMonthlyModal } from "@/components/membership/schedule-monthly-modal";
 import { UpgradeConfirmModal } from "@/components/membership/upgrade-confirm-modal";
 import { formatUsd } from "@/components/membership/plan-summary-card";
+import { RequireSession } from "@/components/onboarding/require-session";
 import { AccountShell } from "@/components/patterns/account-shell";
 import { Button } from "@/components/ui/button";
 import { ComparisonTable } from "@/components/ui/comparison-table";
@@ -15,29 +17,93 @@ import {
   ANNUAL_SAVINGS,
   MONTHLY_ANNUALIZED_PRICE,
   MONTHLY_PRICE,
-  NAOMI_MEMBERSHIP,
   PLAN_COMPARISON_ROWS,
+  cancelMembershipPlanChange,
+  fetchMembership,
+  fetchVisitsThisMonth,
+  formatLongDate,
+  formatMonthDay,
+  initialsOf,
+  scheduleMembershipPlanChange,
+  type MemberMembership,
   type PlanId,
 } from "@/lib/membership";
+import { createClient } from "@/lib/supabase/client";
 
 /**
- * Story 9.1 — "Compare plans" (`Plans.dc.html`). El plan "actual" (borde
- * dorado, chip "Your plan" y botón inerte) se decide por `?plan=` — la
- * misma anatomía de card sirve a los dos casos, solo cambia cuál de las dos
- * la lleva.
+ * Story 9.1 — "Compare plans" (`Plans.dc.html`), backend real. El plan
+ * "actual" (borde dorado, chip "Your plan" y botón inerte) es el de
+ * `memberships`. Sin membresía, ninguna card lo lleva y las dos ofrecen
+ * "Choose …" — la elección de plan reutiliza esta pantalla (decisión de
+ * producto, 23 sept 2026, sin artboard propio; ver COMPONENT-MAP.md).
+ * Desde el anual, "Switch to monthly" programa el cambio para el final del
+ * término (`ScheduleMonthlyModal`, sin cobro hoy) y "Keep annual" lo deshace.
  */
 export default function PlansPage() {
   return (
-    <React.Suspense>
+    <RequireSession>
       <PlansScreen />
-    </React.Suspense>
+    </RequireSession>
   );
 }
 
 function PlansScreen() {
-  const searchParams = useSearchParams();
-  const currentPlan: PlanId = searchParams.get("plan") === "monthly" ? "monthly" : "annual";
-  const [upgradeOpen, setUpgradeOpen] = React.useState(false);
+  const router = useRouter();
+  const supabase = React.useMemo(() => createClient(), []);
+  const [membership, setMembership] = React.useState<MemberMembership | null>(null);
+  const [memberName, setMemberName] = React.useState<string | null>(null);
+  const [visits, setVisits] = React.useState<{
+    used: number;
+    included: number;
+  } | null>(null);
+  const [choice, setChoice] = React.useState<PlanId | null>(null);
+  const [scheduleOpen, setScheduleOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    let active = true;
+    Promise.all([
+      fetchMembership(supabase),
+      fetchVisitsThisMonth(supabase),
+      supabase.auth.getUser().then(async ({ data: { user } }) => {
+        if (!user) return null;
+        const { data } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
+        return (data as { full_name: string } | null)?.full_name ?? null;
+      }),
+    ]).then(([nextMembership, nextVisits, name]) => {
+      if (!active) return;
+      setMembership(nextMembership);
+      setVisits(nextVisits);
+      setMemberName(name);
+    });
+    return () => {
+      active = false;
+    };
+  }, [supabase]);
+
+  const currentPlan = membership?.status === "active" ? membership.plan : null;
+  const renewal = membership?.currentPeriodEnd ?? null;
+  const monthlyScheduled = currentPlan === "annual" && membership?.pendingPlan === "monthly";
+
+  async function reloadMembership() {
+    setMembership(await fetchMembership(supabase));
+  }
+
+  const monthlyEffect =
+    monthlyScheduled && renewal
+      ? `Starts ${formatLongDate(renewal)}`
+      : currentPlan === "annual" && renewal
+        ? `Takes effect on ${formatMonthDay(renewal)}`
+        : currentPlan === "monthly" && renewal
+          ? `Next charge ${formatLongDate(renewal)}`
+          : "Starts today";
+  const annualEffect =
+    monthlyScheduled && renewal
+      ? `Ends ${formatLongDate(renewal)}`
+      : currentPlan === "annual" && renewal
+        ? `Renews ${formatLongDate(renewal)}`
+        : currentPlan === "monthly"
+          ? "Takes effect straight away"
+          : "Starts today";
 
   return (
     <AccountShell
@@ -45,14 +111,19 @@ function PlansScreen() {
       breadcrumb={["Membership", "Compare plans"]}
       topbarRight={null}
       member={
-        currentPlan === "monthly"
-          ? { name: NAOMI_MEMBERSHIP.memberName, initials: NAOMI_MEMBERSHIP.initials, tier: "Monthly member" }
+        memberName
+          ? {
+              name: memberName,
+              initials: initialsOf(memberName),
+              tier:
+                currentPlan === "annual" ? "Annual member" : currentPlan === "monthly" ? "Monthly member" : "Member",
+            }
           : undefined
       }
     >
       <div className="flex items-center gap-3">
         <Link
-          href={currentPlan === "monthly" ? "/profile/membership?plan=monthly" : "/profile/membership"}
+          href="/profile/membership"
           aria-label="Back to Membership"
           className="flex size-8.5 items-center justify-center rounded-[10px] border-[1.5px] border-line bg-surface"
         >
@@ -64,47 +135,99 @@ function PlansScreen() {
         The same access either way. What changes is how often you pay — and what it adds up to.
       </p>
 
-      <div className="mt-5.5 grid grid-cols-2 gap-4.5">
-        <PlanCard
-          label="Monthly"
-          price={formatUsd(MONTHLY_PRICE)}
-          periodLabel="a month"
-          note={`${formatUsd(MONTHLY_ANNUALIZED_PRICE)} over twelve months`}
-          description="Charged on the same day each month. Cancel or pause before the next charge and it simply stops."
-          isCurrent={currentPlan === "monthly"}
-          actionLabel="Switch to monthly"
-          effectNote="Takes effect on November 3"
-        />
-        <PlanCard
-          label="Annual"
-          price={formatUsd(ANNUAL_PRICE)}
-          periodLabel="a year"
-          note={
-            <>
-              $200.00 a month, billed once · <span className="font-bold text-accent-strong">saves {formatUsd(ANNUAL_SAVINGS)}</span>
-            </>
-          }
-          description="One charge a year, and the rate is held for the whole term even if prices change."
-          isCurrent={currentPlan === "annual"}
-          actionLabel="Switch to annual"
-          effectNote="Renews November 3, 2026"
-          onSwitch={currentPlan === "monthly" ? () => setUpgradeOpen(true) : undefined}
-        />
-      </div>
+      {membership ? (
+        <div className="mt-5.5 grid grid-cols-2 gap-4.5">
+          <PlanCard
+            label="Monthly"
+            price={formatUsd(MONTHLY_PRICE)}
+            periodLabel="a month"
+            note={`${formatUsd(MONTHLY_ANNUALIZED_PRICE)} over twelve months`}
+            description="Charged on the same day each month. Cancel or pause before the next charge and it simply stops."
+            isCurrent={currentPlan === "monthly"}
+            actionLabel={monthlyScheduled ? "Switch scheduled" : currentPlan ? "Switch to monthly" : "Choose monthly"}
+            actionDisabled={monthlyScheduled}
+            effectNote={monthlyEffect}
+            onSwitch={
+              currentPlan === "annual"
+                ? () => setScheduleOpen(true)
+                : currentPlan
+                  ? undefined
+                  : () => setChoice("monthly")
+            }
+            secondaryAction={
+              monthlyScheduled ? (
+                <button
+                  type="button"
+                  className="mt-2 w-full text-center text-[12.5px] font-bold text-accent-strong"
+                  onClick={async () => {
+                    await cancelMembershipPlanChange(supabase);
+                    await reloadMembership();
+                  }}
+                >
+                  Keep annual
+                </button>
+              ) : null
+            }
+          />
+          <PlanCard
+            label="Annual"
+            price={formatUsd(ANNUAL_PRICE)}
+            periodLabel="a year"
+            note={
+              <>
+                $200.00 a month, billed once ·{" "}
+                <span className="font-bold text-accent-strong">saves {formatUsd(ANNUAL_SAVINGS)}</span>
+              </>
+            }
+            description="One charge a year, and the rate is held for the whole term even if prices change."
+            isCurrent={currentPlan === "annual"}
+            actionLabel={currentPlan ? "Switch to annual" : "Choose annual"}
+            effectNote={annualEffect}
+            onSwitch={currentPlan === "annual" ? undefined : () => setChoice("annual")}
+          />
+        </div>
+      ) : null}
 
       <ComparisonTable
         className="mt-3.5"
         leadingLabel="What you get"
         columns={[{ label: "Monthly" }, { label: "Annual", highlight: true }]}
-        rows={PLAN_COMPARISON_ROWS.map((row) => ({ label: row.label, values: [row.monthly, row.annual], isTotal: row.isTotal }))}
+        rows={PLAN_COMPARISON_ROWS.map((row) => ({
+          label: row.label,
+          values: [row.monthly, row.annual],
+          isTotal: row.isTotal,
+        }))}
       />
 
       <p className="m-0 mt-3.5 text-[11.5px] leading-[1.55] text-fg-subtle">
-        Moving to annual takes effect straight away and credits the days you have already paid for. Moving to
-        monthly waits until your current term ends, so nothing you paid for is lost.
+        Moving to annual takes effect straight away and credits the days you have already paid for. Moving to monthly
+        waits until your current term ends, so nothing you paid for is lost.
       </p>
 
-      <UpgradeConfirmModal open={upgradeOpen} onOpenChange={setUpgradeOpen} onConfirm={() => {}} />
+      {scheduleOpen && renewal ? (
+        <ScheduleMonthlyModal
+          open
+          onOpenChange={setScheduleOpen}
+          termEndIso={renewal}
+          onConfirm={async () => {
+            await scheduleMembershipPlanChange(supabase, "monthly");
+            await reloadMembership();
+          }}
+        />
+      ) : null}
+
+      {choice ? (
+        <UpgradeConfirmModal
+          open
+          onOpenChange={(open) => {
+            if (!open) setChoice(null);
+          }}
+          plan={choice}
+          visitsUsed={visits?.used}
+          visitsIncluded={visits?.included}
+          onCompleted={() => router.push("/profile/membership")}
+        />
+      ) : null}
     </AccountShell>
   );
 }
@@ -117,8 +240,10 @@ function PlanCard({
   description,
   isCurrent,
   actionLabel,
+  actionDisabled = false,
   effectNote,
   onSwitch,
+  secondaryAction,
 }: {
   label: string;
   price: string;
@@ -127,9 +252,12 @@ function PlanCard({
   description: string;
   isCurrent: boolean;
   actionLabel: string;
+  /** "Switch scheduled" — el paso a mensual ya está programado. */
+  actionDisabled?: boolean;
   effectNote: string;
-  /** Sin handler, el botón queda inerte — solo "Switch to monthly" desde el anual (sin artboard de confirmación). */
   onSwitch?: () => void;
+  /** "Keep annual" bajo la card mensual cuando el paso a mensual está programado. */
+  secondaryAction?: React.ReactNode;
 }) {
   return (
     <div
@@ -168,11 +296,20 @@ function PlanCard({
           Current plan
         </button>
       ) : (
-        <Button variant="secondary" size="lg" block className="mt-4 h-[46px]" type="button" onClick={onSwitch}>
+        <Button
+          variant="secondary"
+          size="lg"
+          block
+          className="mt-4 h-[46px]"
+          type="button"
+          disabled={actionDisabled}
+          onClick={onSwitch}
+        >
           {actionLabel}
         </Button>
       )}
       <p className="m-0 mt-2.5 text-center text-[11.5px] text-fg-subtle">{effectNote}</p>
+      {secondaryAction}
     </div>
   );
 }

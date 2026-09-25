@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, Eye, EyeOff, Lock, Mail } from "lucide-react";
 
 import { AuthSplit } from "@/components/patterns/auth-split";
@@ -20,15 +20,31 @@ import {
   validateSignUp,
   type SignUpErrors,
 } from "@/lib/registration";
+import { normalizeReferralCode } from "@/lib/referrals";
 import { createClient } from "@/lib/supabase/client";
 
 /**
  * Story 1.1 — User Registration.
  * Artboard: docs/design/epic-1-onboarding/Main.dc.html
  * Patrón 1 del DESIGN-SYSTEM (split-screen de autenticación).
+ *
+ * Story 9.2 — quien llega desde `/join/[code]` trae `?ref=CODE`; sin campo
+ * visible (el artboard no lo tiene), el código viaja en los metadatos de
+ * Auth y `create_referral_from_signup` (supabase/schemas/referrals.sql) lo
+ * convierte en un referido al crear el perfil.
  */
 export default function SignUpPage() {
+  return (
+    <React.Suspense>
+      <SignUpScreen />
+    </React.Suspense>
+  );
+}
+
+function SignUpScreen() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const referralCode = normalizeReferralCode(searchParams.get("ref"));
   const supabase = React.useMemo(() => createClient(), []);
 
   const [email, setEmail] = React.useState("");
@@ -71,7 +87,10 @@ export default function SignUpPage() {
           // El perfil se crea varios pasos y una redirección de email
           // después; sin persistencia local, el momento de aceptación viaja
           // aquí para que /onboarding/professional lo lea de vuelta.
-          data: { terms_accepted_at: acceptance?.acceptedAt },
+          data: {
+            terms_accepted_at: acceptance?.acceptedAt,
+            ...(referralCode ? { referral_code: referralCode } : {}),
+          },
         },
       });
       if (error) {

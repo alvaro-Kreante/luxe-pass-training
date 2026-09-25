@@ -3,7 +3,7 @@ import { CalendarCheck } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
-import type { MembershipAccount } from "@/lib/membership";
+import { cardBrandLabel, type MembershipAccount } from "@/lib/membership";
 
 /**
  * "Renewal" (`Main.dc.html`) / "Next charge" (`MonthlyPlan.dc.html`) — rail
@@ -19,13 +19,18 @@ export function RenewalRailCard({
   autoRenewal,
   manageable,
   onManageRenewal,
+  onTurnOn,
 }: {
   account: MembershipAccount;
   autoRenewal: boolean;
   manageable: boolean;
   onManageRenewal: () => void;
+  /** Volver a encenderla no tiene diálogo propio en ningún artboard — se guarda directamente. */
+  onTurnOn: () => void;
 }) {
   const isAnnual = account.plan === "annual";
+  const switchingToMonthly = isAnnual && account.pendingPlan === "monthly";
+  const nextChargePlan = switchingToMonthly ? "monthly" : account.plan;
 
   return (
     <div className="rounded-content border border-line bg-surface p-5 shadow-content">
@@ -34,7 +39,8 @@ export function RenewalRailCard({
       </p>
       <h2 className="mt-2 font-display text-[27px] text-fg">{account.renewalOrChargeDateLabel}</h2>
       <p className="m-0 mt-1.5 text-[12.5px] leading-[1.55] text-fg-muted">
-        {isAnnual ? "$2,400.00" : "$249.00"} will be charged to {cardLabel(account)}.
+        {nextChargePlan === "annual" ? "$2,400.00" : "$249.00"} will be charged to {cardLabel(account)}.
+        {switchingToMonthly ? ` Switching to monthly on ${account.renewalOrChargeDateLabel}.` : null}
       </p>
 
       <div className="my-4 h-px bg-line" />
@@ -43,7 +49,9 @@ export function RenewalRailCard({
         <div className="min-w-0 flex-1">
           <p className="m-0 text-[13.5px] font-bold text-fg">Auto-renewal</p>
           <p className="m-0 mt-0.5 text-[11.5px] text-fg-subtle">
-            {autoRenewal ? `On · renews ${isAnnual ? "for another year" : "every month"}` : `Off · ends ${account.renewalOrChargeDateLabel}`}
+            {autoRenewal
+              ? `On · ${switchingToMonthly ? "then monthly" : `renews ${isAnnual ? "for another year" : "every month"}`}`
+              : `Off · ends ${account.renewalOrChargeDateLabel}`}
           </p>
         </div>
         <Switch
@@ -51,7 +59,8 @@ export function RenewalRailCard({
           label="Auto-renewal"
           onCheckedChange={(next) => {
             if (!manageable) return;
-            if (!next) onManageRenewal();
+            if (next) onTurnOn();
+            else onManageRenewal();
           }}
         />
       </div>
@@ -60,8 +69,8 @@ export function RenewalRailCard({
         <div className="mt-3.5 flex items-start gap-2.5 rounded-[12px] border border-line bg-blush-2 px-3.5 py-2.5">
           <CalendarCheck size={15} strokeWidth={1.8} className="mt-0.5 shrink-0 text-accent-strong" aria-hidden />
           <p className="m-0 text-[11.5px] leading-[1.55] text-fg-muted">
-            We email you on <span className="font-bold text-fg">October 3</span> — a month before — so nothing
-            renews unannounced.
+            We email you on <span className="font-bold text-fg">{account.renewalNoticeDateLabel}</span> — a month before
+            — so nothing renews unannounced.
           </p>
         </div>
       ) : null}
@@ -78,6 +87,6 @@ export function RenewalRailCard({
 }
 
 function cardLabel(account: MembershipAccount) {
-  const brand = account.billingCard.brand === "visa" ? "Visa" : "Mastercard";
-  return `${brand} •••• ${account.billingCard.last4}`;
+  if (!account.billingCard) return "a saved card — none yet, so the renewal would fail and the membership would end";
+  return `${cardBrandLabel(account.billingCard.brand)} •••• ${account.billingCard.last4}`;
 }

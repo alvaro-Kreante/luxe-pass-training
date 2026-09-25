@@ -2,61 +2,110 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { Cake, ChevronLeft, ChevronRight, FileText, Timer, Users } from "lucide-react";
 
 import { ReferralInvitationsTable } from "@/components/membership/referral-invitations-table";
-import { ReferralShareModal } from "@/components/membership/referral-share-modal";
+import { ReferralShareModal, joinUrlFor } from "@/components/membership/referral-share-modal";
 import { ReferralTermsModal } from "@/components/membership/referral-terms-modal";
+import { RequireSession } from "@/components/onboarding/require-session";
 import { AccountShell } from "@/components/patterns/account-shell";
 import { Button } from "@/components/ui/button";
 import { MetricTile } from "@/components/ui/metric-tile";
 import { ReferralCode } from "@/components/ui/referral-code";
-import { SAMPLE_MEMBER } from "@/lib/member";
-import { REFERRAL_CODE } from "@/lib/profile";
+import { fetchMembership, initialsOf, type MemberMembership } from "@/lib/membership";
 import { cn } from "@/lib/utils";
 import {
-  REFERRAL_CREDITED_NOTIFICATIONS,
   REFERRAL_INVITATION_EXPIRY_DAYS,
-  referralViewState,
+  ensureReferralCode,
+  fetchReferralOverview,
+  recordReferralShare,
   type DayPassEntry,
-  type ReferralViewStateId,
+  type ReferralOverview,
+  type ReferralShareChannel,
 } from "@/lib/referrals";
+import { createClient } from "@/lib/supabase/client";
 
-const DAY_PASS_ICONS: Record<DayPassEntry["icon"], React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>> = {
+const DAY_PASS_ICONS: Record<
+  DayPassEntry["icon"],
+  React.ComponentType<{ size?: number; strokeWidth?: number; className?: string }>
+> = {
   referral: Users,
   birthday: Cake,
   pending: Timer,
 };
 
 /**
- * Story 9.2 — "Referral Program". `Referrals.dc.html` por defecto;
- * `?state=credited` alcanza `RewardCredited.dc.html` (Daniel Okonjo pasa a
- * "Day pass credited"), igual que `?state=` en `/my-pass/[reference]`.
+ * Story 9.2 — "Referral Program", backend real (`referrals`,
+ * `referral_shares`, `profiles.referral_code`). `Referrals.dc.html`; el
+ * estado de `RewardCredited.dc.html` (tile y card de day passes resaltados)
+ * aparece cuando un premio se acreditó de verdad en las últimas 48 h — ya
+ * no por `?state=credited`. Las notificaciones de alta y de premio son filas
+ * reales de `notifications`, así que la campana ya no necesita extras.
  */
 export default function ReferralsPage() {
   return (
-    <React.Suspense>
+    <RequireSession>
       <ReferralsScreen />
-    </React.Suspense>
+    </RequireSession>
   );
 }
 
 function ReferralsScreen() {
-  const searchParams = useSearchParams();
-  const state: ReferralViewStateId = searchParams.get("state") === "credited" ? "credited" : "default";
-  const { invitations, stats, dayPasses } = referralViewState(state);
+  const supabase = React.useMemo(() => createClient(), []);
+  const [overview, setOverview] = React.useState<ReferralOverview | null>(null);
+  const [code, setCode] = React.useState<string | null>(null);
+  const [memberName, setMemberName] = React.useState<string | null>(null);
+  const [membership, setMembership] = React.useState<MemberMembership | null>(null);
   const [shareOpen, setShareOpen] = React.useState(false);
   const [termsOpen, setTermsOpen] = React.useState(false);
 
-  const memberFirstName = SAMPLE_MEMBER.name.split(" ")[0];
+  React.useEffect(() => {
+    let active = true;
+    Promise.all([
+      fetchReferralOverview(supabase),
+      ensureReferralCode(supabase),
+      fetchMembership(supabase),
+      supabase.auth.getUser().then(async ({ data: { user } }) => {
+        if (!user) return null;
+        const { data } = await supabase.from("profiles").select("full_name").eq("id", user.id).single();
+        return (data as { full_name: string } | null)?.full_name ?? null;
+      }),
+    ]).then(([nextOverview, nextCode, nextMembership, name]) => {
+      if (!active) return;
+      setOverview(nextOverview);
+      setCode(nextCode);
+      setMembership(nextMembership);
+      setMemberName(name);
+    });
+    return () => {
+      active = false;
+    };
+  }, [supabase]);
+
+  async function handleShare(channel: ReferralShareChannel) {
+    await recordReferralShare(supabase, channel);
+    setOverview(await fetchReferralOverview(supabase));
+  }
+
+  if (!overview || !code) {
+    return (
+      <AccountShell active="membership" breadcrumb={["Membership", "Referrals"]} topbarRight={null}>
+        {null}
+      </AccountShell>
+    );
+  }
+
+  const { invitations, stats, dayPasses, readyDayPassCount, recentlyCredited } = overview;
+  const memberFirstName = (memberName ?? "").split(" ")[0] ?? "";
+  const tier =
+    membership?.status === "active" ? (membership.plan === "annual" ? "Annual member" : "Monthly member") : "Member";
 
   return (
     <AccountShell
       active="membership"
       breadcrumb={["Membership", "Referrals"]}
       topbarRight={null}
-      notificationExtras={state === "credited" ? REFERRAL_CREDITED_NOTIFICATIONS : undefined}
+      member={memberName ? { name: memberName, initials: initialsOf(memberName), tier } : undefined}
     >
       <div className="flex gap-6">
         <div className="min-w-0 flex-1">
@@ -82,7 +131,7 @@ function ReferralsScreen() {
               label="Day passes earned"
               value={String(stats.earnedCount)}
               note={stats.earnedNote}
-              highlighted={state === "credited"}
+              highlighted={recentlyCredited}
             />
           </div>
 
@@ -95,16 +144,16 @@ function ReferralsScreen() {
           <ReferralInvitationsTable invitations={invitations} className="mt-3.5" />
 
           <p className="m-0 mt-2.5 text-[11.5px] leading-[1.55] text-fg-subtle">
-            Invitations stay open for {REFERRAL_INVITATION_EXPIRY_DAYS} days. We only show a friend&#39;s name and
-            email here because you were the one who sent it.
+            Invitations stay open for {REFERRAL_INVITATION_EXPIRY_DAYS} days. We only show a friend&#39;s name and email
+            here because you were the one who sent it.
           </p>
         </div>
 
         <div className="flex w-[344px] shrink-0 flex-col gap-3.5">
           <div className="rounded-content border border-line bg-surface p-5 shadow-content">
             <p className="m-0 text-xs font-bold uppercase tracking-[0.1em] text-accent-strong">Your code</p>
-            <ReferralCode code={REFERRAL_CODE} className="mt-3.5" />
-            <p className="m-0 mt-2.5 truncate text-xs text-fg-muted">luxepass.co/join/{REFERRAL_CODE}</p>
+            <ReferralCode code={code} className="mt-3.5" />
+            <p className="m-0 mt-2.5 truncate text-xs text-fg-muted">{joinUrlFor(code).replace(/^https?:\/\//, "")}</p>
             <Button size="lg" block className="mt-3.5" type="button" onClick={() => setShareOpen(true)}>
               Share your code
             </Button>
@@ -113,19 +162,23 @@ function ReferralsScreen() {
           <div
             className={cn(
               "rounded-content border border-line bg-surface p-5 shadow-content",
-              state === "credited" && "border-[1.5px] border-accent shadow-ring",
+              recentlyCredited && "border-[1.5px] border-accent shadow-ring",
             )}
           >
             <div className="flex items-center justify-between">
               <p className="m-0 text-xs font-bold uppercase tracking-[0.1em] text-accent-strong">Your day passes</p>
-              {state === "credited" ? (
+              {recentlyCredited ? (
                 <span className="inline-flex items-center gap-1.5 rounded-pill bg-accent-soft px-3 py-1 text-[11.5px] font-bold text-fg">
-                  <span aria-hidden className="size-1.5 rounded-full bg-accent" />3 ready
+                  <span aria-hidden className="size-1.5 rounded-full bg-accent" />
+                  {readyDayPassCount} ready
                 </span>
               ) : null}
             </div>
 
             <div className="mt-3.5 flex flex-col gap-3">
+              {dayPasses.length === 0 ? (
+                <p className="m-0 text-[12.5px] text-fg-muted">None yet — they arrive as friends join.</p>
+              ) : null}
               {dayPasses.map((entry) => {
                 const Icon = DAY_PASS_ICONS[entry.icon];
                 return (
@@ -136,10 +189,17 @@ function ReferralsScreen() {
                         entry.pending ? "border border-dashed border-fg-subtle bg-surface" : "bg-accent-soft",
                       )}
                     >
-                      <Icon size={17} strokeWidth={1.7} className={entry.pending ? "text-fg-subtle" : "text-accent-strong"} aria-hidden />
+                      <Icon
+                        size={17}
+                        strokeWidth={1.7}
+                        className={entry.pending ? "text-fg-subtle" : "text-accent-strong"}
+                        aria-hidden
+                      />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className={cn("m-0 text-[13px] font-bold", entry.pending ? "text-fg-muted" : "text-fg")}>{entry.title}</p>
+                      <p className={cn("m-0 text-[13px] font-bold", entry.pending ? "text-fg-muted" : "text-fg")}>
+                        {entry.title}
+                      </p>
                       <p className="m-0 mt-0.5 text-[11.5px] text-fg-subtle">{entry.subtitle}</p>
                     </div>
                   </div>
@@ -153,12 +213,7 @@ function ReferralsScreen() {
               Day passes sit on top of your 8 included visits and last as long as your membership does.
             </p>
 
-            <button
-              type="button"
-              className={cn(
-                buttonSecondaryClass,
-              )}
-            >
+            <button type="button" className={cn(buttonSecondaryClass)}>
               Use a day pass
             </button>
           </div>
@@ -183,7 +238,8 @@ function ReferralsScreen() {
         open={shareOpen}
         onOpenChange={setShareOpen}
         memberFirstName={memberFirstName}
-        code={REFERRAL_CODE}
+        code={code}
+        onShare={handleShare}
       />
       <ReferralTermsModal open={termsOpen} onOpenChange={setTermsOpen} />
     </AccountShell>
