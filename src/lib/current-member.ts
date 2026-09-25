@@ -4,6 +4,7 @@ import * as React from "react";
 
 import { SAMPLE_MEMBER } from "./member";
 import { fetchMembership, initialsOf, type MemberMembership } from "./membership";
+import { resolveProfilePhotoUrl } from "./profile-photo";
 import { createClient } from "./supabase/client";
 
 export interface ShellMember {
@@ -11,6 +12,8 @@ export interface ShellMember {
   initials: string;
   tier: string;
   email: string;
+  /** URL firmada de la foto (bucket privado `profile-photos`); `null` = iniciales. */
+  photoUrl?: string | null;
 }
 
 /** Sin plan activo no se muestra "Inactive": suena a cuenta suspendida. */
@@ -41,16 +44,19 @@ export function useCurrentMember(): ShellMember {
       setMember((current) => ({ ...current, email }));
 
       const [{ data }, membership] = await Promise.all([
-        supabase.from("profiles").select("full_name").eq("id", user.id).maybeSingle(),
+        supabase.from("profiles").select("full_name, photo_url").eq("id", user.id).maybeSingle(),
         fetchMembership(supabase),
       ]);
       if (!data || cancelled) return;
+      const photoUrl = await resolveProfilePhotoUrl(supabase, data.photo_url);
+      if (cancelled) return;
 
       setMember({
         name: data.full_name,
         initials: initialsOf(data.full_name),
         tier: tierFor(membership),
         email,
+        photoUrl,
       });
     })();
 

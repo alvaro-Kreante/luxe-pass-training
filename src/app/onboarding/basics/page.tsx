@@ -37,6 +37,9 @@ export default function ProfileBasicsPage() {
     }
     setErrors((prev) => ({ ...prev, photo: "" }));
     update({ photoName: file.name, photoFile: file });
+    const reader = new FileReader();
+    reader.onload = () => update({ photoPreview: reader.result as string });
+    reader.readAsDataURL(file);
   }
 
   function handleSubmit(event: React.FormEvent) {
@@ -69,9 +72,14 @@ export default function ProfileBasicsPage() {
             type="button"
             onClick={() => fileInput.current?.click()}
             aria-label="Upload profile photo"
-            className="flex h-[72px] w-[72px] min-w-[72px] cursor-pointer items-center justify-center rounded-full border-[1.5px] border-dashed border-line text-fg-subtle transition-colors duration-150 hover:border-accent hover:text-accent-strong"
+            className="flex h-[72px] w-[72px] min-w-[72px] cursor-pointer items-center justify-center overflow-hidden rounded-full border-[1.5px] border-dashed border-line text-fg-subtle transition-colors duration-150 hover:border-accent hover:text-accent-strong"
           >
-            <Camera size={26} strokeWidth={1.6} />
+            {draft.photoPreview ? (
+              /* eslint-disable-next-line @next/next/no-img-element -- vista previa local (data URL), no un <Image> con loader remoto */
+              <img src={draft.photoPreview} alt="Profile photo preview" className="size-full object-cover" />
+            ) : (
+              <Camera size={26} strokeWidth={1.6} />
+            )}
           </button>
           <div>
             <button
@@ -93,6 +101,7 @@ export default function ProfileBasicsPage() {
             ref={fileInput}
             type="file"
             accept="image/jpeg,image/png"
+            aria-label="Upload profile photo"
             className="hidden"
             onChange={handlePhoto}
           />

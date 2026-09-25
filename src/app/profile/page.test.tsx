@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { fetchProfile } from "@/lib/profile";
+import { uploadProfilePhoto } from "@/lib/profile-photo";
 import { ensureReferralCode } from "@/lib/referrals";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
@@ -131,5 +132,40 @@ describe("Upload photo", () => {
     await user.upload(screen.getByLabelText("Upload photo", { selector: "input" }), file);
 
     expect(await screen.findByAltText("Test Member")).toBeInTheDocument();
+  });
+
+  it("muestra la foto ya guardada al volver al perfil", async () => {
+    const supabase = await signUpFreshMember("stored-photo");
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    const path = await uploadProfilePhoto(supabase, new File(["x"], "me.png", { type: "image/png" }));
+    await supabase.from("profiles").update({ photo_url: path }).eq("id", user!.id);
+
+    render(<ProfilePage />);
+
+    await waitFor(() =>
+      expect(screen.getAllByAltText("Test Member").some((img) => img.getAttribute("src")?.includes("/object/sign/profile-photos/"))).toBe(true),
+    );
+  });
+
+  it("guarda la foto subida y sigue viéndose tras recargar", async () => {
+    const supabase = await signUpFreshMember("save-photo");
+    const user = userEvent.setup({ delay: null });
+    const { unmount } = render(<ProfilePage />);
+
+    await waitFor(() => expect(screen.getByLabelText(/full name/i)).toHaveValue("Test Member"));
+    await user.upload(
+      screen.getByLabelText("Upload photo", { selector: "input" }),
+      new File(["avatar"], "avatar.png", { type: "image/png" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await waitFor(async () => expect((await fetchProfile(supabase)).photoUrl).not.toBeNull());
+    unmount();
+
+    render(<ProfilePage />);
+    await waitFor(() =>
+      expect(screen.getAllByAltText("Test Member").some((img) => img.getAttribute("src")?.includes("/object/sign/profile-photos/"))).toBe(true),
+    );
   });
 });

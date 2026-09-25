@@ -15,6 +15,7 @@ import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
 import { StepProgress } from "@/components/ui/step-progress";
+import { uploadProfilePhoto } from "@/lib/profile-photo";
 import { createClient } from "@/lib/supabase/client";
 
 /**
@@ -46,25 +47,16 @@ export default function ProfileProfessionalPage() {
         return;
       }
 
-      let photoUrl: string | null = null;
+      let photoPath: string | null = null;
       if (draft.photoFile) {
-        const extension = draft.photoFile.name.split(".").pop() ?? "jpg";
-        const path = `${user.id}/avatar.${extension}`;
-        const { error: uploadError } = await supabase.storage
-          .from("profile-photos")
-          .upload(path, draft.photoFile, { upsert: true });
-        if (!uploadError) {
-          photoUrl = supabase.storage
-            .from("profile-photos")
-            .getPublicUrl(path).data.publicUrl;
-        }
+        photoPath = await uploadProfilePhoto(supabase, draft.photoFile).catch(() => null);
       }
 
       const { error: insertError } = await supabase.from("profiles").insert({
         id: user.id,
         full_name: draft.fullName,
         phone: draft.phone,
-        photo_url: photoUrl,
+        photo_url: photoPath,
         birth_day: draft.birthDay ? Number(draft.birthDay) : null,
         birth_month: draft.birthMonth
           ? BIRTH_MONTHS.indexOf(draft.birthMonth) + 1

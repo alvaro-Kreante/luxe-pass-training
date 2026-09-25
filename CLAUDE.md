@@ -10,64 +10,43 @@ Repositorio integral del proyecto **LuxePass** (plataforma de membresía de lujo
 
 ---
 
-## ⚠️ Alcance: mockup navegable + backend real parcial (Supabase)
+## Alcance
 
-**Este repo empezó como un mockup navegable sin backend — eso ya no es así del todo.** Desde sept 2026, varias historias tienen lógica real conectada a Supabase: Epic 1 completo (Story 1.1 User Registration, Story 1.2 Login & Authentication), Epic 2 completo (Story 2.1 Map-Based Lounge Discovery, Story 2.2 Lounge Filtering & Search, Story 2.3 List View Alternative — catálogo real en `public.lounges`) y Epic 3 completo (Story 3.1 Lounge Profile Details, Story 3.2 Availability Calendar — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 2 / Epic 3). Epic 4 (Booking System) está completo: Story 4.1 (Seamless Booking Flow), Story 4.2 (Payment Processing, **Stripe real** en modo test) y Story 4.3 (Calendar Integration, ya real desde el mockup) — tablas `bookings`/`payments`, RPC `confirm_booking`/`join_waitlist`, y el email real de recibo de reserva (ver más abajo "Email de recibo de reserva real") — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 4. Epic 5 (QR Code & Check-in) está completo: Story 5.1 (Digital Pass Generation), Story 5.2 (Lounge Check-In Process, RPC "de kiosco" sin login de personal) y Story 5.3 (Booking Reminder, **pg_cron real**) — `bookings` gana `confirmation_code`/`checked_in_at`/`no_show`, `profiles` gana `emergency_contact_*` (ver más abajo "Check-in de recepción real" y "Recordatorio de reserva real") — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 5. Epic 6 (Member Experience & Notifications) está completo: Story 6.1 (Booking Management — RPC `cancel_booking`), Story 6.2 (In-app Notifications — tabla `notifications`, **nace aquí**, con dos de los seis tipos disparados de verdad: confirmación de reserva por trigger y aviso de las 6 AM por **pg_cron**; los otros cuatro se siembran como muestra real al crear el perfil) y Story 6.3 (Member Profile & Preferences — perfil/favoritos/preferencias/privacidad reales, borrado de cuenta como soft-delete reversible con **pg_cron** para el borrado físico a los 30 días) — ver más abajo "Notificaciones en la app reales" y "Borrado de cuenta real" — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 6. Epic 7 (Partner Dashboard) está completo: Story 7.1 (Daily Guest Management — `partner_guest_list`/`partner_checkin_booking`/`partner_report_no_show`, RPC autenticadas, más **Supabase Realtime** en `/partner` para las actualizaciones en vivo, primer uso del proyecto), Story 7.2 (Booking Notifications for Partners — dos Database Webhooks + un **pg_cron** hacia dos Edge Functions nuevas) y Story 7.3 (Partner Analytics — `partner_analytics_summary`/`partner_bookings_by_day`/`partner_repeat_guests`) — nace la tabla `user_roles` (rol member/partner/admin, decisión de arquitectura pospuesta a propósito hasta este epic) y `partners`/`partner_lounges` (ver más abajo "Rol de partner real" y "Notificaciones al partner reales") — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 7. Epic 8 (Admin & Support) está completo: Story 8.1 (Customer Support Dashboard — `support_tickets`/`support_ticket_messages`, **nacen aquí**; reembolso real vía Stripe para un cargo succeeded, ver "Reembolso real" más abajo), Story 8.2 (Data Export & Analytics — analítica real sobre toda la red, export por dataset, y reportes programados reales vía **pg_cron** + Brevo, ver "Reportes programados reales") y Story 8.3 (Content Management — `lounges` gana `content_status`, `lounge_content_submissions` **nace aquí** para un "Content approval workflow" real y genérico, bucket de Storage real `lounge-images`, ver "Gestión de contenido real") — reutiliza `user_roles` (rol admin) nacida en Epic 7, `/admin/login` sin artboard propio (decisión confirmada con el usuario, reutiliza el layout de `/partner/login`) — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 8. Epic 9 (Membership & Referrals) está completo: Story 9.1 (Membership — `memberships` **nace aquí**; un miembro nace sin membresía hasta elegir plan, y alta/subida mensual→anual son un cobro puntual **Stripe real**, no Stripe Billing; aviso de renovación un mes antes por **pg_cron**) y Story 9.2 (Referral Program — `referrals`/`referral_shares` **nacen aquí**, `profiles.referral_code` persistido, `/join/[code]` → `/signup?ref=`, premio acreditado con el primer pago real del amigo) — ver más abajo "Membresía y referidos reales" — ver `docs/design/COMPONENT-MAP.md` §Backend real — Epic 9. Los 9 epics del alcance original ya están conectados a Supabase real; trabajo a partir de aquí es bugfix, refactor o una historia adicional fuera de ese alcance.
+Los 9 epics (24 historias) están implementados y conectados a **Supabase** (Auth, base de datos, Storage, Realtime, Edge Functions, `pg_cron`), con **Stripe** (modo test), **Google Maps** y **Brevo**. Trabajo a partir de aquí es bugfix, refactor o una historia adicional; lo pendiente vive en `docs/PENDIENTES.md`.
+
+- Qué historia usa qué tabla/RPC/Edge Function: `docs/design/COMPONENT-MAP.md` §Backend real — Epic N.
+- Detalle técnico de cada integración (emails, pagos, crons, roles, membresía…): `docs/ARCHITECTURE.md`.
+- Infraestructura (2 Supabase remotos `luxepass-dev`/`luxepass-prod`, 2 Vercel) y lo que falta: `docs/ci-cd/RESUMEN.md`.
 
 La app en producción de En Soleil vive en `app.luxepass.co`; si este repo la reemplaza o sigue siendo un proyecto aparte no está resuelto en este documento — no asumir ninguna de las dos sin confirmar.
-
-**Infraestructura real ya montada:** 2 proyectos Supabase remotos (`luxepass-dev`, `luxepass-prod`) con sus migraciones aplicadas vía CI/CD (`.github/workflows/deploy.yml`), y 2 proyectos Vercel (`luxepass-dev`/`luxepass-prod`, deploy real probado de punta a punta). Detalle completo, incluyendo qué falta (env vars de Google Maps/Stripe en Vercel y en `deploy.yml`, protección de ramas), en `docs/ci-cd/RESUMEN.md`.
 
 **No hacer, salvo que se pida explícitamente:**
 
 - ❌ Instalar ORM o cliente de base de datos (Prisma, Drizzle) **excepto** Supabase
-- ❌ Enlazar (`supabase link`) un proyecto remoto de Supabase a mano, desde tu máquina — eso es exclusivo del pipeline de CI, ver "Supabase Local Development" §Excepción de CI
-- ❌ Crear route handlers en `src/app/api/` salvo que la historia que se implementa lo requiera de verdad
+- ❌ Enlazar (`supabase link`) un proyecto remoto de Supabase a mano — exclusivo del pipeline de CI, ver "Supabase Local Development" §Excepción de CI
+- ❌ Crear route handlers en `src/app/api/` — la lógica de servidor va en Supabase Edge Functions (RPC, webhooks, crons)
 - ❌ Añadir autenticación fuera de Supabase Auth (NextAuth, JWT propio, sesiones caseras)
-- ❌ Server Actions o `fetch` que escriban en servicios externos (pasarelas de pago, envío de emails) para historias que **no** están conectadas a Supabase — ver regla de abajo
-- ❌ Tests e2e con navegador masivos — Playwright existe para verificación visual (uso puntual, ver §Verificación)
-- ❌ Persistir estado del lado del cliente (`localStorage`, `sessionStorage`, cookies propias) en historias sin backend — para las que sí tienen Supabase, la sesión la maneja Supabase Auth, no un estado casero
-- ❌ Implementar un mapa nuevo con SVG propio o un proveedor de tiles distinto a Google Maps — ver regla de mapas justo abajo
+- ❌ Persistir sesión o estado en `localStorage`/`sessionStorage`/cookies propias — la sesión la maneja Supabase Auth
+- ❌ Tests e2e con navegador masivos — Playwright existe para verificación visual puntual
+- ❌ Implementar un mapa con SVG propio o un proveedor de tiles distinto a Google Maps (`@vis.gl/react-google-maps`, con `@googlemaps/markerclusterer` si agrupa markers)
 
 **Sí hacer:**
 
-- ✅ Para historias **sin backend conectado**: datos de muestra en módulos de `src/lib/` o constantes del propio componente; estado de UI con `useState`/Context
-- ✅ Para historias **con backend conectado**: Supabase real (local en desarrollo, remoto vía CI en `staging`/`main`) — ver "Supabase Local Development"
-- ✅ Para **cualquier mapa** de la app (el de `/explore`, el mini-mapa aún sin construir de `/lounges/[id]`, o cualquier otro que salga en un epic futuro): Google Maps real (`@vis.gl/react-google-maps`, con `@googlemaps/markerclusterer` si agrupa markers) — proveedor único fijado al migrar Epic 2 (sept 2026), nunca un SVG propio ni otro proveedor de tiles. Detalle en `docs/design/COMPONENT-MAP.md` §Backend real — Epic 2
-- ✅ Validación **de cliente**, cuya finalidad es que la pantalla pueda mostrar sus estados (error, botón deshabilitado, campo inválido) — no sustituye RLS/validación del lado del servidor en lo que sí toca Supabase
-- ✅ Navegación entre pantallas con `next/link` y `useRouter`
+- ✅ Validación de cliente para que la pantalla muestre sus estados — nunca sustituye RLS/validación del lado del servidor
+- ✅ Navegación con `next/link` y `useRouter`
 - ✅ Tests con Vitest + Testing Library, escritos **antes** del código — ver "Metodología de test"
 
-**Para una historia sin backend conectado todavía**, los criterios de aceptación que exigirían uno (enviar un email, cobrar, verificar un token, comprobar duplicados contra la base) se cubren **visualmente**: se implementa la pantalla del estado y se simula el disparador con datos de muestra. La desviación se anota en la última sección de `docs/design/COMPONENT-MAP.md`.
+### Reglas vivas de las integraciones
 
-Ejemplo ya hecho de patrón mockup (epics aún no conectados): datos de muestra en constantes de componente para simular estados de red/servidor. Ejemplo ya hecho de patrón backend real: Story 1.1/1.2 contra Supabase local/remoto (ver `src/lib/supabase/`, `src/lib/authentication.ts`, `src/lib/registration.ts`). **La regla para una historia sin backend es que la pantalla llegue a mostrar el estado, no que el estado sea real; para una historia conectada a Supabase, el estado sí es real.**
-
-**Envío de email real (Story 1.1/1.2):** desde sept 2026, el email de confirmación/recovery ya no es un SMTP simulado — va vía Brevo, disparado por un Supabase Auth Hook (`send_email`) que invoca la Edge Function `supabase/functions/send-email`. Es la excepción viva a la regla "❌ Server Actions o fetch a servicios externos" de arriba: aplica porque Epic 1 **sí** está conectado a Supabase. Detalle completo en "Supabase Local Development" §Envío de email transaccional.
-
-**Procesamiento de pagos real (Story 4.2):** desde el 17 sept 2026, la decisión de "Stripe fuera de alcance" que traía `docs/DATA-MODEL-MAP.md` (válida solo durante el periodo de mockup) se revierte — ahora que Epic 4 se implementa, el pago va vía **Stripe real, en modo test**, no simulado. Es la segunda excepción viva a la regla "❌ Server Actions o fetch a servicios externos" de arriba: aplica porque Epic 4 **sí** está conectado a Supabase. Misma arquitectura que Brevo — sin route handlers de Next.js, Supabase Edge Functions — y el webhook de Stripe, no el cliente, es quien decide el `status` real del pago. Apple Pay/Google Pay quedan fuera de esta conexión real (dominio no verificado, no viable en `localhost`). Detalle completo en "Supabase Local Development" §Procesamiento de pagos (Stripe).
-
-**Email de recibo de reserva real (Story 4.2/5.1):** desde el 18 sept 2026, el recibo de reserva (`Receipt.dc.html`, alcanzable desde `/book/confirmed`) también se envía de verdad, para toda reserva `confirmed` (con o sin pago — cubre de paso "Email with booking info" de la Story 5.1). Es la tercera excepción viva a la regla "❌ Server Actions o fetch a servicios externos" de arriba. A diferencia de Brevo/Stripe (ambos disparados por un hook nativo de Supabase — Auth Hook y Stripe webhook respectivamente), este es un evento de negocio puro ("se confirmó una reserva"), sin hook nativo que lo cubra: usa un **Database Webhook** (trigger `AFTER INSERT` en `bookings`, ver `supabase/schemas/booking_receipts.sql`) sobre `pg_net`, que llama a la Edge Function `send-booking-receipt`. Detalle completo en "Supabase Local Development" §Email de recibo de reserva.
-
-**Check-in de recepción real (Story 5.2):** desde el 21 sept 2026, `/reception` verifica y actualiza reservas de verdad contra `bookings` — decisión tomada con el usuario para no bloquear en la decisión de rol staff/partner que `docs/DATA-MODEL-MAP.md` deja explícitamente para cuando arranque Epic 7 (no antes): las cuatro funciones `reception_*` (`supabase/schemas/bookings.sql`) son RPC `SECURITY DEFINER` concedidas a `anon`, autorizadas solo por LP# + lounge + fecha, igual que un lector físico de QR en el mostrador — `/reception` sigue sin login de personal, ahora también a nivel de base de datos, no solo de UI. Detalle completo en `docs/design/COMPONENT-MAP.md` §Backend real — Epic 5 y `docs/PENDIENTES.md` §2.7.
-
-**Recordatorio de reserva real (Story 5.3):** desde el 21 sept 2026, "receive an email 24 hrs before the booking time" ya no se simula — es la cuarta excepción viva a la regla "❌ Server Actions o fetch a servicios externos" de arriba, y la primera disparada por el **paso del tiempo**, no por un evento: **`pg_cron`** (primer job programado del proyecto) corre `dispatch_booking_reminders()` cada 30 min, que llama (`pg_net`, mismo mecanismo que el recibo de reserva) a la Edge Function `send-booking-reminder` por cada reserva `confirmed` cuya llegada cae en la ventana "ahora + 24h". Detalle completo, incluida la limitación conocida de este entorno (no se puede ejercitar de punta a punta mientras `lounge_availability` siga sembrada en una ventana fija anclada a 2025-09-09), en "Supabase Local Development" §Recordatorio de reserva (pg_cron).
-
-**Notificaciones en la app reales (Story 6.2):** desde el 21 sept 2026, la tabla `notifications` (nace en Epic 6) es real. De los seis tipos que pide el AC, solo dos tienen un evento real detrás en este repo: "Booking confirmation" (un trigger `AFTER INSERT` en `bookings` que inserta directo en `notifications` — sin `pg_net`, es la misma base) y el aviso de las 6 AM (segundo uso de `pg_cron` en el proyecto, `dispatch_morning_notifications()` cada 15 min, mismo `booking_arrival_at` que Story 5.3 y su mismo gap: no ejercitable de punta a punta mientras `lounge_availability` siga anclada a 2025-09-09). Los otros cuatro (nuevo lounge partner, renovación de membresía, ofertas, cumpleaños) dependen de datos que Epic 7/9 todavía no modelan de verdad — se siembran como notificaciones de muestra reales (filas de verdad, no sintéticas del cliente) al crear el perfil (`seed_sample_notifications()`, trigger `AFTER INSERT` en `profiles`). Detalle completo en `docs/design/COMPONENT-MAP.md` §Backend real — Epic 6.
-
-**Borrado de cuenta real (Story 6.3):** desde el 21 sept 2026, "Account deletion option with confirmation" conecta contra Supabase — pero no borra nada al instante: `DeleteAccount.dc.html` promete un periodo de gracia reversible ("erased after 30 days... sign in before then and everything comes back"), así que confirmar el modal solo marca `profiles.deleted_at` y cancela las reservas futuras (RPC `request_account_deletion`), fiel a esa promesa. El borrado físico real es la quinta excepción viva a la regla "❌ Server Actions o fetch a servicios externos", y la segunda disparada por el paso del tiempo: `pg_cron` corre `dispatch_account_deletions()` una vez al día y, pasados los 30 días, llama (`pg_net`, mismo mecanismo que el recibo/recordatorio) a la Edge Function `delete-account` — primer uso del proyecto de `auth.admin.deleteUser`. El login (`reactivateAccountIfDeleted`) deshace el soft-delete si el miembro vuelve a entrar antes de esos 30 días. Mismo gap conocido que Story 5.3: no ejercitable de punta a punta en 30 días reales en este entorno. Detalle completo en `docs/design/COMPONENT-MAP.md` §Backend real — Epic 6.
-
-**Membresía y referidos reales (Epic 9):** desde el 23 sept 2026, `/profile/membership/**` corre sobre `memberships`/`referrals`/`referral_shares` reales, con cuatro decisiones de producto tomadas con el usuario antes de implementar: (1) el miembro nace **sin membresía** hasta elegir plan — la elección reutiliza `Plans.dc.html` + el modal de `Upgrade.dc.html` sin artboard propio; (2) alta y subida mensual→anual son un **cobro puntual real de Stripe** (Edge Function `stripe-membership-checkout`, importe de la RPC `membership_change_quote`), no Stripe Billing; la **renovación automática sí cobra** (revisado con el usuario el mismo día: "por algo es renovación automática") — el cron cobra off-session la tarjeta guardada al vencer el término, y el paso de anual a mensual se programa para ese momento (`pending_plan`); (3) el premio de referido queda *pending* al registrarse el amigo y pasa a *credited* con su **primer pago real liquidado** (trigger sobre `payments`); (4) el amigo entra por `/join/[code]` → `/signup?ref=CODE` (metadatos de Auth, sin campo nuevo en el signup). Sexta excepción viva a la regla "❌ Server Actions o fetch a servicios externos" (el cobro) y cuarto uso de `pg_cron` (`dispatch_membership_renewals()`, diario: cobro de renovaciones vencidas y aviso un mes antes, ambos hacia la Edge Function `membership-renewal`). Detalle completo en "Supabase Local Development" §Membresía y referidos reales y `docs/design/COMPONENT-MAP.md` §Backend real — Epic 9.
+- **Stripe:** el webhook (`stripe-webhook`) es la única fuente de verdad del `status` de `payments`; el cliente nunca marca un pago como exitoso. El importe lo decide el servidor (RPC), nunca el navegador. Checkout Sessions con `ui_mode: 'elements'` + Payment Element, sin `payment_method_types`. Claves live en `main` solo con confirmación explícita.
+- **`memberships`** no admite escrituras de cliente: nace o cambia solo con un pago `succeeded`.
+- **Emails (Brevo):** el asunto lleva prefijo `[LOCAL]`/`[STAGING]`/`[PROD]` según `APP_ENV`; nunca se pone a mano. En un proyecto remoto nuevo, subir el rate limit de emails de Auth (2/hora por defecto) aunque el envío vaya por el Hook.
+- **Database Webhooks / `pg_cron`** se autentican con secreto compartido en Supabase Vault — alta y lista en `docs/ci-cd/VAULT-SECRETS.md`. `supabase db reset` los borra.
+- **"Hoy" de la app** es el `TODAY` fijo de `src/lib/availability.ts` (`2025-09-09`); las RPC reciben `p_date` en vez de usar `current_date`. Los crons sí usan el reloj real a propósito.
 
 ---
 
-## Estado de implementación
-
-**Diseño y código: completos.** Los 9 epics (24 historias) están implementados y
-diseñados. `git log` tiene el historial por epic; `docs/specs/` lista las historias
-por nombre. Trabajo a partir de aquí es bugfix, refactor o una historia adicional
-fuera del alcance original — sigue "Cómo implementar una historia nueva" más abajo.
-
-### Rutas existentes
+## Rutas existentes
 
 La tabla completa ruta → artboard → story vive en `docs/design/COMPONENT-MAP.md`
 (capa 3). Es la fuente única: no duplicarla aquí.
@@ -89,28 +68,12 @@ qué estado usa qué param está en `docs/PENDIENTES.md` §2.2 (estados de
 
 | Rama | Para qué |
 |---|---|
-| `main` | Producción. Un push aquí dispara CI/CD: migra `supabase/migrations` al Supabase remoto `luxepass-prod` (ver `.github/workflows/deploy.yml`). No se trabaja directamente sobre ella |
-| `staging` | Integración de historias con backend real conectado a Supabase. Un push aquí migra `luxepass-dev`. Se promueve a `main` con un PR `staging` → `main` cuando se decide un release |
-| `design/screens` | Pantallas implementadas en Next.js para historias **sin** backend conectado — mockup navegable |
-| `docs/design` | Mockups `.dc.html` y canvas de los epics (`docs/design/`) |
+| `main` | Producción. Un push aquí dispara CI/CD: migra `supabase/migrations` a `luxepass-prod` (`.github/workflows/deploy.yml`) |
+| `staging` | Integración. Un push aquí migra `luxepass-dev`. Se promueve a `main` con un PR `staging` → `main` cuando se decide un release |
 
-Las ramas `design/*` son el mismo trabajo en dos formatos: el canvas estático y
-las pantallas navegables, para historias que siguen el patrón de mockup. Las
-historias con backend real conectado (ver §Alcance) integran contra `staging`
-en vez de `design/screens`.
+**Nunca `git push` directo a `staging` ni a `main`.** Todo cambio entra por PR (`<prefijo>/*` → `staging`, `staging` → `main`) con el CI en verde: cada push a esas ramas migra un Supabase remoto al instante. (La protección de ramas en GitHub sigue pendiente, ver `docs/ci-cd/RESUMEN.md` — mientras tanto la regla depende de cumplirla.)
 
-**Infraestructura de `staging`/`main`:** 2 proyectos Supabase remotos
-(`luxepass-dev`, `luxepass-prod`) — uno por rama — con las migraciones
-aplicadas automáticamente por CI, nunca a mano (ver "Supabase Local
-Development" §Excepción de CI). Vercel (2 proyectos, mismo esquema dev/prod)
-**ya está montado y probado de punta a punta** (deploy real vía
-`deploy.yml`, confirmado 10-13 sept 2026) — lo que falta no es Vercel en sí,
-sino dar de alta ahí las env vars más nuevas (Google Maps, Stripe) que
-todavía no existían cuando se montó. Detalle completo y estado en
-`docs/ci-cd/RESUMEN.md`.
-
-Para trabajo puntual que no es una historia entera, se sale de `design/screens` con
-un prefijo y se vuelve a ella:
+El trabajo sale de `staging` en una rama con prefijo:
 
 | Prefijo | Cuándo |
 |---|---|
@@ -128,14 +91,13 @@ que la del prefijo (`feat/lounge-search`, `fix/login-lockout-plural`).
 en otra rama. Los mensajes de commit siguen Conventional Commits (`feat:`, `fix:`,
 `docs:`, `chore:`…), como los que ya hay en el historial.
 
-
 Receta completa. Seguirla en orden evita duplicar componentes que ya existen.
 
 **1. Leer la historia** — `docs/specs/epic-N-slug/story-N.M-slug.md`. Sus `## Acceptance Criteria` son el contrato.
 
 **2. Leer el flujo** que la historia enlaza en `## Related Flow`, en `docs/specs/flows/`. La tabla "Story Segments" dice qué nodos del diagrama le corresponden.
 
-**2.1. Si la historia toca Supabase, leer `docs/DATA-MODEL-MAP.md`** — dice qué epic es dueño de cada tabla candidata y qué cruces con otros epics ya se anticiparon, para no rediseñar una FK o duplicar una tabla que otro epic ya reclama.
+**2.1. Leer `docs/DATA-MODEL-MAP.md`** — dice qué epic es dueño de cada tabla candidata y qué cruces con otros epics ya se anticiparon, para no rediseñar una FK o duplicar una tabla que otro epic ya reclama.
 
 **3. Leer la fase de diseño** en `docs/design/DESIGN-SYSTEM.md` §6. **Ojo: los números de fase no coinciden con los de epic** (la Fase 2 es el Epic 7). La tabla de §6 dice qué artboards tiene cada fase y qué criterios cubren.
 
@@ -195,12 +157,11 @@ Los nombres de carpeta coinciden **salvo en el Epic 1**:
 
 **Cada pantalla de este proyecto tiene su artboard.** Construir algo "provisional",
 un "scaffold" o una maqueta propia está prohibido, también para pantallas internas.
-La fase actual es convertir mockups en código, no diseñar en el editor.
 
-Si no aparece el `.dc.html` de la pantalla que toca construir:
+Si una pantalla nueva no tiene `.dc.html`:
 
 1. **Parar. No inventar un diseño.**
-2. Preguntar dónde está el artboard, o si se acepta avanzar sin él.
+2. Preguntar si se reutiliza un artboard existente o se diseña uno nuevo.
 3. Continuar solo con confirmación explícita.
 
 ---
@@ -333,23 +294,22 @@ Estos tokens están replicados en el código como **CSS custom properties** en `
 
 **Los números de fase no son cronológicos** — Fase 2 es Epic 7, aunque se diseñó después de Fase 7.
 
+
 ## Stack tecnológico
 
-- **Next.js 15.1** — App Router, PWA
+- **Next.js 15.1** — App Router, PWA (`@ducanh2912/next-pwa`)
 - **TypeScript**
 - **Tailwind CSS 4** — **No hay `tailwind.config.ts`**: v4 no lee configs JS. El tema vive en `@theme inline` dentro de `src/app/globals.css`
 - **Radix UI** — primitivas accesibles (Dialog, Select, Popover, DropdownMenu, Form)
-- **lucide-react** — iconos, con `strokeWidth={1.6}` para cumplir §1 del design system
+- **lucide-react** — iconos, con `strokeWidth={1.6}` (§1 del design system)
 - **class-variance-authority** — variantes de componente
-- **Recharts** — gráficos (`components/charts/`: BarChart, LineChart), para Epic 7 y 8
-- **@vis.gl/react-google-maps + @googlemaps/markerclusterer** — Google Maps real, proveedor único de mapa de la app desde la migración de Epic 2 (`/explore`, `components/explore/city-map.tsx`). Cualquier mapa nuevo (mini-mapa de lounge profile, u otro futuro) lo reutiliza — nunca SVG propio ni otro proveedor de tiles
-- **@ducanh2912/next-pwa** — service worker
-- **Brevo** — envío de email transaccional real (confirmación, recovery de Story 1.1/1.2), vía Supabase Auth Hook `send_email` + Edge Function `supabase/functions/send-email`. Desde Story 8.2 también manda adjuntos reales (`sendBrevoEmailWithAttachment`, `_shared/brevo.ts`) para el CSV de un reporte programado. Detalle en "Supabase Local Development" §Envío de email transaccional y §Reportes programados reales
-- **Stripe** (`@stripe/stripe-js` + `@stripe/react-stripe-js`) — procesamiento de pagos real (Story 4.2), modo test en desarrollo. Checkout Sessions con `ui_mode: 'elements'` + Payment Element (no PaymentIntent crudo, no Checkout hospedado — el formulario vive embebido en la propia pantalla, como pide `Payment.dc.html`). Sin route handlers de Next.js: Supabase Edge Functions para crear la Checkout Session, para el webhook (única fuente de verdad del estado del pago), desde Story 8.1, para reembolsar un cargo real (`stripe-refund-payment`) y, desde Epic 9, para cobrar el alta o la subida de plan de membresía (`stripe-membership-checkout`). Datos de tarjeta solo tocan Stripe.js/Elements en el cliente, nunca nuestro servidor (PCI DSS SAQ A). Detalle en "Supabase Local Development" §Procesamiento de pagos (Stripe) y §Reembolso real
-- **pg_cron** — jobs programados reales: `dispatch_booking_reminders()` (Story 5.3, primero del proyecto, cada 30 min, recordatorio de 24h), `dispatch_morning_notifications()`/`dispatch_partner_morning_digest()`/`dispatch_account_deletions()` (Story 6.2/6.3/7.2), `dispatch_scheduled_reports()` (Story 8.2, cada 15 min — la cadencia más corta, porque un reporte diario/semanal/mensual necesita revisar seguido si ya le toca) y `dispatch_membership_renewals()` (Epic 9, diario: vence términos sin auto-renovación, cobra las renovaciones vencidas y avisa un mes antes de renovar). Todos vía Database Webhook (`pg_net`) hacia su Edge Function, disparados por tiempo, no por evento. Detalle en "Supabase Local Development" §Recordatorio de reserva (pg_cron) y §Reportes programados reales
-- **Supabase Realtime** — canal `postgres_changes` sobre `bookings` (Story 7.1, `/partner`, primer uso del proyecto): sustituye la simulación de temporizadores del mockup para "real-time updates when new bookings are made". Detalle en "Supabase Local Development" §Rol de partner real
-- **Vitest + Testing Library** — tests sobre jsdom, con `next/navigation` mockeado. jsdom no trae `WebSocket`; el que Node expone globalmente (`undici`) revienta al usarse desde `@supabase/realtime-js` dentro de jsdom — `vitest.setup.ts` lo sustituye por un stub inerte, mismo criterio que el relleno de `IntersectionObserver`
-- **Playwright** — navegador automatizado para verificación visual (uso puntual, no suite e2e masiva)
+- **Recharts** — gráficos (`components/charts/`), Epic 7 y 8
+- **@vis.gl/react-google-maps + @googlemaps/markerclusterer** — proveedor único de mapa
+- **Supabase** — Auth, Postgres, Storage, Realtime, Edge Functions, `pg_cron`/`pg_net`
+- **Stripe** (`@stripe/stripe-js` + `@stripe/react-stripe-js`) — pagos, modo test; datos de tarjeta solo en Stripe Elements (PCI SAQ A)
+- **Brevo** — email transaccional, desde Edge Functions (`supabase/functions/_shared/brevo.ts`)
+- **Vitest + Testing Library** — jsdom, con `next/navigation` mockeado. `vitest.setup.ts` sustituye `WebSocket` por un stub inerte (el de `undici` revienta con `@supabase/realtime-js` en jsdom)
+- **Playwright** — verificación visual puntual
 
 **Convenciones de código:**
 - Componentes en `src/components/` con estructura por capa (ui/, patterns/, charts/) más una carpeta por epic para su lógica
@@ -528,618 +488,3 @@ Antes de comitear una migración nueva (usar la skill `supabase` — ver tabla d
 - ❌ No editar archivos en `supabase/migrations/` a mano — los genera `db diff`
 - ❌ No comitear `supabase/.temp/` ni `supabase/.branches/` (ya en `supabase/.gitignore`)
 - ❌ No correr `supabase link` ni cambiar `schema_paths`/puertos en `config.toml` sin confirmación explícita
-
-### Envío de email transaccional (Auth Hook + Brevo)
-
-Desde Story 1.1/1.2, el email de confirmación y de recovery no usa el SMTP
-simulado de Supabase (Inbucket/Mailpit) — Auth llama al Hook `send_email`
-(`[auth.hook.send_email]` en `config.toml`), que invoca la Edge Function
-`supabase/functions/send-email`, la cual despacha el correo real vía Brevo.
-
-- **Secrets de la function** — nunca commitear: `supabase/functions/.env`
-  (gitignored vía el `.env` del `.gitignore` raíz), plantilla en
-  `supabase/functions/.env.example`. Incluye `BREVO_API_KEY`,
-  `BREVO_SENDER_EMAIL`, `BREVO_SENDER_NAME`, `SEND_EMAIL_HOOK_SECRET`,
-  `APP_URL`, `APP_ENV`.
-- **`APP_URL` no es `auth.site_url` ni `email_data.site_url`** del payload
-  del hook — ese último campo resuelve al puerto del API de Supabase
-  (`127.0.0.1:54331` en local), no al dev server de Next. `APP_URL` es su
-  propio secret (`http://127.0.0.1:3000` en local); si `npm run dev` corre
-  en otro puerto en tu máquina, ajustarlo ahí y reiniciar Supabase.
-- **Regla del subject: prefijo de ambiente entre corchetes.** El asunto de
-  cada correo lleva `[LOCAL]`, `[STAGING]` o `[PROD]` según el secret
-  `APP_ENV` de esa function (`send-email/index.ts` lo antepone al subject de
-  cada plantilla) — así se distingue de un vistazo de qué ambiente vino un
-  correo de prueba. Nunca se pone a mano en Brevo ni en el template.
-- **Staging/prod:** el hook se registra **a mano**, una vez por proyecto
-  remoto, en su dashboard (`Authentication` → `Hooks` → `Send Email`) —
-  nunca vía `supabase config push`, que sincroniza *todo* `config.toml`
-  contra el proyecto remoto (no solo el hook) y arriesga pisar `site_url`,
-  redirect URLs u otra config de Auth puesta a mano en el dashboard.
-  Ya hecho para `luxepass-dev` y `luxepass-prod`; detalle del rollout
-  (orden de pasos, secrets de GitHub, los 4 bugs reales que salieron en el
-  camino) en `docs/ci-cd/RESUMEN.md` y `docs/PENDIENTES.md` → Resueltos.
-  Wiring de CI (`supabase functions deploy` + `supabase secrets set`) en
-  `.github/workflows/deploy.yml`.
-- **Rate limit de Auth: también a mano, por proyecto remoto.** Un proyecto
-  Supabase nuevo trae `Authentication → Rate Limits → Rate limit for
-  sending emails` en 2/hora por defecto, y ese límite **aplica aunque el
-  envío real vaya por el Hook a Brevo** — no es el mailer nativo el que lo
-  dispara, es un límite general del endpoint de Auth. Sin subirlo, el
-  signup funciona un par de veces y luego el resto de flujos (recovery,
-  resend) fallan en silencio: nada en los logs de la function, el hook ni
-  se invoca. Súbelo junto con el registro del hook, antes de dar por
-  probado un ambiente nuevo.
-
-### Procesamiento de pagos (Stripe)
-
-Decisión de alcance (17 sept 2026, revierte la nota original de
-`docs/DATA-MODEL-MAP.md` que era válida solo durante el periodo de mockup):
-Story 4.2 se implementa contra **Stripe real, en modo test** durante
-desarrollo — no se simula. Motivo completo en "Alcance" §Procesamiento de
-pagos real (Story 4.2).
-
-**Cuenta:** una sandbox de Stripe propia de este proyecto (no el test mode
-compartido de una cuenta), creada el 17 sept 2026 con
-`stripe sandbox create --from-git` — `account_id` `acct_1UGUm6IBtxcBzVZb`.
-**Ya reclamada** (21 sept 2026, `stripe sandbox claim` + `stripe login
---complete-device`), asociada a una cuenta Stripe real — ya no expira.
-**Ojo: reclamar no cambia la clave ya emitida.** La clave `rkcs_test_…`
-de antes del claim siguió funcionando, pero con el rate limit bajo de
-"claimable sandbox" (la suite completa lo agotaba: "Claimable sandbox
-request rate limit exceeded"); el 23 sept 2026 se sustituyó por una clave
-de test normal (`sk_test_…`) creada en el Dashboard de la sandbox ya
-reclamada, en `supabase/functions/.env`, `.env.local` y el secret de
-GitHub `STRIPE_SECRET_KEY` (CI). Claves guardadas en `.env.local`
-(`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_SECRET_KEY` para los
-fixtures de test) y `supabase/functions/.env` (`STRIPE_SECRET_KEY`) —
-ninguno de los dos archivos se comitea. **Vercel ya está montado** (staging/prod, ver
-"Infraestructura real ya montada" más arriba) — lo pendiente es dar de alta
-ahí `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (puede ser esta misma sandbox
-reclamada, o una independiente por ambiente — decisión de producto, no
-técnica) **y** ampliar `deploy.yml` para que despliegue las Edge Functions
-de Stripe/recibo de reserva y sus secrets — hoy solo despliega `send-email`.
-Ver `docs/PENDIENTES.md` §4.6.
-
-Lo ya decidido, a seguir al implementar Story 4.2:
-
-- **Checkout Sessions con `ui_mode: 'elements'` + Payment Element** — no un
-  `PaymentIntent` crudo ni el Checkout hospedado/embebido de Stripe: el
-  formulario de tarjeta vive dentro de la propia pantalla del design system
-  (`Payment.dc.html`), con la sesión de Checkout gestionando el estado detrás.
-- **Nunca pasar `payment_method_types`** a `checkout.sessions.create` — se
-  omite para activar *dynamic payment methods* (Stripe decide qué métodos
-  mostrar); Apple Pay/Google Pay simplemente no aparecerán sin dominio
-  verificado (ver más abajo), no hace falta excluirlos a mano.
-- **Sin route handlers de Next.js.** Mismo patrón que `send-email`: la
-  lógica de servidor (crear la Checkout Session, verificar la firma del
-  webhook) vive en Supabase Edge Functions, no en `src/app/api/`.
-- **El webhook es la única fuente de verdad del `status` de `payments`.**
-  El cliente nunca marca un pago como exitoso tras el submit. El handler
-  escucha `checkout.session.completed` y `checkout.session.async_payment_succeeded`
-  (fulfilment solo si `payment_status` no es `unpaid`) y
-  `checkout.session.async_payment_failed` para el fallo — igual que Auth
-  decide el resultado real del signup, no el formulario.
-- **Instanciar `StripeClient`** (`new Stripe(secretKey)` vía SDK de Node en
-  la Edge Function, import `npm:stripe` en Deno) y llamar sobre esa
-  instancia — nunca el patrón global/deprecado (`stripe.api_key = …`).
-- **Secrets de las functions** (mismo patrón que `BREVO_*`):
-  `STRIPE_SECRET_KEY` (clave de test normal, `sk_test_`/`rk_test_` — nunca la `rkcs_` de sandbox sin reclamar) y `STRIPE_WEBHOOK_SECRET`.
-  La clave publicable (`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`) es la única que
-  sí llega al cliente, para `@stripe/stripe-js`/`@stripe/react-stripe-js`.
-- **Modo test en local y en `staging`**; cambiar a claves live en `main`
-  solo con confirmación explícita — no asumirlo como parte de la historia.
-- **Prueba local del webhook**: Stripe CLI (`stripe listen --forward-to`)
-  apuntando a la Edge Function servida localmente (`supabase functions
-  serve`), igual que Brevo se prueba contra Supabase local antes de tocar
-  remoto.
-- **Apple Pay / Google Pay quedan fuera de esta conexión real.** El Payment
-  Element de Stripe los ofrece automáticamente, pero exigen un dominio
-  verificado ante Stripe/Apple que no funciona en `localhost` ni sin el
-  rollout de Vercel (ver `docs/PENDIENTES.md` §4.4, mismo tipo de gap de
-  infraestructura). Los botones pueden quedar visualmente presentes pero
-  inertes hasta ese rollout — anotarlo como desviación en
-  `COMPONENT-MAP.md` al implementar, no como criterio simulado de la
-  historia.
-- **Tabla `payments`** (dueño Epic 4, ver `docs/DATA-MODEL-MAP.md`):
-  columnas exactas, RLS y su relación con `bookings` se deciden con TDD al
-  implementar Story 4.2 — este archivo no lista columnas (ver "Schema
-  management" arriba).
-
-### Email de recibo de reserva (Database Webhook)
-
-Story 4.2/5.1 — desde el 18 sept 2026, el recibo de reserva (`Receipt.dc.html`)
-se envía de verdad para toda reserva `confirmed`, con o sin pago. Motivo
-completo en "Alcance" §Email de recibo de reserva real.
-
-**Por qué no es un Auth Hook como `send-email`.** Los Auth Hooks de Supabase
-solo cubren eventos de Auth (signup, recovery) — "se confirmó una reserva" es
-un evento de negocio sobre una tabla cualquiera, sin hook nativo. El
-mecanismo equivalente es un **Database Webhook**: un trigger `AFTER INSERT`
-en `bookings` que, solo cuando `status = 'confirmed'`, llama de forma
-asíncrona (extensión `pg_net`) a la Edge Function `send-booking-receipt` —
-primer uso de este mecanismo en el proyecto, ver
-`supabase/schemas/booking_receipts.sql`.
-
-**Autenticación: secreto compartido en Supabase Vault, no un JWT.** Postgres
-no tiene sesión de usuario que pasarle a la function, así que no hay
-`verify_jwt` que aplicar (`[functions.send-booking-receipt]` en
-`config.toml` lo desactiva, igual que `stripe-webhook`). El trigger lee la
-URL de la function y un secreto compartido desde
-`vault.decrypted_secrets` (nunca hardcodeados en el schema versionado — la
-URL cambia por ambiente y el secreto no debe comitearse) y los manda en la
-cabecera `x-webhook-secret`, que la function verifica contra su propio
-secret `BOOKING_RECEIPT_WEBHOOK_SECRET`. Alta de los dos secretos, **una vez
-por proyecto** (local/dev/prod), igual que el resto de secretos de este
-epic — nunca vía `supabase config push`:
-```sql
-select vault.create_secret(
-  'http://host.docker.internal:54331/functions/v1/send-booking-receipt', -- local; staging/prod: la URL pública del proyecto
-  'booking_receipt_webhook_url', 'URL de la Edge Function send-booking-receipt'
-);
-select vault.create_secret(
-  '<mismo valor que BOOKING_RECEIPT_WEBHOOK_SECRET en supabase/functions/.env>',
-  'booking_receipt_webhook_secret', 'Secreto compartido del Database Webhook de bookings'
-);
-```
-**Sin los dos secretos dados de alta, el trigger no hace nada** (guard
-explícito en la función, `if v_url is null or v_secret is null then return
-new`) — nunca falla el insert de la reserva por esto, y **no hace falta
-desactivarlo a mano en CI** como sí exige el Auth Hook de Epic 1
-(`ci.yml` nunca crea estos secretos de Vault, así que el trigger es un
-no-op ahí sin tocar nada).
-
-**Networking local: `host.docker.internal`, no `127.0.0.1`.** Postgres
-corre en su propio contenedor Docker — `127.0.0.1` ahí apunta al contenedor
-mismo, no al host. Verificado con `net.http_get`/`net.http_post` directo
-contra el gateway (`supabase_kong_<project_id>`, puerto 54331) antes de dar
-por buena la URL.
-
-**Pago todavía `pending` al confirmar la reserva.** Con tarjeta nueva, el
-`status` de `payments` pasa a `succeeded` cuando el webhook de Stripe lo
-confirma — asíncrono, sin garantía de haber llegado ya cuando
-`confirm_booking` inserta la reserva (el cliente llama a ambos casi
-seguidos). `send-booking-receipt` reintenta unos segundos
-(`findSettledPayment`, 3 intentos con 1s de espera) antes de componer el
-email con el estado que tenga — por eso el trigger usa un timeout de 15s en
-`net.http_post`, no los 5s por defecto (un timeout corto cortaba la llamada
-a mitad de esa espera — bug real encontrado verificando con Playwright el
-flujo completo, no con curl/psql sueltos).
-
-**Brevo compartido con `send-email`.** El envío real (misma cuenta Brevo,
-mismos secrets `BREVO_*`) se factorizó a `supabase/functions/_shared/brevo.ts`,
-del que ahora dependen las dos functions — antes cada una llamaba a la API
-de Brevo por su cuenta.
-
-### Check-in de recepción (RPC de kiosco)
-
-Story 5.2 — desde el 21 sept 2026, `/reception` verifica y actualiza
-reservas de verdad. Motivo completo en "Alcance" §Check-in de recepción
-real.
-
-**Por qué RPC de kiosco y no un login de staff.** `docs/DATA-MODEL-MAP.md`
-deja la decisión de rol (member/partner/admin) sobre `auth.users`
-explícitamente para "en cuanto se empiece Epic 7, no antes" — construir un
-login de personal solo para desbloquear Epic 5 habría adelantado esa
-decisión fuera de tiempo. En su lugar, `reception_lookup_booking`/
-`reception_checkin_booking`/`reception_report_no_show`/
-`reception_today_summary` (`supabase/schemas/bookings.sql`) son funciones
-`SECURITY DEFINER` concedidas a `anon` — autorizadas solo por conocer el
-LP# de hoy en el lounge correcto, igual que un lector físico de QR en el
-mostrador. `/reception` sigue sin sesión de miembro ni de personal, como ya
-fijaba `docs/PENDIENTES.md` §2.7 antes de conectar este módulo.
-
-**`p_date`, no `current_date`.** Todo el proyecto trabaja sobre el "hoy" de
-mockup fijo (`TODAY` en `src/lib/availability.ts`, `2025-09-09`) — las
-cuatro funciones reciben la fecha como parámetro explícito (que el cliente
-manda como `TODAY`) en vez de asumir el reloj real de Postgres, mismo
-criterio que `confirm_booking` recibe `p_date` en vez de asumirlo.
-
-**Cuando llegue el login de staff de Epic 7**, ese es el momento de
-endurecer estas RPC a exigir sesión en vez de `anon` — no antes, ver
-`docs/PENDIENTES.md` §2.7.
-
-### Recordatorio de reserva (pg_cron)
-
-Story 5.3 — desde el 21 sept 2026, "receive an email 24 hrs before the
-booking time" se envía de verdad. Motivo completo en "Alcance" §Recordatorio
-de reserva real.
-
-**Primer job programado del proyecto.** A diferencia de los Database
-Webhooks de arriba (evento: un insert dispara la llamada), aquí no hay
-ninguna escritura que lo dispare — el disparador es el propio paso del
-tiempo. `pg_cron` (`supabase/schemas/booking_reminders.sql`) corre
-`dispatch_booking_reminders()` cada 30 minutos, que a su vez llama
-(`pg_net`, mismo mecanismo que `booking_receipts.sql`) a la Edge Function
-`send-booking-reminder` por cada reserva `confirmed` cuya llegada
-(`booking_arrival_at(date, slot_time)`) cae en la ventana "ahora + 24h" y
-sin recordatorio ya mandado (`bookings.reminder_sent_at`, la guarda contra
-reenvíos si el cron vuelve a correr dentro de esa misma ventana).
-
-**Aquí `now()` sí es el reloj real, a propósito** — a diferencia de las
-funciones de recepción de arriba: "24 horas antes de la reserva" es un
-intervalo de verdad, no el "hoy" de mockup de la app.
-
-**Autenticación y alta de secretos: mismo patrón que el recibo de
-reserva** (Supabase Vault, no JWT — Postgres no tiene sesión de usuario;
-`[functions.send-booking-reminder]` en `config.toml` desactiva
-`verify_jwt`). Alta de los dos secretos, una vez por proyecto:
-```sql
-select vault.create_secret(
-  'http://host.docker.internal:54331/functions/v1/send-booking-reminder', -- local; staging/prod: la URL pública del proyecto
-  'booking_reminder_webhook_url', 'URL de la Edge Function send-booking-reminder'
-);
-select vault.create_secret(
-  '<mismo valor que BOOKING_REMINDER_WEBHOOK_SECRET en supabase/functions/.env>',
-  'booking_reminder_webhook_secret', 'Secreto compartido del cron de recordatorios hacia send-booking-reminder'
-);
-```
-Sin los dos secretos dados de alta, `dispatch_booking_reminders()` no hace
-nada (mismo guard que `notify_booking_confirmed`) — el cron corre igual,
-simplemente no manda nada.
-
-**Limitación conocida de este entorno: no se puede ejercitar de punta a
-punta en local/CI.** `lounge_availability` está sembrada en una ventana
-fija de 18 semanas desde `2025-09-09` (`docs/DATA-MODEL-MAP.md`), así que
-ninguna reserva real posible hoy cae dentro de "ahora + 24h" del reloj
-real. El mecanismo es correcto — mismo patrón ya probado que
-`booking_receipts.sql` — pero queda sin poder probarse de punta a punta
-hasta que ese seed se vuelva a anclar al `current_date` real (fuera de
-alcance de Epic 5, ver `docs/PENDIENTES.md` §2.10).
-
-**Brevo compartido con `send-email`/`send-booking-receipt`** — misma
-factorización en `supabase/functions/_shared/brevo.ts`.
-
-### Notificaciones en la app (trigger + pg_cron)
-
-Story 6.2 — desde el 21 sept 2026, la tabla `notifications`
-(`supabase/schemas/notifications.sql`, nace en Epic 6) es real. Motivo
-completo en "Alcance" §Notificaciones en la app reales.
-
-**"Booking confirmation" es un INSERT directo, no un Database Webhook.**
-`notify_booking_confirmed_in_app()` (trigger `AFTER INSERT` en `bookings`,
-igual disparador que `notify_booking_confirmed` de `booking_receipts.sql`)
-inserta la notificación en la misma base — sin `pg_net`, sin Vault, sin
-Edge Function: no hay servicio externo que llamar para escribir en una
-tabla de la misma base de datos.
-
-**El aviso de las 6 AM sí es `pg_cron`, segundo uso del proyecto** (después
-de `dispatch_booking_reminders`, Story 5.3) — pero tampoco llama a ninguna
-Edge Function: `dispatch_morning_notifications()`
-(`supabase/schemas/notifications.sql`) corre cada 15 minutos e inserta
-directo en `notifications` para cada reserva `confirmed` cuya fecha es hoy
-(reloj real, `now() at time zone 'UTC'`) y cuya hora cae en la ventana
-05:45–06:15 UTC, sin aviso ya mandado (`bookings.morning_notification_sent_at`).
-Mismo gap conocido que Story 5.3: `lounge_availability` sigue sembrada en
-una ventana fija desde `2025-09-09`, así que ninguna reserva real posible
-hoy cae en el `current_date` real que este cron usa a propósito — no
-ejercitable de punta a punta en local/CI.
-
-**Los otros cuatro tipos se siembran al crear el perfil.** "New lounge
-partner announcements", "Membership renewal reminders", "Special offers and
-promotions" y "Birthday month promotion" dependen de datos que Epic 7/9
-todavía no modelan de verdad (nuevos partners, renovación de membresía real)
-— `seed_sample_notifications()` (trigger `AFTER INSERT` en `profiles`)
-inserta las cuatro como notificaciones de muestra reales (contenido fijo,
-filas de verdad) la primera vez que el miembro completa /onboarding.
-
-### Borrado de cuenta (pg_cron)
-
-Story 6.3 — desde el 21 sept 2026, "Account deletion option with
-confirmation" conecta contra Supabase como un soft-delete reversible.
-Motivo completo en "Alcance" §Borrado de cuenta real.
-
-**Confirmar el modal no borra nada.** `request_account_deletion()`
-(`supabase/schemas/account_deletion.sql`, RPC `SECURITY DEFINER`) marca
-`profiles.deleted_at = now()` y cancela las reservas futuras del miembro
-(mismo cálculo de fee que `cancel_booking`) — fiel a lo que
-`DeleteAccountModal` ya declaraba ("upcoming bookings are cancelled...
-charged the fee"). Reactivar es tan simple como `deleted_at = null`: el
-login (`reactivateAccountIfDeleted`, `src/lib/profile.ts`) lo hace solo tras
-un signInWithPassword exitoso, sin RPC propia — RLS "update own profile" ya
-lo permite sobre la fila propia.
-
-**El borrado físico real (30 días cumplidos) es `pg_cron`, tercer uso del
-proyecto** — mismo patrón de Database Webhook por secreto compartido que
-`booking_receipts.sql`/`booking_reminders.sql`, pero corriendo una vez al
-día en vez de cada 15–30 min: `dispatch_account_deletions()`
-(`supabase/schemas/account_deletion.sql`) busca `profiles` con
-`deleted_at <= now() - interval '30 days'` y llama (`pg_net`) a la Edge
-Function `delete-account`, primer uso del proyecto de
-`auth.admin.deleteUser` — `on delete cascade` en `profiles`/`bookings`/
-`payments`/`notifications`/`member_favorite_lounges` limpia el resto solo.
-Alta de los dos secretos, una vez por proyecto:
-```sql
-select vault.create_secret(
-  'http://host.docker.internal:54331/functions/v1/delete-account', -- local; staging/prod: la URL pública del proyecto
-  'account_deletion_webhook_url', 'URL de la Edge Function delete-account'
-);
-select vault.create_secret(
-  '<mismo valor que ACCOUNT_DELETION_WEBHOOK_SECRET en supabase/functions/.env>',
-  'account_deletion_webhook_secret', 'Secreto compartido del cron de borrado de cuenta hacia delete-account'
-);
-```
-Sin los dos secretos dados de alta, `dispatch_account_deletions()` no hace
-nada (mismo guard que el resto de este patrón). La Edge Function además
-re-verifica los 30 días por su cuenta (defensa en profundidad) antes de
-llamar a `auth.admin.deleteUser` — no confía solo en el filtro SQL que la
-invocó.
-
-**Limitación conocida de este entorno: no se puede ejercitar de punta a
-punta en 30 días reales aquí** — mismo tipo de gap que el recordatorio de
-Story 5.3, esta vez por la duración de la ventana (30 días) en vez de por
-el seed de disponibilidad.
-
-### Rol de partner real (`user_roles`)
-
-Epic 7 — decisión de arquitectura pospuesta a propósito hasta este epic
-(ver `docs/DATA-MODEL-MAP.md`: "cómo se distingue el rol member/partner/
-admin sobre `auth.users`... conviene decidirla en cuanto se empiece Epic
-7, no antes"). Decidido con el usuario (22 sept 2026): tabla `user_roles`
-(`user_id`, `role` — 'partner'/'admin'), no un custom claim en el JWT ni
-esquemas separados — no toca `auth.users`, no exige registrar un segundo
-Custom Access Token Hook por proyecto remoto, y el rol se puede cambiar
-sin esperar a que el JWT del miembro se refresque. Sin fila = miembro
-corriente; solo se registran roles elevados. Epic 8 (rol admin) reutiliza
-la misma tabla cuando se conecte.
-
-`partners`/`partner_lounges` (tabla puente many-to-many — un partner puede
-gestionar varios lounges, decisión tomada con el usuario, no una FK directa
-`lounges.partner_id`) completan el modelo. Dar de alta un partner es un
-proceso operativo, nunca self-service (no hay historia de "partner
-signup", solo `Login.dc.html`) — ver "Alta de un partner" en
-`supabase/schemas/partners.sql` y `scripts/seed-partner-account.mjs` para
-la cuenta de muestra de The Ainsworth en local.
-
-### Notificaciones al partner reales (Database Webhook + pg_cron)
-
-Story 7.2 — "Email notification for each new booking", "Cancellation
-notifications with updated guest count" y "Morning digest email with
-day's guest list" se envían de verdad. Mismo mecanismo que
-`booking_receipts.sql`/`booking_reminders.sql` (secreto compartido en
-Supabase Vault, `pg_net`, sin `verify_jwt` — quien llama es Postgres, no
-un miembro autenticado): dos triggers en `bookings`
-(`notify_partner_new_booking`/`notify_partner_cancellation`, Database
-Webhook) y un `pg_cron` a las 6:30 AM (`dispatch_partner_morning_digest`),
-todos en `supabase/schemas/partner_notifications.sql`, hacia dos Edge
-Functions nuevas (`send-partner-booking-event`, que cubre los dos eventos
-distinguidos por `type` en el payload, y `send-partner-digest`).
-
-**Decisión consciente: no se usa la tabla `notifications` de Epic 6.** El
-AC de Story 7.2 es "recibir un email", no una fila en el centro de
-notificaciones del miembro — `docs/DATA-MODEL-MAP.md` ya anticipaba a
-Epic 7 como posible referenciador de esa tabla, pero al conectarse de
-verdad se decidió lo mismo que ya había decidido Story 5.3 (pg_cron
-propio en vez de depender de `notifications`).
-
-Alta de los 4 secretos de Vault, una vez por proyecto (local/dev/prod):
-```sql
-select vault.create_secret(
-  'http://host.docker.internal:54331/functions/v1/send-partner-booking-event', -- local; staging/prod: la URL pública del proyecto
-  'partner_notification_webhook_url', 'URL de send-partner-booking-event'
-);
-select vault.create_secret(
-  '<mismo valor que PARTNER_NOTIFICATION_WEBHOOK_SECRET en supabase/functions/.env>',
-  'partner_notification_webhook_secret', 'Secreto compartido hacia send-partner-booking-event'
-);
-select vault.create_secret(
-  'http://host.docker.internal:54331/functions/v1/send-partner-digest',
-  'partner_digest_webhook_url', 'URL de send-partner-digest'
-);
-select vault.create_secret(
-  '<mismo valor que PARTNER_DIGEST_WEBHOOK_SECRET en supabase/functions/.env>',
-  'partner_digest_webhook_secret', 'Secreto compartido hacia send-partner-digest'
-);
-```
-Sin los 4 secretos dados de alta, ninguna de las tres funciones hace nada
-(mismo guard que el resto de este patrón) — así se comporta `ci.yml` a
-propósito (nunca los crea).
-
-**Las tres pantallas de email (`/partner/emails/digest`, `/new-booking`,
-`/cancellation`) se quedan como preview fija de la narrativa de muestra,
-sin conectar.** El AC ya está cubierto por el envío real de arriba —
-ninguna historia pide que esas pantallas *muestren* el envío más
-reciente.
-
-**La promoción automática de la waitlist no tiene mecanismo real en
-ningún epic.** `join_waitlist` (Epic 4) aparca la reserva en
-`status='waitlisted'`, pero ningún epic conectado hasta ahora la sube a
-`confirmed` cuando se libera un hueco — construirlo expandiría el
-alcance del Epic 4 (dueño real de `bookings`), no del 7. Documentado
-como hueco real en `docs/PENDIENTES.md` §2.11, no simulado.
-
-### Reembolso real (Stripe, Story 8.1)
-
-Decisión de alcance (22 sept 2026, tomada con el usuario antes de
-implementar — revierte la nota de `docs/DATA-MODEL-MAP.md` que daba esto
-por fuera de alcance): "Refund processing interface" reembolsa de verdad
-un cargo real de Stripe (`payments.status = 'succeeded'`) vía la Edge
-Function `stripe-refund-payment` (`stripe.refunds.create`), llamada
-directamente por el cliente admin (no por un cron) tras verificar
-`has_role('admin')` contra el llamador. `payments` se actualiza de forma
-optimista en la misma respuesta (Stripe confirma un reembolso en modo
-test al instante) — el webhook (`stripe-webhook`, caso `charge.refunded`
-ya añadido) es la defensa en profundidad, mismo principio que el resto de
-Story 4.2.
-
-**Una tarifa de no-show/cancelación tardía (Story 6.1) nunca se cobró de
-verdad, así que no pasa por aquí.** "Waive and refund" en ese caso solo
-limpia `bookings.cancellation_fee_cents`/`no_show`
-(`admin_waive_booking_fee`, `supabase/schemas/support_tickets.sql`) — no
-hay nada que reversar en Stripe para un cargo que nunca existió. El
-`RefundModal` (lenguaje de "cargo"/tarjeta/reembolso a 5-10 días) solo se
-muestra cuando el caso trae un pago real `succeeded` ligado a la reserva.
-
-### Reportes programados reales (pg_cron, Story 8.2)
-
-Decisión de alcance (22 sept 2026, misma fecha y mismo criterio que el
-reembolso de arriba — revierte la nota de `docs/DATA-MODEL-MAP.md`):
-"Automated daily/weekly report generation" + "Scheduled email delivery of
-reports" son reales, mismo mecanismo de Database Webhook/`pg_cron` que
-Story 5.3/6.2/7.2 (secreto compartido en Supabase Vault, `pg_net`, sin
-`verify_jwt`). Tabla `scheduled_reports` (nace aquí,
-`supabase/schemas/admin_reports.sql`) + `dispatch_scheduled_reports()`
-(pg_cron cada 15 min — la cadencia más corta de los tres cron del
-proyecto, porque un reporte "diario"/"semanal"/"mensual" necesita que el
-propio cron revise seguido si ya le toca, a diferencia de un evento puntual
-como el recordatorio de 24h) → Edge Function `send-admin-report`, que
-manda el CSV como adjunto real de Brevo (`sendBrevoEmailWithAttachment`,
-nueva en `_shared/brevo.ts`) — no en el cuerpo del email.
-
-**El CSV se genera en SQL, no en el cliente.**
-`admin_generate_report_csv(dataset, from, to)` reutiliza las mismas RPC
-`admin_export_*` que usa "Download CSV" en `/admin/reports`, así que el
-reporte programado y la descarga manual nunca pueden desincronizarse en
-qué columnas trae cada dataset.
-
-**Bug real encontrado y corregido con TDD**: `admin_generate_report_csv`
-y las `admin_export_*` de las que depende exigían `has_role('admin')`
-igual que el resto de RPC de este epic — pero el cron las llama desde
-Postgres, sin sesión (`auth.uid()` es `null` ahí), así que
-`dispatch_scheduled_reports()` fallaba con "Not authorized" en cada
-corrida. El guard de esas funciones pasó a
-`if auth.uid() is not null and not has_role('admin') then raise
-exception`: sigue rechazando a un autenticado sin el rol, pero deja pasar
-la llamada interna sin sesión — mismo criterio que ya usan las RPC "de
-kiosco" de recepción (Epic 5) al no exigir sesión en absoluto.
-
-"Email it to me" en `/admin/reports` usa el mismo `send-admin-report`,
-llamado directamente por el cliente (sin pasar por el cron) con el email
-del propio admin como único destinatario.
-
-Alta de los 2 secretos de Vault, una vez por proyecto (local/dev/prod):
-```sql
-select vault.create_secret(
-  'http://host.docker.internal:54331/functions/v1/send-admin-report', -- local; staging/prod: la URL pública del proyecto
-  'admin_report_webhook_url', 'URL de send-admin-report'
-);
-select vault.create_secret(
-  '<mismo valor que ADMIN_REPORT_WEBHOOK_SECRET en supabase/functions/.env>',
-  'admin_report_webhook_secret', 'Secreto compartido hacia send-admin-report'
-);
-```
-Sin los 2 secretos dados de alta, `dispatch_scheduled_reports()` no hace
-nada (mismo guard que el resto de este patrón).
-
-**Verificado de punta a punta**: `select
-public.dispatch_scheduled_reports();` disparado a mano contra un reporte
-de prueba, con `200` confirmado en `net._http_response` tras el envío
-real por Brevo — a diferencia del recordatorio de reserva (Story 5.3) o
-el aviso de las 6 AM (Story 6.2), este cron **sí** se pudo ejercitar de
-punta a punta en local: la ventana de datos que reporta (`v_to` fijo en
-`TODAY`, no el reloj real) no depende de que `lounge_availability` tenga
-reservas en el "hoy" real, solo de que existan reservas en el "hoy" de
-mockup — que sí las hay.
-
-### Membresía y referidos reales (Epic 9)
-
-Decisiones de producto confirmadas con el usuario el 23 sept 2026 — motivo
-completo en "Alcance" §Membresía y referidos reales.
-
-**`memberships` no admite escrituras de cliente.** La fila nace o cambia
-solo cuando un pago con `payments.membership_plan` pasa a `succeeded`
-(trigger `apply_membership_payment`, `supabase/schemas/memberships.sql`) —
-da igual si viene de la tarjeta guardada (la Edge Function inserta el pago
-ya `succeeded`) o del webhook de Stripe (Checkout Session con
-`<PaymentElement>`, ruta de tarjeta nueva): `stripe-webhook` no se tocó.
-`profiles.membership_status` (stub de Story 6.3) es ahora un espejo
-(`sync_profile_membership_status`) y, como `referral_code` y
-`stripe_customer_id`, el miembro no puede escribirlo aunque "update own
-profile" le deje tocar su fila (`guard_profile_managed_columns`,
-`supabase/schemas/referrals.sql` — trigger `SECURITY INVOKER` a propósito:
-dentro de un `DEFINER`, `current_user` sería siempre el dueño).
-
-**El importe nunca lo decide el navegador.** `stripe-membership-checkout`
-llama a `membership_change_quote` con el JWT del propio miembro, así que
-hereda también sus reglas (no repetir plan, no bajar de anual a mensual —
-eso no se cobra hoy: se programa con `schedule_membership_plan_change`).
-
-**La renovación automática cobra de verdad** (Edge Function
-`membership-renewal`, `type: "charge"`, llamada por el cron). Cobra
-off-session la tarjeta por defecto del Customer de Stripe (o la primera
-guardada) por `pending_plan ?? plan`; el trigger de `payments` abre el
-término siguiente **desde el fin del anterior**, no desde "ahora". Si no hay
-tarjeta o Stripe rechaza el cobro, la membresía vence y se inserta la
-notificación "We couldn't renew your membership". La function relee la fila
-antes de cobrar (409 si la auto-renovación se apagó o el término no ha
-vencido) y el cron marca `renewal_attempted_at` antes de llamarla, para no
-cobrar dos veces la misma renovación.
-
-**Quién paga una reserva** (Epic 9 × Epic 4, `supabase/schemas/booking_coverage.sql`):
-con plan activo, primero un day pass de regalo, luego una de las 8 visitas
-incluidas del mes de la reserva, y si no, el day pass pagado; sin plan,
-siempre se paga. `confirm_booking` lo hace cumplir: sin `p_payment_id` exige
-cobertura real, y con él valida que el pago sea del propio miembro, de un
-day pass y no pague ya otra reserva. `?covered=1` ya no existe.
-
-**Tests:** `memberships` se siembra con el service role
-(`grantTestMembership`, `src/lib/testing/membership-fixture.ts`, o la opción
-`{ membership: "annual" }` de `signUpConfirmedMemberAndSignIn` — cualquier
-test que cree una reserva sin pago la necesita), igual que el alta operativa
-de un partner/admin; `giveTestMemberSavedCard` crea un
-Customer real de Stripe con `pm_card_visa`. El cliente de navegador de
-Supabase es un singleton en jsdom — el "amigo" de los tests de referidos se
-crea con el service role, sin iniciar sesión.
-
-Alta de los 2 secretos de Vault del aviso de renovación, una vez por
-proyecto (local/dev/prod):
-```sql
-select vault.create_secret(
-  'http://host.docker.internal:54331/functions/v1/membership-renewal', -- local; staging/prod: la URL pública del proyecto
-  'membership_renewal_webhook_url', 'URL de membership-renewal'
-);
-select vault.create_secret(
-  '<mismo valor que MEMBERSHIP_RENEWAL_WEBHOOK_SECRET en supabase/functions/.env>',
-  'membership_renewal_webhook_secret', 'Secreto compartido del cron de renovación hacia membership-renewal'
-);
-```
-Sin los 2 secretos, `dispatch_membership_renewals()` sigue insertando la
-notificación en la app y venciendo los términos sin auto-renovación (no
-dependen de Vault) — pero no cobra renovaciones ni manda el email: un
-término vencido con auto-renovación sigue activo hasta que existan. El mismo
-secreto también va en `.env.local` (`MEMBERSHIP_RENEWAL_WEBHOOK_SECRET`):
-los tests invocan el cobro directamente; en CI se genera al vuelo
-(`ci.yml`). **`supabase db reset` borra Vault**: volver a darlos de
-alta después (igual que los de `admin_report_*`).
-
-### Gestión de contenido real (Story 8.3)
-
-`lounges` gana `content_status` (`live`/`draft`/`archived`) — la policy
-`select lounges` (Epic 2) se actualizó para que un miembro solo vea
-`content_status = 'live'`; un admin (`has_role('admin')`) sigue viendo
-todo. Este estado es **ortogonal** a si el lounge tiene un cambio de
-contenido pendiente de aprobar: un lounge `live` con una edición en
-revisión sigue mostrando su contenido publicado a los miembros hasta que
-se apruebe — "pending-approval" en la UI del admin (`LoungeStatusChip`)
-sale de si existe una fila pendiente en `lounge_content_submissions`
-(nace aquí, `supabase/schemas/admin_content.sql`), no de
-`lounges.content_status`.
-
-**"Content approval workflow" es real y genérico, no solo para The
-Vestry como dibujaba el mock.** Un cambio (`admin_submit_lounge_content_
-change`, cualquier combinación de amenities/horario/capacidad/
-restricciones/fotos/publicación en un jsonb `proposed`) nunca toca
-`lounges` directamente — solo se aplica al aprobarse
-(`admin_approve_lounge_submission`) o se descarta sin aplicar al
-rechazarse (`admin_reject_lounge_submission`). `lib/admin-content.ts`
-expone `diffLoungeChanges`, un diff genérico campo por campo que
-reemplaza al `VESTRY_PENDING_CHANGES` literal del mock.
-
-**"Upload and manage lounge images" es real vía un bucket de Storage
-nuevo, `lounge-images` (público a diferencia de `profile-photos`, que es
-privado por usuario — una foto de lounge la ve cualquiera en `/explore`).**
-Solo un admin puede escribir en él (policy `admin manages lounge images
-bucket`, `has_role('admin')`); cualquiera puede leer. "Image optimization
-and resizing" que el artboard anuncia **no** es real — no hay librería de
-procesamiento de imágenes en el stack ni precedente de transformación de
-imágenes en este proyecto.
-
-**De la barra de acción masiva de `/admin/lounges`, solo "Archive" es
-real** (`admin_archive_lounges`, directo, sin pasar por revisión — no es
-contenido nuevo que aprobar, es su retiro). "Update hours", "Add an
-amenity" y "Set closure dates" siguen inertes, mismo criterio que "New
-case" en Story 8.1: ningún artboard dibuja su modal de edición masiva.
-
-**"Add lounge" sigue sin llevar a ningún sitio propio.** Ningún artboard
-de la Fase 8 dibuja el alta de un lounge nuevo — se paró antes de
-inventarlo, ver `docs/PENDIENTES.md` §2.10.
