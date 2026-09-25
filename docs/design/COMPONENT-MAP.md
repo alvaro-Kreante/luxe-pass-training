@@ -340,7 +340,7 @@ Todo corre contra el proyecto local, nunca contra un Supabase remoto.
 | `supabase/schemas/profiles.sql` | Tabla `public.profiles` (los campos de los 3 pasos de onboarding), RLS propia |
 | `supabase/schemas/email_exists.sql` | Story 1.1 — RPC `email_exists`, la excepción consciente al anti-enumeración de Supabase Auth, para poder cumplir el AC "clear error messaging" de emails duplicados |
 | `supabase/schemas/login_attempts.sql` | Story 1.2 — tabla `login_attempts` + RPC `check_login_lock`/`record_failed_login`/`reset_login_attempts`. Supabase Auth no tiene lockout por cuenta (solo rate-limit por IP); sin policies, solo se toca vía esas funciones `security definer` |
-| `supabase/schemas/storage.sql` + bucket `profile-photos` (`config.toml`) | Foto de perfil opcional, un archivo por usuario bajo `{auth.uid()}/` |
+| `supabase/schemas/storage.sql` + bucket `profile-photos` (`config.toml`) | Foto de perfil opcional, un archivo por usuario bajo `{auth.uid()}/`. Bucket privado: `profiles.photo_url` guarda la ruta del objeto y se muestra con URL firmada (`lib/profile-photo.ts`), en `/onboarding/basics` (vista previa), la sidebar del App shell y `/profile` |
 | `supabase/templates/confirmation.html` | Story 1.1 — enlace propio a `/auth/confirm?token_hash=...&type=signup` en vez del flujo implícito por defecto |
 | `supabase/templates/recovery.html` | Story 1.2 — mismo patrón para `type=recovery`, destino `/reset-password` |
 | `[auth.sessions] inactivity_timeout` (`config.toml`) | Story 1.2 — "Automatic logout after 30 days of inactivity", real y global (ver desviación de "Remember me" más abajo) |

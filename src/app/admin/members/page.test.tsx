@@ -41,9 +41,23 @@ const reneeName = `Renee Duforest${suffix}`;
  * 4 dígitos propios de este run para el teléfono — deliberadamente
  * independientes de `suffix` (que va dentro del nombre de los tres
  * miembros): si compartieran dígitos, buscar por teléfono también
- * coincidiría por nombre y el test de "1 match" fallaría con 3.
+ * coincidiría por nombre y el test de "1 match" fallaría con 3. Se eligen en
+ * `beforeAll` con la propia búsqueda: la base local acumula miembros de
+ * corridas anteriores cuyos teléfonos, nombres y emails (con timestamps)
+ * ya contienen muchas combinaciones de 4 dígitos.
  */
-const phoneLast4 = String(Math.floor(1000 + Math.random() * 9000));
+let phoneLast4: string;
+
+async function unusedLast4(client: ReturnType<typeof createClient>) {
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const candidate = String(Math.floor(1000 + Math.random() * 9000));
+    if (suffix.includes(candidate) || String(stamp).includes(candidate)) continue;
+    const { data, error } = await client.rpc("admin_search_members", { p_query: candidate });
+    if (error) throw error;
+    if ((data as unknown[]).length === 0) return candidate;
+  }
+  throw new Error("No quedan 4 dígitos libres para el teléfono de prueba");
+}
 
 async function createMember(name: string, phone: string) {
   const { data: created, error } = await admin.auth.admin.createUser({
@@ -64,12 +78,13 @@ async function createMember(name: string, phone: string) {
 }
 
 beforeAll(async () => {
+  const adminClient = createClient();
+  await signUpConfirmedAdminAndSignIn(adminClient, `members-search-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
+  phoneLast4 = await unusedLast4(adminClient);
+
   camilleId = await createMember(camilleName, `+1555668${phoneLast4}`);
   await createMember(theoName, "+15556689930");
   await createMember(reneeName, "+15552041188");
-
-  const adminClient = createClient();
-  await signUpConfirmedAdminAndSignIn(adminClient, `members-search-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
 });
 
 describe("Member search (/admin/members)", () => {

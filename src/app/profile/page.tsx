@@ -19,6 +19,7 @@ import {
   type MemberMembership,
 } from "@/lib/membership";
 import { fetchProfile, updateProfile, type ProfileDraft } from "@/lib/profile";
+import { resolveProfilePhotoUrl, uploadProfilePhoto } from "@/lib/profile-photo";
 import { ensureReferralCode } from "@/lib/referrals";
 import { createClient } from "@/lib/supabase/client";
 
@@ -53,12 +54,12 @@ function ProfileScreen() {
   const router = useRouter();
   const supabase = React.useMemo(() => createClient(), []);
   const [draft, setDraft] = React.useState<ProfileDraft>(EMPTY_DRAFT);
-  const [memberId, setMemberId] = React.useState<string | null>(null);
   const [membership, setMembership] = React.useState<MemberMembership | null>(null);
   const [visits, setVisits] = React.useState<{ used: number; included: number } | null>(null);
   const [referralCode, setReferralCode] = React.useState("");
   const [photoFile, setPhotoFile] = React.useState<File | null>(null);
   const [photoPreview, setPhotoPreview] = React.useState<string | null>(null);
+  const [savedPhotoSrc, setSavedPhotoSrc] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
@@ -66,18 +67,19 @@ function ProfileScreen() {
     let active = true;
 
     Promise.all([
-      supabase.auth.getUser(),
       fetchProfile(supabase),
       fetchMembership(supabase),
       fetchVisitsThisMonth(supabase),
       ensureReferralCode(supabase),
-    ]).then(([{ data: { user } }, profile, nextMembership, nextVisits, code]) => {
+    ]).then(([profile, nextMembership, nextVisits, code]) => {
       if (!active) return;
-      if (user) setMemberId(user.id);
       setDraft(profile);
       setMembership(nextMembership);
       setVisits(nextVisits);
       setReferralCode(code);
+      resolveProfilePhotoUrl(supabase, profile.photoUrl).then((src) => {
+        if (active) setSavedPhotoSrc(src);
+      });
     });
 
     return () => {
@@ -101,16 +103,9 @@ function ProfileScreen() {
   async function handleSave() {
     setSaving(true);
     try {
-      let photoUrl: string | null | undefined;
-      if (photoFile && memberId) {
-        const extension = photoFile.name.split(".").pop() ?? "jpg";
-        const path = `${memberId}/avatar.${extension}`;
-        const { error: uploadError } = await supabase.storage
-          .from("profile-photos")
-          .upload(path, photoFile, { upsert: true });
-        if (!uploadError) {
-          photoUrl = supabase.storage.from("profile-photos").getPublicUrl(path).data.publicUrl;
-        }
+      let photoUrl: string | undefined;
+      if (photoFile) {
+        photoUrl = await uploadProfilePhoto(supabase, photoFile).catch(() => undefined);
       }
 
       await updateProfile(supabase, { ...draft, photoUrl });
@@ -121,7 +116,7 @@ function ProfileScreen() {
     }
   }
 
-  const avatarSrc = photoPreview ?? draft.photoUrl;
+  const avatarSrc = photoPreview ?? savedPhotoSrc;
   const isActive = membership?.status === "active";
   const memberSince = membership?.startedAt ? formatMonthYear(membership.startedAt) : null;
 
@@ -146,7 +141,7 @@ function ProfileScreen() {
           <div className="mt-5.5 flex items-center gap-4">
             <span className="flex size-18 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent font-display text-[26px] font-bold text-on-accent">
               {avatarSrc ? (
-                /* eslint-disable-next-line @next/next/no-img-element -- vista previa local o URL pública del bucket, no un <Image> con loader remoto */
+                /* eslint-disable-next-line @next/next/no-img-element -- vista previa local o URL firmada del bucket privado, no un <Image> con loader remoto */
                 <img src={avatarSrc} alt={draft.fullName} className="size-full object-cover" />
               ) : (
                 initialsOf(draft.fullName)

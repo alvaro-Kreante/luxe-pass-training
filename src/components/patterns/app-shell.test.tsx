@@ -1,6 +1,7 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import { uploadProfilePhoto } from "@/lib/profile-photo";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
 
@@ -117,5 +118,22 @@ describe("bloque de usuario de la sidebar", () => {
     expect(screen.getByText(/^(Annual|Monthly|Free) member$/)).toBeInTheDocument();
     expect(screen.queryByText("Alexandra Rivas")).not.toBeInTheDocument();
     expect(screen.queryByText("Annual member")).not.toBeInTheDocument();
+  });
+
+  it("muestra la foto de perfil del miembro en vez de sus iniciales", async () => {
+    const supabase = createClient();
+    const user = await signUpConfirmedMemberAndSignIn(
+      supabase,
+      `app-shell-photo-${Date.now()}@ensoleil-test.com`,
+      "EnSoleil!2026",
+    );
+    const path = await uploadProfilePhoto(supabase, new File(["x"], "me.png", { type: "image/png" }));
+    await supabase.from("profiles").update({ photo_url: path }).eq("id", user.id);
+
+    render(<AppShell>contenido</AppShell>);
+
+    const photo = await screen.findByAltText("Test Member");
+    expect(photo.getAttribute("src")).toContain("/object/sign/profile-photos/");
+    expect(screen.queryByText("TM")).not.toBeInTheDocument();
   });
 });

@@ -177,7 +177,10 @@ describe("Case detail (/admin/support/[id])", () => {
     await user.type(screen.getByRole("textbox", { name: /message/i }), "We are waiving the fee.");
     await user.click(screen.getByRole("button", { name: "Send reply" }));
 
-    await waitFor(() => expect(screen.getByText("We are waiving the fee.")).toBeInTheDocument());
+    // El composer solo se vacía tras el insert; el texto por sí solo ya lo
+    // contiene el propio <textarea> (React escribe su defaultValue).
+    await waitFor(() => expect(screen.getByRole("textbox", { name: /message/i })).toHaveValue(""));
+    await waitFor(() => expect(screen.getByText("We are waiving the fee.", { ignore: "textarea" })).toBeInTheDocument());
 
     const { data } = await admin
       .from("support_ticket_messages")
@@ -199,7 +202,10 @@ describe("Case detail (/admin/support/[id])", () => {
     await user.type(screen.getByRole("textbox", { name: /message/i }), "Checking with the lounge.");
     await user.click(screen.getByRole("button", { name: "Save note" }));
 
-    await waitFor(() => expect(screen.getByText("Checking with the lounge.")).toBeInTheDocument());
+    // El composer solo se vacía tras el insert; el texto por sí solo ya lo
+    // contiene el propio <textarea> (React escribe su defaultValue).
+    await waitFor(() => expect(screen.getByRole("textbox", { name: /message/i })).toHaveValue(""));
+    await waitFor(() => expect(screen.getByText("Checking with the lounge.", { ignore: "textarea" })).toBeInTheDocument());
 
     const { data } = await admin
       .from("support_ticket_messages")
