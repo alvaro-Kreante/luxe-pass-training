@@ -56,13 +56,16 @@ function EmailConfirmedCard() {
 }
 
 function VerifyEmailCard() {
+  const router = useRouter();
   const searchParams = useSearchParams();
+  const resendOnArrival = searchParams.get("resend") === "1";
   const emailParam = searchParams.get("email");
   const email = emailParam ?? "your email address";
   const supabase = React.useMemo(() => createClient(), []);
 
   const [cooldown, setCooldown] = React.useState(0);
   const [resending, setResending] = React.useState(false);
+  const [resendError, setResendError] = React.useState("");
 
   React.useEffect(() => {
     if (cooldown <= 0) return;
@@ -70,16 +73,36 @@ function VerifyEmailCard() {
     return () => clearTimeout(timer);
   }, [cooldown]);
 
-  async function handleResend() {
+  const handleResend = React.useCallback(async () => {
     if (!emailParam) return;
     setResending(true);
+    setResendError("");
     try {
-      await supabase.auth.resend({ type: "signup", email: emailParam });
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: emailParam,
+      });
+      if (error) {
+        setResendError("We could not resend the email. Try again in a moment.");
+        return;
+      }
       setCooldown(RESEND_COOLDOWN_SECONDS);
     } finally {
       setResending(false);
     }
-  }
+  }, [supabase, emailParam]);
+
+  // "Resend the link" del login llega con resend=1: reenvía al aterrizar y
+  // limpia el param para que recargar la página no vuelva a enviar.
+  const resentOnArrival = React.useRef(false);
+  React.useEffect(() => {
+    if (!resendOnArrival || resentOnArrival.current) return;
+    resentOnArrival.current = true;
+    void handleResend();
+    if (emailParam) {
+      router.replace(`/verify-email?email=${encodeURIComponent(emailParam)}`);
+    }
+  }, [resendOnArrival, handleResend, router, emailParam]);
 
   return (
     <AuthSplit tagline="Almost there. Confirm your email to begin." centered>
@@ -105,6 +128,12 @@ function VerifyEmailCard() {
       >
         {cooldown > 0 ? `Resend in ${cooldown}s` : "Resend email"}
       </Button>
+
+      {resendError && (
+        <p role="alert" className="m-0 mb-4 text-[12.5px] leading-relaxed text-fg-muted">
+          {resendError}
+        </p>
+      )}
 
       <p className="m-0 mb-5 text-[12.5px] leading-relaxed text-fg-subtle">
         Can&apos;t find it? Check your spam or promotions folder.
