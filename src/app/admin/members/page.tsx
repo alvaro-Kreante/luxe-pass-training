@@ -25,6 +25,9 @@ import { cn } from "@/lib/utils";
  * ningún sitio propio: las tres capacidades que describen ya las cubre el
  * mismo cuadro de búsqueda de arriba — quedan como leyenda, no como botones.
  *
+ * Sin consulta se listan todos los miembros (desviación del artboard, que
+ * solo muestra resultados tras buscar — pedido explícito, 25 sept 2026).
+ *
  * `useSearchParams` obliga a un límite de Suspense para poder prerenderizar
  * (ver la misma nota en `/explore`).
  */
@@ -43,10 +46,9 @@ function MemberSearchScreen() {
   const searchParams = useSearchParams();
   const supabase = React.useMemo(() => createClient(), []);
   const [query, setQuery] = React.useState(searchParams.get("q") ?? "");
-  const [fetchedResults, setFetchedResults] = React.useState<AdminMember[]>([]);
+  const [results, setResults] = React.useState<AdminMember[]>([]);
   const [counts, setCounts] = React.useState<TicketCounts | null>(null);
   const hasQuery = query.trim().length > 0;
-  const results = hasQuery ? fetchedResults : [];
 
   React.useEffect(() => {
     let active = true;
@@ -59,15 +61,14 @@ function MemberSearchScreen() {
   }, [supabase]);
 
   React.useEffect(() => {
-    if (!hasQuery) return;
     let active = true;
     searchMembers(supabase, query).then((rows) => {
-      if (active) setFetchedResults(rows);
+      if (active) setResults(rows);
     });
     return () => {
       active = false;
     };
-  }, [supabase, query, hasQuery]);
+  }, [supabase, query]);
 
   return (
     <AdminShell
@@ -104,7 +105,7 @@ function MemberSearchScreen() {
 
       <div className="mt-4.5 flex min-h-0 gap-4">
         <div className="min-w-0 flex-1">
-          {hasQuery && results.length > 0 ? (
+          {results.length > 0 ? (
             <MemberResultsTable results={results} onOpen={(id) => router.push(`/admin/members/${id}`)} />
           ) : null}
 
@@ -178,9 +179,14 @@ function MemberResultsTable({
           style={{ minHeight: 62 }}
         >
           <span className="flex min-w-0 items-center gap-3">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent font-display text-[13px] font-bold text-on-accent">
-              {member.initials}
-            </span>
+            {member.photoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element -- URL firmada de Storage, efímera
+              <img src={member.photoUrl} alt={member.name} className="size-9 shrink-0 rounded-full object-cover" />
+            ) : (
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent font-display text-[13px] font-bold text-on-accent">
+                {member.initials}
+              </span>
+            )}
             <span className="min-w-0">
               <span className="flex min-w-0 items-center gap-2">
                 <span className="min-w-0 truncate text-sm font-bold text-fg">{member.name}</span>

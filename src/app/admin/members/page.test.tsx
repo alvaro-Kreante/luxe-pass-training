@@ -59,7 +59,7 @@ async function unusedLast4(client: ReturnType<typeof createClient>) {
   throw new Error("No quedan 4 dígitos libres para el teléfono de prueba");
 }
 
-async function createMember(name: string, phone: string) {
+async function createMember(name: string, phone: string, photoPath: string | null = null) {
   const { data: created, error } = await admin.auth.admin.createUser({
     email: `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}@ensoleil-test.com`,
     password: "EnSoleil!2026",
@@ -73,7 +73,17 @@ async function createMember(name: string, phone: string) {
     city: "New York",
     industry: "Testing",
     terms_accepted_at: new Date().toISOString(),
+    photo_url: photoPath?.replace("{id}", created.user.id) ?? null,
   });
+  if (photoPath) {
+    const { error: uploadError } = await admin.storage
+      .from("profile-photos")
+      .upload(photoPath.replace("{id}", created.user.id), new Uint8Array([137, 80, 78, 71]), {
+        upsert: true,
+        contentType: "image/png",
+      });
+    if (uploadError) throw uploadError;
+  }
   return created.user.id;
 }
 
@@ -82,17 +92,26 @@ beforeAll(async () => {
   await signUpConfirmedAdminAndSignIn(adminClient, `members-search-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
   phoneLast4 = await unusedLast4(adminClient);
 
-  camilleId = await createMember(camilleName, `+1555668${phoneLast4}`);
+  camilleId = await createMember(camilleName, `+1555668${phoneLast4}`, "{id}/avatar.png");
   await createMember(theoName, "+15556689930");
   await createMember(reneeName, "+15552041188");
 });
 
 describe("Member search (/admin/members)", () => {
-  it("shows no results before a query is entered", async () => {
+  it("lists members before a query is entered", async () => {
     render(<MemberSearchPage />);
 
     expect(await screen.findByRole("heading", { name: "Find a member" })).toBeInTheDocument();
-    expect(screen.queryByText(camilleName)).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(camilleName)).toBeInTheDocument());
+    expect(screen.getByText(reneeName)).toBeInTheDocument();
+  });
+
+  it("shows the member's photo when they have one, and initials otherwise", async () => {
+    render(<MemberSearchPage />);
+
+    expect(await screen.findByRole("img", { name: camilleName })).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(reneeName)).toBeInTheDocument());
+    expect(screen.queryByRole("img", { name: reneeName })).not.toBeInTheDocument();
   });
 
   it("finds members by a partial name and shows the match count", async () => {

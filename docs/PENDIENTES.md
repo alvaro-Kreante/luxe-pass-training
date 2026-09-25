@@ -262,9 +262,9 @@ alcance tomadas con el usuario, no simulaciones:
   that payment fails or is refunded, the pending reward is withdrawn") —
   un pago fallido nunca lo acredita, pero un reembolso posterior (Story
   8.1) no lo deshace.
-- **La ficha de miembro del admin (`/admin/members/[id]`) sigue mostrando
-  solo Active/Inactive/Account deleted**, aunque `memberships` ya tenga
-  plan y renovación reales — enriquecerla no es AC de Epic 9.
+- **La ficha de miembro del admin (`/admin/members/[id]`) ya muestra el plan
+  real** (25 sept 2026), pero no la fecha de renovación ni las visitas del
+  mes que dibujaba el mock — enriquecerla más no es AC de Epic 9.
 - **Cuentas creadas antes de Epic 9** (staging/prod) conservan
   `profiles.membership_status = 'active'` sin fila en `memberships` — el
   cambio de default a `'inactive'` solo afecta a perfiles nuevos, y una
