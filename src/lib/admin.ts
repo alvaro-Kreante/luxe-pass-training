@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { resolveProfilePhotoUrls } from "@/lib/profile-photo";
+
 /**
  * Epic 8 — Admin & Support. Story 8.1 (Fase 2, `epic-8-admin-support/`):
  * consola de soporte, ficha de miembro y caso con log de comunicación.
@@ -176,15 +178,20 @@ export interface AdminMemberRow {
   open_cases_count: number;
   last_visit_date: string | null;
   last_visit_lounge: string | null;
+  photo_url: string | null;
+  membership_plan: "monthly" | "annual" | null;
+  membership_plan_status: "active" | "expired" | null;
 }
 
 export interface AdminMember {
   id: string;
   name: string;
   initials: string;
+  /** URL firmada de la foto de perfil; null si no tiene (se muestran las iniciales). */
+  photoUrl: string | null;
   email: string;
   phone: string;
-  /** "Active member" / "Inactive" / "Account deleted" — ver nota de `admin_member_profile` sobre por qué no hay Annual/Day pass real todavía. */
+  /** Plan real de `memberships`: "Annual member" / "Monthly member" / "Expired" / "No plan" / "Account deleted". */
   membershipLabel: string;
   status: "active" | "inactive" | "deleted";
   memberSinceLabel: string;
@@ -207,21 +214,25 @@ function formatShortDate(dateIso: string): string {
   );
 }
 
-/**
- * "Annual"/"Day pass" del mock asumía un plan real (Epic 9, sin conectar) —
- * `profiles.membership_status` (Story 6.3) solo distingue Active/Inactive
- * para cualquier miembro con perfil. Desviación anotada en
- * `docs/design/COMPONENT-MAP.md`.
- */
+const PLAN_LABELS = { annual: "Annual member", monthly: "Monthly member" } as const;
+
+/** Membership = plan (`memberships`); Status = si la cuenta puede usar la app ahora. */
+function membershipLabelFor(row: AdminMemberRow): string {
+  if (row.deleted_at) return "Account deleted";
+  if (!row.membership_plan) return "No plan";
+  if (row.membership_plan_status === "expired") return "Expired";
+  return PLAN_LABELS[row.membership_plan];
+}
+
 export function mapAdminMemberRow(row: AdminMemberRow): AdminMember {
   const status = row.deleted_at ? "deleted" : row.membership_status;
-  const membershipLabel =
-    status === "deleted" ? "Account deleted" : status === "active" ? "Active member" : "Inactive";
+  const membershipLabel = membershipLabelFor(row);
 
   return {
     id: row.id,
     name: row.full_name,
     initials: initialsFromName(row.full_name),
+    photoUrl: null,
     email: row.email,
     phone: row.phone ?? "",
     membershipLabel,
@@ -236,7 +247,12 @@ export function mapAdminMemberRow(row: AdminMemberRow): AdminMember {
 export async function searchMembers(supabase: SupabaseClient, query: string): Promise<AdminMember[]> {
   const { data, error } = await supabase.rpc("admin_search_members", { p_query: query });
   if (error) throw error;
-  return (data as AdminMemberRow[]).map(mapAdminMemberRow);
+  const rows = data as AdminMemberRow[];
+  const photoUrls = await resolveProfilePhotoUrls(
+    supabase,
+    rows.map((row) => row.photo_url),
+  );
+  return rows.map((row, index) => ({ ...mapAdminMemberRow(row), photoUrl: photoUrls[index] }));
 }
 
 export async function getAdminMember(

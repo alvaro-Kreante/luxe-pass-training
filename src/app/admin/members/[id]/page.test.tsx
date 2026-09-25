@@ -83,7 +83,7 @@ beforeAll(async () => {
     "EnSoleil!2026",
   );
   memberId = member.id;
-  // Desde Epic 9 un miembro nace sin membresía — "Active member" exige un
+  // Desde Epic 9 un miembro nace sin membresía — "Annual member" exige un
   // plan real en `memberships` (espejo en `profiles.membership_status`).
   await grantTestMembership(memberId, "annual");
 
@@ -160,7 +160,7 @@ describe("Member profile (/admin/members/[id])", () => {
     render(<MemberProfilePage />);
 
     expect(await screen.findByRole("heading", { name: "Test Member" })).toBeInTheDocument();
-    expect(screen.getAllByText("Active member").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Annual member").length).toBeGreaterThan(0);
     // 3 bookings on file, none cancelled → 3 visits. La campana de la
     // topbar (patrón 21) también muestra un "3" decorativo fijo — se lee el
     // valor del tile por su propio label para no chocar con eso.

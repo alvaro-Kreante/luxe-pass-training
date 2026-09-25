@@ -101,7 +101,8 @@ create trigger booking_no_show_opens_ticket
 -- Reglas de búsqueda (más simples que el mock de `lib/admin.ts`, que
 -- tokenizaba por palabra): coincidencia de subcadena en nombre/email, los
 -- últimos 4+ dígitos de un teléfono bastan, y "LP-######" resuelve directo
--- al miembro dueño de esa reserva.
+-- al miembro dueño de esa reserva. Consulta vacía = todos los miembros,
+-- sin límite, del más reciente al más antiguo.
 create or replace function public.admin_search_members(p_query text)
 returns table (
   id uuid,
@@ -113,7 +114,10 @@ returns table (
   member_since timestamptz,
   open_cases_count int,
   last_visit_date date,
-  last_visit_lounge text
+  last_visit_lounge text,
+  photo_url text,
+  membership_plan text,
+  membership_plan_status text
 )
 language plpgsql
 security definer
@@ -129,7 +133,42 @@ begin
     raise exception 'Not authorized';
   end if;
 
+  -- Una sola consulta en vez de `admin_member_profile` por fila: con miles
+  -- de miembros la versión por fila pasaba de 5 s.
   if v_trimmed = '' then
+    return query
+      select
+        u.id,
+        coalesce(p.full_name, split_part(u.email::text, '@', 1)),
+        u.email::text,
+        p.phone,
+        coalesce(p.membership_status, 'active'),
+        p.deleted_at,
+        p.created_at,
+        coalesce(t.open_count, 0),
+        v.date,
+        v.lounge_name,
+        p.photo_url,
+        m.plan,
+        m.status
+      from auth.users u
+      left join public.profiles p on p.id = u.id
+      left join public.memberships m on m.member_id = u.id
+      left join (
+        select st.member_id, count(*)::int as open_count
+        from public.support_tickets st
+        where st.status <> 'resolved'
+        group by st.member_id
+      ) t on t.member_id = u.id
+      left join lateral (
+        select b.date, l.name as lounge_name
+        from public.bookings b
+        join public.lounges l on l.id = b.lounge_id
+        where b.member_id = u.id and b.status <> 'cancelled' and b.status <> 'waitlisted'
+        order by b.date desc
+        limit 1
+      ) v on true
+      order by p.created_at desc nulls last;
     return;
   end if;
 
@@ -181,7 +220,10 @@ returns table (
   member_since timestamptz,
   open_cases_count int,
   last_visit_date date,
-  last_visit_lounge text
+  last_visit_lounge text,
+  photo_url text,
+  membership_plan text,
+  membership_plan_status text
 )
 language plpgsql
 security definer
@@ -215,9 +257,13 @@ begin
         join public.lounges l on l.id = b.lounge_id
         where b.member_id = u.id and b.status <> 'cancelled' and b.status <> 'waitlisted'
         order by b.date desc limit 1
-      )
+      ),
+      p.photo_url,
+      m.plan,
+      m.status
     from auth.users u
     left join public.profiles p on p.id = u.id
+    left join public.memberships m on m.member_id = u.id
     where u.id = p_member_id;
 end;
 $$;

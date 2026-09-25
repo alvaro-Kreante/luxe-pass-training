@@ -42,3 +42,16 @@ export async function resolveProfilePhotoUrl(
   if (error) return null;
   return data.signedUrl;
 }
+
+/** Firma varias fotos en una sola petición; devuelve null en la posición de las que no hay o fallan. */
+export async function resolveProfilePhotoUrls(
+  supabase: SupabaseClient,
+  stored: (string | null | undefined)[],
+): Promise<(string | null)[]> {
+  const paths = stored.filter((value): value is string => Boolean(value)).map(objectPathOf);
+  if (paths.length === 0) return stored.map(() => null);
+  const { data, error } = await supabase.storage.from(BUCKET).createSignedUrls(paths, SIGNED_URL_SECONDS);
+  if (error) return stored.map(() => null);
+  const byPath = new Map(data.map((entry) => [entry.path, entry.error ? null : entry.signedUrl]));
+  return stored.map((value) => (value ? (byPath.get(objectPathOf(value)) ?? null) : null));
+}

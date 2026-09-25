@@ -95,11 +95,25 @@ describe("mapAdminMemberRow", () => {
     open_cases_count: 1,
     last_visit_date: "2026-09-14",
     last_visit_lounge: "The Ainsworth",
+    photo_url: null,
+    membership_plan: "annual",
+    membership_plan_status: "active",
   };
 
-  it('marca "Active member" para un miembro activo', () => {
-    expect(mapAdminMemberRow(row).membershipLabel).toBe("Active member");
+  it("muestra el plan real de `memberships`", () => {
+    expect(mapAdminMemberRow(row).membershipLabel).toBe("Annual member");
+    expect(mapAdminMemberRow({ ...row, membership_plan: "monthly" }).membershipLabel).toBe("Monthly member");
     expect(mapAdminMemberRow(row).status).toBe("active");
+  });
+
+  it('marca "Expired" cuando el plan venció', () => {
+    const expired = { ...row, membership_status: "inactive" as const, membership_plan_status: "expired" as const };
+    expect(mapAdminMemberRow(expired).membershipLabel).toBe("Expired");
+  });
+
+  it('marca "No plan" cuando el miembro nunca contrató uno', () => {
+    const noPlan = { ...row, membership_status: "inactive" as const, membership_plan: null, membership_plan_status: null };
+    expect(mapAdminMemberRow(noPlan).membershipLabel).toBe("No plan");
   });
 
   it('marca "Account deleted" cuando la cuenta tiene deleted_at, sin importar membership_status', () => {

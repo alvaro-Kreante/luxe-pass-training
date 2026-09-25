@@ -8,6 +8,15 @@ using (
   and (select auth.uid()) = (storage.foldername(name))[1]::uuid
 );
 
+-- Story 8.1 — el admin ve la foto de cualquier miembro en /admin/members.
+create policy "admin select profile photos"
+on storage.objects for select
+to authenticated
+using (
+  bucket_id = 'profile-photos'
+  and public.has_role('admin')
+);
+
 create policy "insert own profile photo"
 on storage.objects for insert
 to authenticated
