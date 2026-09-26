@@ -1,6 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { amenityLabel, type AmenityId } from "@/lib/amenities";
+import {
+  closedWeekdaysFromHours,
+  hoursSummary,
+  loungeIdFromName,
+  type LoungeDraftInput,
+} from "@/lib/lounge-draft";
 
 /**
  * Epic 8 — Admin & Support. Story 8.3 (Fase 2, `epic-8-admin-support/`):
@@ -14,9 +20,9 @@ import { amenityLabel, type AmenityId } from "@/lib/amenities";
  * un lounge "live" con una edición en revisión sigue mostrando su
  * contenido publicado a los miembros hasta que se apruebe.
  *
- * "Add lounge" sigue sin llevar a ningún sitio propio (ningún artboard
- * dibuja el formulario de alta) — desviación ya anotada antes de conectar
- * esta historia, sigue vigente. "Image optimization and resizing" tampoco
+ * "Add lounge" (25 sept 2026, artboards 14 y 15): un lounge nuevo nace
+ * borrador y se publica directo, sin cola de aprobación — ver
+ * `createLoungeDraft`/`publishLounge`. "Image optimization and resizing" no
  * es real: la subida a Storage sí lo es, pero no hay redimensionado de
  * verdad detrás — desviación anotada en `docs/design/COMPONENT-MAP.md`.
  */
@@ -85,6 +91,7 @@ export interface LoungeImage {
   id: string;
   url: string;
   caption: string;
+  detail: string | null;
   position: number;
 }
 
@@ -121,6 +128,14 @@ export interface LoungeContentDetail {
   bookingRestrictions: string[];
   images: LoungeImage[];
   closures: LoungeClosure[];
+  phone: string;
+  email: string;
+  website: string;
+  address: string;
+  neighborhood: string;
+  city: string;
+  lat: number;
+  lng: number;
   pendingSubmissionId: string | null;
   pendingProposed: ProposedLoungeContent | null;
   pendingSubmittedBy: string | null;
@@ -138,8 +153,16 @@ interface AdminLoungeDetailRow {
   closed_weekdays: number[];
   weekly_hours: string[];
   booking_restrictions: string[];
-  images: { id: string; url: string; caption: string; position: number }[];
+  images: { id: string; url: string; caption: string; detail: string | null; position: number }[];
   closures: { id: string; starts_on: string; ends_on: string; reason: string; reopens_label: string }[];
+  phone: string;
+  email: string;
+  website: string;
+  address: string;
+  neighborhood: string;
+  city: string;
+  lat: number;
+  lng: number;
   pending_submission_id: string | null;
   pending_proposed: ProposedLoungeContent | null;
   pending_submitted_by: string | null;
@@ -158,7 +181,7 @@ function mapLoungeDetailRow(row: AdminLoungeDetailRow): LoungeContentDetail {
     closedWeekdays: row.closed_weekdays,
     weeklyHours: row.weekly_hours,
     bookingRestrictions: row.booking_restrictions,
-    images: row.images.map((i) => ({ id: i.id, url: i.url, caption: i.caption, position: i.position })),
+    images: row.images.map((i) => ({ id: i.id, url: i.url, caption: i.caption, detail: i.detail ?? null, position: i.position })),
     closures: row.closures.map((c) => ({
       id: c.id,
       startsOn: c.starts_on,
@@ -166,6 +189,14 @@ function mapLoungeDetailRow(row: AdminLoungeDetailRow): LoungeContentDetail {
       reason: c.reason,
       reopensLabel: c.reopens_label,
     })),
+    phone: row.phone,
+    email: row.email,
+    website: row.website,
+    address: row.address,
+    neighborhood: row.neighborhood,
+    city: row.city,
+    lat: row.lat,
+    lng: row.lng,
     pendingSubmissionId: row.pending_submission_id,
     pendingProposed: row.pending_proposed,
     pendingSubmittedBy: row.pending_submitted_by,
@@ -211,6 +242,74 @@ export async function rejectLoungeSubmission(
     p_note: note,
   });
   if (error) throw error;
+}
+
+/* ------------------------------------------------------------------ */
+/* Alta de un lounge (LoungeNew.dc.html / PhotoCaption.dc.html)         */
+/* ------------------------------------------------------------------ */
+
+function draftPayload(input: LoungeDraftInput) {
+  return {
+    id_base: loungeIdFromName(input.name),
+    name: input.name,
+    phone: input.phone,
+    email: input.email,
+    website: input.website,
+    address: input.location?.address ?? "",
+    neighborhood: input.location?.neighborhood ?? "",
+    city: input.location?.city ?? "",
+    lat: input.location?.lat ?? null,
+    lng: input.location?.lng ?? null,
+    weekly_hours: input.weeklyHours,
+    closed_weekdays: closedWeekdaysFromHours(input.weeklyHours),
+    hours: hoursSummary(input.weeklyHours),
+    amenities: input.amenities,
+    capacity: input.capacity,
+  };
+}
+
+/** Crea el lounge como borrador (invisible para los miembros) y devuelve su id. */
+export async function createLoungeDraft(supabase: SupabaseClient, input: LoungeDraftInput): Promise<string> {
+  const { data, error } = await supabase.rpc("admin_create_lounge", { p_lounge: draftPayload(input) });
+  if (error) throw new Error(error.message);
+  return data as string;
+}
+
+/** Solo para borradores — la dirección incluida. Un lounge publicado se edita con la propuesta de cambios. */
+export async function updateLoungeDraft(
+  supabase: SupabaseClient,
+  loungeId: string,
+  input: LoungeDraftInput,
+): Promise<void> {
+  const { error } = await supabase.rpc("admin_update_draft_lounge", {
+    p_lounge_id: loungeId,
+    p_lounge: draftPayload(input),
+  });
+  if (error) throw new Error(error.message);
+}
+
+export interface DraftPhoto {
+  url: string;
+  caption: string;
+  detail: string | null;
+}
+
+/** El orden es la posición: la primera es la foto principal. */
+export async function setDraftLoungePhotos(
+  supabase: SupabaseClient,
+  loungeId: string,
+  photos: DraftPhoto[],
+): Promise<void> {
+  const { error } = await supabase.rpc("admin_set_draft_lounge_photos", {
+    p_lounge_id: loungeId,
+    p_photos: photos,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function publishLounge(supabase: SupabaseClient, loungeId: string): Promise<void> {
+  const { error } = await supabase.rpc("admin_publish_lounge", { p_lounge_id: loungeId });
+  if (error) throw new Error(error.message);
 }
 
 /** Story 8.3 — "Upload and manage lounge images". Sube el archivo al bucket público `lounge-images` y devuelve su URL pública. */

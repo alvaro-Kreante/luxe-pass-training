@@ -173,4 +173,42 @@ describe("Lounge editor (/admin/lounges/[id])", () => {
       expect(data?.proposed.photos?.[0]?.caption).toBe("day-room.jpg");
     });
   });
+
+  it("a draft opens in the add-lounge form, address included, and publishes for real", async () => {
+    const user = userEvent.setup({ delay: null });
+    const id = await createLounge(`Draft Test Lounge ${Date.now()}`, {
+      content_status: "draft",
+      address: "27 Bond Street",
+      neighborhood: "NoHo",
+      city: "New York",
+      phone: "+1 212 555 0148",
+      email: "hello@thelarkspur.com",
+      bands: ["morning", "afternoon", "evening"],
+    });
+    loungeIds.push(id);
+    currentId = id;
+
+    render(<LoungeEditPage />);
+
+    expect(await screen.findByText(/Draft · not visible to members/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Address")).toHaveValue("27 Bond Street");
+
+    await user.click(screen.getByRole("button", { name: "Publish lounge" }));
+
+    await waitFor(async () => {
+      const { data } = await admin.from("lounges").select("content_status").eq("id", id).single();
+      expect(data?.content_status).toBe("live");
+    });
+  });
+
+  it("a published lounge keeps its address fixed — no location field", async () => {
+    const id = await createLounge(`Live Test Lounge ${Date.now()}`);
+    loungeIds.push(id);
+    currentId = id;
+
+    render(<LoungeEditPage />);
+
+    await screen.findByRole("heading", { name: /Live Test Lounge/ });
+    expect(screen.queryByLabelText("Address")).toBeNull();
+  });
 });

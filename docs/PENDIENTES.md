@@ -303,7 +303,7 @@ nada los hace cumplir.
 
 | 8.1 | Escalation to manager functionality | **Sigue igual tras conectar Epic 8 (22 sept 2026).** "Escalate" cambia `support_tickets.status` a `escalated` de verdad, pero Dana Mbeki (`DUTY_MANAGER`) sigue siendo un dato de muestra fijo — no hay bandeja de manager real ni notificación |
 | 8.1 | Every action logged (audit trail) | **Sigue igual tras conectar Epic 8.** El chip "Every action logged" de la topbar es constante; no es un AC propio de ninguna historia (es chrome del patrón 21), así que no se construyó un registro de auditoría aparte — cada acción real (reembolso, cambio de reserva, mensaje) ya queda escrita en su propia tabla, solo no hay un log unificado que las muestre juntas |
-| 8.3 | Add lounge profile | **Resuelto a medias tras conectar Epic 8 (22 sept 2026).** Editar y archivar un lounge ya son reales (`admin_submit_lounge_content_change`/`admin_archive_lounges`); "Add lounge" en `/admin/lounges` sigue sin abrir ningún formulario — ningún artboard de la Fase 8 dibuja el alta de un lounge nuevo, se paró antes de inventarlo (ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 8"). Desde el 25 sept 2026 ya no lo bloquea la disponibilidad (calculada en vivo, §2.10); falta el artboard del formulario |
+| 8.3 | Add lounge profile | **Resuelto (25 sept 2026).** Alta real en `/admin/lounges/new` (artboards 14 y 15 de la Fase 8): nace borrador, se publica directo sin cola de aprobación, la dirección sale de Google Places y solo se edita mientras es borrador. Queda pendiente activar la Places API en la clave de Google (§4.11) |
 | 8.3 | Image optimization and resizing | **Resuelto a medias tras conectar Epic 8.** La subida de foto ya es real (bucket de Storage `lounge-images`); el redimensionado a 1600/800/400 px que el artboard anuncia sigue sin tener nada detrás — no hay librería de procesamiento de imágenes en el stack |
 
 | 9.1 | Renewal date and auto-renewal settings — aviso por email un mes antes | **Resuelto tras conectar Epic 9 (23 sept 2026).** `dispatch_membership_renewals()` (pg_cron diario) inserta la notificación en la app y llama a `membership-renewal` (Brevo) para los anuales con auto-renovación en su último mes. La renovación en sí también cobra de verdad (misma function, `type: "charge"`) |
@@ -549,6 +549,24 @@ timeouts de DNS/SASL) y los tests caen con `AuthRetryableFetchError: fetch faile
 en archivos distintos en cada corrida; `supabase_vector` queda en bucle de
 reinicio. Los mismos archivos pasan al correrlos con menos workers
 (`npx vitest run --maxWorkers=2 <archivos>`). **Causa sin confirmar.**
+
+### 4.11 La clave de Google Maps no tiene activada la Places API (New)
+
+El alta de lounges (`/admin/lounges/new`) busca la dirección con Google
+Places (`AutocompleteSuggestion`, API nueva). Con la clave actual
+(`NEXT_PUBLIC_GOOGLE_MAPS_API_KEY`), Google responde 403
+`API_KEY_SERVICE_BLOCKED` (comprobado el 25 sept 2026): el campo de
+dirección se ve, pero no propone nada, y sin dirección no se puede ni
+guardar el borrador ni publicar.
+
+**Qué hacer:** en Google Cloud, activar **Places API (New)** en el proyecto
+de la clave y añadirla a las restricciones de API de esa clave (en local y
+en las de Vercel, ver §4.4).
+
+**Además:** las fotos se suben a Storage (`lounge-images/new-<uuid>/…`) en
+cuanto se eligen, antes de que exista el lounge. Si el admin abandona el
+alta sin guardar, esos archivos quedan huérfanos en el bucket — no hay
+limpieza automática.
 
 ## 5. Decisiones abiertas
 
