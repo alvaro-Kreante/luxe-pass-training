@@ -27,13 +27,12 @@ const ainsworth = LOUNGES.find((lounge) => lounge.id === "the-ainsworth")!;
 const kiosk = createClient();
 
 /**
- * `TODAY` (2025-09-09) es también la primera fecha sembrada en
- * `lounge_availability` (ver docs/DATA-MODEL-MAP.md) — plazas reales de
- * sobra para que cada test confirme la suya sin depender del formulario
- * mock de `findPredictedSlot` (que solo predice 2-3 bandas para un único
+ * `TODAY` (2025-09-09) tiene plazas reales de sobra (aforo por franja
+ * menos reservas, calculado en vivo) para que cada test confirme la suya
+ * sin depender de `findPredictedSlot` (que solo da 2-3 bandas para un único
  * día, insuficiente para tantos tests independientes). Se reparte entre
- * tres bandas (nunca "evening", solo 1 plaza sembrada) para no competir con
- * los demás archivos de test que también reservan hoy en este lounge.
+ * tres bandas (nunca "evening") para no competir con los demás archivos de
+ * test que también reservan hoy en este lounge.
  */
 const BANDS: { band: BookingRequest["band"]; time: string }[] = [
   { band: "morning", time: "8:00 AM" },

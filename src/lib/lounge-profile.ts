@@ -7,7 +7,8 @@ import type { Lounge } from "./lounges";
 
 /**
  * Story 3.1 / 3.2 — perfil real de un lounge (tabla `public.lounges`
- * extendida, más `lounge_images`/`lounge_availability`/`lounge_closures`).
+ * extendida, más `lounge_images`/`lounge_closures` y la disponibilidad en
+ * vivo de `lounge_availability_range`).
  * Sustituye la capa de derivación por hash que vivía aquí (ver historial de
  * este archivo): contacto, horario, capacidad y restricciones ya son
  * columnas reales; `reviewsFor`/`ratingBreakdownFor`/`mentionsFor` siguen
@@ -424,12 +425,11 @@ export async function fetchAvailability(
   endIso: string,
 ): Promise<AvailabilityCell[]> {
   const [availabilityResult, closuresResult] = await Promise.all([
-    supabase
-      .from("lounge_availability")
-      .select("date, band, seats_left")
-      .eq("lounge_id", lounge.id)
-      .gte("date", startIso)
-      .lte("date", endIso),
+    supabase.rpc("lounge_availability_range", {
+      p_lounge_id: lounge.id,
+      p_from: startIso,
+      p_to: endIso,
+    }),
     supabase
       .from("lounge_closures")
       .select("starts_on, ends_on, reason, reopens_label")
@@ -579,10 +579,10 @@ export function formatWeekdayDate(dateIso: string): string {
  * leen `lounge.address`/`phone`/etc. reales de `LoungeProfile` en su lugar.
  *
  * `weeklyAvailability`/`closureCovering`/`closuresFor`/`CLOSURES` siguen
- * vivas: no las usa ningún epic sin conectar, pero
- * `app/lounges/[id]/availability/page.test.tsx` (Story 3.2, backend real)
- * las usa como predictor offline de la fórmula determinista que la semilla
- * de `lounge_availability` reprodujo — no se tocan.
+ * vivas: no las usa ningún epic sin conectar, pero `findPredictedSlot`
+ * (`lib/testing/lounge-fixture.ts`) usa `weeklyAvailability` como generador
+ * de slots distintos entre tests — ya no predice plazas, que se calculan en
+ * vivo (`lounge_availability_range`).
  */
 
 /** Solo The Ainsworth declara un cierre — el que dibuja `Closure.dc.html`. */

@@ -30,7 +30,7 @@ interface AvailabilityRow {
  * artboard dibuja cuatro horarios ficticios ("9:00 AM"–"12:00 PM") que no
  * existen en el dominio real de `bookings.slot_time` — se sustituyen por los
  * cinco horarios reales (`SLOT_DEFS`, `src/lib/booking.ts`), con las plazas
- * de cada uno consultadas en vivo contra `lounge_availability` para la
+ * de cada uno consultadas en vivo (`lounge_availability_range`) para la
  * fecha elegida. Desviación anotada en `docs/design/COMPONENT-MAP.md`.
  *
  * "Move to another lounge" sigue sin expandir ningún formulario propio: el
@@ -63,10 +63,7 @@ export function BookingOverrideDrawer({
     if (!open) return;
     let active = true;
     supabase
-      .from("lounge_availability")
-      .select("band, seats_left")
-      .eq("lounge_id", booking.loungeId)
-      .eq("date", newDate)
+      .rpc("lounge_availability_range", { p_lounge_id: booking.loungeId, p_from: newDate, p_to: newDate })
       .then(({ data }) => {
         if (!active) return;
         const rows = (data ?? []) as AvailabilityRow[];

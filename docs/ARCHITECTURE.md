@@ -240,13 +240,14 @@ nada (mismo guard que `notify_booking_confirmed`) — el cron corre igual,
 simplemente no manda nada.
 
 **Limitación conocida de este entorno: no se puede ejercitar de punta a
-punta en local/CI.** `lounge_availability` está sembrada en una ventana
-fija de 18 semanas desde `2025-09-09` (`docs/DATA-MODEL-MAP.md`), así que
-ninguna reserva real posible hoy cae dentro de "ahora + 24h" del reloj
-real. El mecanismo es correcto — mismo patrón ya probado que
-`booking_receipts.sql` — pero queda sin poder probarse de punta a punta
-hasta que ese seed se vuelva a anclar al `current_date` real (fuera de
-alcance de Epic 5, ver `docs/PENDIENTES.md` §2.10).
+punta desde la app.** La disponibilidad ya se calcula en vivo para
+cualquier fecha (`lounge_availability_range`), pero el calendario de
+reserva parte del `TODAY` fijo de la app (`2025-09-09`,
+`src/lib/availability.ts`), así que ninguna reserva hecha desde la UI cae
+dentro de "ahora + 24h" del reloj real. El mecanismo es correcto — mismo
+patrón ya probado que `booking_receipts.sql` — pero queda sin poder
+probarse de punta a punta mientras el "hoy" de la app sea esa fecha fija
+(ver `docs/PENDIENTES.md` §2.10).
 
 **Brevo compartido con `send-email`/`send-booking-receipt`** — misma
 factorización en `supabase/functions/_shared/brevo.ts`.
@@ -271,10 +272,10 @@ Edge Function: `dispatch_morning_notifications()`
 directo en `notifications` para cada reserva `confirmed` cuya fecha es hoy
 (reloj real, `now() at time zone 'UTC'`) y cuya hora cae en la ventana
 05:45–06:15 UTC, sin aviso ya mandado (`bookings.morning_notification_sent_at`).
-Mismo gap conocido que Story 5.3: `lounge_availability` sigue sembrada en
-una ventana fija desde `2025-09-09`, así que ninguna reserva real posible
-hoy cae en el `current_date` real que este cron usa a propósito — no
-ejercitable de punta a punta en local/CI.
+Mismo gap conocido que Story 5.3: el calendario de reserva parte del
+`TODAY` fijo de la app (`2025-09-09`), así que ninguna reserva hecha desde
+la UI cae en el `current_date` real que este cron usa a propósito — no
+ejercitable de punta a punta desde la app.
 
 **Los otros cuatro tipos se siembran al crear el perfil.** "New lounge
 partner announcements", "Membership renewal reminders", "Special offers and
@@ -453,8 +454,8 @@ de prueba, con `200` confirmado en `net._http_response` tras el envío
 real por Brevo — a diferencia del recordatorio de reserva (Story 5.3) o
 el aviso de las 6 AM (Story 6.2), este cron **sí** se pudo ejercitar de
 punta a punta en local: la ventana de datos que reporta (`v_to` fijo en
-`TODAY`, no el reloj real) no depende de que `lounge_availability` tenga
-reservas en el "hoy" real, solo de que existan reservas en el "hoy" de
+`TODAY`, no el reloj real) no depende de que haya reservas en el "hoy"
+real, solo de que existan reservas en el "hoy" de
 mockup — que sí las hay.
 
 ## Membresía y referidos reales (Epic 9)

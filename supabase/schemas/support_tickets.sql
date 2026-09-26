@@ -399,7 +399,6 @@ set search_path = ''
 as $$
 declare
   v_booking public.bookings;
-  v_seats smallint;
   v_was_confirmed boolean;
 begin
   if not public.has_role('admin') then
@@ -416,27 +415,19 @@ begin
 
   v_was_confirmed := v_booking.status = 'confirmed';
 
+  -- Plazas en vivo (`lounge_availability.sql`): mover la reserva libera sola
+  -- su franja anterior, no hay contador que devolver.
   if not p_override then
-    select seats_left into v_seats
-    from public.lounge_availability
-    where lounge_id = v_booking.lounge_id and date = p_date and band = p_band
-    for update;
-
-    if v_seats is null then
+    if not public.lounge_band_is_open(v_booking.lounge_id, p_date, p_band) then
       raise exception 'No availability window for % on % (%)', v_booking.lounge_id, p_date, p_band;
     end if;
-    if v_seats <= 0 then
+
+    perform pg_advisory_xact_lock(hashtext(v_booking.lounge_id || '|' || p_date::text || '|' || p_band));
+
+    if public.lounge_seats_left(v_booking.lounge_id, p_date, p_band)
+       + (case when v_was_confirmed and v_booking.date = p_date and v_booking.band = p_band then 1 else 0 end)
+       <= 0 then
       raise exception 'No seats left for % on % (%) — use the override', v_booking.lounge_id, p_date, p_band;
-    end if;
-
-    update public.lounge_availability
-      set seats_left = seats_left - 1, updated_at = now()
-      where lounge_id = v_booking.lounge_id and date = p_date and band = p_band;
-
-    if v_was_confirmed then
-      update public.lounge_availability
-        set seats_left = seats_left + 1, updated_at = now()
-        where lounge_id = v_booking.lounge_id and date = v_booking.date and band = v_booking.band;
     end if;
   end if;
 
@@ -459,7 +450,6 @@ set search_path = ''
 as $$
 declare
   v_booking public.bookings;
-  v_was_confirmed boolean;
 begin
   if not public.has_role('admin') then
     raise exception 'Not authorized';
@@ -473,18 +463,10 @@ begin
     raise exception 'Booking cannot be cancelled from status %', v_booking.status;
   end if;
 
-  v_was_confirmed := v_booking.status = 'confirmed';
-
   update public.bookings b
     set status = 'cancelled', cancelled_at = now(), updated_at = now()
     where b.id = p_booking_id
     returning b.* into v_booking;
-
-  if v_was_confirmed then
-    update public.lounge_availability
-      set seats_left = seats_left + 1, updated_at = now()
-      where lounge_id = v_booking.lounge_id and date = v_booking.date and band = v_booking.band;
-  end if;
 
   return v_booking;
 end;

@@ -166,10 +166,10 @@ create trigger booking_cancelled_notify_partner
 -- (`TODAY` en `src/lib/availability.ts`) — mismo criterio que
 -- `dispatch_booking_reminders`/`dispatch_morning_notifications`: "la mañana
 -- de hoy" es un instante de verdad. Mismo gap conocido que esas dos
--- funciones: `lounge_availability` está sembrada en una ventana fija desde
--- 2025-09-09, así que el `current_date` real de este entorno no tiene
--- reservas — el mecanismo es correcto pero no se puede ejercitar de punta a
--- punta en local/CI (ver docs/PENDIENTES.md).
+-- funciones: el calendario de reserva parte del `TODAY` fijo de la app
+-- (2025-09-09), así que el `current_date` real de este entorno no tiene
+-- reservas hechas desde la UI — el mecanismo es correcto pero no se puede
+-- ejercitar de punta a punta desde la app (ver docs/PENDIENTES.md).
 create or replace function public.dispatch_partner_morning_digest()
 returns void
 language plpgsql

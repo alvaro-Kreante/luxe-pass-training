@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedAdminAndSignIn } from "@/lib/testing/confirmed-user";
+import { fillSlot } from "@/lib/testing/lounge-fixture";
 
 import { BookingOverrideDrawer } from "./booking-override-drawer";
 
@@ -13,9 +14,9 @@ import { BookingOverrideDrawer } from "./booking-override-drawer";
  * restricciones. Backend real (22 sept 2026):
  * `admin_reschedule_booking`/`admin_cancel_booking`
  * (`supabase/schemas/support_tickets.sql`). Un lounge/reserva efímeros
- * propios de este archivo, con `lounge_availability` sembrada a mano para
- * poder distinguir una franja llena de una con plazas — mismo patrón que
- * `analytics/page.test.tsx` (Epic 7).
+ * propios de este archivo (aforo 20 por franja), con la tarde llena de
+ * reservas reales (`fillSlot`) para distinguir una franja llena de una con
+ * plazas — mismo patrón que `analytics/page.test.tsx` (Epic 7).
  */
 
 const admin = createAdminClient(
@@ -26,17 +27,6 @@ const admin = createAdminClient(
 let loungeId: string;
 let memberId: string;
 const bookingDate = "2026-10-01";
-
-async function seedAvailability(date: string, seats: { morning: number; afternoon: number; evening: number }) {
-  await admin.from("lounge_availability").upsert(
-    [
-      { lounge_id: loungeId, date, band: "morning", seats_left: seats.morning },
-      { lounge_id: loungeId, date, band: "afternoon", seats_left: seats.afternoon },
-      { lounge_id: loungeId, date, band: "evening", seats_left: seats.evening },
-    ],
-    { onConflict: "lounge_id,date,band" },
-  );
-}
 
 async function createBooking(band: string, slotTime: string) {
   const { data, error } = await admin
@@ -68,10 +58,12 @@ beforeAll(async () => {
     lat: 0,
     lng: 0,
     hours: "Open 24 hours",
+    bands: ["morning", "afternoon", "evening"],
+    capacity: 20,
   });
   if (loungeError) throw loungeError;
 
-  await seedAvailability(bookingDate, { morning: 5, afternoon: 0, evening: 2 });
+  await fillSlot(loungeId, bookingDate, "afternoon");
 
   const memberClient = createClient();
   const { data: created, error: createError } = await admin.auth.admin.createUser({
@@ -91,7 +83,7 @@ afterAll(async () => {
   await admin.from("lounges").delete().eq("id", loungeId);
 });
 
-/** Espera a que la consulta real a `lounge_availability` resuelva — antes de eso todas las franjas aparecen "—", nunca bloqueadas. */
+/** Espera a que la consulta real de disponibilidad resuelva — antes de eso todas las franjas aparecen "—", nunca bloqueadas. */
 async function waitForAvailabilityLoaded() {
   await waitFor(() => expect(screen.getByRole("button", { name: /1:00 PM.*full/ })).toBeInTheDocument());
 }
@@ -126,7 +118,8 @@ describe("BookingOverrideDrawer", () => {
 
     expect(screen.getByRole("radio", { name: "Date or arrival time" })).toHaveAttribute("aria-checked", "true");
     await waitForAvailabilityLoaded();
-    expect(screen.getByRole("button", { name: /10:30 AM.*5 left/ })).toBeInTheDocument();
+    // Aforo 20 menos la reserva de mañana recién creada.
+    expect(screen.getByRole("button", { name: /10:30 AM.*19 left/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /1:00 PM.*full/ })).toBeInTheDocument();
   });
 

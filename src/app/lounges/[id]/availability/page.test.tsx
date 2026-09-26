@@ -2,8 +2,6 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { mondayOf, weeklyAvailability, WEEK_BANDS } from "@/lib/lounge-profile";
-import { LOUNGES } from "@/lib/lounges";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedAndSignIn } from "@/lib/testing/confirmed-user";
 
@@ -14,11 +12,9 @@ import AvailabilityPage from "./page";
  * Criterios en docs/specs/epic-3-lounge-profiles-details/story-3.2-availability.md
  * y el segmento "Story 3.2" de flow-complete-booking-journey.md.
  *
- * Backend real: la semilla de `lounge_availability` reproduce la misma
- * fórmula determinista que `weeklyAvailability` (legacy, sobre el mock de
- * `lib/lounges.ts` — sigue viva para Epic 4, ver `lounge-profile.ts`), así
- * que "cambia la selección" puede seguir derivando su objetivo de ahí en
- * vez de fijar un valor literal.
+ * Backend real: las plazas se calculan en vivo (`capacity` − reservas,
+ * `lounge_availability_range`), así que los tests no fijan un número de
+ * plazas concreto.
  */
 
 const params = vi.fn(() => ({ id: "the-ainsworth" }));
@@ -67,18 +63,11 @@ describe("calendario semanal", () => {
 
   it("cambia la selección al hacer clic en otra celda libre", async () => {
     const user = userEvent.setup({ delay: null });
-    const lounge = LOUNGES.find((l) => l.id === "the-ainsworth")!;
-    const weekStart = mondayOf("2025-09-09");
-    const cells = weeklyAvailability(lounge, weekStart);
-    const available = cells.filter((cell) => cell.status === "available");
-    const target = available[available.length - 1];
-    const band = WEEK_BANDS.find((b) => b.id === target.band)!;
 
     render(<AvailabilityPage />);
 
-    const cellButton = await screen.findByRole("button", {
-      name: new RegExp(`${band.label}: ${target.seatsLeft} seats left`),
-    });
+    const freeCells = await screen.findAllByRole("button", { name: /seats left/ });
+    const cellButton = freeCells[freeCells.length - 1];
     await user.click(cellButton);
 
     expect(cellButton).toHaveAttribute("aria-pressed", "true");
