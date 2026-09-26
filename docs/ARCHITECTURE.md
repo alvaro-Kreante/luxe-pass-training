@@ -24,6 +24,12 @@ simulado de Supabase (Inbucket/Mailpit) — Auth llama al Hook `send_email`
   `APP_ENV` de esa function (`send-email/index.ts` lo antepone al subject de
   cada plantilla) — así se distingue de un vistazo de qué ambiente vino un
   correo de prueba. Nunca se pone a mano en Brevo ni en el template.
+- **En `LOCAL`, los destinatarios de test no reciben email.** La suite
+  completa agotaba la cuota diaria de Brevo (25 sept 2026):
+  `_shared/brevo.ts` no envía cuando `APP_ENV=LOCAL` y el destinatario es
+  de un dominio de test (`*-test.com`, `example.*`, `email.com`,
+  `_shared/test-recipient.ts`) — solo lo registra en el log de la
+  function. Un email real en local sí se envía; en staging/prod, siempre.
 - **Staging/prod:** el hook se registra **a mano**, una vez por proyecto
   remoto, en su dashboard (`Authentication` → `Hooks` → `Send Email`) —
   nunca vía `supabase config push`, que sincroniza *todo* `config.toml`
