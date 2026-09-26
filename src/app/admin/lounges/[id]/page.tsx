@@ -5,6 +5,7 @@ import { Eye, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 
+import { LoungeDraftForm } from "@/components/admin/lounge-draft-form";
 import { AdminShell } from "@/components/patterns/admin-shell";
 import { RequireAdminSession } from "@/components/admin/require-admin-session";
 import { ApprovalDiff } from "@/components/ui/approval-diff";
@@ -56,23 +57,53 @@ function LoungeEditScreen() {
   const { id } = useParams<{ id: string }>();
   const supabase = React.useMemo(() => createClient(), []);
   const [lounge, setLounge] = React.useState<LoungeContentDetail | null | undefined>(undefined);
+
+  React.useEffect(() => {
+    let active = true;
+    getLoungeContentDetail(supabase, id).then((detail) => {
+      if (active) setLounge(detail ?? null);
+    });
+    return () => {
+      active = false;
+    };
+  }, [supabase, id]);
+
+  if (lounge === null) notFound();
+  if (lounge === undefined) return null;
+
+  // Un borrador se sigue editando con el formulario de alta, dirección
+  // incluida (LoungeNew.dc.html); publicado, la dirección queda fija.
+  if (lounge.contentStatus === "draft") return <LoungeDraftForm lounge={lounge} />;
+
+  return <LiveLoungeEditor initial={lounge} />;
+}
+
+function LiveLoungeEditor({ initial }: { initial: LoungeContentDetail }) {
+  const id = initial.id;
+  const supabase = React.useMemo(() => createClient(), []);
+  const [lounge, setLounge] = React.useState<LoungeContentDetail | null | undefined>(initial);
   const [counts, setCounts] = React.useState<TicketCounts | null>(null);
   const [reloadToken, setReloadToken] = React.useState(0);
   const reload = React.useCallback(() => setReloadToken((t) => t + 1), []);
 
-  const [amenities, setAmenities] = React.useState<string[]>([]);
-  const [weeklyHours, setWeeklyHours] = React.useState<string[]>([]);
-  const [capacity, setCapacity] = React.useState(0);
-  const [restrictions, setRestrictions] = React.useState<string[]>([]);
+  const [amenities, setAmenities] = React.useState<string[]>(initial.amenities);
+  const [weeklyHours, setWeeklyHours] = React.useState<string[]>(initial.weeklyHours);
+  const [capacity, setCapacity] = React.useState(initial.capacity);
+  const [restrictions, setRestrictions] = React.useState<string[]>(initial.bookingRestrictions);
   const [newRestriction, setNewRestriction] = React.useState("");
-  const [photos, setPhotos] = React.useState<{ url: string; caption: string }[]>([]);
+  const [photos, setPhotos] = React.useState<{ url: string; caption: string }[]>(
+    initial.images.map((i) => ({ url: i.url, caption: i.caption })),
+  );
   const [rejectNote, setRejectNote] = React.useState("");
   const [banner, setBanner] = React.useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   React.useEffect(() => {
     let active = true;
-    getLoungeContentDetail(supabase, id).then((detail) => {
+    // La ficha ya llega cargada (`initial`); solo se relee tras enviar,
+    // aprobar o devolver un cambio — releerla al montar podía pisar un
+    // cambio que el admin ya hubiera hecho en el formulario.
+    if (reloadToken > 0) getLoungeContentDetail(supabase, id).then((detail) => {
       if (!active) return;
       setLounge(detail ?? null);
       if (detail) {

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { ChevronRight, Plus, Search, SlidersHorizontal } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { AdminShell } from "@/components/patterns/admin-shell";
@@ -22,9 +23,8 @@ const GRID = "grid-cols-[32px_1fr_158px_92px_106px_128px_30px]";
  * docs/design/epic-8-admin-support/Lounges.dc.html.
  *
  * Backend real (22 sept 2026): `admin_lounge_list`
- * (`supabase/schemas/admin_content.sql`). "Add lounge" sigue sin llevar a
- * ningún sitio propio (ningún artboard dibuja el formulario de alta); de
- * la barra masiva, solo "Archive" es real ahora — retira el lounge del
+ * (`supabase/schemas/admin_content.sql`). "Add lounge" lleva al alta
+ * (`/admin/lounges/new`, artboard LoungeNew.dc.html); de la barra masiva, solo "Archive" es real ahora — retira el lounge del
  * catálogo de miembro de inmediato, sin pasar por revisión. El resto
  * ("Update hours", "Add an amenity", "Set closure dates") sigue inerte:
  * ningún artboard dibuja su modal.
@@ -111,13 +111,13 @@ function LoungesScreen() {
             <SlidersHorizontal size={16} strokeWidth={1.8} className="text-accent" aria-hidden />
             <span className="text-[13.5px] font-semibold text-fg">All cities</span>
           </button>
-          <button
-            type="button"
-            className="flex h-11 items-center justify-center gap-2 rounded-[11px] bg-accent px-5"
+          <Link
+            href="/admin/lounges/new"
+            className="flex h-11 items-center justify-center gap-2 rounded-[11px] bg-accent px-5 transition-colors duration-150 hover:bg-accent-strong"
           >
             <Plus size={16} strokeWidth={2} className="text-on-accent" aria-hidden />
             <span className="text-[12.5px] font-bold uppercase tracking-[0.1em] text-on-accent">Add lounge</span>
-          </button>
+          </Link>
         </div>
       </div>
 

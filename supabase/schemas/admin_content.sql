@@ -91,6 +91,14 @@ returns table (
   booking_restrictions text[],
   images jsonb,
   closures jsonb,
+  phone text,
+  email text,
+  website text,
+  address text,
+  neighborhood text,
+  city text,
+  lat double precision,
+  lng double precision,
   pending_submission_id uuid,
   pending_proposed jsonb,
   pending_submitted_by text,
@@ -110,7 +118,7 @@ begin
       l.id, l.name, l.neighborhood || ', ' || l.city, l.capacity, l.content_status,
       l.amenities, l.bands, l.closed_weekdays, l.weekly_hours, l.booking_restrictions,
       coalesce(
-        (select jsonb_agg(jsonb_build_object('id', i.id, 'url', i.url, 'caption', i.caption, 'position', i.position) order by i.position)
+        (select jsonb_agg(jsonb_build_object('id', i.id, 'url', i.url, 'caption', i.caption, 'detail', i.detail, 'position', i.position) order by i.position)
          from public.lounge_images i where i.lounge_id = l.id),
         '[]'::jsonb
       ),
@@ -119,6 +127,7 @@ begin
          from public.lounge_closures c where c.lounge_id = l.id),
         '[]'::jsonb
       ),
+      l.phone, l.email, l.website, l.address, l.neighborhood, l.city, l.lat, l.lng,
       s.id,
       s.proposed,
       case when a.email is not null then split_part(a.email::text, '@', 1) end,
@@ -247,6 +256,189 @@ end;
 $$;
 
 grant execute on function public.admin_reject_lounge_submission(uuid, text) to authenticated;
+
+/* -------------------------------------------------------------------- */
+/* "Add/edit/remove lounge profiles" — alta de un lounge nuevo           */
+/* (LoungeNew.dc.html / PhotoCaption.dc.html)                            */
+/* -------------------------------------------------------------------- */
+
+-- Un lounge nuevo nace 'draft' (invisible para los miembros, ver la policy
+-- de `lounges`) y se publica directo con `admin_publish_lounge`, sin pasar
+-- por `lounge_content_submissions` — decisión de producto (25 sept 2026):
+-- hoy cualquier admin aprueba cualquier cambio, incluido el suyo, así que
+-- la cola solo añadiría un clic. Mientras es borrador se edita entero,
+-- dirección incluida; una vez publicado la dirección queda fija.
+--
+-- `p_lounge` lleva: id_base (slug del nombre, ver `loungeIdFromName`),
+-- name, phone, email, website, address, neighborhood, city, lat, lng,
+-- weekly_hours (7 strings, domingo primero), closed_weekdays (int[]),
+-- hours (resumen corto), amenities (text[]), capacity (plazas por franja).
+
+create or replace function public.admin_apply_lounge_draft(p_lounge_id text, p_lounge jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if coalesce(trim(p_lounge->>'name'), '') = '' then
+    raise exception 'A lounge needs a name';
+  end if;
+  if coalesce(trim(p_lounge->>'address'), '') = '' or p_lounge->>'lat' is null or p_lounge->>'lng' is null then
+    raise exception 'A lounge needs an address picked on the map';
+  end if;
+
+  update public.lounges l set
+    name = trim(p_lounge->>'name'),
+    phone = coalesce(trim(p_lounge->>'phone'), ''),
+    email = coalesce(trim(p_lounge->>'email'), ''),
+    website = coalesce(trim(p_lounge->>'website'), ''),
+    address = trim(p_lounge->>'address'),
+    neighborhood = coalesce(p_lounge->>'neighborhood', ''),
+    city = coalesce(p_lounge->>'city', ''),
+    city_id = trim(both '-' from lower(regexp_replace(coalesce(p_lounge->>'city', ''), '[^a-zA-Z0-9]+', '-', 'g'))),
+    lat = (p_lounge->>'lat')::double precision,
+    lng = (p_lounge->>'lng')::double precision,
+    weekly_hours = coalesce(p_lounge->'weekly_hours', '[]'::jsonb),
+    closed_weekdays = (select coalesce(array_agg(x::smallint), '{}') from jsonb_array_elements_text(coalesce(p_lounge->'closed_weekdays', '[]'::jsonb)) x),
+    hours = coalesce(p_lounge->>'hours', ''),
+    amenities = (select coalesce(array_agg(x), '{}') from jsonb_array_elements_text(coalesce(p_lounge->'amenities', '[]'::jsonb)) x),
+    capacity = coalesce((p_lounge->>'capacity')::int, 0),
+    updated_at = now()
+  where l.id = p_lounge_id;
+end;
+$$;
+
+revoke execute on function public.admin_apply_lounge_draft(text, jsonb) from public, anon, authenticated;
+
+create or replace function public.admin_create_lounge(p_lounge jsonb)
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_base text := coalesce(nullif(p_lounge->>'id_base', ''), 'lounge');
+  v_id text := v_base;
+  v_suffix int := 1;
+begin
+  if not public.has_role('admin') then
+    raise exception 'Not authorized';
+  end if;
+
+  while exists (select 1 from public.lounges where id = v_id) loop
+    v_suffix := v_suffix + 1;
+    v_id := v_base || '-' || v_suffix;
+  end loop;
+
+  -- Las tres franjas abiertas: la disponibilidad en vivo
+  -- (`lounge_availability.sql`) las ofrece con `capacity` plazas cada una.
+  insert into public.lounges (id, name, neighborhood, city, city_id, lat, lng, hours, bands, content_status)
+  values (v_id, '', '', '', '', 0, 0, '', array['morning', 'afternoon', 'evening'], 'draft');
+
+  perform public.admin_apply_lounge_draft(v_id, p_lounge);
+
+  return v_id;
+end;
+$$;
+
+grant execute on function public.admin_create_lounge(jsonb) to authenticated;
+
+create or replace function public.admin_update_draft_lounge(p_lounge_id text, p_lounge jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.has_role('admin') then
+    raise exception 'Not authorized';
+  end if;
+
+  perform 1 from public.lounges where id = p_lounge_id and content_status = 'draft' for update;
+  if not found then
+    raise exception 'Only drafts can be edited this way';
+  end if;
+
+  perform public.admin_apply_lounge_draft(p_lounge_id, p_lounge);
+end;
+$$;
+
+grant execute on function public.admin_update_draft_lounge(text, jsonb) to authenticated;
+
+-- `p_photos`: array de {url, caption, detail} — el orden es la posición, y
+-- la primera (position 0) es la foto principal que abre el perfil. Solo
+-- puede haber una: es un orden, no una marca por foto.
+create or replace function public.admin_set_draft_lounge_photos(p_lounge_id text, p_photos jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_photo jsonb;
+  v_position smallint := 0;
+begin
+  if not public.has_role('admin') then
+    raise exception 'Not authorized';
+  end if;
+
+  perform 1 from public.lounges where id = p_lounge_id and content_status = 'draft' for update;
+  if not found then
+    raise exception 'Only drafts can be edited this way';
+  end if;
+
+  if jsonb_array_length(coalesce(p_photos, '[]'::jsonb)) > 3 then
+    raise exception 'A lounge has up to 3 photos';
+  end if;
+
+  delete from public.lounge_images where lounge_id = p_lounge_id;
+  for v_photo in select * from jsonb_array_elements(coalesce(p_photos, '[]'::jsonb)) loop
+    insert into public.lounge_images (lounge_id, url, caption, detail, position)
+    values (p_lounge_id, v_photo->>'url', coalesce(v_photo->>'caption', ''), nullif(v_photo->>'detail', ''), v_position);
+    v_position := v_position + 1;
+  end loop;
+end;
+$$;
+
+grant execute on function public.admin_set_draft_lounge_photos(text, jsonb) to authenticated;
+
+-- Mismos requisitos que la lista "Before it can be published" del
+-- artboard (`publishChecklist`, src/lib/lounge-draft.ts) — el servidor los
+-- vuelve a comprobar, el cliente solo los muestra.
+create or replace function public.admin_publish_lounge(p_lounge_id text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_lounge public.lounges;
+begin
+  if not public.has_role('admin') then
+    raise exception 'Not authorized';
+  end if;
+
+  select * into v_lounge from public.lounges where id = p_lounge_id and content_status = 'draft' for update;
+  if v_lounge.id is null then
+    raise exception 'Only drafts can be published';
+  end if;
+
+  if trim(v_lounge.name) = '' or trim(v_lounge.phone) = '' or trim(v_lounge.email) = ''
+     or trim(v_lounge.address) = ''
+     or v_lounge.capacity <= 0
+     or not exists (
+       select 1 from jsonb_array_elements_text(v_lounge.weekly_hours) h
+       where lower(trim(h)) not in ('', 'closed')
+     ) then
+    raise exception 'This lounge is incomplete and cannot be published yet';
+  end if;
+
+  update public.lounges set content_status = 'live', updated_at = now() where id = p_lounge_id;
+end;
+$$;
+
+grant execute on function public.admin_publish_lounge(text) to authenticated;
 
 /* -------------------------------------------------------------------- */
 /* "Bulk update capabilities" — el único botón real de la barra masiva:  */

@@ -75,6 +75,12 @@ afterAll(async () => {
 });
 
 describe("Lounges (/admin/lounges)", () => {
+  it("Add lounge opens the new-lounge form", async () => {
+    render(<LoungesPage />);
+
+    expect(await screen.findByRole("link", { name: "Add lounge" })).toHaveAttribute("href", "/admin/lounges/new");
+  });
+
   it("lists real lounges with their content status", async () => {
     render(<LoungesPage />);
 

@@ -193,6 +193,19 @@ class StubAdvancedMarkerElement extends EventTarget {
       this.dispatchEvent(new Event("gmp-click"));
     });
   }
+
+  /**
+   * Story 8.3 — el pin arrastrable del alta de lounge (`gmpDraggable`):
+   * `AdvancedMarker` cablea "dragstart"/"drag"/"dragend" con
+   * `google.maps.event.addListener(marker, …)`, igual que en el mapa.
+   */
+  gmpDraggable = false;
+
+  addListener(event: string, callback: (payload?: unknown) => void) {
+    const listener = (e: Event) => callback((e as CustomEvent).detail);
+    this.addEventListener(event, listener);
+    return { remove: () => this.removeEventListener(event, listener) };
+  }
 }
 
 /**
@@ -214,7 +227,7 @@ export function installGoogleMapsStub() {
         },
         event: {
           addListener: (
-            instance: StubMapCanvas,
+            instance: StubMapCanvas | StubAdvancedMarkerElement,
             eventName: string,
             handler: () => void,
           ) => instance.addListener(eventName, handler),
