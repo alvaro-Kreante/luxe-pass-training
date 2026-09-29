@@ -97,6 +97,10 @@ $$;
 
 grant execute on function public.partner_lounge_ids() to authenticated;
 
+-- Desde el 29 sept 2026 el alta normal es publicar su lounge desde el admin
+-- (Edge Function `admin-publish-lounge`, ver `lounge_partner_invites` abajo).
+-- A mano, para cuentas de muestra:
+--
 -- Alta de un partner (proceso operativo, no self-service — no hay historia
 -- de "partner signup" en Epic 7, solo `Login.dc.html`): crear el usuario de
 -- Auth con la API de administración (`auth.admin.createUser`, service role,

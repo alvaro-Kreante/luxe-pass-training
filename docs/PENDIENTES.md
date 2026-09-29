@@ -568,6 +568,26 @@ cuanto se eligen, antes de que exista el lounge. Si el admin abandona el
 alta sin guardar, esos archivos quedan huérfanos en el bucket — no hay
 limpieza automática.
 
+### 4.12 Invitación de partner: caducidad en los remotos y reenvío
+
+El email de invitación (`EmailInvite.dc.html`) promete un enlace de 24 h.
+En local vale porque `supabase/config.toml` fija `otp_expiry = 86400`, pero
+**los remotos no leen ese archivo**: en `luxepass-dev`/`luxepass-prod` hay
+que poner a mano *Authentication → Providers → Email → Email OTP
+Expiration* a `86400` (hoy, por defecto, 1 h). Afecta también a los
+enlaces de confirmación y recovery.
+
+**Además, sin pantalla todavía:**
+- **Reenviar la invitación.** Si el enlace caduca o el email falla
+  (`admin-publish-lounge` responde 502 con el lounge ya publicado), no hay
+  botón para mandar otro — la pantalla de enlace caducado pide al partner
+  que se lo pida a su account manager. Hace falta decidir dónde vive ese
+  botón (probablemente la ficha del lounge publicado) y diseñarlo.
+- **Añadir un segundo partner a un lounge ya publicado** (`partner_lounges`
+  es many-to-many): tampoco hay artboard.
+- `deploy.yml` despliega `admin-publish-lounge` en los dos jobs, pero
+  (como §4.7) el resto de functions de Epic 8 siguen sin desplegarse.
+
 ## 5. Decisiones abiertas
 
 ### 5.1 El error de términos de `/signup` no se puede llegar a ver

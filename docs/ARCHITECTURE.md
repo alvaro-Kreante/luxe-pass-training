@@ -30,6 +30,11 @@ simulado de Supabase (Inbucket/Mailpit) — Auth llama al Hook `send_email`
   de un dominio de test (`*-test.com`, `example.*`, `email.com`,
   `_shared/test-recipient.ts`) — solo lo registra en el log de la
   function. Un email real en local sí se envía; en staging/prod, siempre.
+- **Sin `APP_ENV`, nada sale (29 sept 2026).** El runner de GitHub Actions
+  (`ci.yml`) no define `APP_ENV` ni tiene clave de Brevo: `emailSkipReason`
+  (`_shared/test-recipient.ts`, con test en Vitest) devuelve
+  `"no-environment"` y `_shared/brevo.ts` solo lo registra. Los tests
+  solo pueden mandar emails desde local; subir a GitHub nunca envía nada.
 - **Staging/prod:** el hook se registra **a mano**, una vez por proyecto
   remoto, en su dashboard (`Authentication` → `Hooks` → `Send Email`) —
   nunca vía `supabase config push`, que sincroniza *todo* `config.toml`
@@ -343,6 +348,21 @@ proceso operativo, nunca self-service (no hay historia de "partner
 signup", solo `Login.dc.html`) — ver "Alta de un partner" en
 `supabase/schemas/partners.sql` y `scripts/seed-partner-account.mjs` para
 la cuenta de muestra de The Ainsworth en local.
+
+**Alta desde el admin (29 sept 2026).** El partner ya no se da de alta a
+mano: nace al publicar su lounge desde `/admin/lounges/new`. El borrador
+guarda sus datos en `lounge_partner_invites`; la Edge Function
+`admin-publish-lounge` (verifica JWT + `has_role('admin')`) crea el usuario
+invitado con `auth.admin.generateLink({ type: 'invite' })` — que **no**
+envía email ni pasa por el hook `send-email` —, su rol, `partners` y
+`partner_lounges`, publica con `admin_publish_lounge` como el propio admin y
+solo entonces envía la invitación por Brevo (`admin-publish-lounge/email.ts`,
+copia de `EmailInvite.dc.html`). El enlace es
+`${APP_URL}/partner/welcome?token_hash=…&type=invite`: la página verifica el
+token con `verifyOtp` en el cliente, y el partner corrige nombre/móvil/foto y
+fija su contraseña (`lib/partner-invite.ts`). El token caduca según
+`[auth.email] otp_expiry` (24 h en local; en los remotos se fija en el
+dashboard, ver `docs/PENDIENTES.md` §4.12).
 
 ## Notificaciones al partner reales (Database Webhook + pg_cron)
 
