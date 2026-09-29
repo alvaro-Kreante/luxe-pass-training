@@ -1,4 +1,5 @@
-// Epic 7 · EmailInvite.dc.html — la invitación del partner, con estilos
+// Epic 7 · EmailInvite.dc.html — la invitación del partner (al publicar el
+// lounge, al añadirlo a uno live o al reenviarla), con estilos
 // inline (los clientes de email no leen <style> de forma fiable).
 
 export interface PartnerInviteEmail {

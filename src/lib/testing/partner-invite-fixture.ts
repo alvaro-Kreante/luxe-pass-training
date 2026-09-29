@@ -34,7 +34,7 @@ export async function invitePartnerForTest(label: string): Promise<InvitedPartne
   const admin = isolatedClient();
   const adminUser = await signUpConfirmedAdminAndSignIn(admin, `${label}-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
 
-  const loungeName = `Larkspur ${label} ${stamp}`;
+  const loungeName = `Test Lounge ${label} ${stamp}`;
   const email = `${label}-${stamp}@thelarkspur-test.com`;
   const loungeId = await createLoungeDraft(admin, {
     name: loungeName,
@@ -45,7 +45,8 @@ export async function invitePartnerForTest(label: string): Promise<InvitedPartne
     weeklyHours: ["Closed", "8 AM – 9 PM", "8 AM – 9 PM", "8 AM – 9 PM", "8 AM – 9 PM", "8 AM – 9 PM", "9 AM – 6 PM"],
     amenities: ["wifi"],
     capacity: 24,
-    partner: { firstName: "Camille", lastName: "Duarte", email, mobile: "+1 917 555 0163" },
+    bookingRestrictions: [],
+    partners: [{ firstName: "Camille", lastName: "Duarte", email, mobile: "+1 917 555 0163" }],
   });
   // Publicado, el lounge lo ven los miembros: si algo falla antes de
   // devolver el fixture (Auth local es intermitente con la suite en

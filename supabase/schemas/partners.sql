@@ -14,6 +14,9 @@ create table if not exists public.partners (
   first_name    text not null default '',
   last_name     text not null default '',
   photo_path    text,
+  -- Epic 8 · PartnerSuspend.dc.html — suspendida no entra al dashboard (la
+  -- Edge Function `admin-lounge-partners` banea además el usuario de Auth).
+  suspended_at  timestamptz,
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
 );
@@ -24,6 +27,12 @@ create policy "select own partner account"
 on public.partners for select
 to authenticated
 using ( (select auth.uid()) = user_id );
+
+-- Epic 8 · LoungeLive.dc.html — el admin ve los partners de cada lounge.
+create policy "admins read partners"
+on public.partners for select
+to authenticated
+using ( public.has_role('admin') );
 
 -- El partner corrige su nombre, móvil y foto (/partner/welcome). El email,
 -- el negocio y el usuario no: los fija el trigger de abajo.
@@ -77,6 +86,11 @@ using (
   )
 );
 
+create policy "admins read partner lounges"
+on public.partner_lounges for select
+to authenticated
+using ( public.has_role('admin') );
+
 -- Helper reutilizado por las policies de `bookings` (Story 7.1 realtime) y
 -- por las RPC de analítica de partner (Story 7.3) — los ids de lounge que
 -- gestiona el partner autenticado. SECURITY INVOKER: las dos policies de
@@ -112,26 +126,33 @@ grant execute on function public.partner_lounge_ids() to authenticated;
 -- En local, `scripts/seed-partner-account.ts` automatiza justo esto para la
 -- cuenta de muestra de `PARTNER_ACCOUNT` (`src/lib/partner.ts`).
 
--- Epic 8 · LoungeNewPartner.dc.html — el partner que el admin escribe en el
--- formulario del lounge. Mientras el lounge es borrador solo se recuerda;
--- al publicar, `admin-publish-lounge` crea la cuenta y rellena
--- `partner_id`. `admin_publish_lounge` exige ese `partner_id`, así que no
--- hay forma de publicar sin haber invitado a nadie.
+-- Epic 8 · LoungeDraftPartners.dc.html — los partners que el admin escribe
+-- en el borrador de un lounge (uno o varios). Mientras el lounge es borrador
+-- solo se recuerdan; al publicar, `admin-publish-lounge` crea cada cuenta (o
+-- vincula la de un partner que ya existía) y rellena `partner_id`.
+-- `admin_publish_lounge` exige al menos un partner vinculado, así que no hay
+-- forma de publicar sin haber invitado a nadie. Borrar la cuenta de un
+-- partner borra también su fila aquí (cascade), para no reinvitarlo.
 create table if not exists public.lounge_partner_invites (
-  lounge_id  text primary key references public.lounges (id) on delete cascade,
+  id         uuid primary key default gen_random_uuid(),
+  lounge_id  text not null references public.lounges (id) on delete cascade,
   first_name text not null,
   last_name  text not null,
   email      text not null,
   mobile     text not null default '',
-  partner_id uuid references public.partners (id) on delete set null,
+  partner_id uuid references public.partners (id) on delete cascade,
+  position   int not null default 0,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  unique (lounge_id, email)
 );
+
+create index if not exists lounge_partner_invites_partner_id_idx on public.lounge_partner_invites (partner_id);
 
 alter table public.lounge_partner_invites enable row level security;
 
 -- Solo lectura para admin; se escribe con las RPC de admin_content.sql
--- (security definer) y con la Edge Function (service role).
+-- (security definer) y con las Edge Functions (service role).
 create policy "admins read partner invites"
 on public.lounge_partner_invites for select
 to authenticated

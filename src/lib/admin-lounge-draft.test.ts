@@ -27,7 +27,7 @@ const created: string[] = [];
 
 function draftInput(overrides: Partial<LoungeDraftInput> = {}): LoungeDraftInput {
   return {
-    name: `Larkspur Test ${stamp} ${created.length}`,
+    name: `Test Lounge Draft ${stamp} ${created.length}`,
     phone: "+1 212 555 0148",
     email: "hello@thelarkspur.com",
     website: "thelarkspur.com",
@@ -35,12 +35,15 @@ function draftInput(overrides: Partial<LoungeDraftInput> = {}): LoungeDraftInput
     weeklyHours: ["Closed", "8 AM – 9 PM", "8 AM – 9 PM", "8 AM – 9 PM", "8 AM – 9 PM", "8 AM – 9 PM", "9 AM – 6 PM"],
     amenities: ["wifi", "co-working"],
     capacity: 24,
-    partner: {
-      firstName: "Camille",
-      lastName: "Duarte",
-      email: `draft-partner-${stamp}-${created.length}-${Math.random().toString(36).slice(2, 6)}@thelarkspur-test.com`,
-      mobile: "+1 917 555 0163",
-    },
+    bookingRestrictions: [],
+    partners: [
+      {
+        firstName: "Camille",
+        lastName: "Duarte",
+        email: `draft-partner-${stamp}-${created.length}-${Math.random().toString(36).slice(2, 6)}@thelarkspur-test.com`,
+        mobile: "+1 917 555 0163",
+      },
+    ],
     ...overrides,
   };
 }

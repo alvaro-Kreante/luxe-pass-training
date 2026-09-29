@@ -78,7 +78,10 @@ function fromRow(row: LoungeTableRow): LoungeRow {
 export async function fetchLounges(
   supabase: SupabaseClient,
 ): Promise<LoungeRow[]> {
-  const { data, error } = await supabase.from("lounges").select("*");
+  // La policy de `lounges` deja ver un borrador a sus partners y a quien
+  // tiene reserva allí (Epic 8, editar un lounge live) — el catálogo solo
+  // muestra los publicados.
+  const { data, error } = await supabase.from("lounges").select("*").eq("content_status", "live");
 
   if (error) throw error;
 

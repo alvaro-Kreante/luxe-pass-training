@@ -55,7 +55,20 @@ alter table public.lounges enable row level security;
 -- gestionarlos desde `/admin/lounges`. Sin policies de insert/update/delete
 -- de miembro: el contenido solo se escribe vía las RPC de
 -- `admin_content.sql`.
+--
+-- Epic 8 · LoungeEditConfirm.dc.html (29 sept 2026): editar un lounge live
+-- lo devuelve a 'draft', pero sus reservas siguen valiendo — el miembro con
+-- reserva sigue viendo su lounge (el pase hace join con `lounges`) y sus
+-- partners también (el dashboard lo necesita), aunque salga del catálogo.
 create policy "select lounges"
 on public.lounges for select
 to authenticated
-using ( content_status = 'live' or public.has_role('admin') );
+using (
+  content_status = 'live'
+  or public.has_role('admin')
+  or id in (select public.partner_lounge_ids())
+  or exists (
+    select 1 from public.bookings b
+    where b.lounge_id = lounges.id and b.member_id = (select auth.uid())
+  )
+);

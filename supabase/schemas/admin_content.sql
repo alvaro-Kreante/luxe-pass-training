@@ -307,25 +307,43 @@ begin
     updated_at = now()
   where l.id = p_lounge_id;
 
-  -- `partner`: {first_name, last_name, email, mobile} o null. Solo se
-  -- recuerda — la cuenta nace al publicar (`admin-publish-lounge`).
-  if jsonb_typeof(p_lounge->'partner') = 'object' then
-    insert into public.lounge_partner_invites (lounge_id, first_name, last_name, email, mobile)
-    values (
+  -- `booking_restrictions` (text[]): el draft las edita desde que el lounge
+  -- live ya no tiene editor propio (LoungeDraftPartners.dc.html).
+  if p_lounge ? 'booking_restrictions' then
+    update public.lounges l set
+      booking_restrictions = (select coalesce(array_agg(x), '{}') from jsonb_array_elements_text(p_lounge->'booking_restrictions') x)
+    where l.id = p_lounge_id;
+  end if;
+
+  -- `partners`: [{first_name, last_name, email, mobile}] — los pendientes de
+  -- invitar. Solo se recuerdan: las cuentas nacen al publicar
+  -- (`admin-publish-lounge`). Los ya creados (`partner_id`) no se tocan
+  -- aquí — se gestionan desde la lista de partners.
+  if jsonb_typeof(p_lounge->'partners') = 'array' then
+    delete from public.lounge_partner_invites i
+    where i.lounge_id = p_lounge_id
+      and i.partner_id is null
+      and lower(i.email) not in (
+        select lower(trim(x->>'email')) from jsonb_array_elements(p_lounge->'partners') x
+      );
+
+    insert into public.lounge_partner_invites (lounge_id, first_name, last_name, email, mobile, position)
+    select
       p_lounge_id,
-      coalesce(trim(p_lounge->'partner'->>'first_name'), ''),
-      coalesce(trim(p_lounge->'partner'->>'last_name'), ''),
-      lower(coalesce(trim(p_lounge->'partner'->>'email'), '')),
-      coalesce(trim(p_lounge->'partner'->>'mobile'), '')
-    )
-    on conflict (lounge_id) do update set
+      coalesce(trim(x->>'first_name'), ''),
+      coalesce(trim(x->>'last_name'), ''),
+      lower(coalesce(trim(x->>'email'), '')),
+      coalesce(trim(x->>'mobile'), ''),
+      (ord - 1)::int
+    from jsonb_array_elements(p_lounge->'partners') with ordinality as t(x, ord)
+    where coalesce(trim(x->>'email'), '') <> ''
+    on conflict (lounge_id, email) do update set
       first_name = excluded.first_name,
       last_name = excluded.last_name,
-      email = excluded.email,
       mobile = excluded.mobile,
-      updated_at = now();
-  else
-    delete from public.lounge_partner_invites where lounge_id = p_lounge_id;
+      position = excluded.position,
+      updated_at = now()
+    where public.lounge_partner_invites.partner_id is null;
   end if;
 end;
 $$;
@@ -456,10 +474,11 @@ begin
   end if;
 
   if not exists (
-    select 1 from public.lounge_partner_invites
-    where lounge_id = p_lounge_id and partner_id is not null
+    select 1 from public.partner_lounges pl
+    join public.partners p on p.id = pl.partner_id
+    where pl.lounge_id = p_lounge_id and p.suspended_at is null
   ) then
-    raise exception 'A lounge needs its partner account before it can be published';
+    raise exception 'A lounge needs a partner account before it can be published';
   end if;
 
   update public.lounges set content_status = 'live', updated_at = now() where id = p_lounge_id;
@@ -467,6 +486,86 @@ end;
 $$;
 
 grant execute on function public.admin_publish_lounge(text) to authenticated;
+
+-- Epic 8 · LoungeEditConfirm.dc.html — "Move to draft and edit". El lounge
+-- sale del catálogo de miembro hasta que se vuelva a publicar; sus reservas
+-- siguen valiendo (ver la policy de `lounges`).
+create or replace function public.admin_unpublish_lounge(p_lounge_id text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.has_role('admin') then
+    raise exception 'Not authorized';
+  end if;
+
+  update public.lounges set content_status = 'draft', updated_at = now()
+  where id = p_lounge_id and content_status = 'live';
+  if not found then
+    raise exception 'Only a live lounge can be moved to draft';
+  end if;
+end;
+$$;
+
+grant execute on function public.admin_unpublish_lounge(text) to authenticated;
+
+-- Epic 8 · LoungeLive.dc.html / LoungeDraftPartners.dc.html — la lista de
+-- partners de un lounge con su estado: 'on_publish' (escrito en el borrador,
+-- aún sin cuenta), 'invited' (cuenta creada, sin contraseña todavía),
+-- 'active' o 'suspended'. El estado de la invitación sale de `auth.users`,
+-- por eso es security definer (solo admin).
+create or replace function public.admin_lounge_partners(p_lounge_id text)
+returns table (
+  user_id    uuid,
+  first_name text,
+  last_name  text,
+  email      text,
+  mobile     text,
+  status     text
+)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.has_role('admin') then
+    raise exception 'Not authorized';
+  end if;
+
+  return query
+    select * from (
+      select
+        p.user_id,
+        p.first_name,
+        p.last_name,
+        p.contact_email,
+        p.contact_phone,
+        case
+          when p.suspended_at is not null then 'suspended'
+          when u.email_confirmed_at is null then 'invited'
+          else 'active'
+        end
+      from public.partner_lounges pl
+      join public.partners p on p.id = pl.partner_id
+      join auth.users u on u.id = p.user_id
+      left join public.lounge_partner_invites i on i.lounge_id = pl.lounge_id and i.partner_id = p.id
+      where pl.lounge_id = p_lounge_id
+      order by coalesce(i.position, 0), pl.created_at
+    ) linked
+    union all
+    select * from (
+      select null::uuid, i.first_name, i.last_name, i.email, i.mobile, 'on_publish'
+      from public.lounge_partner_invites i
+      where i.lounge_id = p_lounge_id and i.partner_id is null
+      order by i.position, i.created_at
+    ) pending;
+end;
+$$;
+
+grant execute on function public.admin_lounge_partners(text) to authenticated;
 
 /* -------------------------------------------------------------------- */
 /* "Bulk update capabilities" — el único botón real de la barra masiva:  */
