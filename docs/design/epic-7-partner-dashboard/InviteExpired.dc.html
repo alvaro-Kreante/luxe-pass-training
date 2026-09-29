@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,500&family=Manrope:wght@400;500;600;700;800&display=swap">
+  <style>
+    :root {
+      --bg-blush-1: #F8EAE1; --bg-blush-2: #FCF4EE;
+      --ink-900: #221A14; --ink-700: #55483D; --ink-400: #9C8D80;
+      --gold-500: #C9A876; --gold-600: #AD8A5C; --gold-100: #F1E3D0;
+      --border: #E7D9C9; --white: #FFFFFF; --panel-black: #15110D;
+      --dark-ink-100: #F1E3D0; --dark-ink-300: #C9BDAF; --dark-ink-500: #8A7C6C;
+      --dark-border: #3A322A; --dark-card: #1E1813; --dark-hover: #241D17;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Manrope', 'Segoe UI', sans-serif; color: var(--dark-ink-100); }
+    h1, h2, h3 { font-family: 'Bodoni Moda', Georgia, 'Times New Roman', serif; margin: 0; font-weight: 500; }
+    a { color: var(--gold-600); text-decoration: none; }
+    a:hover { color: var(--gold-500); }
+    .dk-nav { transition: background .15s ease; cursor: pointer; }
+    .dk-nav:hover { background: var(--dark-hover); }
+    .dk-gold { transition: background .15s ease; }
+    .dk-gold:hover { background: var(--gold-600) !important; }
+    .dk-ghost { transition: background .15s ease, border-color .15s ease; cursor: pointer; }
+    .dk-ghost:hover { background: var(--dark-hover); border-color: var(--gold-500); }
+    .dk-tr { transition: background .15s ease; cursor: pointer; }
+    .dk-tr:hover { background: var(--dark-hover); }
+    .dk-row { transition: border-color .15s ease; }
+    .dk-row:hover { border-color: var(--gold-500); }
+    .dk-link { transition: color .15s ease; cursor: pointer; }
+    .dk-link:hover { color: var(--gold-500); }
+    .lt-btn { transition: background .15s ease; }
+    .lt-btn:hover { background: var(--gold-600) !important; }
+    .lt-ghost { transition: background .15s ease; cursor: pointer; }
+    .lt-ghost:hover { background: var(--gold-100); }
+  </style>
+</helmet>
+
+<div style="display:flex; width:1440px; height:900px; background:var(--panel-black); overflow:hidden; font-family:'Manrope',sans-serif;">
+
+  <!-- Brand panel -->
+  <div style="position:relative; width:600px; min-width:600px; height:900px; background:radial-gradient(circle at 26% 12%, #2c241c, #15110d 64%); display:flex; flex-direction:column; padding:64px 60px;">
+    <div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.16) 1px, transparent 1.5px); background-size:18px 18px;"></div>
+
+    <img src="logo.png" alt="En Soleil" style="position:relative; width:170px; height:auto;">
+
+    <div style="flex:1;"></div>
+
+    <div style="position:relative;">
+      <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-500); margin:0;">En Soleil · LuxePass</p>
+      <h1 style="font-size:38px; line-height:1.2; color:var(--dark-ink-100); margin:16px 0 0; max-width:420px;">A fresh link is one message away.</h1>
+      <p style="font-size:14.5px; line-height:1.65; color:var(--dark-ink-300); margin:18px 0 0; max-width:400px;">Invitations are kept short on purpose — a door left open is a door anyone can walk through.</p>
+    </div>
+
+    <div style="flex:1;"></div>
+
+    <p style="position:relative; font-size:12px; color:var(--dark-ink-500); margin:0;">The Larkspur · invited by En Soleil</p>
+  </div>
+
+  <!-- Card panel -->
+  <div style="position:relative; flex:1; height:900px; display:flex; align-items:center; justify-content:center; background:radial-gradient(circle at 68% 18%, #241D17, #15110D 72%);">
+
+    <div style="width:460px; background:var(--dark-card); border:1px solid var(--dark-border); border-radius:24px; padding:44px; box-shadow:0 30px 60px -20px rgba(0,0,0,0.55);">
+
+      <div style="width:52px; height:52px; border-radius:14px; border:1.5px dashed var(--gold-600); display:flex; align-items:center; justify-content:center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></div>
+
+      <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:22px 0 0;">Partner invitation</p>
+      <h2 style="font-size:30px; color:var(--dark-ink-100); margin:12px 0 8px;">This link has expired</h2>
+      <p style="font-size:13.5px; line-height:1.6; color:var(--dark-ink-500); margin:0;">Invitation links work once and for 24 hours. This one has already been used or has run out of time.</p>
+
+      <div style="margin-top:22px; padding:14px 16px; background:var(--panel-black); border:1px solid var(--dark-border); border-radius:14px;">
+        <p style="font-size:13px; line-height:1.6; color:var(--dark-ink-300); margin:0;">Ask your En Soleil account manager to send a new invitation. If you already created your password, sign in instead.</p>
+      </div>
+
+      <div class="dk-gold" style="display:flex; align-items:center; justify-content:center; height:52px; min-height:52px; margin-top:26px; background:var(--gold-500); border-radius:12px; cursor:pointer;"><span style="font-size:13px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--white);">Go to sign in</span></div>
+
+      <div style="height:1px; background:var(--dark-border); margin:28px 0 20px;"></div>
+
+      <p style="font-size:12px; line-height:1.65; color:var(--dark-ink-500); margin:0;">Partner accounts are issued by En Soleil — <span style="color:var(--gold-600);">partners@luxepass.co</span></p>
+
+    </div>
+
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

@@ -119,6 +119,14 @@
       "w": 1440,
       "h": 900,
       "title": "15. Name a photo"
+    },
+    {
+      "file": "LoungeNewPartner.dc.html",
+      "x": 6160,
+      "y": 3150,
+      "w": 1440,
+      "h": 900,
+      "title": "16. Add a lounge with its partner"
     }
   ],
   "annotations": [
@@ -163,6 +171,13 @@
       "y": 3055,
       "w": 940,
       "text": "Add a lounge · The same form stays open while the lounge is a draft — address and pin included. Once it is published the address is fixed: screen 12 edits a live lounge without a location section. Every photo gets an area name members read under it (15)."
+    },
+    {
+      "id": "partner-account-note",
+      "x": 6160,
+      "y": 3055,
+      "w": 940,
+      "text": "Add a lounge, partner included · The form that creates a lounge also creates the person who runs it: first and last name, work email and mobile. Saving — draft or publish — opens the partner account and emails the invitation (Epic 7, screens 13–15). The address the admin types is the one the partner signs in with."
     }
   ],
   "launch": {
