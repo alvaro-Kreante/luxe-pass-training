@@ -35,6 +35,12 @@ function draftInput(overrides: Partial<LoungeDraftInput> = {}): LoungeDraftInput
     weeklyHours: ["Closed", "8 AM – 9 PM", "8 AM – 9 PM", "8 AM – 9 PM", "8 AM – 9 PM", "8 AM – 9 PM", "9 AM – 6 PM"],
     amenities: ["wifi", "co-working"],
     capacity: 24,
+    partner: {
+      firstName: "Camille",
+      lastName: "Duarte",
+      email: `draft-partner-${stamp}-${created.length}-${Math.random().toString(36).slice(2, 6)}@thelarkspur-test.com`,
+      mobile: "+1 917 555 0163",
+    },
     ...overrides,
   };
 }
@@ -61,6 +67,11 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  const { data: partners } = await service
+    .from("partners")
+    .select("user_id, partner_lounges!inner(lounge_id)")
+    .in("partner_lounges.lounge_id", created);
+  for (const partner of partners ?? []) await service.auth.admin.deleteUser(partner.user_id);
   await service.from("lounges").delete().in("id", created);
 });
 

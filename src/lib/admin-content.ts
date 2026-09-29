@@ -6,6 +6,7 @@ import {
   hoursSummary,
   loungeIdFromName,
   type LoungeDraftInput,
+  type PartnerInviteInput,
 } from "@/lib/lounge-draft";
 
 /**
@@ -265,6 +266,14 @@ function draftPayload(input: LoungeDraftInput) {
     hours: hoursSummary(input.weeklyHours),
     amenities: input.amenities,
     capacity: input.capacity,
+    partner: input.partner
+      ? {
+          first_name: input.partner.firstName,
+          last_name: input.partner.lastName,
+          email: input.partner.email,
+          mobile: input.partner.mobile,
+        }
+      : null,
   };
 }
 
@@ -307,9 +316,31 @@ export async function setDraftLoungePhotos(
   if (error) throw new Error(error.message);
 }
 
-export async function publishLounge(supabase: SupabaseClient, loungeId: string): Promise<void> {
-  const { error } = await supabase.rpc("admin_publish_lounge", { p_lounge_id: loungeId });
+/** El partner que el admin escribió en el borrador, o null si aún no hay. */
+export async function getLoungePartnerInvite(
+  supabase: SupabaseClient,
+  loungeId: string,
+): Promise<PartnerInviteInput | null> {
+  const { data, error } = await supabase
+    .from("lounge_partner_invites")
+    .select("first_name, last_name, email, mobile")
+    .eq("lounge_id", loungeId)
+    .maybeSingle();
   if (error) throw new Error(error.message);
+  if (!data) return null;
+  return { firstName: data.first_name, lastName: data.last_name, email: data.email, mobile: data.mobile };
+}
+
+/**
+ * Publica el borrador y, en el mismo paso, crea la cuenta de su partner y le
+ * envía la invitación (Edge Function `admin-publish-lounge`). Si algo falla,
+ * el lounge sigue en borrador y no queda ninguna cuenta a medias.
+ */
+export async function publishLounge(supabase: SupabaseClient, loungeId: string): Promise<void> {
+  const { error } = await supabase.functions.invoke("admin-publish-lounge", { body: { loungeId } });
+  if (!error) return;
+  const body = error.context instanceof Response ? await error.context.json().catch(() => null) : null;
+  throw new Error(body?.error ?? error.message);
 }
 
 /** Story 8.3 — "Upload and manage lounge images". Sube el archivo al bucket público `lounge-images` y devuelve su URL pública. */

@@ -23,6 +23,15 @@ export interface LoungeDraftInput {
   weeklyHours: string[];
   amenities: string[];
   capacity: number;
+  /** Epic 8 · artboard 16 — quien gestiona el lounge. Se invita al publicar. */
+  partner?: PartnerInviteInput | null;
+}
+
+export interface PartnerInviteInput {
+  firstName: string;
+  lastName: string;
+  email: string;
+  mobile: string;
 }
 
 export const CLOSED = "Closed";

@@ -2,21 +2,18 @@
 // (Auth Hook, Story 1.1/1.2) y `send-booking-receipt` (Database Webhook,
 // Story 4.2/5.1). Factorizado aquí porque ambas functions lo hacían igual:
 // mismo remitente, misma api-key, mismo prefijo de ambiente en el subject.
-import { isTestRecipient } from "./test-recipient.ts";
+import { emailSkipReason } from "./test-recipient.ts";
 
 const brevoApiKey = Deno.env.get("BREVO_API_KEY") as string;
 const senderEmail = Deno.env.get("BREVO_SENDER_EMAIL") as string;
 const senderName = Deno.env.get("BREVO_SENDER_NAME") ?? "LuxePass";
 const envLabel = Deno.env.get("APP_ENV");
 
-/**
- * En local, los usuarios que crean los tests no reciben email: la suite
- * completa agotaba la cuota diaria de Brevo. Solo en LOCAL — en staging/prod
- * se envía siempre.
- */
-function skipInLocal(to: string, subject: string): boolean {
-  if (envLabel !== "LOCAL" || !isTestRecipient(to)) return false;
-  console.log(`brevo: skipped test recipient ${to} (${subject})`);
+/** Ver `emailSkipReason`: sin APP_ENV (CI) nada sale; en LOCAL, los destinatarios de test tampoco. */
+function skipSending(to: string, subject: string): boolean {
+  const reason = emailSkipReason(envLabel, to);
+  if (!reason) return false;
+  console.log(`brevo: skipped ${to} (${reason}) — ${subject}`);
   return true;
 }
 
@@ -30,7 +27,7 @@ export async function sendBrevoEmail(
   subject: string,
   htmlContent: string,
 ): Promise<void> {
-  if (skipInLocal(to, subject)) return;
+  if (skipSending(to, subject)) return;
   const response = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
     headers: {
@@ -62,7 +59,7 @@ export async function sendBrevoEmailWithAttachment(
   htmlContent: string,
   attachments: { name: string; content: string }[],
 ): Promise<void> {
-  if (skipInLocal(to, subject)) return;
+  if (skipSending(to, subject)) return;
   const response = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
     headers: {

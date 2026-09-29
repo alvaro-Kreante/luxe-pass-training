@@ -306,6 +306,27 @@ begin
     capacity = coalesce((p_lounge->>'capacity')::int, 0),
     updated_at = now()
   where l.id = p_lounge_id;
+
+  -- `partner`: {first_name, last_name, email, mobile} o null. Solo se
+  -- recuerda — la cuenta nace al publicar (`admin-publish-lounge`).
+  if jsonb_typeof(p_lounge->'partner') = 'object' then
+    insert into public.lounge_partner_invites (lounge_id, first_name, last_name, email, mobile)
+    values (
+      p_lounge_id,
+      coalesce(trim(p_lounge->'partner'->>'first_name'), ''),
+      coalesce(trim(p_lounge->'partner'->>'last_name'), ''),
+      lower(coalesce(trim(p_lounge->'partner'->>'email'), '')),
+      coalesce(trim(p_lounge->'partner'->>'mobile'), '')
+    )
+    on conflict (lounge_id) do update set
+      first_name = excluded.first_name,
+      last_name = excluded.last_name,
+      email = excluded.email,
+      mobile = excluded.mobile,
+      updated_at = now();
+  else
+    delete from public.lounge_partner_invites where lounge_id = p_lounge_id;
+  end if;
 end;
 $$;
 
@@ -432,6 +453,13 @@ begin
        where lower(trim(h)) not in ('', 'closed')
      ) then
     raise exception 'This lounge is incomplete and cannot be published yet';
+  end if;
+
+  if not exists (
+    select 1 from public.lounge_partner_invites
+    where lounge_id = p_lounge_id and partner_id is not null
+  ) then
+    raise exception 'A lounge needs its partner account before it can be published';
   end if;
 
   update public.lounges set content_status = 'live', updated_at = now() where id = p_lounge_id;

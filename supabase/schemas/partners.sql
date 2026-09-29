@@ -8,6 +8,12 @@ create table if not exists public.partners (
   business_name text not null,
   contact_email text not null,
   contact_phone text not null default '',
+  -- Epic 7 · SetPassword.dc.html — la persona detrás de la cuenta. El admin
+  -- los escribe al dar de alta el lounge; el partner los corrige al aceptar
+  -- la invitación. `photo_path` es la ruta en el bucket `profile-photos`.
+  first_name    text not null default '',
+  last_name     text not null default '',
+  photo_path    text,
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
 );
@@ -19,7 +25,38 @@ on public.partners for select
 to authenticated
 using ( (select auth.uid()) = user_id );
 
--- Sin policies de insert/update/delete: alta operativa, ver más abajo.
+-- El partner corrige su nombre, móvil y foto (/partner/welcome). El email,
+-- el negocio y el usuario no: los fija el trigger de abajo.
+create policy "update own partner details"
+on public.partners for update
+to authenticated
+using ( (select auth.uid()) = user_id )
+with check ( (select auth.uid()) = user_id );
+
+create or replace function public.partners_guard_issued_fields()
+returns trigger
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+begin
+  -- Sin `auth.uid()` es la service role (alta desde `admin-publish-lounge`).
+  if (select auth.uid()) is not null
+     and (new.contact_email is distinct from old.contact_email
+          or new.business_name is distinct from old.business_name
+          or new.user_id is distinct from old.user_id) then
+    raise exception 'The work email is issued by En Soleil and cannot be changed';
+  end if;
+  return new;
+end;
+$$;
+
+create or replace trigger partners_guard_issued_fields
+before update on public.partners
+for each row execute function public.partners_guard_issued_fields();
+
+-- Sin policies de insert/delete: el alta la hace la Edge Function
+-- `admin-publish-lounge` (service role) al publicar el lounge.
 
 create table if not exists public.partner_lounges (
   partner_id uuid not null references public.partners (id) on delete cascade,
@@ -70,3 +107,28 @@ grant execute on function public.partner_lounge_ids() to authenticated;
 --   insert into public.partner_lounges (partner_id, lounge_id) values ('<partner_id>', 'the-ainsworth');
 -- En local, `scripts/seed-partner-account.ts` automatiza justo esto para la
 -- cuenta de muestra de `PARTNER_ACCOUNT` (`src/lib/partner.ts`).
+
+-- Epic 8 · LoungeNewPartner.dc.html — el partner que el admin escribe en el
+-- formulario del lounge. Mientras el lounge es borrador solo se recuerda;
+-- al publicar, `admin-publish-lounge` crea la cuenta y rellena
+-- `partner_id`. `admin_publish_lounge` exige ese `partner_id`, así que no
+-- hay forma de publicar sin haber invitado a nadie.
+create table if not exists public.lounge_partner_invites (
+  lounge_id  text primary key references public.lounges (id) on delete cascade,
+  first_name text not null,
+  last_name  text not null,
+  email      text not null,
+  mobile     text not null default '',
+  partner_id uuid references public.partners (id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.lounge_partner_invites enable row level security;
+
+-- Solo lectura para admin; se escribe con las RPC de admin_content.sql
+-- (security definer) y con la Edge Function (service role).
+create policy "admins read partner invites"
+on public.lounge_partner_invites for select
+to authenticated
+using ( public.has_role('admin') );
