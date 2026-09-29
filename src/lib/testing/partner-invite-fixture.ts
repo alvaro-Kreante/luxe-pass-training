@@ -47,25 +47,34 @@ export async function invitePartnerForTest(label: string): Promise<InvitedPartne
     capacity: 24,
     partner: { firstName: "Camille", lastName: "Duarte", email, mobile: "+1 917 555 0163" },
   });
-  await publishLounge(admin, loungeId);
-
-  const { data: partner } = await service.from("partners").select("user_id").eq("contact_email", email).single();
-  const userId = partner!.user_id as string;
-  const { data: link, error } = await service.auth.admin.generateLink({ type: "invite", email });
-  if (error) throw error;
-
-  return {
-    loungeId,
-    loungeName,
-    email,
-    userId,
-    token: link.properties.hashed_token,
-    cleanup: async () => {
-      await service.auth.admin.deleteUser(userId);
-      await service.auth.admin.deleteUser(adminUser.id);
-      await service.from("lounges").delete().eq("id", loungeId);
-    },
+  // Publicado, el lounge lo ven los miembros: si algo falla antes de
+  // devolver el fixture (Auth local es intermitente con la suite en
+  // paralelo, PENDIENTES §4.10) se borra aquí, o descuadra Explore.
+  const cleanup = async () => {
+    const { data: partner } = await service.from("partners").select("user_id").eq("contact_email", email).maybeSingle();
+    if (partner) await service.auth.admin.deleteUser(partner.user_id);
+    await service.auth.admin.deleteUser(adminUser.id);
+    await service.from("lounges").delete().eq("id", loungeId);
   };
+
+  try {
+    await publishLounge(admin, loungeId);
+    const { data: partner } = await service.from("partners").select("user_id").eq("contact_email", email).single();
+    const { data: link, error } = await service.auth.admin.generateLink({ type: "invite", email });
+    if (error) throw error;
+
+    return {
+      loungeId,
+      loungeName,
+      email,
+      userId: partner!.user_id as string,
+      token: link.properties.hashed_token,
+      cleanup,
+    };
+  } catch (error) {
+    await cleanup();
+    throw error;
+  }
 }
 
 export { isolatedClient };
