@@ -127,6 +127,54 @@
       "w": 1440,
       "h": 900,
       "title": "16. Add a lounge with its partner"
+    },
+    {
+      "file": "LoungeLive.dc.html",
+      "x": 0,
+      "y": 5250,
+      "w": 1440,
+      "h": 900,
+      "title": "17. A live lounge, locked"
+    },
+    {
+      "file": "LoungeEditConfirm.dc.html",
+      "x": 1540,
+      "y": 5250,
+      "w": 1440,
+      "h": 900,
+      "title": "18. Move it to draft to edit"
+    },
+    {
+      "file": "LoungeDraftPartners.dc.html",
+      "x": 3080,
+      "y": 5250,
+      "w": 1440,
+      "h": 900,
+      "title": "19. Edit a draft, several partners"
+    },
+    {
+      "file": "PartnerAdd.dc.html",
+      "x": 0,
+      "y": 6300,
+      "w": 1440,
+      "h": 900,
+      "title": "20. Add a partner to a live lounge"
+    },
+    {
+      "file": "PartnerSuspend.dc.html",
+      "x": 1540,
+      "y": 6300,
+      "w": 1440,
+      "h": 900,
+      "title": "21. Suspend a partner"
+    },
+    {
+      "file": "PartnerDelete.dc.html",
+      "x": 3080,
+      "y": 6300,
+      "w": 1440,
+      "h": 900,
+      "title": "22. Delete a partner account"
     }
   ],
   "annotations": [
@@ -178,6 +226,20 @@
       "y": 3055,
       "w": 940,
       "text": "Add a lounge, partner included · The form that creates a lounge also creates the person who runs it: first and last name, work email and mobile. Publishing — not saving a draft — opens the partner account and emails the invitation (Epic 7, screens 13–15). The address the admin types is the one the partner signs in with."
+    },
+    {
+      "id": "live-lounge-note",
+      "x": 0,
+      "y": 5155,
+      "w": 940,
+      "text": "Edit a lounge · replaces screens 12 and 13 (29 sept 2026). A live lounge shows everything members read — location and map included — locked; the approval queue is gone. Edit lounge (18) moves it back to draft: it leaves the member app, bookings already made stay valid, and it goes live again only when an admin publishes it (19). The draft form is the same one that creates a lounge: several partners, invited when it is published."
+    },
+    {
+      "id": "partners-note",
+      "x": 0,
+      "y": 6205,
+      "w": 940,
+      "text": "Partners · managed while the lounge stays live. Adding one (20) invites them at once — someone who already runs another lounge is just added. Suspend (21) is reversible and covers every lounge on the account; delete (22) is final. A live lounge always keeps at least one active partner. A partner who has not set a password yet can be sent a fresh 24-hour link (Resend invitation, 17)."
     }
   ],
   "launch": {
