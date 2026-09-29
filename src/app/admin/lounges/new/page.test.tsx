@@ -137,6 +137,30 @@ describe("antes de poder guardar o publicar", () => {
   });
 });
 
+describe("el partner del lounge", () => {
+  it("pide nombre, apellido, email de trabajo y móvil de quien lo gestiona", async () => {
+    render(<NewLoungePage />);
+
+    expect(await screen.findByLabelText("First name")).toBeInTheDocument();
+    expect(screen.getByLabelText("Last name")).toBeInTheDocument();
+    expect(screen.getByLabelText("Work email")).toBeInTheDocument();
+    expect(screen.getByLabelText("Mobile")).toBeInTheDocument();
+  });
+
+  it("sin partner la lista de requisitos lo marca pendiente, y completo, hecho", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<NewLoungePage />);
+    const checklist = await screen.findByRole("list", { name: "Before it can be published" });
+    expect(within(checklist).getByRole("listitem", { name: /Partner account · pending/ })).toBeInTheDocument();
+
+    await user.type(screen.getByLabelText("First name"), "Camille");
+    await user.type(screen.getByLabelText("Last name"), "Duarte");
+    await user.type(screen.getByLabelText("Work email"), "camille.duarte@thelarkspur.com");
+
+    expect(within(checklist).getByRole("listitem", { name: /Partner account · done/ })).toBeInTheDocument();
+  });
+});
+
 describe("horario de apertura", () => {
   it("cada día se abre con su interruptor y las horas se eligen en desplegables", async () => {
     const user = userEvent.setup({ delay: null });

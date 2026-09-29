@@ -110,7 +110,7 @@ export function parseDayHours(hours: string): DayHours {
 }
 
 export interface ChecklistItem {
-  id: "contact" | "location" | "hours" | "seats";
+  id: "contact" | "partner" | "location" | "hours" | "seats";
   label: string;
   done: boolean;
 }
@@ -122,8 +122,17 @@ export function publishChecklist(draft: LoungeDraftInput): ChecklistItem[] {
       label: "Name and contact",
       done: draft.name.trim() !== "" && draft.phone.trim() !== "" && draft.email.trim() !== "",
     },
+    { id: "partner", label: "Partner account", done: isPartnerComplete(draft.partner) },
     { id: "location", label: "Address on the map", done: draft.location !== null },
     { id: "hours", label: "Operating hours", done: draft.weeklyHours.some((hours) => !isClosed(hours)) },
     { id: "seats", label: "Seats per time slot", done: draft.capacity > 0 },
   ];
+}
+
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Epic 8 · artboard 16 — nombre, apellido y un email al que invitar; el móvil es opcional. */
+export function isPartnerComplete(partner: PartnerInviteInput | null | undefined): boolean {
+  if (!partner) return false;
+  return partner.firstName.trim() !== "" && partner.lastName.trim() !== "" && EMAIL.test(partner.email.trim());
 }

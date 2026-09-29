@@ -19,12 +19,14 @@ import {
   approveLoungeSubmission,
   diffLoungeChanges,
   getLoungeContentDetail,
+  getLoungePartnerInvite,
   rejectLoungeSubmission,
   submitLoungeContentChange,
   uploadLoungeImage,
   type LoungeContentDetail,
   type ProposedLoungeContent,
 } from "@/lib/admin-content";
+import type { PartnerInviteInput } from "@/lib/lounge-draft";
 import { cn } from "@/lib/utils";
 
 const WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -57,11 +59,14 @@ function LoungeEditScreen() {
   const { id } = useParams<{ id: string }>();
   const supabase = React.useMemo(() => createClient(), []);
   const [lounge, setLounge] = React.useState<LoungeContentDetail | null | undefined>(undefined);
+  const [partner, setPartner] = React.useState<PartnerInviteInput | null>(null);
 
   React.useEffect(() => {
     let active = true;
-    getLoungeContentDetail(supabase, id).then((detail) => {
-      if (active) setLounge(detail ?? null);
+    Promise.all([getLoungeContentDetail(supabase, id), getLoungePartnerInvite(supabase, id)]).then(([detail, invite]) => {
+      if (!active) return;
+      setPartner(invite);
+      setLounge(detail ?? null);
     });
     return () => {
       active = false;
@@ -73,7 +78,7 @@ function LoungeEditScreen() {
 
   // Un borrador se sigue editando con el formulario de alta, dirección
   // incluida (LoungeNew.dc.html); publicado, la dirección queda fija.
-  if (lounge.contentStatus === "draft") return <LoungeDraftForm lounge={lounge} />;
+  if (lounge.contentStatus === "draft") return <LoungeDraftForm lounge={lounge} partner={partner} />;
 
   return <LiveLoungeEditor initial={lounge} />;
 }

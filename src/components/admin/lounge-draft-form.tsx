@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, Plus } from "lucide-react";
+import { Check, Mail, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -33,6 +33,7 @@ import {
   publishChecklist,
   type LoungeDraftInput,
   type LoungeLocation,
+  type PartnerInviteInput,
 } from "@/lib/lounge-draft";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -55,8 +56,18 @@ function locationOf(lounge: LoungeContentDetail): LoungeLocation | null {
  * docs/design/epic-8-admin-support/LoungeNew.dc.html (14), con el popup de
  * PhotoCaption.dc.html (15). Un borrador no aparece a los miembros; se
  * publica directo, sin cola de aprobación (decisión 25 sept 2026).
+ *
+ * Con LoungeNewPartner.dc.html (16): el formulario lleva también al partner
+ * que gestiona el lounge. El borrador solo lo recuerda; publicar crea su
+ * cuenta y le envía la invitación (`admin-publish-lounge`).
  */
-export function LoungeDraftForm({ lounge }: { lounge?: LoungeContentDetail }) {
+export function LoungeDraftForm({
+  lounge,
+  partner: savedPartner,
+}: {
+  lounge?: LoungeContentDetail;
+  partner?: PartnerInviteInput | null;
+}) {
   const router = useRouter();
   const supabase = React.useMemo(() => createClient(), []);
 
@@ -70,6 +81,10 @@ export function LoungeDraftForm({ lounge }: { lounge?: LoungeContentDetail }) {
   );
   const [amenities, setAmenities] = React.useState<string[]>(lounge?.amenities ?? []);
   const [capacity, setCapacity] = React.useState(lounge?.capacity ?? 0);
+  const [partnerFirstName, setPartnerFirstName] = React.useState(savedPartner?.firstName ?? "");
+  const [partnerLastName, setPartnerLastName] = React.useState(savedPartner?.lastName ?? "");
+  const [partnerEmail, setPartnerEmail] = React.useState(savedPartner?.email ?? "");
+  const [partnerMobile, setPartnerMobile] = React.useState(savedPartner?.mobile ?? "");
   const [photos, setPhotos] = React.useState<DraftPhotoItem[]>(
     (lounge?.images ?? []).map((image) => ({
       key: image.id,
@@ -85,7 +100,9 @@ export function LoungeDraftForm({ lounge }: { lounge?: LoungeContentDetail }) {
   const [busy, setBusy] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const draft: LoungeDraftInput = { name, phone, email, website, location, weeklyHours, amenities, capacity };
+  const partnerFields = { firstName: partnerFirstName, lastName: partnerLastName, email: partnerEmail, mobile: partnerMobile };
+  const partner = Object.values(partnerFields).some((value) => value.trim() !== "") ? partnerFields : null;
+  const draft: LoungeDraftInput = { name, phone, email, website, location, weeklyHours, amenities, capacity, partner };
   const checklist = publishChecklist(draft);
   const ready = checklist.every((item) => item.done);
   const canSave = name.trim() !== "" && location !== null && !busy;
@@ -223,6 +240,35 @@ export function LoungeDraftForm({ lounge }: { lounge?: LoungeContentDetail }) {
                 <Input id="lounge-website" inputSize="compact" value={website} onChange={(e) => setWebsite(e.target.value)} />
               </Field>
             </div>
+          </div>
+
+          <div className={CARD}>
+            <div className="flex items-center gap-3">
+              <p className={EYEBROW}>Partner account</p>
+              <div className="flex-1" />
+              <p className="m-0 text-[11.5px] text-fg-subtle">
+                The person who runs the lounge day to day — they sign in to the Partner Dashboard
+              </p>
+            </div>
+            <div className="mt-3 grid grid-cols-4 gap-3">
+              <Field label="First name" htmlFor="partner-first-name" className="mb-0">
+                <Input id="partner-first-name" inputSize="compact" autoComplete="off" value={partnerFirstName} onChange={(e) => setPartnerFirstName(e.target.value)} />
+              </Field>
+              <Field label="Last name" htmlFor="partner-last-name" className="mb-0">
+                <Input id="partner-last-name" inputSize="compact" autoComplete="off" value={partnerLastName} onChange={(e) => setPartnerLastName(e.target.value)} />
+              </Field>
+              <Field label="Work email" htmlFor="partner-email" className="mb-0">
+                <Input id="partner-email" inputSize="compact" type="email" autoComplete="off" value={partnerEmail} onChange={(e) => setPartnerEmail(e.target.value)} />
+              </Field>
+              <Field label="Mobile" htmlFor="partner-mobile" className="mb-0">
+                <Input id="partner-mobile" inputSize="compact" type="tel" autoComplete="off" value={partnerMobile} onChange={(e) => setPartnerMobile(e.target.value)} />
+              </Field>
+            </div>
+            <p className="m-0 mt-3 flex items-center gap-2.5 text-[11.5px] text-fg-muted">
+              <Mail size={15} strokeWidth={1.8} className="shrink-0 text-accent" aria-hidden />
+              Publishing the lounge emails this address a link to set a password. The email can&apos;t be changed later by the
+              partner.
+            </p>
           </div>
 
           <div className={CARD}>
@@ -449,8 +495,8 @@ export function LoungeDraftForm({ lounge }: { lounge?: LoungeContentDetail }) {
 
           <div className="rounded-2xl border border-dashed border-gold-600 bg-panel-black px-4 py-3.5">
             <p className="m-0 text-[11.5px] leading-[1.55] text-fg-muted">
-              Publishing puts the lounge in the member app straight away. Not ready yet? Save a draft and finish it later —
-              drafts stay hidden from members.
+              Publishing puts the lounge in the member app, creates {partnerFirstName.trim() ? `${partnerFirstName.trim()}'s` : "the"}{" "}
+              partner account and sends the invitation. A draft stays hidden and invites nobody yet.
             </p>
           </div>
         </div>

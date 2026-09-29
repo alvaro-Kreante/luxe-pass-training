@@ -187,11 +187,16 @@ describe("Lounge editor (/admin/lounges/[id])", () => {
     });
     loungeIds.push(id);
     currentId = id;
+    const partnerEmail = `draft-edit-${Date.now()}@thelarkspur-test.com`;
+    await admin
+      .from("lounge_partner_invites")
+      .insert({ lounge_id: id, first_name: "Camille", last_name: "Duarte", email: partnerEmail, mobile: "+1 917 555 0163" });
 
     render(<LoungeEditPage />);
 
     expect(await screen.findByText(/Draft · not visible to members/)).toBeInTheDocument();
     expect(screen.getByLabelText("Address")).toHaveValue("27 Bond Street");
+    expect(screen.getByLabelText("Work email")).toHaveValue(partnerEmail);
 
     await user.click(screen.getByRole("button", { name: "Publish lounge" }));
 
@@ -199,6 +204,8 @@ describe("Lounge editor (/admin/lounges/[id])", () => {
       const { data } = await admin.from("lounges").select("content_status").eq("id", id).single();
       expect(data?.content_status).toBe("live");
     });
+    const { data: partner } = await admin.from("partners").select("user_id").eq("contact_email", partnerEmail).single();
+    await admin.auth.admin.deleteUser(partner!.user_id);
   });
 
   it("a published lounge keeps its address fixed — no location field", async () => {
