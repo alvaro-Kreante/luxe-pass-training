@@ -40,6 +40,8 @@ export interface AdminLoungeListRow {
   photos_count: number;
   amenities_count: number;
   updated_at: string;
+  city: string;
+  created_at: string;
 }
 
 export interface AdminLoungeRow {
@@ -52,6 +54,7 @@ export interface AdminLoungeRow {
   photosCount: number;
   amenitiesCount: number;
   updatedLabel: string;
+  city: string;
 }
 
 function formatShortDate(iso: string): string {
@@ -69,6 +72,7 @@ export function mapLoungeListRow(row: AdminLoungeListRow): AdminLoungeRow {
     photosCount: row.photos_count,
     amenitiesCount: row.amenities_count ?? 0,
     updatedLabel: formatShortDate(row.updated_at),
+    city: row.city,
   };
 }
 

@@ -602,6 +602,10 @@ Reenviar la invitación y añadir más partners a un lounge live ya existen
 
 ## 5. Decisiones abiertas
 
+### 5.0 Filtro por país en `/admin/lounges`
+
+Pedido el 1 oct 2026 junto al filtro de ciudad. `lounges` no tiene columna de país (solo `city`/`city_id`), así que quedó fuera: hacerlo pide una columna `country` en `supabase/schemas/lounges.sql`, rellenarla para los lounges existentes y pedirla en el alta/edición (la dirección elegida en Google Places ya trae el país en `address_components`). Hasta entonces solo se filtra por ciudad (artboards 27–28).
+
 ### 5.1 El error de términos de `/signup` no se puede llegar a ver
 
 `validateSignUp` devuelve `errors.terms`, y `src/app/signup/page.tsx` lo pinta bajo

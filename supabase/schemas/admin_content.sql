@@ -42,7 +42,9 @@ returns table (
   pending_count int,
   photos_count int,
   amenities_count int,
-  updated_at timestamptz
+  updated_at timestamptz,
+  city text,
+  created_at timestamptz
 )
 language plpgsql
 security definer
@@ -63,11 +65,11 @@ begin
       (select count(*)::int from public.lounge_content_submissions s where s.lounge_id = l.id and s.status = 'pending'),
       (select count(*)::int from public.lounge_images i where i.lounge_id = l.id),
       array_length(l.amenities, 1),
-      l.updated_at
+      l.updated_at,
+      l.city,
+      l.created_at
     from public.lounges l
-    order by
-      (select count(*) from public.lounge_content_submissions s where s.lounge_id = l.id and s.status = 'pending') desc,
-      l.name;
+    order by l.created_at desc, l.name;
 end;
 $$;
 

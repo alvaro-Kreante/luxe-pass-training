@@ -30,6 +30,8 @@ let loungeAId: string;
 let loungeBId: string;
 let loungeAName: string;
 let loungeBName: string;
+let cityA: string;
+let cityB: string;
 
 beforeAll(async () => {
   const stamp = Date.now();
@@ -37,29 +39,33 @@ beforeAll(async () => {
   loungeBId = `test-lounge-b-${stamp}`;
   loungeAName = `Alpha Test Lounge ${stamp}`;
   loungeBName = `Beta Test Lounge ${stamp}`;
+  cityA = `Alpha City ${stamp}`;
+  cityB = `Beta City ${stamp}`;
 
   await admin.from("lounges").insert([
     {
       id: loungeAId,
       name: loungeAName,
       neighborhood: "Test",
-      city: "Test City",
+      city: cityA,
       city_id: "test-city",
       lat: 0,
       lng: 0,
       hours: "Open 24 hours",
       content_status: "draft",
+      created_at: new Date(stamp - 60_000).toISOString(),
     },
     {
       id: loungeBId,
       name: loungeBName,
       neighborhood: "Test",
-      city: "Test City",
+      city: cityB,
       city_id: "test-city",
       lat: 0,
       lng: 0,
       hours: "Open 24 hours",
       content_status: "live",
+      created_at: new Date(stamp).toISOString(),
     },
   ]);
 
@@ -99,6 +105,76 @@ describe("Lounges (/admin/lounges)", () => {
 
     expect(screen.queryByText(loungeAName)).not.toBeInTheDocument();
     expect(screen.getByText(loungeBName)).toBeInTheDocument();
+  });
+
+  it("lists the newest lounge first", async () => {
+    render(<LoungesPage />);
+
+    await waitFor(() => expect(screen.getByText(loungeAName)).toBeInTheDocument());
+    const names = screen.getAllByRole("button", { name: /^Open / }).map((b) => b.getAttribute("aria-label"));
+    expect(names.indexOf(`Open ${loungeBName}`)).toBeLessThan(names.indexOf(`Open ${loungeAName}`));
+  });
+
+  describe("quick status filters", () => {
+    it("Live shows only live lounges, and pressing it again shows all", async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<LoungesPage />);
+
+      await waitFor(() => expect(screen.getByText(loungeAName)).toBeInTheDocument());
+      const live = screen.getByRole("button", { name: /^Live/ });
+      await user.click(live);
+
+      expect(live).toHaveAttribute("aria-pressed", "true");
+      expect(screen.queryByText(loungeAName)).not.toBeInTheDocument();
+      expect(screen.getByText(loungeBName)).toBeInTheDocument();
+
+      await user.click(live);
+      expect(screen.getByText(loungeAName)).toBeInTheDocument();
+    });
+
+    it("Draft shows only drafts", async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<LoungesPage />);
+
+      await waitFor(() => expect(screen.getByText(loungeAName)).toBeInTheDocument());
+      await user.click(screen.getByRole("button", { name: /^Draft/ }));
+
+      expect(screen.getByText(loungeAName)).toBeInTheDocument();
+      expect(screen.queryByText(loungeBName)).not.toBeInTheDocument();
+    });
+  });
+
+  describe("city filter", () => {
+    it("searches the cities that have a lounge and filters the list by the one picked", async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<LoungesPage />);
+
+      await waitFor(() => expect(screen.getByText(loungeAName)).toBeInTheDocument());
+      await user.click(screen.getByRole("button", { name: "All cities" }));
+      await user.type(screen.getByRole("searchbox", { name: "Search cities" }), cityB);
+
+      expect(screen.queryByRole("option", { name: new RegExp(cityA) })).not.toBeInTheDocument();
+      await user.click(screen.getByRole("option", { name: new RegExp(cityB) }));
+
+      expect(screen.getByRole("button", { name: cityB })).toBeInTheDocument();
+      expect(screen.queryByText(loungeAName)).not.toBeInTheDocument();
+      expect(screen.getByText(loungeBName)).toBeInTheDocument();
+    });
+
+    it("Clear filters drops both the status and the city", async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<LoungesPage />);
+
+      await waitFor(() => expect(screen.getByText(loungeAName)).toBeInTheDocument());
+      await user.click(screen.getByRole("button", { name: /^Live/ }));
+      await user.click(screen.getByRole("button", { name: "All cities" }));
+      await user.click(screen.getByRole("option", { name: new RegExp(cityB) }));
+      await user.click(screen.getByRole("button", { name: "Clear filters" }));
+
+      expect(screen.getByRole("button", { name: "All cities" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: /^Live/ })).toHaveAttribute("aria-pressed", "false");
+      expect(screen.getByText(loungeAName)).toBeInTheDocument();
+    });
   });
 
   it("archives selected lounges for real and drops them from the list", async () => {

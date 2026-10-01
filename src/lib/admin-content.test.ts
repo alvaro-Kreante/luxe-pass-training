@@ -32,11 +32,14 @@ describe("mapLoungeListRow", () => {
       photos_count: 3,
       amenities_count: 6,
       updated_at: "2026-09-16T09:52:00Z",
+      city: "New York",
+      created_at: "2026-08-01T00:00:00Z",
     };
     const mapped = mapLoungeListRow(row);
     expect(mapped.id).toBe("the-vestry");
     expect(mapped.pendingCount).toBe(1);
     expect(mapped.updatedLabel).toBe("Sep 16");
+    expect(mapped.city).toBe("New York");
   });
 
   it("no revienta cuando amenities_count viene null (array vacío en SQL)", () => {
@@ -50,6 +53,8 @@ describe("mapLoungeListRow", () => {
       photos_count: 0,
       amenities_count: null as unknown as number,
       updated_at: "2026-09-15T00:00:00Z",
+      city: "Brooklyn",
+      created_at: "2026-09-15T00:00:00Z",
     };
     expect(mapLoungeListRow(row).amenitiesCount).toBe(0);
   });

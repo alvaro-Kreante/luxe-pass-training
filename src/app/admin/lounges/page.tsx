@@ -1,18 +1,25 @@
 "use client";
 
 import * as React from "react";
-import { ChevronRight, Plus, Search, SlidersHorizontal } from "lucide-react";
+import { ChevronRight, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { AdminShell } from "@/components/patterns/admin-shell";
 import { RequireAdminSession } from "@/components/admin/require-admin-session";
+import { CityFilterPopover } from "@/components/admin/city-filter-popover";
 import { LoungeStatusChip } from "@/components/admin/lounge-status-chip";
 import { BulkActionBar, BulkActionButton } from "@/components/ui/bulk-action-bar";
 import { Checkbox } from "@/components/ui/checkbox";
+import { StatusChip } from "@/components/ui/status-chip";
 import { createClient } from "@/lib/supabase/client";
 import { getTicketCounts, type TicketCounts } from "@/lib/admin";
-import { archiveLounges, listAdminLounges, type AdminLoungeRow } from "@/lib/admin-content";
+import {
+  archiveLounges,
+  listAdminLounges,
+  type AdminLoungeRow,
+  type LoungeContentStatus,
+} from "@/lib/admin-content";
 import { cn } from "@/lib/utils";
 
 const GRID = "grid-cols-[32px_1fr_158px_92px_106px_128px_30px]";
@@ -28,6 +35,10 @@ const GRID = "grid-cols-[32px_1fr_158px_92px_106px_128px_30px]";
  * catálogo de miembro de inmediato, sin pasar por revisión. El resto
  * ("Update hours", "Add an amenity", "Set closure dates") sigue inerte:
  * ningún artboard dibuja su modal.
+ *
+ * Orden por fecha de alta, el más nuevo arriba (el RPC ya lo devuelve así).
+ * Filtros rápidos Live/Draft y de ciudad: LoungeFilterCity.dc.html (27) y
+ * LoungeFilterApplied.dc.html (28).
  */
 export default function LoungesPage() {
   return (
@@ -43,6 +54,8 @@ function LoungesScreen() {
   const [lounges, setLounges] = React.useState<AdminLoungeRow[] | null>(null);
   const [selected, setSelected] = React.useState<string[]>([]);
   const [query, setQuery] = React.useState("");
+  const [status, setStatus] = React.useState<Exclude<LoungeContentStatus, "archived"> | null>(null);
+  const [city, setCity] = React.useState<string | null>(null);
   const [counts, setCounts] = React.useState<TicketCounts | null>(null);
   const [reloadToken, setReloadToken] = React.useState(0);
   const reload = React.useCallback(() => setReloadToken((t) => t + 1), []);
@@ -61,11 +74,30 @@ function LoungesScreen() {
   }, [supabase, reloadToken]);
 
   const visible = (lounges ?? []).filter((l) => l.contentStatus !== "archived");
-  const filtered = query.trim()
-    ? visible.filter((l) => l.name.toLowerCase().includes(query.trim().toLowerCase()))
-    : visible;
+  const needle = query.trim().toLowerCase();
+  const filtered = visible.filter(
+    (l) =>
+      (!needle || l.name.toLowerCase().includes(needle)) &&
+      (!status || l.contentStatus === status) &&
+      (!city || l.city === city),
+  );
   const draftCount = visible.filter((l) => l.contentStatus === "draft").length;
   const liveCount = visible.filter((l) => l.contentStatus === "live").length;
+  const cityCounts = new Map<string, number>();
+  for (const l of visible) cityCounts.set(l.city, (cityCounts.get(l.city) ?? 0) + 1);
+  const cities = [...cityCounts]
+    .map(([name, count]) => ({ city: name, count }))
+    .sort((a, b) => a.city.localeCompare(b.city));
+  const filtering = status !== null || city !== null;
+
+  function toggleStatus(next: Exclude<LoungeContentStatus, "archived">) {
+    setStatus((current) => (current === next ? null : next));
+  }
+
+  function clearFilters() {
+    setStatus(null);
+    setCity(null);
+  }
 
   function toggle(id: string, checked: boolean) {
     setSelected((current) => (checked ? [...current, id] : current.filter((i) => i !== id)));
@@ -80,7 +112,7 @@ function LoungesScreen() {
   return (
     <AdminShell
       topbarLabel={<span className="text-[13.5px] font-bold text-fg">Lounges</span>}
-      topbarMeta="· All cities"
+      topbarMeta={`· ${city ?? "All cities"}`}
       supportBadge={counts?.open}
     >
       <div className="flex items-center gap-6">
@@ -102,13 +134,7 @@ function LoungesScreen() {
               className="w-full bg-transparent text-[13.5px] text-fg placeholder:text-fg-subtle focus:outline-none"
             />
           </label>
-          <button
-            type="button"
-            className="flex h-11 items-center justify-center gap-2 rounded-[11px] border-[1.5px] border-line px-4"
-          >
-            <SlidersHorizontal size={16} strokeWidth={1.8} className="text-accent" aria-hidden />
-            <span className="text-[13.5px] font-semibold text-fg">All cities</span>
-          </button>
+          <CityFilterPopover cities={cities} total={visible.length} value={city} onChange={setCity} />
           <Link
             href="/admin/lounges/new"
             className="flex h-11 items-center justify-center gap-2 rounded-[11px] bg-accent px-5 transition-colors duration-150 hover:bg-accent-strong"
@@ -117,6 +143,28 @@ function LoungesScreen() {
             <span className="text-[12.5px] font-bold uppercase tracking-[0.1em] text-on-accent">Add lounge</span>
           </Link>
         </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <StatusFilter label="Live" count={liveCount} pressed={status === "live"} onToggle={() => toggleStatus("live")} />
+        <StatusFilter
+          label="Draft"
+          count={draftCount}
+          pressed={status === "draft"}
+          onToggle={() => toggleStatus("draft")}
+        />
+        {filtering ? (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="ml-1.5 text-xs font-bold text-accent-strong transition-colors duration-150 hover:text-accent"
+          >
+            Clear filters
+          </button>
+        ) : null}
+        <span className="ml-auto text-[11.5px] font-semibold text-fg-subtle">
+          {filtering || needle ? `${filtered.length} of ${visible.length} lounges · newest first` : "Newest first"}
+        </span>
       </div>
 
       {selected.length > 0 ? (
@@ -189,7 +237,9 @@ function LoungesScreen() {
         ))}
 
         {lounges && filtered.length === 0 ? (
-          <p className="px-5.5 py-6 text-[13px] text-fg-subtle">No lounges match this search.</p>
+          <p className="px-5.5 py-6 text-[13px] text-fg-subtle">
+            {filtering ? "No lounges match these filters." : "No lounges match this search."}
+          </p>
         ) : null}
       </div>
 
@@ -198,6 +248,32 @@ function LoungesScreen() {
         edit does — nothing reaches the member app until a content manager has seen it.
       </p>
     </AdminShell>
+  );
+}
+
+function StatusFilter({
+  label,
+  count,
+  pressed,
+  onToggle,
+}: {
+  label: string;
+  count: number;
+  pressed: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={pressed}
+      onClick={onToggle}
+      className="rounded-pill focus-visible:outline-none focus-visible:shadow-ring"
+    >
+      <StatusChip available={pressed} outlined={pressed} className="cursor-pointer px-3.5 py-1.5">
+        <span className={pressed ? "text-fg" : "text-fg-muted"}>{label}</span>
+        <span className="font-semibold text-fg-subtle">{count}</span>
+      </StatusChip>
+    </button>
   );
 }
 
