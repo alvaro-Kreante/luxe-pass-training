@@ -77,32 +77,11 @@ describe("publishChecklist — antes de poder publicar", () => {
     amenities: ["wifi"],
     capacity: 24,
     bookingRestrictions: [],
-    partners: [{ firstName: "Camille", lastName: "Duarte", email: "camille.duarte@thelarkspur.com", mobile: "+1 917 555 0163" }],
   };
 
-  it("con todo relleno, los cinco requisitos están cumplidos", () => {
+  it("con todo relleno, los requisitos están cumplidos", () => {
     const checklist = publishChecklist(complete);
-    expect(checklist.map((item) => item.done)).toEqual([true, true, true, true, true]);
-  });
-
-  it("sin partners no se puede publicar: son a quienes se invita al publicar", () => {
-    const checklist = publishChecklist({ ...complete, partners: [] });
-    expect(checklist.find((item) => item.id === "partner")?.done).toBe(false);
-  });
-
-  it("un lounge que ya tuvo partners vinculados puede publicarse sin pendientes nuevos", () => {
-    const checklist = publishChecklist({ ...complete, partners: [], linkedPartners: 2 });
-    expect(checklist.find((item) => item.id === "partner")?.done).toBe(true);
-  });
-
-  it("cada partner necesita nombre, apellido y un email válido; el móvil es opcional", () => {
-    const partner = complete.partners[0];
-    const done = (changes: Partial<typeof partner>) =>
-      publishChecklist({ ...complete, partners: [{ ...partner, ...changes }] }).find((item) => item.id === "partner")?.done;
-
-    expect(done({ mobile: "" })).toBe(true);
-    expect(done({ lastName: " " })).toBe(false);
-    expect(done({ email: "camille.duarte" })).toBe(false);
+    expect(checklist.every((item) => item.done)).toBe(true);
   });
 
   it("sin dirección elegida del mapa no se puede publicar", () => {

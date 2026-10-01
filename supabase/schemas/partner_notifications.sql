@@ -13,8 +13,7 @@ create extension if not exists pg_cron with schema extensions;
 /* "Email notification for each new booking"                            */
 /* -------------------------------------------------------------------- */
 
--- Sin partner dado de alta para el lounge (la mayoría hoy, salvo
--- The Ainsworth), el loop de abajo no itera nada — no falla el insert de la
+-- Sin partner activo con usuarios para el lounge, el loop de abajo no itera nada — no falla el insert de la
 -- reserva por esto, igual que sin los dos secretos de Vault.
 create or replace function public.notify_partner_new_booking()
 returns trigger
@@ -47,10 +46,12 @@ begin
   select l.name into v_lounge_name from public.lounges l where l.id = new.lounge_id;
 
   for v_partner in
-    select p.contact_email, p.business_name
-    from public.partner_lounges pl
-    join public.partners p on p.id = pl.partner_id
-    where pl.lounge_id = new.lounge_id
+    -- Story 10.1 — cada usuario activo del partner del lounge.
+    select m.email as contact_email, p.name as business_name
+    from public.lounges l
+    join public.partners p on p.id = l.partner_id and p.status = 'active'
+    join public.partner_members m on m.partner_id = p.id
+    where l.id = new.lounge_id and m.user_id is not null and m.suspended_at is null
   loop
     perform net.http_post(
       url := v_url,
@@ -122,10 +123,12 @@ begin
   where b.lounge_id = new.lounge_id and b.date = new.date and b.status <> 'cancelled';
 
   for v_partner in
-    select p.contact_email, p.business_name
-    from public.partner_lounges pl
-    join public.partners p on p.id = pl.partner_id
-    where pl.lounge_id = new.lounge_id
+    -- Story 10.1 — cada usuario activo del partner del lounge.
+    select m.email as contact_email, p.name as business_name
+    from public.lounges l
+    join public.partners p on p.id = l.partner_id and p.status = 'active'
+    join public.partner_members m on m.partner_id = p.id
+    where l.id = new.lounge_id and m.user_id is not null and m.suspended_at is null
   loop
     perform net.http_post(
       url := v_url,
@@ -195,9 +198,9 @@ begin
 
   for v_row in
     select
-      p.contact_email,
-      p.business_name,
-      pl.lounge_id,
+      m.email as contact_email,
+      p.name as business_name,
+      l.id as lounge_id,
       l.name as lounge_name,
       count(b.id) filter (where b.status <> 'cancelled')::int as guest_count,
       coalesce(
@@ -211,14 +214,15 @@ begin
         ) filter (where b.status <> 'cancelled'),
         '[]'::jsonb
       ) as guests
-    from public.partner_lounges pl
-    join public.partners p on p.id = pl.partner_id
-    join public.lounges l on l.id = pl.lounge_id
+    from public.partners p
+    join public.partner_members m on m.partner_id = p.id and m.user_id is not null and m.suspended_at is null
+    join public.lounges l on l.partner_id = p.id
     left join public.bookings b
-      on b.lounge_id = pl.lounge_id and b.date = (now() at time zone 'UTC')::date
+      on b.lounge_id = l.id and b.date = (now() at time zone 'UTC')::date
     left join auth.users u on u.id = b.member_id
     left join public.profiles prof on prof.id = b.member_id
-    group by p.contact_email, p.business_name, pl.lounge_id, l.name
+    where p.status = 'active'
+    group by m.email, p.name, l.id, l.name
   loop
     perform net.http_post(
       url := v_url,

@@ -110,7 +110,7 @@ describe("crear la cuenta", () => {
     const signIn = isolatedClient();
     const { error } = await signIn.auth.signInWithPassword({ email: invited.email, password: "Larkspur2026" });
     expect(error).toBeNull();
-    const { data } = await signIn.from("partners").select("first_name").single();
+    const { data } = await signIn.from("partner_members").select("first_name").single();
     expect(data?.first_name).toBe("Camila");
   });
 });

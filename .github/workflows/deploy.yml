@@ -109,16 +109,6 @@ jobs:
             ACCOUNT_DELETION_WEBHOOK_SECRET="${{ secrets.ACCOUNT_DELETION_WEBHOOK_SECRET_DEV }}"
       - name: Desplegar la Edge Function delete-account
         run: supabase functions deploy delete-account --no-verify-jwt
-      # Epic 8 · artboard 16 — publicar un lounge crea e invita a su partner.
-      # La llama el admin con su sesión (`supabase.functions.invoke`), así
-      # que verifica JWT. Usa APP_URL y BREVO_* ya dados de alta arriba en
-      # este mismo job.
-      - name: Desplegar la Edge Function admin-publish-lounge
-        run: supabase functions deploy admin-publish-lounge
-      # Epic 8 · LoungeLive.dc.html — añadir, suspender, reactivar, eliminar y
-      # reinvitar partners de un lounge live. Mismo patrón que la de arriba.
-      - name: Desplegar la Edge Function admin-lounge-partners
-        run: supabase functions deploy admin-lounge-partners
       - name: Instalar Vercel CLI
         run: npm install --global vercel@latest
       - name: Descargar configuración del proyecto luxepass-dev
@@ -194,16 +184,6 @@ jobs:
             ACCOUNT_DELETION_WEBHOOK_SECRET="${{ secrets.ACCOUNT_DELETION_WEBHOOK_SECRET_PROD }}"
       - name: Desplegar la Edge Function delete-account
         run: supabase functions deploy delete-account --no-verify-jwt
-      # Epic 8 · artboard 16 — publicar un lounge crea e invita a su partner.
-      # La llama el admin con su sesión (`supabase.functions.invoke`), así
-      # que verifica JWT. Usa APP_URL y BREVO_* ya dados de alta arriba en
-      # este mismo job.
-      - name: Desplegar la Edge Function admin-publish-lounge
-        run: supabase functions deploy admin-publish-lounge
-      # Epic 8 · LoungeLive.dc.html — añadir, suspender, reactivar, eliminar y
-      # reinvitar partners de un lounge live. Mismo patrón que la de arriba.
-      - name: Desplegar la Edge Function admin-lounge-partners
-        run: supabase functions deploy admin-lounge-partners
       - name: Instalar Vercel CLI
         run: npm install --global vercel@latest
       - name: Descargar configuración del proyecto luxepass-prod

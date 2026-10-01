@@ -282,8 +282,6 @@ language plpgsql
 security definer
 set search_path = ''
 as $$
-declare
-  v_taken text;
 begin
   if coalesce(trim(p_lounge->>'name'), '') = '' then
     raise exception 'A lounge needs a name';
@@ -319,58 +317,6 @@ begin
     where l.id = p_lounge_id;
   end if;
 
-  -- `partners`: [{first_name, last_name, email, mobile}] — los pendientes de
-  -- invitar. Solo se recuerdan: las cuentas nacen al publicar
-  -- (`admin-publish-lounge`). Los ya creados (`partner_id`) no se tocan
-  -- aquí — se gestionan desde la lista de partners.
-  if jsonb_typeof(p_lounge->'partners') = 'array' then
-    -- Un partner gestiona un solo lounge (decisión 1 oct 2026): un email que
-    -- ya usa otro lounge — pendiente o con cuenta — o cualquier otra cuenta
-    -- de LuxePass (miembro, admin) está en uso. Los de este mismo lounge sí
-    -- se pueden volver a guardar.
-    select e.email into v_taken
-    from (
-      select lower(trim(x->>'email')) as email from jsonb_array_elements(p_lounge->'partners') x
-    ) e
-    where e.email <> ''
-      and not exists (
-        select 1 from public.lounge_partner_invites own
-        where own.lounge_id = p_lounge_id and lower(own.email) = e.email
-      )
-      and (
-        exists (select 1 from public.lounge_partner_invites i where lower(i.email) = e.email)
-        or exists (select 1 from auth.users u where lower(u.email) = e.email)
-      )
-    limit 1;
-    if v_taken is not null then
-      raise exception '% is already in use', v_taken;
-    end if;
-
-    delete from public.lounge_partner_invites i
-    where i.lounge_id = p_lounge_id
-      and i.partner_id is null
-      and lower(i.email) not in (
-        select lower(trim(x->>'email')) from jsonb_array_elements(p_lounge->'partners') x
-      );
-
-    insert into public.lounge_partner_invites (lounge_id, first_name, last_name, email, mobile, position)
-    select
-      p_lounge_id,
-      coalesce(trim(x->>'first_name'), ''),
-      coalesce(trim(x->>'last_name'), ''),
-      lower(coalesce(trim(x->>'email'), '')),
-      coalesce(trim(x->>'mobile'), ''),
-      (ord - 1)::int
-    from jsonb_array_elements(p_lounge->'partners') with ordinality as t(x, ord)
-    where coalesce(trim(x->>'email'), '') <> ''
-    on conflict (lounge_id, email) do update set
-      first_name = excluded.first_name,
-      last_name = excluded.last_name,
-      mobile = excluded.mobile,
-      position = excluded.position,
-      updated_at = now()
-    where public.lounge_partner_invites.partner_id is null;
-  end if;
 end;
 $$;
 
@@ -499,12 +445,13 @@ begin
     raise exception 'This lounge is incomplete and cannot be published yet';
   end if;
 
+  -- Story 10.1 — publicar no invita a nadie: exige un partner activo, que
+  -- ya invitó a sus usuarios al activarse (Story 10.4).
   if not exists (
-    select 1 from public.partner_lounges pl
-    join public.partners p on p.id = pl.partner_id
-    where pl.lounge_id = p_lounge_id and p.suspended_at is null
+    select 1 from public.partners p
+    where p.id = v_lounge.partner_id and p.status = 'active'
   ) then
-    raise exception 'A lounge needs a partner account before it can be published';
+    raise exception 'A lounge needs an active partner before it can be published';
   end if;
 
   update public.lounges set content_status = 'live', updated_at = now() where id = p_lounge_id;
@@ -537,61 +484,6 @@ $$;
 
 grant execute on function public.admin_unpublish_lounge(text) to authenticated;
 
--- Epic 8 · LoungeLive.dc.html / LoungeDraftPartners.dc.html — la lista de
--- partners de un lounge con su estado: 'on_publish' (escrito en el borrador,
--- aún sin cuenta), 'invited' (cuenta creada, sin contraseña todavía),
--- 'active' o 'suspended'. El estado de la invitación sale de `auth.users`,
--- por eso es security definer (solo admin).
-create or replace function public.admin_lounge_partners(p_lounge_id text)
-returns table (
-  user_id    uuid,
-  first_name text,
-  last_name  text,
-  email      text,
-  mobile     text,
-  status     text
-)
-language plpgsql
-stable
-security definer
-set search_path = ''
-as $$
-begin
-  if not public.has_role('admin') then
-    raise exception 'Not authorized';
-  end if;
-
-  return query
-    select * from (
-      select
-        p.user_id,
-        p.first_name,
-        p.last_name,
-        p.contact_email,
-        p.contact_phone,
-        case
-          when p.suspended_at is not null then 'suspended'
-          when u.email_confirmed_at is null then 'invited'
-          else 'active'
-        end
-      from public.partner_lounges pl
-      join public.partners p on p.id = pl.partner_id
-      join auth.users u on u.id = p.user_id
-      left join public.lounge_partner_invites i on i.lounge_id = pl.lounge_id and i.partner_id = p.id
-      where pl.lounge_id = p_lounge_id
-      order by coalesce(i.position, 0), pl.created_at
-    ) linked
-    union all
-    select * from (
-      select null::uuid, i.first_name, i.last_name, i.email, i.mobile, 'on_publish'
-      from public.lounge_partner_invites i
-      where i.lounge_id = p_lounge_id and i.partner_id is null
-      order by i.position, i.created_at
-    ) pending;
-end;
-$$;
-
-grant execute on function public.admin_lounge_partners(text) to authenticated;
 
 /* -------------------------------------------------------------------- */
 /* "Bulk update capabilities" — el único botón real de la barra masiva:  */

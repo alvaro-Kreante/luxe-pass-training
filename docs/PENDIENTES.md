@@ -577,8 +577,8 @@ que poner a mano *Authentication → Providers → Email → Email OTP
 Expiration* a `86400` (hoy, por defecto, 1 h). Afecta también a los
 enlaces de confirmación y recovery.
 
-Reenviar la invitación y añadir más partners a un lounge live ya existen
-(29 sept 2026, `/admin/lounges/[id]`, artboards 17–22).
+Desde el Epic 10 (1 oct 2026) la invitación la envía activar el partner,
+no publicar el lounge; reenviarla vuelve con la Story 10.4.
 
 **Además:**
 - **La cola de aprobación se retiró de la UI pero no de la base.** La
@@ -587,18 +587,36 @@ Reenviar la invitación y añadir más partners a un lounge live ya existen
   columna `pending_count` de `admin_lounge_list`) siguen en
   `supabase/schemas/admin_content.sql` sin uso. Borrarlas es destructivo
   (genera `DROP`); el 1 oct 2026 el usuario decidió **dejarlas** por ahora.
-- **Un lounge por partner (1 oct 2026)** añade el índice único
-  `partner_lounges(partner_id)`. Si un remoto ya tiene un partner en dos
-  lounges, la migración `one_lounge_per_partner` fallará en el deploy:
-  comprobarlo antes del PR con
-  `select partner_id from partner_lounges group by 1 having count(*) > 1`.
 - El aviso tras guardar/publicar desde `/admin/lounges/new` no tiene test
   de pantalla: guardar exige una dirección de Google Places, que no carga
   en jsdom. Lo cubren el test del detalle (`[id]/page.test.tsx`, mismo
   formulario y mismo aviso) y la verificación de Playwright.
-- `deploy.yml` despliega `admin-publish-lounge` y `admin-lounge-partners`
-  en los dos jobs, pero (como §4.7) el resto de functions de Epic 8 siguen
-  sin desplegarse.
+
+### 4.13 Epic 10: el modelo de partners cambió y los remotos no lo tienen
+
+La Story 10.1 (1 oct 2026, migración `partner_organizations`) sustituye el
+partner-persona por el partner-organización. Antes del primer PR a
+`staging` con este cambio:
+
+- **`partners` tiene que estar vacía en el remoto.** La migración añade
+  `partners.name not null` sin default y borra `partner_lounges` y
+  `lounge_partner_invites`: con filas fallará el deploy, y sin vaciarla se
+  perderían igualmente los vínculos con lounges. En local ya se vació (con
+  todas las cuentas salvo el admin). Hacerlo en `luxepass-dev`/`luxepass-prod`
+  es una acción sobre datos remotos: pedir confirmación antes.
+- **Las Edge Functions `admin-publish-lounge` y `admin-lounge-partners` se
+  borraron del repo y de `deploy.yml`**, pero quitarlas de `deploy.yml` no
+  las borra de los proyectos remotos donde ya estén desplegadas: hay que
+  borrarlas a mano (`supabase functions delete …`, con confirmación).
+- **Transición hasta 10.3–10.5:** el admin no puede gestionar partners ni
+  asignar uno a un lounge desde la app; un borrador nuevo no se puede
+  publicar (exige un partner activo). En local se asignan con
+  `scripts/seed-partners.mjs`. Los lounges sembrados que no están en ese
+  script siguen live sin partner (la base lo admite; solo publicar lo exige).
+- **`/partner` abre el primer lounge** del partner (`firstPartnerLoungeId`)
+  hasta el selector de la Story 10.6, y su cabecera sigue con el venue fijo
+  de `PARTNER_VENUE`.
+- **`admin_revenue_by_partner`** sigue agrupando por lounge, no por partner.
 
 ## 5. Decisiones abiertas
 

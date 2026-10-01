@@ -26,6 +26,7 @@ import {
   revenueBreakdownToCsv,
 } from "@/lib/partner";
 import { downloadTextFile } from "@/lib/download";
+import { firstPartnerLoungeId } from "@/lib/partner-lounges";
 import { cn } from "@/lib/utils";
 
 const MONTHLY_COLUMNS = [
@@ -54,14 +55,10 @@ async function reportToCsv(
   reportId: PartnerReport["id"],
 ): Promise<string> {
   if (reportId === "daily-guest-list") {
-    const { data } = await supabase
-      .from("partner_lounges")
-      .select("lounge_id")
-      .limit(1)
-      .maybeSingle();
-    if (!data) return guestListToCsv([]);
+    const loungeId = await firstPartnerLoungeId(supabase);
+    if (!loungeId) return guestListToCsv([]);
     const { data: guestRows } = await supabase.rpc("partner_guest_list", {
-      p_lounge_id: data.lounge_id,
+      p_lounge_id: loungeId,
       p_date: TODAY,
     });
     return guestListToCsv(((guestRows as PartnerGuestRow[] | null) ?? []).map((row) => mapGuestRow(row)));

@@ -4,8 +4,9 @@ import { resolveProfilePhotoUrl, uploadProfilePhoto } from "@/lib/profile-photo"
 
 /**
  * Epic 7 · SetPassword.dc.html — /partner/welcome. El enlace del email trae
- * un token de invitación de Supabase Auth; al verificarlo el partner queda
- * con sesión y puede leer su propia fila de `partners` y sus lounges.
+ * un token de invitación de Supabase Auth; al verificarlo el usuario queda
+ * con sesión y puede leer su fila de `partner_members` y los lounges de su
+ * partner (Story 10.1).
  */
 
 export interface PartnerWelcome {
@@ -34,26 +35,27 @@ export async function acceptPartnerInvite(supabase: SupabaseClient, tokenHash: s
 
 export async function loadPartnerWelcome(supabase: SupabaseClient): Promise<PartnerWelcome | null> {
   const { data, error } = await supabase
-    .from("partners")
-    .select("first_name, last_name, contact_email, contact_phone, photo_path, partner_lounges(lounges(name, address, neighborhood))")
+    .from("partner_members")
+    .select("first_name, last_name, email, mobile, photo_path, partner_id")
     .maybeSingle();
   if (error || !data) return null;
 
-  type LoungeRow = { name: string; address: string; neighborhood: string };
-  const links = (data.partner_lounges ?? []) as unknown as { lounges: LoungeRow | null }[];
+  const { data: lounges } = await supabase
+    .from("lounges")
+    .select("name, address, neighborhood")
+    .eq("partner_id", data.partner_id)
+    .order("name");
+
   return {
     firstName: data.first_name,
     lastName: data.last_name,
-    email: data.contact_email,
-    mobile: data.contact_phone,
+    email: data.email,
+    mobile: data.mobile,
     photoUrl: await resolveProfilePhotoUrl(supabase, data.photo_path),
-    lounges: links
-      .map((link) => link.lounges)
-      .filter((lounge): lounge is LoungeRow => lounge !== null)
-      .map((lounge) => ({
-        name: lounge.name,
-        address: [lounge.address, lounge.neighborhood].filter(Boolean).join(", "),
-      })),
+    lounges: (lounges ?? []).map((lounge) => ({
+      name: lounge.name,
+      address: [lounge.address, lounge.neighborhood].filter(Boolean).join(", "),
+    })),
   };
 }
 
@@ -67,13 +69,12 @@ export async function completePartnerInvite(supabase: SupabaseClient, input: Par
   const photoPath = input.photo ? await uploadProfilePhoto(supabase, input.photo) : undefined;
 
   const { error: detailsError } = await supabase
-    .from("partners")
+    .from("partner_members")
     .update({
       first_name: input.firstName.trim(),
       last_name: input.lastName.trim(),
-      contact_phone: input.mobile.trim(),
+      mobile: input.mobile.trim(),
       ...(photoPath ? { photo_path: photoPath } : {}),
-      updated_at: new Date().toISOString(),
     })
     .eq("user_id", user.id);
   if (detailsError) throw new Error(detailsError.message);

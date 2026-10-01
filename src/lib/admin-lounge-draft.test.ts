@@ -36,22 +36,31 @@ function draftInput(overrides: Partial<LoungeDraftInput> = {}): LoungeDraftInput
     amenities: ["wifi", "co-working"],
     capacity: 24,
     bookingRestrictions: [],
-    partners: [
-      {
-        firstName: "Camille",
-        lastName: "Duarte",
-        email: `draft-partner-${stamp}-${created.length}-${Math.random().toString(36).slice(2, 6)}@thelarkspur-test.com`,
-        mobile: "+1 917 555 0163",
-      },
-    ],
     ...overrides,
   };
 }
 
-async function create(overrides: Partial<LoungeDraftInput> = {}) {
+let activePartnerId: string;
+
+/** Story 10.1 — publicar exige un partner activo; hasta la Story 10.5 el admin aún no lo elige desde el formulario. */
+async function create(overrides: Partial<LoungeDraftInput> = {}, partnerId: string | null = activePartnerId) {
   const id = await createLoungeDraft(supabase, draftInput(overrides));
   created.push(id);
+  if (partnerId) {
+    const { error } = await service.from("lounges").update({ partner_id: partnerId }).eq("id", id);
+    if (error) throw error;
+  }
   return id;
+}
+
+async function createPartner(status: "draft" | "active") {
+  const { data, error } = await service
+    .from("partners")
+    .insert({ name: `Draft Test Partner ${status} ${stamp}`, status })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id as string;
 }
 
 /** Un miembro cualquiera, con su propia sesión (sin tocar la del admin). */
@@ -67,15 +76,12 @@ async function memberClient() {
 
 beforeAll(async () => {
   await signUpConfirmedAdminAndSignIn(supabase, `draft-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
+  activePartnerId = await createPartner("active");
 });
 
 afterAll(async () => {
-  const { data: partners } = await service
-    .from("partners")
-    .select("user_id, partner_lounges!inner(lounge_id)")
-    .in("partner_lounges.lounge_id", created);
-  for (const partner of partners ?? []) await service.auth.admin.deleteUser(partner.user_id);
   await service.from("lounges").delete().in("id", created);
+  await service.from("partners").delete().like("name", `Draft Test Partner % ${stamp}`);
 });
 
 describe("dar de alta un lounge", () => {
@@ -184,6 +190,18 @@ describe("publicar", () => {
       p_to: "2026-10-01",
     });
     expect(seats).toContainEqual({ date: "2026-10-01", band: "morning", seats_left: 24 });
+  });
+
+  it("sin partner no se puede publicar", async () => {
+    const id = await create({}, null);
+
+    await expect(publishLounge(supabase, id)).rejects.toThrow(/active partner/i);
+  });
+
+  it("con un partner todavía en draft no se puede publicar", async () => {
+    const id = await create({}, await createPartner("draft"));
+
+    await expect(publishLounge(supabase, id)).rejects.toThrow(/active partner/i);
   });
 
   it("el servidor rechaza publicar un borrador incompleto", async () => {

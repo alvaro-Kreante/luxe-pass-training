@@ -41,9 +41,14 @@ create table if not exists public.lounges (
   -- — un lounge 'live' con una edición en revisión sigue siendo visible
   -- para los miembros con su contenido ya publicado hasta que se apruebe.
   content_status       text not null default 'live' check (content_status in ('live', 'draft', 'archived')),
+  -- Story 10.1 — el partner (organización) que opera el lounge. Null solo
+  -- mientras es borrador: publicar exige un partner activo.
+  partner_id           uuid references public.partners (id) on delete restrict,
   created_at           timestamptz not null default now(),
   updated_at           timestamptz not null default now()
 );
+
+create index if not exists lounges_partner_id_idx on public.lounges (partner_id);
 
 alter table public.lounges enable row level security;
 

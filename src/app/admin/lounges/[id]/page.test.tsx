@@ -9,13 +9,11 @@ import { signUpConfirmedAdminAndSignIn } from "@/lib/testing/confirmed-user";
 import LoungeEditPage from "./page";
 
 /**
- * Epic 8 · LoungeLive.dc.html (17), LoungeEditConfirm (18),
- * LoungeDraftPartners (19), PartnerAdd (20), PartnerSuspend (21) y
- * PartnerDelete (22). Un lounge live se ve entero y bloqueado; editarlo lo
- * devuelve a borrador (sin cola de aprobación, decisión 29 sept 2026). Los
- * partners se gestionan sin despublicar. Las acciones sobre partners pasan
- * por la Edge Function `admin-lounge-partners` (necesita `supabase
- * functions serve`).
+ * Epic 8 · LoungeLive.dc.html (17), LoungeEditConfirm (18) y
+ * LoungeDraftPartners (19). Un lounge live se ve entero y bloqueado;
+ * editarlo lo devuelve a borrador (sin cola de aprobación, decisión 29 sept
+ * 2026). Story 10.1: los usuarios partner ya no se gestionan desde el
+ * lounge, y publicar exige un partner activo.
  */
 
 const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }));
@@ -34,7 +32,7 @@ vi.mock("next/navigation", () => ({
 const admin = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 const stamp = Date.now();
 const loungeIds: string[] = [];
-const userIds: string[] = [];
+const partnerIds: string[] = [];
 
 async function createLounge(name: string, extra: Record<string, unknown> = {}) {
   const id = `test-lounge-edit-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
@@ -63,39 +61,23 @@ async function createLounge(name: string, extra: Record<string, unknown> = {}) {
   return id;
 }
 
-/** Un partner vinculado al lounge: `active` ya creó su contraseña, `invited` todavía no. */
-async function linkPartner(loungeId: string, firstName: string, state: "active" | "invited") {
-  const email = `${firstName.toLowerCase()}-${stamp}-${Math.random().toString(36).slice(2, 6)}@thelarkspur-test.com`;
-  const userId =
-    state === "active"
-      ? (await admin.auth.admin.createUser({ email, password: "Larkspur2026", email_confirm: true })).data.user!.id
-      : (await admin.auth.admin.generateLink({ type: "invite", email })).data.user!.id;
-  userIds.push(userId);
-  await admin.from("user_roles").insert({ user_id: userId, role: "partner" });
-  const { data: partner } = await admin
+async function activePartner() {
+  const { data, error } = await admin
     .from("partners")
-    .insert({ user_id: userId, business_name: "The Larkspur", contact_email: email, first_name: firstName, last_name: "Duarte" })
+    .insert({ name: `Lounge Edit Partner ${stamp} ${partnerIds.length}`, status: "active" })
     .select("id")
     .single();
-  await admin.from("partner_lounges").insert({ partner_id: partner!.id, lounge_id: loungeId });
-  await admin
-    .from("lounge_partner_invites")
-    .insert({ lounge_id: loungeId, first_name: firstName, last_name: "Duarte", email, partner_id: partner!.id });
-  return { email, userId };
+  if (error) throw error;
+  partnerIds.push(data.id);
+  return data.id as string;
 }
 
-async function liveLoungeWithPartners({ onlyCamille = false } = {}) {
+async function liveLounge() {
   const id = await createLounge(`Live Lounge ${Date.now()}`);
   await admin.from("lounge_images").insert({ lounge_id: id, url: "https://example.com/main-room.jpg", caption: "Main room", position: 0 });
-  await linkPartner(id, "Camille", "active");
-  if (!onlyCamille) await linkPartner(id, "Julian", "invited");
   render(<LoungeEditPage />);
   await screen.findByRole("heading", { name: /Live Lounge/ });
   return id;
-}
-
-function partnersList() {
-  return screen.getByRole("list", { name: "Partners" });
 }
 
 /** Con un popup abierto, Radix oculta el resto de la pantalla a la accesibilidad. */
@@ -113,17 +95,13 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  const { data: created } = await admin
-    .from("partners")
-    .select("user_id, partner_lounges!inner(lounge_id)")
-    .in("partner_lounges.lounge_id", loungeIds);
-  for (const userId of [...userIds, ...(created ?? []).map((p) => p.user_id)]) await admin.auth.admin.deleteUser(userId);
   await admin.from("lounges").delete().in("id", loungeIds);
+  if (partnerIds.length) await admin.from("partners").delete().in("id", partnerIds);
 });
 
 describe("un lounge live se ve entero y bloqueado", () => {
   it("muestra contacto, ubicación y restricciones como texto, sin campos editables", async () => {
-    await liveLoungeWithPartners();
+    await liveLounge();
 
     expect(screen.getByText("+1 212 555 0148")).toBeInTheDocument();
     expect(screen.getByText(/27 Bond Street/)).toBeInTheDocument();
@@ -133,14 +111,14 @@ describe("un lounge live se ve entero y bloqueado", () => {
   });
 
   it("las fotos se ven de verdad", async () => {
-    await liveLoungeWithPartners();
+    await liveLounge();
 
     expect(screen.getByRole("img", { name: "Main room" })).toHaveAttribute("src", "https://example.com/main-room.jpg");
   });
 
   it("editar pide confirmación; quedarse live no cambia nada", async () => {
     const user = userEvent.setup({ delay: null });
-    const id = await liveLoungeWithPartners();
+    const id = await liveLounge();
 
     await user.click(screen.getByRole("button", { name: "Edit lounge" }));
     const dialog = await screen.findByRole("dialog", { name: "Move to draft to edit?" });
@@ -152,7 +130,7 @@ describe("un lounge live se ve entero y bloqueado", () => {
 
   it("confirmar lo pasa a borrador y abre el formulario para publicar de nuevo", async () => {
     const user = userEvent.setup({ delay: null });
-    const id = await liveLoungeWithPartners();
+    const id = await liveLounge();
 
     await user.click(screen.getByRole("button", { name: "Edit lounge" }));
     await user.click(await screen.findByRole("button", { name: "Move to draft and edit" }));
@@ -161,82 +139,6 @@ describe("un lounge live se ve entero y bloqueado", () => {
     expect(screen.getByRole("textbox", { name: "Lounge name" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Submit for review" })).toBeNull();
     expect(await contentStatus(id)).toBe("draft");
-  });
-});
-
-describe("partners de un lounge live", () => {
-  it("lista cada partner con su estado", async () => {
-    await liveLoungeWithPartners();
-
-    const list = await waitFor(() => partnersList());
-    expect(within(list).getByRole("listitem", { name: "Camille Duarte · Active" })).toBeInTheDocument();
-    expect(within(list).getByRole("listitem", { name: "Julian Duarte · Invited" })).toBeInTheDocument();
-  });
-
-  it("solo a quien no ha creado su contraseña se le reenvía la invitación", async () => {
-    const user = userEvent.setup({ delay: null });
-    await liveLoungeWithPartners();
-    await waitFor(() => partnersList());
-
-    expect(screen.queryByRole("button", { name: "Resend invitation to Camille Duarte" })).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Resend invitation to Julian Duarte" }));
-
-    expect(await screen.findByText(/Invitation sent to/)).toBeInTheDocument();
-  });
-
-  it("añadir un partner lo invita sin despublicar", async () => {
-    const user = userEvent.setup({ delay: null });
-    const id = await liveLoungeWithPartners();
-
-    await user.click(await screen.findByRole("button", { name: "Add partner" }));
-    const dialog = await screen.findByRole("dialog", { name: "Add a partner" });
-    await user.type(within(dialog).getByLabelText("First name"), "Rafael");
-    await user.type(within(dialog).getByLabelText("Last name"), "Ortiz");
-    await user.type(within(dialog).getByLabelText("Work email"), `rafael-${stamp}@thelarkspur-test.com`);
-    await user.click(within(dialog).getByRole("button", { name: "Send invitation" }));
-    await dialogClosed();
-
-    expect(await within(partnersList()).findByRole("listitem", { name: "Rafael Ortiz · Invited" })).toBeInTheDocument();
-    expect(await contentStatus(id)).toBe("live");
-  });
-
-  it("suspender pide confirmación y se puede reactivar", async () => {
-    const user = userEvent.setup({ delay: null });
-    await liveLoungeWithPartners();
-
-    await user.click(await screen.findByRole("button", { name: "Suspend Julian Duarte" }));
-    const dialog = await screen.findByRole("dialog", { name: "Suspend this account?" });
-    await user.click(within(dialog).getByRole("button", { name: "Suspend account" }));
-    await dialogClosed();
-
-    expect(await within(partnersList()).findByRole("listitem", { name: "Julian Duarte · Suspended" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Reactivate Julian Duarte" }));
-    expect(await within(partnersList()).findByRole("listitem", { name: "Julian Duarte · Invited" })).toBeInTheDocument();
-  });
-
-  it("eliminar exige marcar que no se puede deshacer", async () => {
-    const user = userEvent.setup({ delay: null });
-    await liveLoungeWithPartners();
-
-    await user.click(await screen.findByRole("button", { name: "Delete Julian Duarte" }));
-    const dialog = await screen.findByRole("dialog", { name: "Delete this account?" });
-    const confirm = within(dialog).getByRole("button", { name: "Delete account" });
-    expect(confirm).toBeDisabled();
-    await user.click(within(dialog).getByRole("checkbox", { name: "I understand this cannot be undone" }));
-    await user.click(confirm);
-    await dialogClosed();
-
-    await waitFor(() => expect(within(partnersList()).queryByRole("listitem", { name: /Julian Duarte/ })).toBeNull());
-  });
-
-  it("no deja suspender al último partner activo", async () => {
-    const user = userEvent.setup({ delay: null });
-    await liveLoungeWithPartners({ onlyCamille: true });
-
-    await user.click(await screen.findByRole("button", { name: "Suspend Camille Duarte" }));
-    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Suspend account" }));
-
-    expect(await screen.findByText(/last active partner/i)).toBeInTheDocument();
   });
 });
 
@@ -251,33 +153,9 @@ describe("un lounge en borrador", () => {
     expect(screen.queryByRole("button", { name: "Submit for review" })).toBeNull();
   });
 
-  it("admite varios partners pendientes, y quitar uno antes de publicar", async () => {
+  it("publicar avisa y se queda en el lounge, ya live", async () => {
     const user = userEvent.setup({ delay: null });
-    await createLounge(`Draft Lounge ${Date.now()}`, { content_status: "draft" });
-    render(<LoungeEditPage />);
-    await screen.findByText(/Draft · not visible to members/);
-
-    for (const name of ["Camille", "Julian"]) {
-      if (name !== "Camille") await user.click(screen.getByRole("button", { name: "Add partner" }));
-      await user.type(screen.getByLabelText("First name"), name);
-      await user.type(screen.getByLabelText("Last name"), "Duarte");
-      await user.type(screen.getByLabelText("Work email"), `${name.toLowerCase()}-${stamp}@thelarkspur-test.com`);
-      await user.click(screen.getByRole("button", { name: "Save partner" }));
-    }
-
-    const list = partnersList();
-    expect(within(list).getByRole("listitem", { name: "Camille Duarte · On publish" })).toBeInTheDocument();
-    expect(within(list).getByRole("listitem", { name: "Julian Duarte · On publish" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Remove Julian Duarte" }));
-    expect(within(list).queryByRole("listitem", { name: /Julian/ })).toBeNull();
-  });
-
-  it("publicar invita a los partners, avisa y se queda en el lounge, ya live", async () => {
-    const user = userEvent.setup({ delay: null });
-    const id = await createLounge(`Draft Lounge ${Date.now()}`, { content_status: "draft" });
-    await admin
-      .from("lounge_partner_invites")
-      .insert({ lounge_id: id, first_name: "Camille", last_name: "Duarte", email: `publish-${stamp}@thelarkspur-test.com` });
+    const id = await createLounge(`Draft Lounge ${Date.now()}`, { content_status: "draft", partner_id: await activePartner() });
     render(<LoungeEditPage />);
 
     await user.click(await screen.findByRole("button", { name: "Publish lounge" }));
@@ -303,24 +181,6 @@ describe("un lounge en borrador", () => {
     await dialogClosed();
     expect(screen.getByRole("button", { name: "Publish lounge" })).toBeInTheDocument();
   });
-
-  it("un email que ya usa otro lounge no se guarda y lo dice", async () => {
-    const user = userEvent.setup({ delay: null });
-    const other = await createLounge(`Live Lounge ${Date.now()}`);
-    const { email } = await linkPartner(other, "Noor", "active");
-    await createLounge(`Draft Lounge ${Date.now()}`, { content_status: "draft" });
-    render(<LoungeEditPage />);
-    await screen.findByText(/Draft · not visible to members/);
-
-    await user.type(screen.getByLabelText("First name"), "Noor");
-    await user.type(screen.getByLabelText("Last name"), "Haddad");
-    await user.type(screen.getByLabelText("Work email"), email);
-    await user.click(screen.getByRole("button", { name: "Save partner" }));
-    await user.click(screen.getByRole("button", { name: "Save draft" }));
-
-    expect(await screen.findByRole("alert")).toHaveTextContent(/already in use/i);
-    expect(screen.queryByRole("dialog", { name: "Draft saved" })).toBeNull();
-  });
 });
 
 describe("las fotos del lounge", () => {
@@ -331,7 +191,6 @@ describe("las fotos del lounge", () => {
       { lounge_id: id, url: "https://example.com/main-room.jpg", caption: "Main room", position: 0 },
       { lounge_id: id, url: "https://example.com/bar.jpg", caption: "Bar", position: 1 },
     ]);
-    await linkPartner(id, "Camille", "active");
     render(<LoungeEditPage />);
 
     await user.click(await screen.findByRole("button", { name: "View photo Main room" }));

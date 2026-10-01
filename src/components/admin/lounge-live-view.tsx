@@ -5,14 +5,13 @@ import { Lock, Pencil } from "lucide-react";
 import Link from "next/link";
 
 import { LoungeLocationPreview } from "@/components/admin/address-autocomplete";
-import { LivePartnersCard } from "@/components/admin/lounge-partners-card";
 import { ModalPoint } from "@/components/admin/lounge-saved-notice";
 import { PhotoViewer } from "@/components/admin/photo-viewer";
 import { AdminShell } from "@/components/patterns/admin-shell";
 import { Modal } from "@/components/patterns/modal";
 import { Button } from "@/components/ui/button";
 import { amenityLabel, type AmenityId } from "@/lib/amenities";
-import { unpublishLounge, type LoungeContentDetail, type LoungePartner } from "@/lib/admin-content";
+import { unpublishLounge, type LoungeContentDetail } from "@/lib/admin-content";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -53,18 +52,14 @@ function Value({ label, value }: { label: string; value: string }) {
 /**
  * Epic 8 · LoungeLive.dc.html (17) — un lounge publicado se ve entero y
  * bloqueado, ubicación incluida. "Edit lounge" pide confirmación
- * (LoungeEditConfirm.dc.html, 18) y lo devuelve a borrador. Los partners se
- * gestionan aquí mismo, sin despublicar (`LivePartnersCard`).
+ * (LoungeEditConfirm.dc.html, 18) y lo devuelve a borrador. Los usuarios
+ * partner se gestionan en el partner (Epic 10), no en el lounge.
  */
 export function LoungeLiveView({
   lounge,
-  partners,
-  onPartnersChanged,
   onMovedToDraft,
 }: {
   lounge: LoungeContentDetail;
-  partners: LoungePartner[];
-  onPartnersChanged: () => Promise<void>;
   onMovedToDraft: () => Promise<void>;
 }) {
   const supabase = React.useMemo(() => createClient(), []);
@@ -117,7 +112,7 @@ export function LoungeLiveView({
             </span>
           </div>
           <p className="mt-1.5 text-[12.5px] text-fg-subtle">
-            {lounge.area} · {partners.length} {partners.length === 1 ? "partner" : "partners"}
+            {lounge.area}
           </p>
         </div>
         <div className="flex items-center gap-2.5">
@@ -225,7 +220,6 @@ export function LoungeLiveView({
         </div>
 
         <div className="flex h-fit w-[344px] shrink-0 flex-col gap-3">
-          <LivePartnersCard loungeId={lounge.id} loungeName={lounge.name} partners={partners} onChanged={onPartnersChanged} />
           <div className="rounded-2xl border border-dashed border-gold-600 bg-panel-black px-4 py-3.5">
             <p className="m-0 text-[11.5px] leading-[1.55] text-fg-muted">
               Everything members read is locked while the lounge is live. <strong className="text-fg">Edit lounge</strong> moves it

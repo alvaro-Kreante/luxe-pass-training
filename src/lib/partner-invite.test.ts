@@ -65,11 +65,11 @@ describe("crear la contraseña", () => {
     const signIn = isolatedClient();
     const { error } = await signIn.auth.signInWithPassword({ email: invited.email, password: "Larkspur2026" });
     expect(error).toBeNull();
-    const { data } = await signIn.from("partners").select("first_name, last_name, contact_phone, photo_path").single();
+    const { data } = await signIn.from("partner_members").select("first_name, last_name, mobile, photo_path").single();
     expect(data).toEqual({
       first_name: "Camila",
       last_name: "Duarte Ruiz",
-      contact_phone: "+1 917 555 0199",
+      mobile: "+1 917 555 0199",
       photo_path: `${invited.userId}/avatar.jpg`,
     });
   });
@@ -79,7 +79,7 @@ describe("crear la contraseña", () => {
     const client = isolatedClient();
     await acceptPartnerInvite(client, invited.token);
 
-    const { error } = await client.from("partners").update({ contact_email: "other@elsewhere-test.com" }).eq("user_id", invited.userId);
+    const { error } = await client.from("partner_members").update({ email: "other@elsewhere-test.com" }).eq("user_id", invited.userId);
 
     expect(error?.message).toMatch(/cannot be changed/i);
   });

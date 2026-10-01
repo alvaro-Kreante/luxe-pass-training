@@ -192,17 +192,9 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
 **Resuelto** (22 sept 2026, al implementar este epic — ver
 `docs/design/COMPONENT-MAP.md` "Backend real — Epic 7"):
 
-- `partners` (**nace aquí**, dueño) — cuenta de partner. `partner_lounges`
-  es la tabla puente many-to-many con `lounges` (decisión tomada con el
-  usuario: un partner puede gestionar varios lounges, no una FK directa
-  `lounges.partner_id`). Desde el 29 sept 2026 guarda también
-  `first_name`/`last_name`/`photo_path` de la persona. **Desde el 1 oct
-  2026 un partner gestiona un solo lounge** (índice único
-  `partner_lounges(partner_id)`); un lounge sigue teniendo varios partners.
-- `lounge_partner_invites` (Epic 8 dueño, alimenta Epic 7) — los partners
-  que el admin escribe para un lounge (varios por lounge, `unique(lounge_id,
-  email)`), con `partner_id` → `partners` una vez creada o vinculada la
-  cuenta. `partners.suspended_at` marca una cuenta suspendida.
+- `partners` nació aquí como cuenta de **una persona** con su lounge
+  (`partner_lounges`, `lounge_partner_invites`). **Sustituido por el Epic 10
+  (1 oct 2026)**: ver "Epic 10 — Partner Organizations" abajo.
 - Auth de partners: tabla `user_roles` (`user_id`, `role` — 'partner'/'admin'),
   no un custom claim en el JWT ni esquemas separados. Sin fila = miembro
   corriente; solo se registran roles elevados. Ver `supabase/schemas/user_roles.sql`.
@@ -299,6 +291,29 @@ el amigo llega por `/join/[code]` → `/signup?ref=` (metadatos de Auth).
 
 ---
 
+### Epic 10 — Partner Organizations
+
+**Resuelto** (1 oct 2026, Story 10.1 — `supabase/schemas/partners.sql`):
+
+- `partners` (**dueño**) — la organización (hotel, spa, club): nombre,
+  email de contacto, edificio central en texto (`address_line1`…`country`,
+  `city` = ciudad principal) y `status` `draft`/`active`/`suspended`.
+  `representative_id` → `partner_members`, siempre del mismo partner (FK
+  compuesta).
+- `partner_members` (**dueño**) — los usuarios de un partner. `user_id`
+  único (un usuario, un partner) y null mientras el partner es draft: la
+  cuenta nace al activarlo (Story 10.4). Email único y nunca de una cuenta
+  existente (trigger). El primero es el representante; no se borra mientras
+  queden otros.
+- `lounges.partner_id` → `partners` (null solo en borrador). Sustituye a
+  `partner_lounges`; `lounge_partner_invites` desaparece (los usuarios viven
+  en el partner, no en el lounge).
+- `partner_lounge_ids()` sigue siendo el único helper de autorización de
+  partner (bookings, lounges, RPC del dashboard): ahora devuelve todos los
+  lounges del partner del usuario, si partner y usuario están activos.
+- Un miembro solo lee `id`/`name`/`status` de `partners` (privilegio por
+  columna) y solo del partner de un lounge publicado.
+
 ## Quién es dueño de qué
 
 | Entidad | Epic dueño | Referenciada por |
@@ -312,7 +327,7 @@ el amigo llega por `/join/[code]` → `/signup?ref=` (metadatos de Auth).
 | `payments` | 4 | 8 (refunds) |
 | `notifications` | 6 | 5, 7, 9 |
 | `member_favorite_lounges` | 6 | 2/3 (`lounges`) |
-| `partners` / `partner_lounges` | 7 | 2/3 (`lounges` vía `partner_lounges`: varios partners por lounge, un lounge por partner) |
+| `partners` / `partner_members` | 10 | 2/3 (`lounges.partner_id`: un partner por lounge, varios lounges por partner), 7 (dashboard), 8 (admin) |
 | `user_roles` | 7 | 1 (auth), 8 (rol admin, cuando se conecte) |
 | `support_tickets` / `support_ticket_messages` | 8 | 1/9 (member), 4 (`bookings`) |
 | `lounge_content_submissions` | 8 | 2/3 (`lounges`) |

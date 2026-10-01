@@ -5,7 +5,6 @@ import {
   hoursSummary,
   loungeIdFromName,
   type LoungeDraftInput,
-  type PartnerInviteInput,
 } from "@/lib/lounge-draft";
 
 /**
@@ -240,12 +239,6 @@ function draftPayload(input: LoungeDraftInput) {
     amenities: input.amenities,
     capacity: input.capacity,
     booking_restrictions: input.bookingRestrictions,
-    partners: input.partners.map((partner) => ({
-      first_name: partner.firstName,
-      last_name: partner.lastName,
-      email: partner.email,
-      mobile: partner.mobile,
-    })),
   };
 }
 
@@ -288,78 +281,19 @@ export async function setDraftLoungePhotos(
   if (error) throw new Error(error.message);
 }
 
-export type LoungePartnerStatus = "on_publish" | "invited" | "active" | "suspended";
-
-export interface LoungePartner {
-  /** null mientras solo está escrito en el borrador (sin cuenta todavía). */
-  userId: string | null;
-  firstName: string;
-  lastName: string;
-  email: string;
-  mobile: string;
-  status: LoungePartnerStatus;
-}
-
-/** Epic 8 · LoungeLive / LoungeDraftPartners — los partners del lounge con su estado. */
-export async function getLoungePartners(supabase: SupabaseClient, loungeId: string): Promise<LoungePartner[]> {
-  const { data, error } = await supabase.rpc("admin_lounge_partners", { p_lounge_id: loungeId });
-  if (error) throw new Error(error.message);
-  return (data as { user_id: string | null; first_name: string; last_name: string; email: string; mobile: string; status: LoungePartnerStatus }[]).map(
-    (row) => ({
-      userId: row.user_id,
-      firstName: row.first_name,
-      lastName: row.last_name,
-      email: row.email,
-      mobile: row.mobile,
-      status: row.status,
-    }),
-  );
-}
-
 /** Epic 8 · LoungeEditConfirm.dc.html — el lounge vuelve a borrador para editarlo. */
 export async function unpublishLounge(supabase: SupabaseClient, loungeId: string): Promise<void> {
   const { error } = await supabase.rpc("admin_unpublish_lounge", { p_lounge_id: loungeId });
   if (error) throw new Error(error.message);
 }
 
-async function invokeOrThrow(supabase: SupabaseClient, name: string, body: Record<string, unknown>): Promise<void> {
-  const { error } = await supabase.functions.invoke(name, { body });
-  if (!error) return;
-  const detail = error.context instanceof Response ? await error.context.json().catch(() => null) : null;
-  throw new Error(detail?.error ?? error.message);
-}
-
-/** Epic 8 · PartnerAdd.dc.html — invita al momento; el lounge sigue live. */
-export function addLoungePartner(supabase: SupabaseClient, loungeId: string, partner: PartnerInviteInput) {
-  return invokeOrThrow(supabase, "admin-lounge-partners", { action: "add", loungeId, partner });
-}
-
-/** Epic 8 · PartnerSuspend.dc.html — reversible; cubre todos los lounges de la cuenta. */
-export function suspendLoungePartner(supabase: SupabaseClient, loungeId: string, userId: string) {
-  return invokeOrThrow(supabase, "admin-lounge-partners", { action: "suspend", loungeId, userId });
-}
-
-export function reactivateLoungePartner(supabase: SupabaseClient, loungeId: string, userId: string) {
-  return invokeOrThrow(supabase, "admin-lounge-partners", { action: "reactivate", loungeId, userId });
-}
-
-/** Epic 8 · PartnerDelete.dc.html — borra la cuenta de partner para siempre. */
-export function deleteLoungePartner(supabase: SupabaseClient, loungeId: string, userId: string) {
-  return invokeOrThrow(supabase, "admin-lounge-partners", { action: "delete", loungeId, userId });
-}
-
-/** Epic 8 · LoungeLive.dc.html — "Resend invitation": un enlace nuevo de 24 h. */
-export function resendPartnerInvite(supabase: SupabaseClient, loungeId: string, userId: string) {
-  return invokeOrThrow(supabase, "admin-lounge-partners", { action: "resend", loungeId, userId });
-}
-
 /**
- * Publica el borrador y, en el mismo paso, crea la cuenta de su partner y le
- * envía la invitación (Edge Function `admin-publish-lounge`). Si algo falla,
- * el lounge sigue en borrador y no queda ninguna cuenta a medias.
+ * Story 10.1 — publicar ya no crea cuentas ni invita a nadie: exige un
+ * partner activo, que invitó a sus usuarios al activarse (Story 10.4).
  */
-export function publishLounge(supabase: SupabaseClient, loungeId: string): Promise<void> {
-  return invokeOrThrow(supabase, "admin-publish-lounge", { loungeId });
+export async function publishLounge(supabase: SupabaseClient, loungeId: string): Promise<void> {
+  const { error } = await supabase.rpc("admin_publish_lounge", { p_lounge_id: loungeId });
+  if (error) throw new Error(error.message);
 }
 
 /** Story 8.3 — "Upload and manage lounge images". Sube el archivo al bucket público `lounge-images` y devuelve su URL pública. */

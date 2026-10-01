@@ -24,17 +24,6 @@ export interface LoungeDraftInput {
   amenities: string[];
   capacity: number;
   bookingRestrictions: string[];
-  /** Epic 8 · artboard 19 — partners pendientes de invitar; se invitan al publicar. */
-  partners: PartnerInviteInput[];
-  /** Partners con cuenta ya vinculados (un lounge que estuvo live). */
-  linkedPartners?: number;
-}
-
-export interface PartnerInviteInput {
-  firstName: string;
-  lastName: string;
-  email: string;
-  mobile: string;
 }
 
 export const CLOSED = "Closed";
@@ -113,7 +102,7 @@ export function parseDayHours(hours: string): DayHours {
 }
 
 export interface ChecklistItem {
-  id: "contact" | "partner" | "location" | "hours" | "seats";
+  id: "contact" | "location" | "hours" | "seats";
   label: string;
   done: boolean;
 }
@@ -125,20 +114,8 @@ export function publishChecklist(draft: LoungeDraftInput): ChecklistItem[] {
       label: "Name and contact",
       done: draft.name.trim() !== "" && draft.phone.trim() !== "" && draft.email.trim() !== "",
     },
-    {
-      id: "partner",
-      label: "Partners",
-      done: (draft.linkedPartners ?? 0) + draft.partners.length > 0 && draft.partners.every(isPartnerComplete),
-    },
     { id: "location", label: "Address on the map", done: draft.location !== null },
     { id: "hours", label: "Operating hours", done: draft.weeklyHours.some((hours) => !isClosed(hours)) },
     { id: "seats", label: "Seats per time slot", done: draft.capacity > 0 },
   ];
-}
-
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-/** Epic 8 · artboard 16 — nombre, apellido y un email al que invitar; el móvil es opcional. */
-export function isPartnerComplete(partner: PartnerInviteInput): boolean {
-  return partner.firstName.trim() !== "" && partner.lastName.trim() !== "" && EMAIL.test(partner.email.trim());
 }

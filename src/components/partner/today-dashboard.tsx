@@ -10,6 +10,7 @@ import { GuestDetailDrawer } from "@/components/partner/guest-detail-drawer";
 import { GuestListTable } from "@/components/partner/guest-list-table";
 import { ExportGuestListPopover } from "@/components/partner/export-guest-list-popover";
 import { NoShowModal } from "@/components/partner/no-show-modal";
+import { firstPartnerLoungeId } from "@/lib/partner-lounges";
 import { Toast } from "@/components/ui/toast";
 import { createClient } from "@/lib/supabase/client";
 import { TODAY } from "@/lib/availability";
@@ -77,16 +78,11 @@ export function TodayDashboard() {
 
   React.useEffect(() => {
     let active = true;
-    supabase
-      .from("partner_lounges")
-      .select("lounge_id")
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!active || !data) return;
-        setLoungeId(data.lounge_id);
-        fetchGuestList(data.lounge_id);
-      });
+    firstPartnerLoungeId(supabase).then((id) => {
+      if (!active || !id) return;
+      setLoungeId(id);
+      fetchGuestList(id);
+    });
     return () => {
       active = false;
     };

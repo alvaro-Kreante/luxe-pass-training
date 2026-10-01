@@ -137,67 +137,6 @@ describe("antes de poder guardar o publicar", () => {
   });
 });
 
-describe("los partners del lounge", () => {
-  it("pide nombre, apellido, email de trabajo y móvil de cada partner", async () => {
-    render(<NewLoungePage />);
-
-    expect(await screen.findByLabelText("First name")).toBeInTheDocument();
-    expect(screen.getByLabelText("Last name")).toBeInTheDocument();
-    expect(screen.getByLabelText("Work email")).toBeInTheDocument();
-    expect(screen.getByLabelText(/Mobile/)).toBeInTheDocument();
-  });
-
-  it("se añaden varios; sin ninguno la lista de requisitos lo marca pendiente", async () => {
-    const user = userEvent.setup({ delay: null });
-    render(<NewLoungePage />);
-    const checklist = await screen.findByRole("list", { name: "Before it can be published" });
-    expect(within(checklist).getByRole("listitem", { name: /Partners · pending/ })).toBeInTheDocument();
-
-    for (const name of ["Camille", "Julian"]) {
-      if (name !== "Camille") await user.click(screen.getByRole("button", { name: "Add partner" }));
-      await user.type(screen.getByLabelText("First name"), name);
-      await user.type(screen.getByLabelText("Last name"), "Duarte");
-      await user.type(screen.getByLabelText("Work email"), `${name.toLowerCase()}@thelarkspur.com`);
-      await user.click(screen.getByRole("button", { name: "Save partner" }));
-    }
-
-    const partners = screen.getByRole("list", { name: "Partners" });
-    expect(within(partners).getAllByRole("listitem")).toHaveLength(2);
-    expect(within(checklist).getByRole("listitem", { name: /Partners · done/ })).toBeInTheDocument();
-  });
-
-  it("guardado un partner, el formulario se cierra y 'Add partner' abre otro", async () => {
-    const user = userEvent.setup({ delay: null });
-    render(<NewLoungePage />);
-
-    expect(await screen.findByRole("button", { name: "Save partner" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Add partner" })).toBeNull();
-    await user.type(screen.getByLabelText("First name"), "Camille");
-    await user.type(screen.getByLabelText("Last name"), "Duarte");
-    await user.type(screen.getByLabelText("Work email"), "camille@thelarkspur.com");
-    await user.click(screen.getByRole("button", { name: "Save partner" }));
-
-    expect(screen.queryByLabelText("First name")).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Add partner" }));
-    expect(screen.getByLabelText("First name")).toHaveValue("");
-  });
-
-  it("no deja añadir dos veces el mismo email", async () => {
-    const user = userEvent.setup({ delay: null });
-    render(<NewLoungePage />);
-
-    for (let i = 0; i < 2; i++) {
-      if (i === 1) await user.click(screen.getByRole("button", { name: "Add partner" }));
-      await user.type(await screen.findByLabelText("First name"), "Camille");
-      await user.type(screen.getByLabelText("Last name"), "Duarte");
-      await user.type(screen.getByLabelText("Work email"), "camille@thelarkspur.com");
-      if (i === 0) await user.click(screen.getByRole("button", { name: "Save partner" }));
-    }
-
-    expect(screen.getByRole("button", { name: "Save partner" })).toBeDisabled();
-  });
-});
-
 describe("horario de apertura", () => {
   it("cada día se abre con su interruptor y las horas se eligen en desplegables", async () => {
     const user = userEvent.setup({ delay: null });

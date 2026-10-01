@@ -341,47 +341,31 @@ sin esperar a que el JWT del miembro se refresque. Sin fila = miembro
 corriente; solo se registran roles elevados. Epic 8 (rol admin) reutiliza
 la misma tabla cuando se conecte.
 
-`partners`/`partner_lounges` (tabla puente many-to-many — un partner puede
-gestionar varios lounges, decisión tomada con el usuario, no una FK directa
-`lounges.partner_id`) completan el modelo. Dar de alta un partner es un
-proceso operativo, nunca self-service (no hay historia de "partner
-signup", solo `Login.dc.html`) — ver "Alta de un partner" en
-`supabase/schemas/partners.sql` y `scripts/seed-partner-account.mjs` para
-la cuenta de muestra de The Ainsworth en local.
+**Partner = organización (Epic 10, 1 oct 2026).** El modelo del Epic 7/8
+(un partner = una persona con un lounge, `partner_lounges` +
+`lounge_partner_invites`, invitar al publicar) se sustituyó por
+`partners` (organización) 1 → N `lounges.partner_id` y 1 → N
+`partner_members` (usuarios, uno de ellos representante). Detalle en
+`docs/DATA-MODEL-MAP.md` "Epic 10" y `supabase/schemas/partners.sql`.
 
-**Alta desde el admin (29 sept 2026).** El partner ya no se da de alta a
-mano: nace al publicar su lounge desde `/admin/lounges/new`. El borrador
-guarda sus datos en `lounge_partner_invites`; la Edge Function
-`admin-publish-lounge` (verifica JWT + `has_role('admin')`) crea el usuario
-invitado con `auth.admin.generateLink({ type: 'invite' })` — que **no**
-envía email ni pasa por el hook `send-email` —, su rol, `partners` y
-`partner_lounges`, publica con `admin_publish_lounge` como el propio admin y
-solo entonces envía la invitación por Brevo (`admin-publish-lounge/email.ts`,
-copia de `EmailInvite.dc.html`). El enlace es
-`${APP_URL}/partner/welcome?token_hash=…&type=invite`: la página verifica el
-token con `verifyOtp` en el cliente, y el partner corrige nombre/móvil/foto y
-fija su contraseña (`lib/partner-invite.ts`). El token caduca según
-`[auth.email] otp_expiry` (24 h en local; en los remotos se fija en el
-dashboard, ver `docs/PENDIENTES.md` §4.12).
-
-**Varios partners y gestión en live (29 sept 2026).** Un lounge admite
-varios partners (`lounge_partner_invites` ya no es 1:1). Al publicar,
-`admin-publish-lounge` invita a todos los pendientes y vincula sin cuenta
-nueva a quien ya es partner de otro lounge (`_shared/partner-accounts.ts`,
-compartido con la function de abajo). **Desde el 1 oct 2026 ya no se
-vincula**: un partner gestiona un solo lounge, y un email que ya usa otro
-lounge (pendiente o con cuenta) o cualquier otra cuenta de LuxePass se
-rechaza con "is already in use" — al guardar el borrador
-(`admin_apply_lounge_draft`), al publicar y al añadir con el lounge live;
-`partner_lounges(partner_id)` es único como última barrera. Con el lounge live, la Edge Function
-`admin-lounge-partners` gestiona la lista sin despublicar: `add`, `resend`
-(solo si el usuario de Auth no tiene `email_confirmed_at`), `suspend`
-(`partners.suspended_at` + `ban_duration` en Auth: no puede iniciar sesión
-en ningún lounge), `reactivate` y `delete` (`auth.admin.deleteUser`,
-cascade). Ninguna acción deja un lounge live sin un partner no suspendido.
-Editar un lounge live lo devuelve a borrador (`admin_unpublish_lounge`); la
-policy de `lounges` mantiene visible ese borrador para sus partners y para
-quien tiene reserva allí, así que pases y dashboard siguen funcionando.
+- Un partner nace en `draft`; activarlo envía a sus usuarios el email de
+  crear contraseña (Story 10.4). **Publicar un lounge ya no invita a nadie**:
+  `admin_publish_lounge` exige un partner `active`. Las Edge Functions
+  `admin-publish-lounge` y `admin-lounge-partners` y
+  `_shared/partner-accounts.ts` se retiraron; el admin publica con la RPC.
+- La invitación sigue llegando a `/partner/welcome?token_hash=…&type=invite`
+  (`lib/partner-invite.ts`): el usuario corrige nombre/móvil/foto en
+  `partner_members` y fija su contraseña. El email no lo puede cambiar
+  (trigger `partner_members_guard_issued_fields`).
+- El usuario partner ve todos los lounges de su partner
+  (`partner_lounge_ids()`), nunca escribe en `lounges` (solo el admin) y
+  pierde todo acceso si el partner o él mismo están suspendidos.
+- Notificaciones (`partner_notifications.sql`): una por usuario activo del
+  partner del lounge, con `partners.name` como nombre de negocio.
+- Editar un lounge live lo devuelve a borrador (`admin_unpublish_lounge`); la
+  policy de `lounges` lo mantiene visible para su partner y para quien tiene
+  reserva allí.
+- Datos de muestra en local: `scripts/seed-partners.mjs`.
 
 ## Notificaciones al partner reales (Database Webhook + pg_cron)
 

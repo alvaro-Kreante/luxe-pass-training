@@ -1,16 +1,13 @@
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 
-import { createLoungeDraft, publishLounge } from "@/lib/admin-content";
-
-import { signUpConfirmedAdminAndSignIn } from "./confirmed-user";
-
 /**
- * Epic 7 · SetPassword.dc.html — un partner invitado de verdad: un admin da
- * de alta el lounge con su partner y lo publica (Edge Function
- * `admin-publish-lounge`, necesita `supabase functions serve`). El token del
- * email no se puede leer en un test (el dominio de test no recibe nada), así
- * que se pide otro para el mismo usuario invitado con `generateLink` — solo
- * vale mientras nadie lo haya aceptado: un fixture por test.
+ * Epic 7 · SetPassword.dc.html — un usuario partner invitado de verdad: un
+ * partner activo con un lounge y un usuario cuya cuenta de Auth nace con el
+ * enlace de invitación (`generateLink`, service role). Desde la Story 10.1
+ * publicar un lounge ya no invita a nadie; la invitación real la manda
+ * activar el partner (Story 10.4), así que el fixture la reproduce sin pasar
+ * por el admin. El token solo vale mientras nadie lo haya aceptado: un
+ * fixture por test.
  */
 export interface InvitedPartner {
   loungeId: string;
@@ -31,47 +28,56 @@ function isolatedClient(): SupabaseClient {
 export async function invitePartnerForTest(label: string): Promise<InvitedPartner> {
   const service = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
   const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-  const admin = isolatedClient();
-  const adminUser = await signUpConfirmedAdminAndSignIn(admin, `${label}-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
-
+  const loungeId = `test-lounge-${label}-${stamp}`;
   const loungeName = `Test Lounge ${label} ${stamp}`;
   const email = `${label}-${stamp}@thelarkspur-test.com`;
-  const loungeId = await createLoungeDraft(admin, {
-    name: loungeName,
-    phone: "+1 212 555 0148",
-    email: "hello@thelarkspur.com",
-    website: "thelarkspur.com",
-    location: { address: "27 Bond Street", neighborhood: "NoHo", city: "New York", lat: 40.7262, lng: -73.9936 },
-    weeklyHours: ["Closed", "8 AM – 9 PM", "8 AM – 9 PM", "8 AM – 9 PM", "8 AM – 9 PM", "8 AM – 9 PM", "9 AM – 6 PM"],
-    amenities: ["wifi"],
-    capacity: 24,
-    bookingRestrictions: [],
-    partners: [{ firstName: "Camille", lastName: "Duarte", email, mobile: "+1 917 555 0163" }],
-  });
-  // Publicado, el lounge lo ven los miembros: si algo falla antes de
-  // devolver el fixture (Auth local es intermitente con la suite en
-  // paralelo, PENDIENTES §4.10) se borra aquí, o descuadra Explore.
+  let partnerId: string | null = null;
+  let userId: string | null = null;
+
   const cleanup = async () => {
-    const { data: partner } = await service.from("partners").select("user_id").eq("contact_email", email).maybeSingle();
-    if (partner) await service.auth.admin.deleteUser(partner.user_id);
-    await service.auth.admin.deleteUser(adminUser.id);
+    if (userId) await service.auth.admin.deleteUser(userId);
     await service.from("lounges").delete().eq("id", loungeId);
+    if (partnerId) await service.from("partners").delete().eq("id", partnerId);
   };
 
   try {
-    await publishLounge(admin, loungeId);
-    const { data: partner } = await service.from("partners").select("user_id").eq("contact_email", email).single();
-    const { data: link, error } = await service.auth.admin.generateLink({ type: "invite", email });
-    if (error) throw error;
+    const { data: partner, error: partnerError } = await service
+      .from("partners")
+      .insert({ name: `Test Partner ${label} ${stamp}`, contact_email: "hello@thelarkspur.com", status: "active" })
+      .select("id")
+      .single();
+    if (partnerError) throw partnerError;
+    partnerId = partner.id as string;
 
-    return {
-      loungeId,
-      loungeName,
-      email,
-      userId: partner!.user_id as string,
-      token: link.properties.hashed_token,
-      cleanup,
-    };
+    const { error: loungeError } = await service.from("lounges").insert({
+      id: loungeId,
+      name: loungeName,
+      address: "27 Bond Street",
+      neighborhood: "NoHo",
+      city: "New York",
+      city_id: "new-york",
+      lat: 40.7262,
+      lng: -73.9936,
+      hours: "Open until 9 PM",
+      content_status: "draft",
+      partner_id: partnerId,
+    });
+    if (loungeError) throw loungeError;
+
+    const { error: memberError } = await service
+      .from("partner_members")
+      .insert({ partner_id: partnerId, first_name: "Camille", last_name: "Duarte", email, mobile: "+1 917 555 0163" });
+    if (memberError) throw memberError;
+
+    const { data: link, error: linkError } = await service.auth.admin.generateLink({ type: "invite", email });
+    if (linkError) throw linkError;
+    userId = link.user.id;
+
+    await service.from("user_roles").insert({ user_id: userId, role: "partner" });
+    const { error: linkMemberError } = await service.from("partner_members").update({ user_id: userId }).eq("email", email);
+    if (linkMemberError) throw linkMemberError;
+
+    return { loungeId, loungeName, email, userId, token: link.properties.hashed_token, cleanup };
   } catch (error) {
     await cleanup();
     throw error;

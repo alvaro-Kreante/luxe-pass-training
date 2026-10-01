@@ -5,7 +5,6 @@ import { Check, Plus, X } from "lucide-react";
 import Link from "next/link";
 
 import { AddressAutocomplete } from "@/components/admin/address-autocomplete";
-import { DraftPartnersCard } from "@/components/admin/lounge-partners-card";
 import type { LoungeSavedKind } from "@/components/admin/lounge-saved-notice";
 import { PhotoCaptionDialog, type DraftPhotoItem } from "@/components/admin/photo-caption-dialog";
 import { AdminShell } from "@/components/patterns/admin-shell";
@@ -22,7 +21,6 @@ import {
   updateLoungeDraft,
   uploadLoungeImage,
   type LoungeContentDetail,
-  type LoungePartner,
 } from "@/lib/admin-content";
 import {
   CLOSED,
@@ -35,7 +33,6 @@ import {
   publishChecklist,
   type LoungeDraftInput,
   type LoungeLocation,
-  type PartnerInviteInput,
 } from "@/lib/lounge-draft";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -61,26 +58,20 @@ function locationOf(lounge: LoungeContentDetail): LoungeLocation | null {
  * PhotoCaption.dc.html (15). Un borrador no aparece a los miembros; se
  * publica directo, sin cola de aprobación (decisión 25 sept 2026).
  *
- * Con LoungeDraftPartners.dc.html (19): el formulario lleva también a los
- * partners (uno o varios) y las restricciones de reserva. El borrador solo
- * los recuerda; publicar crea sus cuentas y les envía la invitación
- * (`admin-publish-lounge`). Es también la vista de edición de un lounge que
- * estuvo live y volvió a borrador (LoungeEditConfirm.dc.html, 18).
+ * Con LoungeDraftPartners.dc.html (19): el formulario lleva también las
+ * restricciones de reserva. Es también la vista de edición de un lounge que
+ * estuvo live y volvió a borrador (LoungeEditConfirm.dc.html, 18). Story
+ * 10.1: los usuarios partner ya no viven en el lounge sino en su partner, y
+ * publicar no invita a nadie (exige un partner activo).
  *
  * Guardar o publicar no saca al admin del lounge: `onSaved` decide qué
  * mostrar después (LoungeDraftSaved.dc.html, 24 · LoungePublished.dc.html, 25).
  */
 export function LoungeDraftForm({
   lounge,
-  linkedPartners = [],
-  pendingPartners = [],
   onSaved,
 }: {
   lounge?: LoungeContentDetail;
-  /** Partners con cuenta (de cuando el lounge estuvo live). */
-  linkedPartners?: LoungePartner[];
-  /** Partners escritos en el borrador, pendientes de invitar al publicar. */
-  pendingPartners?: PartnerInviteInput[];
   onSaved: (loungeId: string, kind: LoungeSavedKind, loungeName: string) => void | Promise<void>;
 }) {
   const supabase = React.useMemo(() => createClient(), []);
@@ -95,7 +86,6 @@ export function LoungeDraftForm({
   );
   const [amenities, setAmenities] = React.useState<string[]>(lounge?.amenities ?? []);
   const [capacity, setCapacity] = React.useState(lounge?.capacity ?? 0);
-  const [partners, setPartners] = React.useState<PartnerInviteInput[]>(pendingPartners);
   const [restrictions, setRestrictions] = React.useState<string[]>(lounge?.bookingRestrictions ?? []);
   const [newRestriction, setNewRestriction] = React.useState("");
   const [photos, setPhotos] = React.useState<DraftPhotoItem[]>(
@@ -123,8 +113,6 @@ export function LoungeDraftForm({
     amenities,
     capacity,
     bookingRestrictions: restrictions,
-    partners,
-    linkedPartners: linkedPartners.filter((partner) => partner.status !== "suspended").length,
   };
   const checklist = publishChecklist(draft);
   const ready = checklist.every((item) => item.done);
@@ -442,8 +430,6 @@ export function LoungeDraftForm({
               </form>
             </div>
           </div>
-
-          <DraftPartnersCard linked={linkedPartners} pending={partners} onPendingChange={setPartners} />
         </div>
 
         <div className="flex h-fit w-[344px] shrink-0 flex-col gap-3.5">
@@ -531,8 +517,7 @@ export function LoungeDraftForm({
 
           <div className="rounded-2xl border border-dashed border-gold-600 bg-panel-black px-4 py-3.5">
             <p className="m-0 text-[11.5px] leading-[1.55] text-fg-muted">
-              Publishing puts the lounge in the member app and invites the new partners. A draft stays hidden and invites
-              nobody yet.
+              Publishing no longer invites anyone: the partner&apos;s users get their email when you activate the partner.
             </p>
           </div>
         </div>
