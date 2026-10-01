@@ -74,6 +74,11 @@ create table if not exists public.partner_lounges (
   primary key (partner_id, lounge_id)
 );
 
+-- Un partner gestiona un solo lounge (decisión 1 oct 2026, deja atrás el
+-- 1 partner : N lounges del 22 sept); un lounge sigue teniendo varios.
+create unique index if not exists partner_lounges_one_lounge_per_partner
+  on public.partner_lounges (partner_id);
+
 alter table public.partner_lounges enable row level security;
 
 create policy "select own partner lounges"

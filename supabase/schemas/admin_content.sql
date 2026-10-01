@@ -280,6 +280,8 @@ language plpgsql
 security definer
 set search_path = ''
 as $$
+declare
+  v_taken text;
 begin
   if coalesce(trim(p_lounge->>'name'), '') = '' then
     raise exception 'A lounge needs a name';
@@ -320,6 +322,28 @@ begin
   -- (`admin-publish-lounge`). Los ya creados (`partner_id`) no se tocan
   -- aquí — se gestionan desde la lista de partners.
   if jsonb_typeof(p_lounge->'partners') = 'array' then
+    -- Un partner gestiona un solo lounge (decisión 1 oct 2026): un email que
+    -- ya usa otro lounge — pendiente o con cuenta — o cualquier otra cuenta
+    -- de LuxePass (miembro, admin) está en uso. Los de este mismo lounge sí
+    -- se pueden volver a guardar.
+    select e.email into v_taken
+    from (
+      select lower(trim(x->>'email')) as email from jsonb_array_elements(p_lounge->'partners') x
+    ) e
+    where e.email <> ''
+      and not exists (
+        select 1 from public.lounge_partner_invites own
+        where own.lounge_id = p_lounge_id and lower(own.email) = e.email
+      )
+      and (
+        exists (select 1 from public.lounge_partner_invites i where lower(i.email) = e.email)
+        or exists (select 1 from auth.users u where lower(u.email) = e.email)
+      )
+    limit 1;
+    if v_taken is not null then
+      raise exception '% is already in use', v_taken;
+    end if;
+
     delete from public.lounge_partner_invites i
     where i.lounge_id = p_lounge_id
       and i.partner_id is null

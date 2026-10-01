@@ -32,6 +32,7 @@ const supabase = createClient();
 const stamp = Date.now();
 const created: string[] = [];
 const emails: string[] = [];
+const afterCleanup: string[] = [];
 
 function isolated(): SupabaseClient {
   return createSupabaseClient(url, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
@@ -99,6 +100,7 @@ afterAll(async () => {
     const userId = await userIdOf(email);
     if (userId) await service.auth.admin.deleteUser(userId);
   }
+  for (const id of afterCleanup) await service.auth.admin.deleteUser(id);
   await service.from("lounges").delete().in("id", created);
 });
 
@@ -140,6 +142,59 @@ describe("el borrador guarda varios partners", () => {
   });
 });
 
+describe("un partner gestiona un solo lounge", () => {
+  it("el email de un partner de otro lounge está en uso y el borrador no se guarda", async () => {
+    const shared = partner("Camille");
+    await publishLounge(supabase, await create({ partners: [shared] }));
+
+    await expect(create({ partners: [{ ...shared }] })).rejects.toThrow(/already in use/i);
+  });
+
+  it("tampoco se puede repetir el de un partner pendiente en otro borrador", async () => {
+    const shared = partner("Julian");
+    await create({ partners: [shared] });
+
+    await expect(create({ partners: [{ ...shared, email: shared.email.toUpperCase() }] })).rejects.toThrow(/already in use/i);
+  });
+
+  it("el email de una cuenta que no es de partner está en uso", async () => {
+    const memberEmail = `member-${stamp}@ensoleil-test.com`;
+    emails.push(memberEmail);
+    const { data } = await service.auth.admin.createUser({ email: memberEmail, password: "EnSoleil!2026", email_confirm: true });
+    afterCleanup.push(data.user!.id);
+
+    await expect(create({ partners: [{ ...partner("Inés"), email: memberEmail }] })).rejects.toThrow(/already in use/i);
+  });
+
+  it("volver a guardar el mismo borrador con sus partners sí se puede", async () => {
+    const own = partner("Rafael");
+    const id = await create({ partners: [own] });
+
+    await expect(updateLoungeDraft(supabase, id, draftInput({ partners: [own] }))).resolves.toBeUndefined();
+  });
+
+  it("añadir a un lounge live el partner de otro lounge se rechaza", async () => {
+    const shared = partner("Noor");
+    await publishLounge(supabase, await create({ partners: [shared] }));
+    const live = await create({ partners: [partner("Camille")] });
+    await publishLounge(supabase, live);
+
+    await expect(addLoungePartner(supabase, live, { ...shared })).rejects.toThrow(/already in use/i);
+  });
+
+  it("la base no deja vincular un partner a un segundo lounge", async () => {
+    const own = partner("Ines");
+    const first = await create({ partners: [own] });
+    await publishLounge(supabase, first);
+    const second = await create({ partners: [partner("Julian")] });
+    const { data } = await service.from("partners").select("id").eq("contact_email", own.email).single();
+
+    const { error } = await service.from("partner_lounges").insert({ partner_id: data!.id, lounge_id: second });
+
+    expect(error).not.toBeNull();
+  });
+});
+
 describe("publicar invita a todos los partners", () => {
   it("crea una cuenta invitada por partner, vinculada al lounge", async () => {
     const first = partner("Camille");
@@ -161,30 +216,6 @@ describe("publicar invita a todos los partners", () => {
 
     await expect(publishLounge(supabase, id)).rejects.toThrow(/partner/i);
     expect(await contentStatus(id)).toBe("draft");
-  });
-
-  it("un partner que ya gestiona otro lounge se vincula sin cuenta nueva", async () => {
-    const shared = partner("Camille");
-    const first = await create({ partners: [shared] });
-    await publishLounge(supabase, first);
-    const userId = await userIdOf(shared.email);
-
-    const second = await create({ partners: [{ ...shared }] });
-    await publishLounge(supabase, second);
-
-    expect(await userIdOf(shared.email)).toBe(userId);
-    expect((await getLoungePartners(supabase, second)).map((p) => p.email)).toEqual([shared.email]);
-  });
-
-  it("el email de una cuenta que no es de partner se rechaza y no deja nada a medias", async () => {
-    const memberEmail = `member-${stamp}@ensoleil-test.com`;
-    await service.auth.admin.createUser({ email: memberEmail, password: "EnSoleil!2026", email_confirm: true });
-    const fresh = partner("Julian");
-    const id = await create({ partners: [fresh, { ...partner("Inés"), email: memberEmail }] });
-
-    await expect(publishLounge(supabase, id)).rejects.toThrow(/already has a LuxePass account/i);
-    expect(await contentStatus(id)).toBe("draft");
-    expect(await userIdOf(fresh.email)).toBeNull();
   });
 
   it("la RPC de publicar no deja saltarse la invitación", async () => {

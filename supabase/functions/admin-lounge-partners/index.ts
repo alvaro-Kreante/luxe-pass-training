@@ -1,7 +1,7 @@
 // Epic 8 · LoungeLive.dc.html y PartnerAdd / PartnerSuspend / PartnerDelete
 // — los partners de un lounge se gestionan sin despublicarlo (decisión 29
 // sept 2026). Acciones:
-//   add        invita al momento (o vincula a quien ya es partner de otro lounge)
+//   add        invita al momento (un email ya en uso se rechaza)
 //   resend     un enlace nuevo de 24 h, solo si aún no creó su contraseña
 //   suspend    reversible: `suspended_at` + ban en Auth, en todos sus lounges
 //   reactivate deshace la suspensión
@@ -91,7 +91,7 @@ Deno.serve(async (req) => {
         position: count ?? 0,
       });
       if (inviteError) throw inviteError;
-      if (account.tokenHash) await sendPartnerInvite(service, partner, lounge, account.tokenHash, admin.id);
+      await sendPartnerInvite(service, partner, lounge, account.tokenHash, admin.id);
       return json({ userId: account.userId });
     }
 

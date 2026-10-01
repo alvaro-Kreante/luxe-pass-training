@@ -26,8 +26,8 @@ export interface LoungeSummary {
 export interface LinkedPartner {
   partnerId: string;
   userId: string;
-  /** Cuenta nueva: hay que enviarle la invitación con este token. */
-  tokenHash: string | null;
+  /** Hay que enviarle la invitación con este token. */
+  tokenHash: string;
 }
 
 /** Un error con el código HTTP que la function debe devolver. */
@@ -42,10 +42,10 @@ export function isCompletePartner(partner: Partial<PartnerDetails> | undefined):
 }
 
 /**
- * Vincula al partner con el lounge: si el email ya es de un partner, sin
- * cuenta nueva ni invitación (PartnerAdd.dc.html); si es de otra cuenta
- * (miembro, admin), se rechaza; si es nuevo, crea el usuario invitado con
+ * Crea la cuenta invitada del partner y la vincula al lounge: el usuario con
  * `generateLink` — que no envía nada — más su rol y su fila en `partners`.
+ * Un partner gestiona un solo lounge (LoungePartnersMain.dc.html, 23): un
+ * email que ya tiene cuenta, de partner o de cualquier otro rol, está en uso.
  */
 export async function linkOrInvitePartner(
   service: SupabaseClient,
@@ -54,18 +54,9 @@ export async function linkOrInvitePartner(
 ): Promise<LinkedPartner> {
   const email = partner.email.trim().toLowerCase();
 
-  const { data: existing } = await service.from("partners").select("id, user_id").eq("contact_email", email).maybeSingle();
-  if (existing) {
-    const { error } = await service
-      .from("partner_lounges")
-      .upsert({ partner_id: existing.id, lounge_id: lounge.id }, { onConflict: "partner_id,lounge_id", ignoreDuplicates: true });
-    if (error) throw error;
-    return { partnerId: existing.id, userId: existing.user_id, tokenHash: null };
-  }
-
   // `generateLink` reutiliza un usuario que ya exista con ese email.
   const { data: taken } = await service.rpc("email_exists", { p_email: email });
-  if (taken) throw new HttpError(409, `${email} already has a LuxePass account`);
+  if (taken) throw new HttpError(409, `${email} is already in use`);
 
   const { data: link, error: linkError } = await service.auth.admin.generateLink({
     type: "invite",

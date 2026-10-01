@@ -71,8 +71,7 @@ Deno.serve(async (req) => {
     const undo = async () => {
       for (const { invite, account } of done) {
         await service.from("lounge_partner_invites").update({ partner_id: null }).eq("id", invite.id);
-        if (account.tokenHash) await service.auth.admin.deleteUser(account.userId);
-        else await service.from("partner_lounges").delete().eq("partner_id", account.partnerId).eq("lounge_id", loungeId);
+        await service.auth.admin.deleteUser(account.userId);
       }
     };
 
@@ -100,7 +99,6 @@ Deno.serve(async (req) => {
     // deshacer nada — la invitación se puede reenviar desde la lista.
     const failed: string[] = [];
     for (const { invite, account } of done) {
-      if (!account.tokenHash) continue;
       try {
         await sendPartnerInvite(service, invite, lounge, account.tokenHash, admin.id);
       } catch (error) {
