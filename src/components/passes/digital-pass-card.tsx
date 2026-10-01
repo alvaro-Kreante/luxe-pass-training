@@ -27,6 +27,9 @@ export function DigitalPassCard({
   const today = state === "today";
   const checkedIn = state === "checked-in";
 
+  // Story 10.8 — el partner (hotel, spa…) junto al lounge.
+  const loungeWithPartner = pass.partnerName ? `${pass.loungeName} · ${pass.partnerName}` : pass.loungeName;
+
   return (
     <div
       data-theme="dark"
@@ -129,13 +132,13 @@ export function DigitalPassCard({
             <>
               <Row label="Reference" value={pass.reference} muted={expired} />
               <Row label="Member" value={pass.memberName} muted={expired} />
-              <Row label="Lounge" value={pass.loungeName} muted={expired} />
+              <Row label="Lounge" value={loungeWithPartner} muted={expired} />
               <Row label="Stay until" value={pass.windowCloseTime} muted={expired} />
             </>
           ) : expired ? (
             <>
               <Row label="Member" value={pass.memberName} muted />
-              <Row label="Lounge" value={pass.loungeName} muted />
+              <Row label="Lounge" value={loungeWithPartner} muted />
               <Row
                 label="Visited"
                 value={pass.checkedInAt ? `${pass.shortDateLabel} · ${pass.checkedInAt}` : pass.shortDateLabel}
@@ -152,7 +155,7 @@ export function DigitalPassCard({
           ) : (
             <>
               <Row label="Member" value={pass.memberName} />
-              <Row label="Lounge" value={pass.loungeName} />
+              <Row label="Lounge" value={loungeWithPartner} />
               <Row label="Date" value={pass.shortDateLabel} />
               <Row
                 label="Arrival"

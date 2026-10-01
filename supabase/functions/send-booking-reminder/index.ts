@@ -96,7 +96,7 @@ Deno.serve(async (req) => {
     await Promise.all([
       service.auth.admin.getUserById(booking.member_id),
       service.from("profiles").select("full_name").eq("id", booking.member_id).maybeSingle(),
-      service.from("lounges").select("name, address, reception_note").eq("id", booking.lounge_id).single(),
+      service.from("lounges").select("name, address, reception_note, partners(name)").eq("id", booking.lounge_id).single(),
     ]);
 
   if (authError || !authUser.user?.email || loungeError) {
@@ -118,7 +118,8 @@ Deno.serve(async (req) => {
       `Tomorrow at ${booking.slot_time} — your visit at ${lounge.name}`,
       renderReminderHtml({
         memberFirstName,
-        loungeName: lounge.name,
+        // Story 10.8 — el partner (hotel, spa…) como contexto: "Tower A at Halcyon Hotels".
+        loungeName: lounge.partners?.name ? `${lounge.name} at ${lounge.partners.name}` : lounge.name,
         loungeAddress: lounge.address,
         receptionNote: lounge.reception_note,
         dateIso: booking.date,

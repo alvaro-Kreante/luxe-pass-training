@@ -22,7 +22,7 @@ export default function BookPage() {
         lounge={lounge}
         backHref={`/lounges/${lounge.id}`}
         backLabel={`Back to ${lounge.name}`}
-        address={`${lounge.neighborhood} · ${lounge.city} · ${lounge.address}`}
+        address={[lounge.partnerName, lounge.neighborhood, lounge.city, lounge.address].filter(Boolean).join(" · ")}
         headerBadge={<StatusChip available>Accepting bookings</StatusChip>}
         topbarRight={
           <a

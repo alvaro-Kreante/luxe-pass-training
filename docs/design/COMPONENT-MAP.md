@@ -912,6 +912,7 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 ## Desviaciones conscientes respecto a los artboards
 
 - **Epic 10 · Activar solo desde el detalle.** `PartnerNew` (2) dibuja *Activate partner* deshabilitado en el rail del alta; en código el alta no lo muestra: se activa desde el detalle, una vez guardado el draft.
+- **Epic 10 · Story 10.8 sin artboard propio.** El nombre del partner se añadió a pantallas de las Fases 3, 4 y 6 sin redibujar sus artboards: en la ficha (`/lounges/[id]`) una línea "at {partner}" bajo el nombre; en las tarjetas de `/explore`, el callout y la tarjeta de resultado, delante del barrio ("Halcyon Hotels · Midtown East · …"); en el rail de reserva, la confirmación, el recibo, el pase y "Upcoming" de `/my-pass`, delante de la dirección. Misma tipografía y color que la línea en la que entra. Sin partner, todo se ve como antes.
 - **Epic 10 · El selector no ofrece partners suspendidos.** `LoungeDraftPartner` (12) solo muestra activos y draft; un partner suspendido no se puede asignar a un lounge nuevo hasta reactivarlo.
 - **Epic 10 · Suspended sin rojo.** `Partners.dc.html` y los demás artboards de la Fase 10 pintan *Suspended* en `#D9826B`/`#E39A85`, pero el design system no admite verde ni rojo (§5 "Estados") y `globals.css` no tiene ese token. `PartnerStatusChip` usa el chip de "no disponible" (`StatusChip available={false}`). Si se quiere el rojo, hay que añadirlo antes a DESIGN-SYSTEM.md §2.
 

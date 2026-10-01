@@ -612,6 +612,10 @@ partner-persona por el partner-organización. Antes del primer PR a
   `scripts/seed-partners.mjs` siguen live sin partner (la base lo admite;
   solo publicar lo exige). Para asignarles uno hay que pasarlos a draft
   ("Edit lounge"), elegir el partner y publicar.
+- **El partner en el pase de un lounge que ya no está live (10.8):** el
+  miembro solo puede leer el nombre del partner de un lounge publicado
+  (policy "read partner of a live lounge"), así que el pase de una reserva
+  en un lounge pasado a draft o suspendido se ve sin el partner.
 - **Vistas previas de email de `/partner/emails/*`** siguen con el venue fijo
   de `PARTNER_VENUE` (son la vista previa del artboard, como antes); los
   emails reales ya nombran al partner y al lounge (10.7).

@@ -73,6 +73,7 @@ interface LoungeProfileTableRow {
   review_count: number;
   capacity: number;
   booking_restrictions: string[];
+  partners: { name: string } | null;
 }
 
 function fromProfileRow(row: LoungeProfileTableRow): LoungeProfile {
@@ -101,6 +102,7 @@ function fromProfileRow(row: LoungeProfileTableRow): LoungeProfile {
     reviewCount: row.review_count,
     capacity: row.capacity,
     bookingRestrictions: row.booking_restrictions,
+    partnerName: row.partners?.name ?? null,
   };
 }
 
@@ -110,7 +112,7 @@ export async function fetchLoungeProfile(
 ): Promise<LoungeProfile | null> {
   const { data, error } = await supabase
     .from("lounges")
-    .select("*")
+    .select("*, partners(name)")
     .eq("id", id)
     .maybeSingle();
 

@@ -26,6 +26,11 @@ export interface LoungeRow {
   bands: TimeBand[];
   closedWeekdays: number[];
   featured: boolean;
+  /**
+   * Story 10.8 — el partner que lo opera (hotel, spa…), como contexto bajo el
+   * nombre. null si no tiene; opcional para los datos de muestra del mock.
+   */
+  partnerName?: string | null;
 }
 
 export interface LoungeWithDistance extends LoungeRow {
@@ -48,6 +53,7 @@ interface LoungeTableRow {
   bands: string[];
   closed_weekdays: number[];
   featured: boolean;
+  partners: { name: string } | null;
 }
 
 function fromRow(row: LoungeTableRow): LoungeRow {
@@ -67,6 +73,7 @@ function fromRow(row: LoungeTableRow): LoungeRow {
     bands: row.bands as TimeBand[],
     closedWeekdays: row.closed_weekdays,
     featured: row.featured,
+    partnerName: row.partners?.name ?? null,
   };
 }
 
@@ -81,7 +88,8 @@ export async function fetchLounges(
   // La policy de `lounges` deja ver un borrador a sus partners y a quien
   // tiene reserva allí (Epic 8, editar un lounge live) — el catálogo solo
   // muestra los publicados.
-  const { data, error } = await supabase.from("lounges").select("*").eq("content_status", "live");
+  // Story 10.8 — solo `name` del partner: el miembro no puede leer nada más (privilegio por columna).
+  const { data, error } = await supabase.from("lounges").select("*, partners(name)").eq("content_status", "live");
 
   if (error) throw error;
 

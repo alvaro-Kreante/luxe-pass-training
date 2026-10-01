@@ -81,7 +81,7 @@ export default function ReceiptPage() {
             <ReceiptField
               label="Lounge"
               value={lounge.name}
-              detail={`${lounge.address} · Level 2`}
+              detail={[lounge.partnerName, lounge.address, "Level 2"].filter(Boolean).join(" · ")}
             />
             <ReceiptField
               label="When"

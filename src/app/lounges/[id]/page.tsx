@@ -280,6 +280,12 @@ function LoungeProfileScreen() {
                   </Link>
                 </div>
 
+                {lounge.partnerName ? (
+                  <p className="m-0 mt-1 text-[13.5px] text-fg-muted">
+                    at <span className="font-bold text-fg">{lounge.partnerName}</span>
+                  </p>
+                ) : null}
+
                 <div className="mt-2.5 flex flex-wrap items-center gap-3.5">
                   <span className="flex items-center gap-1.5 text-[13px] text-fg-muted">
                     <MapPin size={15} strokeWidth={1.7} className="text-fg-subtle" aria-hidden />

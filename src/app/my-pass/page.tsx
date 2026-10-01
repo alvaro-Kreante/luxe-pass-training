@@ -235,7 +235,9 @@ function UpcomingList({
             </div>
             <p className="m-0 mt-1 text-[12.5px] text-fg-subtle">{booking.dateTimeLabel}</p>
             {booking.addressLine && (
-              <p className="m-0 mt-0.5 text-[12.5px] text-fg-subtle">{booking.addressLine}</p>
+              <p className="m-0 mt-0.5 text-[12.5px] text-fg-subtle">
+                {[booking.partnerName, booking.addressLine].filter(Boolean).join(" · ")}
+              </p>
             )}
           </div>
 

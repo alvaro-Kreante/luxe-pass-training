@@ -90,6 +90,7 @@ export function LoungeCallout({
             {lounge.name}
           </p>
           <p className="m-0 mb-2 text-xs text-fg-subtle">
+            {lounge.partnerName ? `${lounge.partnerName} · ` : ""}
             {lounge.neighborhood} · {formatDistance(lounge.distanceMiles, unit)} ·{" "}
             {walkingMinutes(lounge.distanceMiles)} min walk
           </p>

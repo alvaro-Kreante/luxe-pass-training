@@ -58,6 +58,7 @@ export function ResultCard({
         </span>
 
         <span className="mb-2 mt-[3px] block text-xs text-fg-subtle">
+          {lounge.partnerName ? `${lounge.partnerName} · ` : ""}
           {lounge.neighborhood} · {lounge.city}
         </span>
 

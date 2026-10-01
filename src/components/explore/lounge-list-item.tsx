@@ -42,6 +42,7 @@ export function LoungeListItem({
             <Rating value={lounge.rating} />
           </div>
           <p className="m-0 text-[12.5px] text-fg-subtle">
+            {lounge.partnerName ? `${lounge.partnerName} · ` : ""}
             {lounge.neighborhood} · {lounge.city} · {lounge.hours}
           </p>
         </div>
