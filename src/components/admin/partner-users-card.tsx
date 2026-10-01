@@ -100,13 +100,19 @@ export function PartnerUsersCard({
   const [adding, setAdding] = React.useState(false);
   const [draft, setDraft] = React.useState<PartnerMemberInput>(EMPTY_PARTNER_USER);
   const [editing, setEditing] = React.useState<{ id: string; value: PartnerMemberInput } | null>(null);
-  const [blockedRepresentative, setBlockedRepresentative] = React.useState<string | null>(null);
+  // El aviso vale para la lista tal como estaba al pulsar: si cambia (otra
+  // acción, activar el partner…), desaparece solo.
+  const snapshot = users.map((u) => `${u.id}:${u.status}:${u.isRepresentative}`).join("|");
+  const [blocked, setBlocked] = React.useState<{ name: string; snapshot: string } | null>(null);
+  const blockedRepresentative = blocked && blocked.snapshot === snapshot ? blocked.name : null;
+  const setBlockedRepresentative = (name: string | null) => setBlocked(name ? { name, snapshot } : null);
   const [error, setError] = React.useState("");
   const [busy, setBusy] = React.useState(false);
 
   async function run(action: () => Promise<void>) {
     setBusy(true);
     setError("");
+    setBlocked(null);
     try {
       await action();
       return true;

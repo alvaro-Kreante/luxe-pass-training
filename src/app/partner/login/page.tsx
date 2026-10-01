@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Lock, Mail } from "lucide-react";
 
 import { PartnerAuthSplit } from "@/components/patterns/partner-auth-split";
@@ -9,10 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { hasDashboardAccess, loadPartnerContext } from "@/lib/partner-lounges";
 import { createClient } from "@/lib/supabase/client";
 
 const INVALID_CREDENTIALS_MESSAGE =
   "We could not find a partner account with that email and password.";
+// Story 10.1 — su partner, o su propia cuenta, está suspendido.
+const SUSPENDED_MESSAGE = "Your access to the Partner Dashboard is suspended. Contact En Soleil if you think this is a mistake.";
 
 /**
  * Flow: flow-partner-experience.md — "Partner Login". Sin historia ni
@@ -31,12 +34,22 @@ const INVALID_CREDENTIALS_MESSAGE =
  * de abrir para no dejarla a medias.
  */
 export default function PartnerLoginPage() {
+  // `useSearchParams` obliga a un límite de Suspense para prerenderizar.
+  return (
+    <React.Suspense>
+      <PartnerLoginScreen />
+    </React.Suspense>
+  );
+}
+
+function PartnerLoginScreen() {
   const router = useRouter();
+  const suspendedOnArrival = useSearchParams().has("suspended");
   const supabase = React.useMemo(() => createClient(), []);
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [rememberDevice, setRememberDevice] = React.useState(false);
-  const [error, setError] = React.useState("");
+  const [error, setError] = React.useState(suspendedOnArrival ? SUSPENDED_MESSAGE : "");
   const [submitting, setSubmitting] = React.useState(false);
 
   async function handleSubmit(event: React.FormEvent) {
@@ -60,6 +73,12 @@ export default function PartnerLoginPage() {
       if (!isPartner) {
         await supabase.auth.signOut();
         setError(INVALID_CREDENTIALS_MESSAGE);
+        return;
+      }
+
+      if (!hasDashboardAccess(await loadPartnerContext(supabase))) {
+        await supabase.auth.signOut();
+        setError(SUSPENDED_MESSAGE);
         return;
       }
 

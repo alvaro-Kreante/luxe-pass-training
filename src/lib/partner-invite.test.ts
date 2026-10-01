@@ -23,7 +23,7 @@ afterAll(async () => {
 });
 
 describe("abrir el enlace de invitación", () => {
-  it("con un token válido devuelve lo que escribió el admin y el lounge al que se une", async () => {
+  it("con un token válido devuelve lo que escribió el admin, el partner al que se une y sus lounges", async () => {
     const invited = await invite();
 
     const welcome = await acceptPartnerInvite(isolatedClient(), invited.token);
@@ -34,6 +34,8 @@ describe("abrir el enlace de invitación", () => {
       email: invited.email,
       mobile: "+1 917 555 0163",
       photoUrl: null,
+      // Story 10.1 — se une a un partner (la organización), con sus lounges.
+      partnerName: invited.partnerName,
       lounges: [{ name: invited.loungeName, address: "27 Bond Street, NoHo" }],
     });
   });

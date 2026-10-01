@@ -269,6 +269,7 @@ as $$
 declare
   v_member public.partner_members;
   v_partner_name text;
+  v_partner_status text;
   v_lounges jsonb;
   v_selected text;
 begin
@@ -277,7 +278,7 @@ begin
     return null;
   end if;
 
-  select p.name into v_partner_name from public.partners p where p.id = v_member.partner_id;
+  select p.name, p.status into v_partner_name, v_partner_status from public.partners p where p.id = v_member.partner_id;
 
   select coalesce(jsonb_agg(jsonb_build_object(
     'id', l.id,
@@ -297,8 +298,8 @@ begin
   end if;
 
   return jsonb_build_object(
-    'partner', jsonb_build_object('id', v_member.partner_id, 'name', v_partner_name),
-    'user', jsonb_build_object('first_name', v_member.first_name, 'last_name', v_member.last_name),
+    'partner', jsonb_build_object('id', v_member.partner_id, 'name', v_partner_name, 'status', v_partner_status),
+    'user', jsonb_build_object('first_name', v_member.first_name, 'last_name', v_member.last_name, 'suspended', v_member.suspended_at is not null),
     'lounges', v_lounges,
     'selected_lounge_id', v_selected,
     'all_lounges', v_member.all_lounges and jsonb_array_length(v_lounges) > 0

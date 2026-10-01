@@ -4,6 +4,7 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 
 import { PartnerContextProvider } from "@/components/partner/partner-context";
+import { hasDashboardAccess, loadPartnerContext } from "@/lib/partner-lounges";
 import { createClient } from "@/lib/supabase/client";
 
 /**
@@ -12,7 +13,8 @@ import { createClient } from "@/lib/supabase/client";
  * `supabase/schemas/user_roles.sql`). Gemelo de `RequireSession`
  * (`components/onboarding/require-session.tsx`) para el lado de partner —
  * no lo reutiliza porque además del check de sesión valida el rol. Story
- * 10.6: monta además el contexto del partner (partner, usuario y lounge
+ * 10.6: monta además el contexto del partner. Story 10.1: un usuario de un
+ * partner suspendido, o suspendido él mismo, sale con la sesión cerrada (partner, usuario y lounge
  * elegido) para todo /partner.
  */
 export function RequirePartnerSession({ children }: { children: React.ReactNode }) {
@@ -35,6 +37,15 @@ export function RequirePartnerSession({ children }: { children: React.ReactNode 
 
       if (!isPartner) {
         router.replace("/partner/login");
+        return;
+      }
+
+      // Story 10.1 — partner suspendido o usuario suspendido: fuera.
+      const context = await loadPartnerContext(supabase);
+      if (!active) return;
+      if (!hasDashboardAccess(context)) {
+        await supabase.auth.signOut();
+        router.replace("/partner/login?suspended=1");
         return;
       }
 

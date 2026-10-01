@@ -99,7 +99,7 @@ describe("el contexto del dashboard", () => {
     const context = await loadPartnerContext(session);
 
     expect(context?.partner.name).toBe(`Halcyon ${stamp}`);
-    expect(context?.user).toEqual({ firstName: "Camille", lastName: "Duarte" });
+    expect(context?.user).toEqual({ firstName: "Camille", lastName: "Duarte", suspended: false });
     expect(context?.lounges.map((l) => l.id).sort()).toEqual([towerA, towerB].sort());
   });
 

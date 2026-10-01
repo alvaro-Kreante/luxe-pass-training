@@ -12,6 +12,7 @@ import { createClient as createSupabaseClient, type SupabaseClient } from "@supa
 export interface InvitedPartner {
   loungeId: string;
   loungeName: string;
+  partnerName: string;
   email: string;
   userId: string;
   /** Un token de invitación sin usar, como el del enlace del email. */
@@ -77,7 +78,7 @@ export async function invitePartnerForTest(label: string): Promise<InvitedPartne
     const { error: linkMemberError } = await service.from("partner_members").update({ user_id: userId }).eq("email", email);
     if (linkMemberError) throw linkMemberError;
 
-    return { loungeId, loungeName, email, userId, token: link.properties.hashed_token, cleanup };
+    return { loungeId, loungeName, partnerName: `Test Partner ${label} ${stamp}`, email, userId, token: link.properties.hashed_token, cleanup };
   } catch (error) {
     await cleanup();
     throw error;

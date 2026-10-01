@@ -15,8 +15,8 @@ export interface PartnerLounge {
 }
 
 export interface PartnerContext {
-  partner: { id: string; name: string };
-  user: { firstName: string; lastName: string };
+  partner: { id: string; name: string; status: "draft" | "active" | "suspended" };
+  user: { firstName: string; lastName: string; suspended: boolean };
   lounges: PartnerLounge[];
   /** Siempre un lounge concreto (Today y el check-in); null si el partner no tiene ninguno. */
   selectedLoungeId: string | null;
@@ -28,8 +28,8 @@ export async function loadPartnerContext(supabase: SupabaseClient): Promise<Part
   const { data, error } = await supabase.rpc("partner_context");
   if (error || !data) return null;
   type Raw = {
-    partner: { id: string; name: string };
-    user: { first_name: string; last_name: string };
+    partner: PartnerContext["partner"];
+    user: { first_name: string; last_name: string; suspended: boolean };
     lounges: { id: string; name: string; neighborhood: string; content_status: PartnerLounge["contentStatus"] }[];
     selected_lounge_id: string | null;
     all_lounges: boolean;
@@ -37,11 +37,20 @@ export async function loadPartnerContext(supabase: SupabaseClient): Promise<Part
   const raw = data as Raw;
   return {
     partner: raw.partner,
-    user: { firstName: raw.user.first_name, lastName: raw.user.last_name },
+    user: { firstName: raw.user.first_name, lastName: raw.user.last_name, suspended: raw.user.suspended },
     lounges: raw.lounges.map((l) => ({ id: l.id, name: l.name, neighborhood: l.neighborhood, contentStatus: l.content_status })),
     selectedLoungeId: raw.selected_lounge_id,
     allLounges: raw.all_lounges,
   };
+}
+
+/**
+ * Story 10.1 — un usuario de un partner que no está activo, o suspendido él
+ * mismo, no entra al dashboard aunque su sesión siga viva (el ban de Auth
+ * solo impide renovarla).
+ */
+export function hasDashboardAccess(context: PartnerContext | null): boolean {
+  return Boolean(context && context.partner.status === "active" && !context.user.suspended);
 }
 
 /** `null` = "All lounges". Un lounge que no es del partner se rechaza. */

@@ -36,7 +36,13 @@ export function PartnerWelcomeForm({
   const rules = passwordRules(password, confirmation);
   const ready = rules.length && rules.number && rules.match && firstName.trim() !== "" && lastName.trim() !== "";
   const initials = `${firstName.trim()[0] ?? ""}${lastName.trim()[0] ?? ""}`.toUpperCase();
-  const lounge = welcome.lounges[0];
+  // Story 10.1 — se une al partner; sus lounges, como resumen.
+  const loungesSummary =
+    welcome.lounges.length === 1
+      ? welcome.lounges[0].name
+      : welcome.lounges.length > 1
+        ? `${welcome.lounges.length} lounges`
+        : "Lounges coming soon";
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -70,16 +76,16 @@ export function PartnerWelcomeForm({
         Check the details En Soleil entered for you, add a photo your team will recognise, and choose a password.
       </p>
 
-      {lounge ? (
+      {welcome.partnerName ? (
         <div className="mt-5 flex items-center gap-3.5 rounded-[14px] border border-accent-strong bg-accent/8 px-4 py-3.5">
           <div className="flex size-10 shrink-0 items-center justify-center rounded-[11px] border border-line bg-panel-black text-accent">
             <House size={19} strokeWidth={1.7} />
           </div>
           <div className="min-w-0 flex-1">
             <p className="m-0 text-[11px] font-bold uppercase tracking-[0.08em] text-fg-subtle">You&apos;re joining</p>
-            <p className="m-0 mt-0.5 font-display text-[19px] text-fg">{lounge.name}</p>
+            <p className="m-0 mt-0.5 font-display text-[19px] text-fg">{welcome.partnerName}</p>
           </div>
-          <span className="hidden text-xs text-fg-subtle sm:inline">{lounge.address}</span>
+          <span className="hidden text-xs text-fg-subtle sm:inline">{loungesSummary}</span>
         </div>
       ) : null}
 

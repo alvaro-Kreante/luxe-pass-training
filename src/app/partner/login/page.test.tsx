@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createClient } from "@/lib/supabase/client";
@@ -15,9 +16,11 @@ import PartnerLoginPage from "./page";
  */
 
 const push = vi.fn();
+const search = vi.hoisted(() => ({ params: new URLSearchParams() }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push }),
+  useSearchParams: () => search.params,
 }));
 
 const PASSWORD = "AinsworthFOH!24";
@@ -39,6 +42,7 @@ beforeAll(async () => {
 
 beforeEach(() => {
   push.mockClear();
+  search.params = new URLSearchParams();
 });
 
 function emailField() {
@@ -101,5 +105,29 @@ describe("acceso de partner", () => {
     render(<PartnerLoginPage />);
 
     expect(screen.getByText(/Members sign in at/)).toBeVisible();
+  });
+
+  /* Story 10.1 — el acceso suspendido. */
+  it("al llegar desde el dashboard con el acceso suspendido, lo dice", async () => {
+    search.params = new URLSearchParams("suspended=1");
+
+    render(<PartnerLoginPage />);
+
+    expect(await screen.findByText(/access to the Partner Dashboard is suspended/i)).toBeVisible();
+  });
+
+  it("un usuario suspendido no entra aunque su contraseña sea correcta", async () => {
+    const user = userEvent.setup({ delay: null });
+    const service = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    await service.from("partner_members").update({ suspended_at: new Date().toISOString() }).eq("email", PARTNER_EMAIL.toLowerCase());
+    render(<PartnerLoginPage />);
+
+    await user.type(emailField(), PARTNER_EMAIL);
+    await user.type(passwordField(), PASSWORD);
+    await user.click(submitButton());
+
+    expect(await screen.findByText(/access to the Partner Dashboard is suspended/i)).toBeVisible();
+    expect(push).not.toHaveBeenCalled();
+    await service.from("partner_members").update({ suspended_at: null }).eq("email", PARTNER_EMAIL.toLowerCase());
   });
 });

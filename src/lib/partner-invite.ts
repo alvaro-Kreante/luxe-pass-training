@@ -15,6 +15,8 @@ export interface PartnerWelcome {
   email: string;
   mobile: string;
   photoUrl: string | null;
+  /** Story 10.1 — el partner (la organización) al que se une. */
+  partnerName: string;
   lounges: { name: string; address: string }[];
 }
 
@@ -40,6 +42,7 @@ export async function loadPartnerWelcome(supabase: SupabaseClient): Promise<Part
     .maybeSingle();
   if (error || !data) return null;
 
+  const { data: partner } = await supabase.from("partners").select("name").eq("id", data.partner_id).maybeSingle();
   const { data: lounges } = await supabase
     .from("lounges")
     .select("name, address, neighborhood")
@@ -52,6 +55,7 @@ export async function loadPartnerWelcome(supabase: SupabaseClient): Promise<Part
     email: data.email,
     mobile: data.mobile,
     photoUrl: await resolveProfilePhotoUrl(supabase, data.photo_path),
+    partnerName: partner?.name ?? "",
     lounges: (lounges ?? []).map((lounge) => ({
       name: lounge.name,
       address: [lounge.address, lounge.neighborhood].filter(Boolean).join(", "),

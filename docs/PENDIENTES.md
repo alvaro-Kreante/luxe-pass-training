@@ -623,7 +623,7 @@ partner-persona por el partner-organización. Antes del primer PR a
   emails reales ya nombran al partner y al lounge (10.7).
 - **`admin_revenue_by_partner`** sigue agrupando por lounge, no por partner.
 - **`admin-partners` (Story 10.4) es una Edge Function nueva:** ya está en `deploy.yml`, pero necesita `APP_URL` y `BREVO_*` en los remotos, como las demás que envían emails.
-- **Suspender un usuario no corta una sesión ya abierta al instante:** el ban impide renovar el token, y `partner_lounge_ids()` deja de devolver lounges, pero el access token vigente sigue siendo válido hasta que caduca (1 h).
+- **Suspender un usuario no invalida su token al instante** (el ban solo impide renovarlo), pero `RequirePartnerSession` y el login comprueban el acceso con `partner_context()`: el usuario sale con la sesión cerrada y el aviso "Your access… is suspended" en cuanto abre o recarga /partner.
 
 ## 5. Decisiones abiertas
 
