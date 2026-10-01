@@ -207,6 +207,22 @@
       "w": 1440,
       "h": 1080,
       "title": "26. Taller photos, full-size viewer"
+    },
+    {
+      "file": "LoungeFilterCity.dc.html",
+      "x": 0,
+      "y": 9380,
+      "w": 1440,
+      "h": 900,
+      "title": "27. Live only, find a city"
+    },
+    {
+      "file": "LoungeFilterApplied.dc.html",
+      "x": 1540,
+      "y": 9380,
+      "w": 1440,
+      "h": 900,
+      "title": "28. Live lounges in Miami"
     }
   ],
   "annotations": [
@@ -279,6 +295,13 @@
       "y": 7835,
       "w": 1400,
       "text": "Lounge adjustments · A partner runs one lounge: an email already used by another lounge — or by any other account — is refused with 'Already in use' (screen 20 no longer adds them silently). Partners sit in the main column of the new-lounge form and the draft; the form saves with 'Save partner' and closes, and 'Add partner' opens a new one (19, 23). Saving a draft and publishing confirm with a notice and keep the admin on the lounge (24, 25). Location is one column — address on top, the map full width below. Live photos are 144px tall and open full size in a viewer (26). The week starts on Monday. No 'Preview as a member': no story asks for it."
+    },
+    {
+      "id": "lounge-filters-note",
+      "x": 0,
+      "y": 9285,
+      "w": 1400,
+      "text": "Lounge filters · The list is newest first. Live and Draft are quick filters: one press shows only that status, a second press clears it. The city button opens a search over the cities that already have a lounge — typing narrows the list, picking one filters the table and becomes the button's label. Status and city combine; Clear filters drops both."
     }
   ],
   "launch": {
