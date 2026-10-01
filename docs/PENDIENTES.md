@@ -594,6 +594,8 @@ no publicar el lounge; reenviarla vuelve con la Story 10.4.
 
 ### 4.13 Epic 10: el modelo de partners cambió y los remotos no lo tienen
 
+Paso a paso para `staging` y `main`: `docs/ci-cd/EPIC-10-DESPLIEGUE.md`.
+
 La Story 10.1 (1 oct 2026, migración `partner_organizations`) sustituye el
 partner-persona por el partner-organización. Antes del primer PR a
 `staging` con este cambio:
