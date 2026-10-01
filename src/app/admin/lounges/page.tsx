@@ -22,7 +22,7 @@ import {
 } from "@/lib/admin-content";
 import { cn } from "@/lib/utils";
 
-const GRID = "grid-cols-[32px_1fr_158px_92px_106px_128px_30px]";
+const GRID = "grid-cols-[32px_1fr_210px_150px_76px_92px_92px_30px]";
 
 /**
  * Story 8.3 — "Add/edit/remove lounge profiles" (la lista) y "Bulk update
@@ -38,7 +38,9 @@ const GRID = "grid-cols-[32px_1fr_158px_92px_106px_128px_30px]";
  *
  * Orden por fecha de alta, el más nuevo arriba (el RPC ya lo devuelve así).
  * Filtros rápidos Live/Draft y de ciudad: LoungeFilterCity.dc.html (27) y
- * LoungeFilterApplied.dc.html (28).
+ * LoungeFilterApplied.dc.html (28). Story 10.5 (LoungesWithPartner.dc.html,
+ * Fase 10 · 9): columna Partner, búsqueda también por partner y filtro
+ * Suspended.
  */
 export default function LoungesPage() {
   return (
@@ -77,12 +79,13 @@ function LoungesScreen() {
   const needle = query.trim().toLowerCase();
   const filtered = visible.filter(
     (l) =>
-      (!needle || l.name.toLowerCase().includes(needle)) &&
+      (!needle || l.name.toLowerCase().includes(needle) || (l.partnerName ?? "").toLowerCase().includes(needle)) &&
       (!status || l.contentStatus === status) &&
       (!city || l.city === city),
   );
   const draftCount = visible.filter((l) => l.contentStatus === "draft").length;
   const liveCount = visible.filter((l) => l.contentStatus === "live").length;
+  const suspendedCount = visible.filter((l) => l.contentStatus === "suspended").length;
   const cityCounts = new Map<string, number>();
   for (const l of visible) cityCounts.set(l.city, (cityCounts.get(l.city) ?? 0) + 1);
   const cities = [...cityCounts]
@@ -127,8 +130,8 @@ function LoungesScreen() {
             <Search size={17} strokeWidth={1.8} className="text-fg-subtle" aria-hidden />
             <input
               type="search"
-              aria-label="Search lounges"
-              placeholder="Search lounges"
+              aria-label="Search lounges or partners"
+              placeholder="Search lounges or partners"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               className="w-full bg-transparent text-[13.5px] text-fg placeholder:text-fg-subtle focus:outline-none"
@@ -152,6 +155,12 @@ function LoungesScreen() {
           count={draftCount}
           pressed={status === "draft"}
           onToggle={() => toggleStatus("draft")}
+        />
+        <StatusFilter
+          label="Suspended"
+          count={suspendedCount}
+          pressed={status === "suspended"}
+          onToggle={() => toggleStatus("suspended")}
         />
         {filtering ? (
           <button
@@ -184,6 +193,7 @@ function LoungesScreen() {
         <div className={cn("grid items-center gap-3.5 border-b border-line px-5.5", GRID)} style={{ height: 42 }}>
           <span />
           <Th>Lounge</Th>
+          <Th>Partner</Th>
           <Th>Status</Th>
           <Th>Photos</Th>
           <Th>Amenities</Th>
@@ -219,6 +229,16 @@ function LoungesScreen() {
                 </span>
               </span>
             </button>
+            {lounge.partnerName ? (
+              <Link
+                href={`/admin/partners/${lounge.partnerId}`}
+                className="truncate text-[12.5px] font-bold text-fg-muted transition-colors duration-150 hover:text-accent"
+              >
+                {lounge.partnerName}
+              </Link>
+            ) : (
+              <p className="m-0 text-[12.5px] italic text-fg-subtle">No partner yet</p>
+            )}
             <div>
               <LoungeStatusChip lounge={lounge} />
             </div>

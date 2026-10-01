@@ -41,6 +41,8 @@ export interface AdminLoungeListRow {
   updated_at: string;
   city: string;
   created_at: string;
+  partner_id: string | null;
+  partner_name: string | null;
 }
 
 export interface AdminLoungeRow {
@@ -54,6 +56,9 @@ export interface AdminLoungeRow {
   amenitiesCount: number;
   updatedLabel: string;
   city: string;
+  /** Story 10.5 — null mientras el borrador no tiene partner. */
+  partnerId: string | null;
+  partnerName: string | null;
 }
 
 function formatShortDate(iso: string): string {
@@ -72,6 +77,8 @@ export function mapLoungeListRow(row: AdminLoungeListRow): AdminLoungeRow {
     amenitiesCount: row.amenities_count ?? 0,
     updatedLabel: formatShortDate(row.updated_at),
     city: row.city,
+    partnerId: row.partner_id,
+    partnerName: row.partner_name,
   };
 }
 
@@ -143,6 +150,18 @@ export interface LoungeContentDetail {
   pendingProposed: ProposedLoungeContent | null;
   pendingSubmittedBy: string | null;
   pendingSubmittedAt: string | null;
+  /** Story 10.5 — LoungePartner.dc.html (Fase 10 · 10), en solo lectura. */
+  partner: LoungePartnerSummary | null;
+}
+
+export interface LoungePartnerSummary {
+  id: string;
+  name: string;
+  status: "draft" | "active" | "suspended";
+  city: string;
+  loungeCount: number;
+  userCount: number;
+  representative: { name: string; email: string } | null;
 }
 
 interface AdminLoungeDetailRow {
@@ -170,6 +189,15 @@ interface AdminLoungeDetailRow {
   pending_proposed: ProposedLoungeContent | null;
   pending_submitted_by: string | null;
   pending_submitted_at: string | null;
+  partner: {
+    id: string;
+    name: string;
+    status: LoungePartnerSummary["status"];
+    city: string;
+    lounge_count: number;
+    user_count: number;
+    representative: { name: string; email: string } | null;
+  } | null;
 }
 
 function mapLoungeDetailRow(row: AdminLoungeDetailRow): LoungeContentDetail {
@@ -204,6 +232,17 @@ function mapLoungeDetailRow(row: AdminLoungeDetailRow): LoungeContentDetail {
     pendingProposed: row.pending_proposed,
     pendingSubmittedBy: row.pending_submitted_by,
     pendingSubmittedAt: row.pending_submitted_at,
+    partner: row.partner
+      ? {
+          id: row.partner.id,
+          name: row.partner.name,
+          status: row.partner.status,
+          city: row.partner.city,
+          loungeCount: row.partner.lounge_count,
+          userCount: row.partner.user_count,
+          representative: row.partner.representative,
+        }
+      : null,
   };
 }
 
@@ -239,6 +278,7 @@ function draftPayload(input: LoungeDraftInput) {
     amenities: input.amenities,
     capacity: input.capacity,
     booking_restrictions: input.bookingRestrictions,
+    partner_id: input.partnerId,
   };
 }
 

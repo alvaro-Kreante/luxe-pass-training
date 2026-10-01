@@ -224,7 +224,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `/admin/partners` | Fase 10 · `Partners.dc.html` (1) | 10.2 |
 | `/admin/partners/new` | Fase 10 · `PartnerNew.dc.html` (2) | 10.3 |
 | `/admin/partners/[id]` | Fase 10 · `PartnerDetail.dc.html` (3) + `PartnerUserEdit.dc.html` (4) | 10.3 |
-| `/admin/lounges` | `Lounges.dc.html` (11) + `LoungeFilterCity` (27) + `LoungeFilterApplied` (28) | 8.3 |
+| `/admin/lounges` | `Lounges.dc.html` (11) + `LoungeFilterCity` (27) + `LoungeFilterApplied` (28) + Fase 10 · `LoungesWithPartner` (9) | 8.3, 10.5 |
 | `/admin/lounges/[id]` | `LoungeLive.dc.html` (17, live) + `LoungeEditConfirm` (18) + `PartnerAdd`/`PartnerSuspend`/`PartnerDelete` (20–22) + `LoungePhotoViewer` (26) · `LoungeDraftPartners.dc.html` (19, borrador) + `LoungePartnersMain` (23) · avisos `LoungeDraftSaved`/`LoungePublished` (24–25) — sustituyen a `LoungeEdit` (12) | 8.3 |
 | `/admin/lounges/new` | `LoungeDraftPartners.dc.html` (19) + `LoungePartnersMain` (23) — sustituyen a `LoungeNew`/`LoungeNewPartner` — + `PhotoCaption.dc.html` + avisos 24–25 | 8.3 |
 | `/profile/membership` | `Main` (plan anual) + `MonthlyPlan` (plan mensual) + `AutoRenew` + `Upgrade` — el plan real decide cuál; sin membresía, estado "Inactive" sin artboard propio | 9.1 |
@@ -332,10 +332,12 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `admin/partner-users-card.tsx` | Story 10.3 — tabla de usuarios (3, 4): lápiz en la fila, "Make representative", borrar con el aviso del representante, "Add user". Story 10.4 (6): suspender/reactivar, "Resend invitation", y confirmación al suspender o borrar a alguien con cuenta |
 | `admin/partner-lounges-card.tsx` | Story 10.3 — los lounges del partner con su status y "Open lounge" a `/admin/lounges/[id]` |
 | `admin/partner-activation-checklist.tsx` | Story 10.3 — "Ready to activate" y la nota del rail (2, 3), con el botón de activar como `children`; Story 10.4 la reutiliza para "When you reactivate" (8) |
+| `admin/partner-picker.tsx` | Story 10.5 — `PartnerPicker` (Fase 10 · 12): busca y elige el partner del borrador (también los draft; no los suspendidos), con el aviso "Not listed? Create the partner first" |
+| `admin/lounge-partner-card.tsx` | Story 10.5 — `LoungePartnerCard` (Fase 10 · 10): el partner del lounge en solo lectura, con representante y "Open partner" |
 | `admin/confirm-modal.tsx` | Story 10.4 — `ConfirmModal`, la confirmación con la geometría de PartnerSuspend (Fase 8 · 21): activar (5), suspender partner (7), suspender/borrar usuario y suspender lounge (11) |
 | `admin/lounge-status-chip.tsx` | Story 8.3 — `LoungeStatusChip`, el mapa Live/Draft/N to approve sobre `StatusChip` |
 | `admin/city-filter-popover.tsx` | Story 8.3 — `CityFilterPopover`, el botón de ciudad de `/admin/lounges` con su popover de Radix: busca solo entre las ciudades que ya tienen lounge (artboards 27–28). Los filtros Live/Draft no son componente propio: un `StatusChip` (`available`+`outlined` cuando está pulsado) dentro de un botón `aria-pressed` |
-| `app/admin/lounges/page.tsx` | Story 8.3 — "Add/edit/remove lounge profiles" y "Bulk update capabilities": la lista con selección y barra de acción masiva (`Lounges.dc.html`) |
+| `app/admin/lounges/page.tsx` | Story 8.3 — "Add/edit/remove lounge profiles" y "Bulk update capabilities": la lista con selección y barra de acción masiva (`Lounges.dc.html`). Story 10.5 (Fase 10 · 9): columna Partner, búsqueda por partner y filtro Suspended |
 | `app/admin/lounges/[id]/page.tsx` | Story 8.3 — detalle de lounge: compone `LoungeLiveView` (live, bloqueado) o `LoungeDraftForm` (borrador) |
 | `components/admin/lounge-live-view.tsx` | `LoungeLive.dc.html` (17) + popup `LoungeEditConfirm` (18): todo en solo lectura, ubicación con mapa (`LoungeLocationPreview`), fotos reales. Story 10.4: "Suspend lounge" (Fase 10 · 11) y, suspendido, solo "Reactivate lounge" (vuelve a draft) |
 | `components/admin/lounge-saved-notice.tsx` | `LoungeDraftSaved.dc.html` (24) y `LoungePublished.dc.html` (25): aviso informativo tras guardar o publicar, sobre el patrón `Modal` centrado; exporta `ModalPoint`, los puntos de los popups del lounge |
@@ -907,6 +909,7 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 ## Desviaciones conscientes respecto a los artboards
 
 - **Epic 10 · Activar solo desde el detalle.** `PartnerNew` (2) dibuja *Activate partner* deshabilitado en el rail del alta; en código el alta no lo muestra: se activa desde el detalle, una vez guardado el draft.
+- **Epic 10 · El selector no ofrece partners suspendidos.** `LoungeDraftPartner` (12) solo muestra activos y draft; un partner suspendido no se puede asignar a un lounge nuevo hasta reactivarlo.
 - **Epic 10 · Suspended sin rojo.** `Partners.dc.html` y los demás artboards de la Fase 10 pintan *Suspended* en `#D9826B`/`#E39A85`, pero el design system no admite verde ni rojo (§5 "Estados") y `globals.css` no tiene ese token. `PartnerStatusChip` usa el chip de "no disponible" (`StatusChip available={false}`). Si se quiere el rojo, hay que añadirlo antes a DESIGN-SYSTEM.md §2.
 
 | Qué | Por qué |

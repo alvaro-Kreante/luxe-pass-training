@@ -7,6 +7,7 @@ import { signUpConfirmedAdminAndSignIn } from "@/lib/testing/confirmed-user";
 import {
   createLoungeDraft,
   getLoungeContentDetail,
+  listAdminLounges,
   publishLounge,
   setDraftLoungePhotos,
   updateLoungeDraft,
@@ -36,6 +37,7 @@ function draftInput(overrides: Partial<LoungeDraftInput> = {}): LoungeDraftInput
     amenities: ["wifi", "co-working"],
     capacity: 24,
     bookingRestrictions: [],
+    partnerId: null,
     ...overrides,
   };
 }
@@ -171,6 +173,57 @@ describe("editar un borrador", () => {
     const four = Array.from({ length: 4 }, (_, index) => ({ url: `https://example.com/${index}.jpg`, caption: `p${index}`, detail: null }));
 
     await expect(setDraftLoungePhotos(supabase, id, four)).rejects.toThrow(/up to 3/i);
+  });
+});
+
+describe("el partner del lounge (Story 10.5)", () => {
+  it("el borrador guarda su partner, aunque esté en draft, y se puede quitar", async () => {
+    const draftPartner = await createPartner("draft");
+    const id = await create({ partnerId: draftPartner }, null);
+
+    expect((await getLoungeContentDetail(supabase, id))?.partner).toMatchObject({ id: draftPartner, status: "draft" });
+
+    await updateLoungeDraft(supabase, id, draftInput({ partnerId: null }));
+    expect((await getLoungeContentDetail(supabase, id))?.partner).toBeNull();
+  });
+
+  it("se publica con el partner activo elegido en el formulario", async () => {
+    const id = await create({ partnerId: activePartnerId }, null);
+
+    await publishLounge(supabase, id);
+
+    expect((await getLoungeContentDetail(supabase, id))?.contentStatus).toBe("live");
+  });
+
+  it("el detalle trae el nombre, el estado y el representante del partner", async () => {
+    await service.from("partner_members").insert({
+      partner_id: activePartnerId,
+      first_name: "Camille",
+      last_name: "Duarte",
+      email: `lounge-rep-${stamp}@halcyon-test.com`,
+    });
+    const id = await create({ partnerId: activePartnerId }, null);
+
+    const partner = (await getLoungeContentDetail(supabase, id))?.partner;
+
+    expect(partner).toMatchObject({
+      id: activePartnerId,
+      name: `Draft Test Partner active ${stamp}`,
+      status: "active",
+      representative: { name: "Camille Duarte", email: `lounge-rep-${stamp}@halcyon-test.com` },
+    });
+  });
+
+  it("la lista de lounges trae el nombre de su partner", async () => {
+    const id = await create({ partnerId: activePartnerId }, null);
+
+    const row = (await listAdminLounges(supabase)).find((lounge) => lounge.id === id);
+
+    expect(row?.partnerName).toBe(`Draft Test Partner active ${stamp}`);
+  });
+
+  it("un partner que no existe no se guarda", async () => {
+    await expect(create({ partnerId: "00000000-0000-0000-0000-000000000000" }, null)).rejects.toThrow(/partner/i);
   });
 });
 

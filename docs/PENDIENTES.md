@@ -608,18 +608,16 @@ partner-persona por el partner-organización. Antes del primer PR a
   borraron del repo y de `deploy.yml`**, pero quitarlas de `deploy.yml` no
   las borra de los proyectos remotos donde ya estén desplegadas: hay que
   borrarlas a mano (`supabase functions delete …`, con confirmación).
-- **Transición hasta 10.5:** el admin aún no puede asignar un partner a un
-  lounge desde la app; un borrador nuevo no se puede publicar (exige un
-  partner activo). En local se asignan con
-  `scripts/seed-partners.mjs`. Los lounges sembrados que no están en ese
-  script siguen live sin partner (la base lo admite; solo publicar lo exige).
+- **Lounges live sin partner:** los sembrados que no están en
+  `scripts/seed-partners.mjs` siguen live sin partner (la base lo admite;
+  solo publicar lo exige). Para asignarles uno hay que pasarlos a draft
+  ("Edit lounge"), elegir el partner y publicar.
 - **`/partner` abre el primer lounge** del partner (`firstPartnerLoungeId`)
   hasta el selector de la Story 10.6, y su cabecera sigue con el venue fijo
   de `PARTNER_VENUE`.
 - **`admin_revenue_by_partner`** sigue agrupando por lounge, no por partner.
 - **`admin-partners` (Story 10.4) es una Edge Function nueva:** ya está en `deploy.yml`, pero necesita `APP_URL` y `BREVO_*` en los remotos, como las demás que envían emails.
 - **Suspender un usuario no corta una sesión ya abierta al instante:** el ban impide renovar el token, y `partner_lounge_ids()` deja de devolver lounges, pero el access token vigente sigue siendo válido hasta que caduca (1 h).
-- **Los lounges sembrados siguen live sin partner** hasta asignarles uno (10.5); suspender o publicar no depende de eso, pero un lounge así no tiene a quién notificar.
 
 ## 5. Decisiones abiertas
 

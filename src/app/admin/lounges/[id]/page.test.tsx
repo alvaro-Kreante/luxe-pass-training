@@ -210,6 +210,62 @@ describe("un lounge en borrador", () => {
   });
 });
 
+describe("el partner del lounge (Story 10.5)", () => {
+  async function partnerNamed(name: string, status: "draft" | "active") {
+    const { data, error } = await admin.from("partners").insert({ name, status, city: "New York" }).select("id").single();
+    if (error) throw error;
+    partnerIds.push(data.id);
+    return data.id as string;
+  }
+
+  it("en un borrador se elige entre los partners existentes, también los draft, y se guarda", async () => {
+    const user = userEvent.setup({ delay: null });
+    const draftName = `Solenne Pick ${stamp}`;
+    const partnerId = await partnerNamed(draftName, "draft");
+    const id = await createLounge(`Draft Lounge ${Date.now()}`, { content_status: "draft" });
+    render(<LoungeEditPage />);
+
+    await user.type(await screen.findByRole("combobox", { name: "Who runs this lounge" }), `Solenne Pick ${stamp}`);
+    await user.click(await screen.findByRole("option", { name: new RegExp(draftName) }));
+    await user.click(screen.getByRole("button", { name: "Save draft" }));
+
+    await screen.findByRole("dialog", { name: "Draft saved" }, { timeout: 8000 });
+    const { data } = await admin.from("lounges").select("partner_id").eq("id", id).single();
+    expect(data?.partner_id).toBe(partnerId);
+  });
+
+  it("si el partner no existe, avisa de crearlo primero y enlaza a Partners", async () => {
+    await createLounge(`Draft Lounge ${Date.now()}`, { content_status: "draft" });
+    render(<LoungeEditPage />);
+
+    expect(await screen.findByText(/Not listed\? Create the partner first/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Go to Partners/ })).toHaveAttribute("href", "/admin/partners/new");
+  });
+
+  it("con un partner en draft no se puede publicar", async () => {
+    const partnerId = await partnerNamed(`Draft Owner ${stamp}`, "draft");
+    await createLounge(`Draft Lounge ${Date.now()}`, { content_status: "draft", partner_id: partnerId });
+    render(<LoungeEditPage />);
+
+    const checklist = await screen.findByRole("list", { name: "Before it can be published" });
+    expect(within(checklist).getByRole("listitem", { name: /An active partner · pending/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Publish lounge" })).toBeDisabled();
+  });
+
+  it("un lounge live muestra su partner en solo lectura y enlaza a su detalle", async () => {
+    const partnerId = await partnerNamed(`Halcyon Owner ${stamp}`, "active");
+    await admin.from("partner_members").insert({ partner_id: partnerId, first_name: "Camille", last_name: "Duarte", email: `owner-rep-${stamp}@halcyon-test.com` });
+    await createLounge(`Live Lounge ${Date.now()}`, { partner_id: partnerId });
+    render(<LoungeEditPage />);
+
+    const card = await screen.findByRole("region", { name: "Partner" });
+    expect(within(card).getByText(`Halcyon Owner ${stamp}`)).toBeInTheDocument();
+    expect(within(card).getByText("Camille Duarte")).toBeInTheDocument();
+    expect(within(card).getByRole("link", { name: /Open partner/ })).toHaveAttribute("href", `/admin/partners/${partnerId}`);
+    expect(within(card).queryByRole("textbox")).toBeNull();
+  });
+});
+
 describe("las fotos del lounge", () => {
   it("al hacer clic en una se abre a tamaño completo y se pasa a la siguiente", async () => {
     const user = userEvent.setup({ delay: null });

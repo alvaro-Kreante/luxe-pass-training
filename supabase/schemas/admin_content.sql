@@ -44,7 +44,9 @@ returns table (
   amenities_count int,
   updated_at timestamptz,
   city text,
-  created_at timestamptz
+  created_at timestamptz,
+  partner_id uuid,
+  partner_name text
 )
 language plpgsql
 security definer
@@ -55,6 +57,7 @@ begin
     raise exception 'Not authorized';
   end if;
 
+  -- Story 10.5 — LoungesWithPartner.dc.html (Fase 10 · 9): el partner de cada lounge.
   return query
     select
       l.id,
@@ -67,8 +70,11 @@ begin
       array_length(l.amenities, 1),
       l.updated_at,
       l.city,
-      l.created_at
+      l.created_at,
+      p.id,
+      p.name
     from public.lounges l
+    left join public.partners p on p.id = l.partner_id
     order by l.created_at desc, l.name;
 end;
 $$;
@@ -104,7 +110,8 @@ returns table (
   pending_submission_id uuid,
   pending_proposed jsonb,
   pending_submitted_by text,
-  pending_submitted_at timestamptz
+  pending_submitted_at timestamptz,
+  partner jsonb
 )
 language plpgsql
 security definer
@@ -133,7 +140,23 @@ begin
       s.id,
       s.proposed,
       case when a.email is not null then split_part(a.email::text, '@', 1) end,
-      s.created_at
+      s.created_at,
+      -- Story 10.5 — LoungePartner.dc.html (Fase 10 · 10): la tarjeta de partner, en solo lectura.
+      (
+        select jsonb_build_object(
+          'id', p.id,
+          'name', p.name,
+          'status', p.status,
+          'city', p.city,
+          'lounge_count', (select count(*)::int from public.lounges pl where pl.partner_id = p.id and pl.content_status <> 'archived'),
+          'user_count', (select count(*)::int from public.partner_members pm where pm.partner_id = p.id),
+          'representative', (
+            select jsonb_build_object('name', trim(r.first_name || ' ' || r.last_name), 'email', r.email)
+            from public.partner_members r where r.id = p.representative_id
+          )
+        )
+        from public.partners p where p.id = l.partner_id
+      )
     from public.lounges l
     left join public.lounge_content_submissions s on s.lounge_id = l.id and s.status = 'pending'
     left join auth.users a on a.id = s.submitted_by
@@ -274,7 +297,8 @@ grant execute on function public.admin_reject_lounge_submission(uuid, text) to a
 -- `p_lounge` lleva: id_base (slug del nombre, ver `loungeIdFromName`),
 -- name, phone, email, website, address, neighborhood, city, lat, lng,
 -- weekly_hours (7 strings, domingo primero), closed_weekdays (int[]),
--- hours (resumen corto), amenities (text[]), capacity (plazas por franja).
+-- hours (resumen corto), amenities (text[]), capacity (plazas por franja),
+-- partner_id (Story 10.5).
 
 create or replace function public.admin_apply_lounge_draft(p_lounge_id text, p_lounge jsonb)
 returns void
@@ -308,6 +332,17 @@ begin
     capacity = coalesce((p_lounge->>'capacity')::int, 0),
     updated_at = now()
   where l.id = p_lounge_id;
+
+  -- Story 10.5 — `partner_id` (uuid o null): el partner que lo opera, también
+  -- uno en draft. Opcional mientras es borrador; publicar exige uno activo.
+  if p_lounge ? 'partner_id' then
+    if nullif(p_lounge->>'partner_id', '') is not null
+       and not exists (select 1 from public.partners p where p.id = (p_lounge->>'partner_id')::uuid) then
+      raise exception 'That partner does not exist';
+    end if;
+    update public.lounges l set partner_id = nullif(p_lounge->>'partner_id', '')::uuid
+    where l.id = p_lounge_id;
+  end if;
 
   -- `booking_restrictions` (text[]): el draft las edita desde que el lounge
   -- live ya no tiene editor propio (LoungeDraftPartners.dc.html).

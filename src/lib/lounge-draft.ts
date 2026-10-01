@@ -24,6 +24,8 @@ export interface LoungeDraftInput {
   amenities: string[];
   capacity: number;
   bookingRestrictions: string[];
+  /** Story 10.5 — el partner que lo opera; null mientras no se elige (solo en borrador). */
+  partnerId: string | null;
 }
 
 export const CLOSED = "Closed";
@@ -102,12 +104,19 @@ export function parseDayHours(hours: string): DayHours {
 }
 
 export interface ChecklistItem {
-  id: "contact" | "location" | "hours" | "seats";
+  id: "contact" | "location" | "hours" | "seats" | "partner";
   label: string;
   done: boolean;
 }
 
-export function publishChecklist(draft: LoungeDraftInput): ChecklistItem[] {
+/**
+ * Lo mismo que comprueba `admin_publish_lounge`. `partnerStatus` es el del
+ * partner elegido (Story 10.5): solo uno activo deja publicar.
+ */
+export function publishChecklist(
+  draft: LoungeDraftInput,
+  partnerStatus: "draft" | "active" | "suspended" | null = null,
+): ChecklistItem[] {
   return [
     {
       id: "contact",
@@ -117,5 +126,6 @@ export function publishChecklist(draft: LoungeDraftInput): ChecklistItem[] {
     { id: "location", label: "Address on the map", done: draft.location !== null },
     { id: "hours", label: "Operating hours", done: draft.weeklyHours.some((hours) => !isClosed(hours)) },
     { id: "seats", label: "Seats per time slot", done: draft.capacity > 0 },
+    { id: "partner", label: "An active partner", done: draft.partnerId !== null && partnerStatus === "active" },
   ];
 }

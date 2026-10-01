@@ -32,6 +32,8 @@ let loungeAName: string;
 let loungeBName: string;
 let cityA: string;
 let cityB: string;
+let partnerName: string;
+let partnerId: string;
 
 beforeAll(async () => {
   const stamp = Date.now();
@@ -70,12 +72,18 @@ beforeAll(async () => {
   ]);
 
 
+  partnerName = `Halcyon List ${stamp}`;
+  const { data: partner } = await admin.from("partners").insert({ name: partnerName, status: "active" }).select("id").single();
+  partnerId = partner!.id;
+  await admin.from("lounges").update({ partner_id: partnerId }).eq("id", loungeBId);
+
   const adminClient = createClient();
   await signUpConfirmedAdminAndSignIn(adminClient, `lounges-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
 });
 
 afterAll(async () => {
   await admin.from("lounges").delete().in("id", [loungeAId, loungeBId]);
+  await admin.from("partners").delete().eq("id", partnerId);
 });
 
 describe("Lounges (/admin/lounges)", () => {
@@ -96,12 +104,32 @@ describe("Lounges (/admin/lounges)", () => {
     expect(within(rowB).getByText("Live")).toBeInTheDocument();
   });
 
+  it("shows each lounge's partner, and 'No partner yet' for a draft without one (Story 10.5)", async () => {
+    render(<LoungesPage />);
+
+    await waitFor(() => expect(screen.getByText(loungeBName)).toBeInTheDocument());
+    const rowB = screen.getByText(loungeBName).closest("button")!.parentElement!;
+    expect(within(rowB).getByText(partnerName)).toBeInTheDocument();
+    const rowA = screen.getByText(loungeAName).closest("button")!.parentElement!;
+    expect(within(rowA).getByText("No partner yet")).toBeInTheDocument();
+  });
+
+  it("searches by partner name too", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<LoungesPage />);
+
+    await user.type(await screen.findByRole("searchbox", { name: "Search lounges or partners" }), partnerName);
+
+    await waitFor(() => expect(screen.queryByText(loungeAName)).toBeNull());
+    expect(screen.getByText(loungeBName)).toBeInTheDocument();
+  });
+
   it("filters lounges by name", async () => {
     const user = userEvent.setup({ delay: null });
     render(<LoungesPage />);
 
     await waitFor(() => expect(screen.getByText(loungeAName)).toBeInTheDocument());
-    await user.type(screen.getByRole("searchbox", { name: "Search lounges" }), loungeBName);
+    await user.type(screen.getByRole("searchbox", { name: "Search lounges or partners" }), loungeBName);
 
     expect(screen.queryByText(loungeAName)).not.toBeInTheDocument();
     expect(screen.getByText(loungeBName)).toBeInTheDocument();

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { AddressAutocomplete } from "@/components/admin/address-autocomplete";
 import type { LoungeSavedKind } from "@/components/admin/lounge-saved-notice";
 import { PhotoCaptionDialog, type DraftPhotoItem } from "@/components/admin/photo-caption-dialog";
+import { PartnerPicker } from "@/components/admin/partner-picker";
 import { AdminShell } from "@/components/patterns/admin-shell";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
@@ -34,6 +35,7 @@ import {
   type LoungeDraftInput,
   type LoungeLocation,
 } from "@/lib/lounge-draft";
+import { listAdminPartners, type AdminPartnerRow } from "@/lib/admin-partners";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -62,7 +64,9 @@ function locationOf(lounge: LoungeContentDetail): LoungeLocation | null {
  * restricciones de reserva. Es también la vista de edición de un lounge que
  * estuvo live y volvió a borrador (LoungeEditConfirm.dc.html, 18). Story
  * 10.1: los usuarios partner ya no viven en el lounge sino en su partner, y
- * publicar no invita a nadie (exige un partner activo).
+ * publicar no invita a nadie (exige un partner activo). Story 10.5
+ * (LoungeDraftPartner.dc.html, Fase 10 · 12): el partner se elige aquí,
+ * opcional mientras es borrador.
  *
  * Guardar o publicar no saca al admin del lounge: `onSaved` decide qué
  * mostrar después (LoungeDraftSaved.dc.html, 24 · LoungePublished.dc.html, 25).
@@ -87,6 +91,8 @@ export function LoungeDraftForm({
   const [amenities, setAmenities] = React.useState<string[]>(lounge?.amenities ?? []);
   const [capacity, setCapacity] = React.useState(lounge?.capacity ?? 0);
   const [restrictions, setRestrictions] = React.useState<string[]>(lounge?.bookingRestrictions ?? []);
+  const [partnerId, setPartnerId] = React.useState<string | null>(lounge?.partner?.id ?? null);
+  const [partners, setPartners] = React.useState<AdminPartnerRow[]>([]);
   const [newRestriction, setNewRestriction] = React.useState("");
   const [photos, setPhotos] = React.useState<DraftPhotoItem[]>(
     (lounge?.images ?? []).map((image) => ({
@@ -103,6 +109,18 @@ export function LoungeDraftForm({
   const [busy, setBusy] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
+  React.useEffect(() => {
+    let active = true;
+    listAdminPartners(supabase)
+      .then((rows) => {
+        if (active) setPartners(rows);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [supabase]);
+
   const draft: LoungeDraftInput = {
     name,
     phone,
@@ -113,8 +131,11 @@ export function LoungeDraftForm({
     amenities,
     capacity,
     bookingRestrictions: restrictions,
+    partnerId,
   };
-  const checklist = publishChecklist(draft);
+  const partnerStatus =
+    partners.find((partner) => partner.id === partnerId)?.status ?? (partnerId === lounge?.partner?.id ? lounge?.partner?.status : null) ?? null;
+  const checklist = publishChecklist(draft, partnerStatus);
   const ready = checklist.every((item) => item.done);
   const canSave = name.trim() !== "" && location !== null && !busy;
 
@@ -430,6 +451,8 @@ export function LoungeDraftForm({
               </form>
             </div>
           </div>
+
+          <PartnerPicker partners={partners} value={partnerId} onChange={setPartnerId} />
         </div>
 
         <div className="flex h-fit w-[344px] shrink-0 flex-col gap-3.5">

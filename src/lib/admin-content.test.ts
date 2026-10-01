@@ -33,6 +33,8 @@ describe("mapLoungeListRow", () => {
       amenities_count: 6,
       updated_at: "2026-09-16T09:52:00Z",
       city: "New York",
+      partner_id: null,
+      partner_name: null,
       created_at: "2026-08-01T00:00:00Z",
     };
     const mapped = mapLoungeListRow(row);
@@ -54,6 +56,8 @@ describe("mapLoungeListRow", () => {
       amenities_count: null as unknown as number,
       updated_at: "2026-09-15T00:00:00Z",
       city: "Brooklyn",
+      partner_id: null,
+      partner_name: null,
       created_at: "2026-09-15T00:00:00Z",
     };
     expect(mapLoungeListRow(row).amenitiesCount).toBe(0);

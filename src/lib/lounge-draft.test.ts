@@ -77,15 +77,26 @@ describe("publishChecklist — antes de poder publicar", () => {
     amenities: ["wifi"],
     capacity: 24,
     bookingRestrictions: [],
+    partnerId: "partner-1",
   };
 
-  it("con todo relleno, los requisitos están cumplidos", () => {
-    const checklist = publishChecklist(complete);
+  it("con todo relleno y un partner activo, los requisitos están cumplidos", () => {
+    const checklist = publishChecklist(complete, "active");
     expect(checklist.every((item) => item.done)).toBe(true);
   });
 
+  it("sin partner, o con uno que no está activo, no se puede publicar (Story 10.5)", () => {
+    const partnerDone = (draft: LoungeDraftInput, status: "draft" | "active" | "suspended" | null) =>
+      publishChecklist(draft, status).find((item) => item.id === "partner")?.done;
+
+    expect(partnerDone({ ...complete, partnerId: null }, null)).toBe(false);
+    expect(partnerDone(complete, "draft")).toBe(false);
+    expect(partnerDone(complete, "suspended")).toBe(false);
+    expect(partnerDone(complete, "active")).toBe(true);
+  });
+
   it("sin dirección elegida del mapa no se puede publicar", () => {
-    const checklist = publishChecklist({ ...complete, location: null });
+    const checklist = publishChecklist({ ...complete, location: null }, "active");
     expect(checklist.find((item) => item.id === "location")?.done).toBe(false);
   });
 
