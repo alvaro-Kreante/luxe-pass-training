@@ -355,6 +355,7 @@ Debajo, leyenda con muestras de 16px. El sello de frescura (`Updated N min ago �
 | 7 | Epic 6 — Member Experience & Notifications (tema claro) | ✅ Completa — 11 artboards |
 | 8 | Epic 8 — Admin & Support (tema oscuro) | ✅ Completa — 13 artboards |
 | 9 | Epic 9 — Membership & Referrals (tema claro) | ✅ Completa — 9 artboards |
+| 10 | Epic 10 — Partner Organizations (tema oscuro, admin) | 🟡 En curso — 4 artboards (10.2, 10.3) |
 
 Cada fase vive en `design/epic-N-slug/` con sus `.dc.html`, su `canvas.json` y una copia de
 `logo.png`, y se publica como un canvas propio.
@@ -787,6 +788,27 @@ término ni historial de facturas fechado** que dejaría el hueco a la vista; al
 elegir una de las dos y corregir el artboard de la Fase 7, igual que con el corazón de favorito que
 la Fase 7 dejó pendiente para la Fase 4. El texto legal de `Terms` es una propuesta estructural, a
 reemplazar por el documento real de En Soleil.
+
+### Fase 10 — `design/epic-10-partner-organizations/`
+
+Rediseña el modelo de partner: deja de ser una persona con un lounge y pasa a ser la
+**organización** (hotel, spa, club) dueña de varios lounges y con varios usuarios. Hereda sin
+cambios el lenguaje del admin de la Fase 8 (sidebar, top bar, cards de `--dark-card`, chips de
+estado, inputs de 44px, formulario discontinuo de partner del artboard 23). Añade la entrada
+**Partners** al sidebar del admin, entre Bookings y Lounges.
+
+| Artboard | Qué muestra | Historia |
+|---|---|---|
+| `Partners` | Listado: nombre + email de contacto, status, nº de lounges, representante, ciudad principal; búsqueda y filtros Active / Draft / Suspended | 10.2 |
+| `PartnerNew` | Partner nuevo en draft: datos, edificio central como texto (sin mapa) y el primer usuario, que queda como representante | 10.3 |
+| `PartnerDetail` | Detalle en draft: datos editables, tabla de usuarios con lápiz y "Make representative", lounges con "Open lounge", checklist para activar | 10.3 |
+| `PartnerUserEdit` | Edición en línea de un usuario (email bloqueado) y aviso al intentar borrar al representante | 10.3 |
+
+Decisiones: el chip **Suspended** reutiliza el color de error que la Fase 8 ya usa en los
+inputs (`#D9826B` / `#E39A85`); el usuario sin acceso todavía muestra **On activation**, gemelo
+del **On publish** del artboard 23. Pendiente de diseñar en esta misma fase: modales de activar y
+suspender (10.4), selector de partner en el formulario de lounge (10.5) y selector de lounge en
+la cabecera de `/partner` (10.6).
 
 ## 7. Cómo regenerar y publicar un canvas
 

@@ -1,0 +1,48 @@
+{
+  "artboards": [
+    {
+      "file": "Partners.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "1. Partners"
+    },
+    {
+      "file": "PartnerNew.dc.html",
+      "x": 1540,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "2. A new partner, saved as draft"
+    },
+    {
+      "file": "PartnerDetail.dc.html",
+      "x": 3080,
+      "y": 0,
+      "w": 1440,
+      "h": 1080,
+      "title": "3. One partner — details, users and lounges"
+    },
+    {
+      "file": "PartnerUserEdit.dc.html",
+      "x": 0,
+      "y": 1230,
+      "w": 1440,
+      "h": 900,
+      "title": "4. Edit a user · the representative stays"
+    }
+  ],
+  "notes": [
+    {
+      "id": "partners-model-note",
+      "x": 0,
+      "y": 2460,
+      "w": 1400,
+      "text": "Partner organizations · A partner is the business behind one or more lounges — a hotel, a spa, a club. It is born as a draft: the admin fills in its details, a central building typed as plain text (no map — the city becomes the partner's main city) and its users. No email goes out while it is a draft. The first user becomes the representative; 'Make representative' hands the role to another user, and the representative can't be deleted while other users remain (4). The pencil edits a user's name and mobile — the email is the sign-in and stays locked. Every partner user is a brand-new account: an email already used by a member, a partner or an admin is refused. Lounges are linked from the lounge form, also while the partner is a draft, and open in the existing lounge view."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}
