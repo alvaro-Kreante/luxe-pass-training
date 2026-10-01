@@ -1,0 +1,228 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,500&family=Manrope:wght@400;500;600;700;800&display=swap">
+  <style>
+    :root {
+      --bg-blush-1: #F8EAE1; --bg-blush-2: #FCF4EE;
+      --ink-900: #221A14; --ink-700: #55483D; --ink-400: #9C8D80;
+      --gold-500: #C9A876; --gold-600: #AD8A5C; --gold-100: #F1E3D0;
+      --border: #E7D9C9; --white: #FFFFFF; --panel-black: #15110D;
+      --dark-ink-100: #F1E3D0; --dark-ink-300: #C9BDAF; --dark-ink-500: #8A7C6C;
+      --dark-border: #3A322A; --dark-card: #1E1813; --dark-hover: #241D17;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Manrope', 'Segoe UI', sans-serif; color: var(--dark-ink-100); }
+    h1, h2, h3 { font-family: 'Bodoni Moda', Georgia, 'Times New Roman', serif; margin: 0; font-weight: 500; }
+    a { color: var(--gold-600); text-decoration: none; }
+    a:hover { color: var(--gold-500); }
+    .dk-nav { transition: background .15s ease; cursor: pointer; }
+    .dk-nav:hover { background: var(--dark-hover); }
+    .dk-gold { transition: background .15s ease; }
+    .dk-gold:hover { background: var(--gold-600) !important; }
+    .dk-ghost { transition: background .15s ease, border-color .15s ease; cursor: pointer; }
+    .dk-ghost:hover { background: var(--dark-hover); border-color: var(--gold-500); }
+    .dk-link { transition: color .15s ease; cursor: pointer; }
+    .dk-link:hover { color: var(--gold-500); }
+    .dk-input { transition: border-color .15s ease; }
+    .dk-input:hover { border-color: var(--gold-600); }
+    .dk-sugg { transition: background .15s ease; cursor: pointer; }
+    .dk-sugg:hover { background: var(--dark-hover); }
+  </style>
+</helmet>
+
+<div style="position:relative; display:flex; width:1440px; height:1300px; background:var(--panel-black); overflow:hidden; font-family:'Manrope',sans-serif;">
+
+  <!-- Admin sidebar -->
+  <div style="width:248px; min-width:248px; height:1300px; background:var(--panel-black); border-right:1px solid var(--dark-border); display:flex; flex-direction:column; padding:30px 18px;">
+
+    <img src="logo.png" alt="En Soleil" style="width:46px; height:auto; margin:0 0 14px 12px;">
+    <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0 0 24px 12px;">Admin console</p>
+
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 14.5v-2.5a7.5 7.5 0 0 1 15 0v2.5"/><rect x="2.8" y="13.2" width="4.2" height="6.4" rx="1.8"/><rect x="17" y="13.2" width="4.2" height="6.4" rx="1.8"/><path d="M19.1 19.6v.4a2.6 2.6 0 0 1-2.6 2.6H13"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--dark-ink-300);">Support</span>
+      <div style="flex:1;"></div>
+      <span style="min-width:22px; height:20px; padding:0 7px; border-radius:10px; background:rgba(201,168,118,0.18); border:1px solid var(--gold-600); color:var(--dark-ink-300); font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center;">22</span>
+    </div>
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.6" r="3.2"/><path d="M3.2 19.6a5.8 5.8 0 0 1 11.6 0"/><path d="M16.2 6.4a3.2 3.2 0 0 1 0 6.4"/><path d="M17.6 14.4a5.8 5.8 0 0 1 3.2 5.2"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--dark-ink-300);">Members</span>
+    </div>
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--dark-ink-300);">Bookings</span>
+    </div>
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:rgba(201,168,118,0.16); margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 20.5h17"/><path d="M5.5 20.5V9.5l6.5-4.5 6.5 4.5v11"/><path d="M10 20.5v-5h4v5"/></svg>
+      <span style="font-size:14px; font-weight:700; color:var(--dark-ink-100);">Lounges</span>
+      <div style="flex:1;"></div>
+      <span style="min-width:22px; height:20px; padding:0 7px; border-radius:10px; background:var(--gold-500); color:var(--panel-black); font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center;">3</span>
+    </div>
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M6.5 20v-5.5M12 20V6M17.5 20v-8.5"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--dark-ink-300);">Analytics</span>
+    </div>
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h7l5 5v12H6z"/><path d="M13 3.5v5h5"/><path d="M9 13h6M9 16.5h4"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--dark-ink-300);">Reports</span>
+    </div>
+
+    <div style="flex:1;"></div>
+
+    <div class="dk-nav" style="display:flex; align-items:center; gap:11px; padding-top:18px; border-top:1px solid var(--dark-border);">
+      <div style="width:36px; height:36px; min-width:36px; border-radius:10px; background:rgba(201,168,118,0.14); border:1px solid var(--gold-600); display:flex; align-items:center; justify-content:center; font-family:'Bodoni Moda',serif; font-size:16px; color:var(--gold-500);">P</div>
+      <div style="flex:1; overflow:hidden;">
+        <p style="font-size:13px; font-weight:700; color:var(--dark-ink-100); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Priya Raghunathan</p>
+        <p style="font-size:11.5px; color:var(--dark-ink-500); margin:2px 0 0;">Support lead · En Soleil</p>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m8 10 4 4 4-4"/></svg>
+    </div>
+
+  </div>
+
+  <!-- Content -->
+  <div style="position:relative; flex:1; height:1300px; display:flex; flex-direction:column; background:radial-gradient(circle at 30% 0%, #2c241c, #15110d 62%); overflow:hidden;">
+    <div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.10) 1px, transparent 1.5px); background-size:18px 18px;"></div>
+
+    <!-- Top bar -->
+    <div style="position:relative; height:64px; min-height:64px; display:flex; align-items:center; gap:12px; padding:0 40px; background:rgba(21,17,13,0.72); border-bottom:1px solid var(--dark-border);">
+      <span class="dk-link" style="font-size:13.5px; font-weight:700; color:var(--dark-ink-500);">Lounges</span>
+      <span style="font-size:13.5px; color:var(--dark-ink-500);">›</span>
+      <span style="font-size:13.5px; font-weight:700; color:var(--dark-ink-100);">The Larkspur</span>
+      <div style="flex:1;"></div>
+      <span style="display:inline-flex; align-items:center; gap:9px; padding:8px 15px; border-radius:20px; border:1px solid var(--dark-border);">
+        <span style="width:6px; height:6px; border-radius:50%; background:var(--gold-500); box-shadow:0 0 0 3px rgba(201,168,118,0.28);"></span>
+        <span style="font-size:11.5px; font-weight:700; color:var(--dark-ink-300); white-space:nowrap;">Every action logged</span>
+      </span>
+      <div class="dk-ghost" style="position:relative; width:40px; height:40px; min-width:40px; border-radius:11px; border:1.5px solid var(--dark-border); display:flex; align-items:center; justify-content:center;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8.5a6 6 0 0 0-12 0c0 6-2.2 7.5-2.2 7.5h16.4S18 14.5 18 8.5"/><path d="M13.7 19.5a2 2 0 0 1-3.4 0"/></svg>
+        <span style="position:absolute; top:-6px; right:-6px; min-width:19px; height:19px; padding:0 5px; border-radius:10px; background:var(--gold-500); border:2px solid var(--panel-black); color:var(--panel-black); font-size:10.5px; font-weight:800; display:flex; align-items:center; justify-content:center;">3</span>
+      </div>
+      <div class="dk-ghost" style="width:40px; height:40px; min-width:40px; border-radius:11px; border:1.5px solid var(--dark-border); display:flex; align-items:center; justify-content:center;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-13.7-5.2L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 13.7 5.2L20 16"/><path d="M20 20v-4h-4"/></svg>
+      </div>
+    </div>
+
+    <!-- Lounge header -->
+    <div style="position:relative; display:flex; align-items:center; gap:16px; height:84px; min-height:84px; padding:0 40px; border-bottom:1px solid var(--dark-border);">
+      <div style="width:52px; height:52px; min-width:52px; border-radius:14px; background:radial-gradient(ellipse at 30% 70%, #6b4f33 0 18%, transparent 40%), linear-gradient(160deg, #b08a5e 0%, #4a3826 45%, #1e1813 100%); border:1px solid var(--dark-border);"></div>
+      <div style="flex:1; min-width:0;">
+        <div style="display:flex; align-items:center; gap:11px;">
+          <h1 style="font-size:22px; color:var(--dark-ink-100); margin:0;">The Larkspur</h1>
+          <span style="display:inline-flex; align-items:center; gap:7px; padding:6px 13px; border-radius:20px; border:1px dashed var(--dark-ink-500);"><span style="font-size:11.5px; font-weight:700; color:var(--dark-ink-300);">Draft · not visible to members</span></span>
+        </div>
+        <p style="font-size:12.5px; color:var(--dark-ink-500); margin:6px 0 0;">Moved to draft by Priya R. at 11:02 AM · was live since Sep 16</p>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;"><div class="dk-ghost" style="display:flex; align-items:center; justify-content:center; gap:9px; padding:0 16px; height:44px; min-height:44px; border:1.5px solid var(--dark-border); border-radius:11px;"><span style="font-size:12.5px; font-weight:700; letter-spacing:0.06em; color:var(--dark-ink-300);">Save draft</span></div><div class="dk-gold" style="display:flex; align-items:center; justify-content:center; gap:9px; padding:0 20px; height:44px; min-height:44px; background:var(--gold-500); border-radius:11px; cursor:pointer;"><span style="font-size:12.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#FFFFFF;">Publish lounge</span></div></div>
+    </div>
+
+    <!-- Body -->
+    <div style="position:relative; flex:1; min-height:0; display:flex; gap:16px; padding:14px 40px 14px;">
+
+      <!-- Lounge -->
+      <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:10px;">
+
+        <div style="background:var(--dark-card); border:1px solid var(--dark-border); border-radius:20px; padding:16px 20px;">
+          <div style="display:flex; align-items:center; gap:12px;"><p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Name and contact</p><div style="flex:1;"></div></div>
+          <div style="display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; margin-top:12px;"><div style="display:flex; flex-direction:column; gap:7px; min-width:0;"><span style="font-size:12.5px; font-weight:700; color:var(--dark-ink-500);">Lounge name</span><div class="dk-input" style="display:flex; align-items:center; height:44px; min-height:44px; padding:0 15px; background:var(--panel-black); border:1px solid var(--dark-border); border-radius:11px;"><span style="font-size:13.5px; color:var(--dark-ink-100); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">The Larkspur</span></div></div><div style="display:flex; flex-direction:column; gap:7px; min-width:0;"><span style="font-size:12.5px; font-weight:700; color:var(--dark-ink-500);">Phone</span><div class="dk-input" style="display:flex; align-items:center; height:44px; min-height:44px; padding:0 15px; background:var(--panel-black); border:1px solid var(--dark-border); border-radius:11px;"><span style="font-size:13.5px; color:var(--dark-ink-100); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">+1 212 555 0148</span></div></div><div style="display:flex; flex-direction:column; gap:7px; min-width:0;"><span style="font-size:12.5px; font-weight:700; color:var(--dark-ink-500);">Email</span><div class="dk-input" style="display:flex; align-items:center; height:44px; min-height:44px; padding:0 15px; background:var(--panel-black); border:1px solid var(--dark-border); border-radius:11px;"><span style="font-size:13.5px; color:var(--dark-ink-100); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">hello@thelarkspur.com</span></div></div><div style="display:flex; flex-direction:column; gap:7px; min-width:0;"><span style="font-size:12.5px; font-weight:700; color:var(--dark-ink-500);">Website</span><div class="dk-input" style="display:flex; align-items:center; height:44px; min-height:44px; padding:0 15px; background:var(--panel-black); border:1px solid var(--dark-border); border-radius:11px;"><span style="font-size:13.5px; color:var(--dark-ink-500); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">thelarkspur.com</span></div></div></div>
+        </div>
+
+        <div style="background:var(--dark-card); border:1px solid var(--dark-border); border-radius:20px; padding:16px 20px;">
+          <div style="display:flex; align-items:center; gap:12px;"><p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Location</p><div style="flex:1;"></div><p style="font-size:11.5px; color:var(--dark-ink-500); margin:0;">Pick the address from the list — the pin is where members are sent</p></div>
+          <div style="display:flex; gap:14px; margin-top:10px;">
+            <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:10px;">
+              <div class="dk-input" style="display:flex; align-items:center; height:44px; min-height:44px; padding:0 15px; background:var(--panel-black); border:1px solid var(--dark-border); border-radius:11px; gap:10px;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg><span style="flex:1; font-size:13.5px; color:var(--dark-ink-100);">27 Bond Street, NoHo, New York, NY 10012</span></div>
+              <div style="display:flex; flex-wrap:wrap; gap:8px;"><span style="display:inline-flex; align-items:center; padding:6px 12px; border-radius:20px; border:1px solid var(--dark-border);"><span style="font-size:11.5px; font-weight:700; color:var(--dark-ink-300); white-space:nowrap;">Neighborhood · NoHo</span></span><span style="display:inline-flex; align-items:center; padding:6px 12px; border-radius:20px; border:1px solid var(--dark-border);"><span style="font-size:11.5px; font-weight:700; color:var(--dark-ink-300); white-space:nowrap;">City · New York</span></span><span style="display:inline-flex; align-items:center; padding:6px 12px; border-radius:20px; border:1px solid var(--dark-border);"><span style="font-size:11.5px; font-weight:700; color:var(--dark-ink-500); white-space:nowrap;">40.7262, −73.9936</span></span></div>
+            </div>
+            <div style="position:relative; width:260px; min-width:260px; height:92px; border-radius:14px; border:1px solid var(--dark-border); overflow:hidden; background:#1a1510;">
+              <svg width="260" height="92" viewBox="0 0 300 120" preserveAspectRatio="none" style="position:absolute; left:0; top:0;">
+                <g stroke="#2e261e" stroke-width="7" fill="none" stroke-linecap="round"><path d="M-10 32 L310 14"/><path d="M-10 88 L310 72"/><path d="M60 -10 L82 130"/><path d="M190 -10 L208 130"/></g>
+                <g stroke="#261f18" stroke-width="3" fill="none"><path d="M-10 60 L310 44"/><path d="M128 -10 L142 130"/><path d="M250 -10 L264 130"/></g>
+              </svg>
+              <svg width="24" height="31" viewBox="0 0 26 34" style="position:absolute; left:118px; top:20px;"><path d="M13 33S1.5 21 1.5 12.5a11.5 11.5 0 0 1 23 0C24.5 21 13 33 13 33z" fill="#C9A876" stroke="#15110D" stroke-width="1.5"/><circle cx="13" cy="12.5" r="4" fill="#15110D"/></svg>
+              <span style="position:absolute; left:10px; bottom:9px; padding:4px 9px; border-radius:8px; background:rgba(21,17,13,0.85); font-size:10.5px; font-weight:700; color:var(--dark-ink-300);">Drag the pin to the entrance</span>
+            </div>
+          </div>
+        </div>
+
+        <div style="background:var(--dark-card); border:1px solid var(--dark-border); border-radius:20px; padding:16px 20px;">
+          <div style="display:flex; align-items:center; gap:12px;"><p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Photos · up to 3</p><div style="flex:1;"></div><p style="font-size:11.5px; color:var(--dark-ink-500); margin:0;">3 of 3 · click one to name it</p></div>
+          <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:10px; margin-top:10px;"><div style="position:relative; height:96px; border-radius:12px; background:radial-gradient(ellipse at 30% 70%, #6b4f33 0 18%, transparent 40%), linear-gradient(160deg, #b08a5e 0%, #4a3826 45%, #1e1813 100%); border:1px solid var(--dark-border); overflow:hidden;"><span style="position:absolute; left:8px; top:8px; padding:4px 9px; border-radius:20px; background:var(--gold-500);"><span style="font-size:10px; font-weight:800; letter-spacing:0.06em; color:#FFFFFF;">MAIN</span></span><span style="position:absolute; right:8px; top:8px; width:22px; height:22px; border-radius:50%; background:rgba(21,17,13,0.85); display:flex; align-items:center; justify-content:center;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-300)" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span><span style="position:absolute; left:8px; bottom:8px; padding:3px 8px; border-radius:7px; background:rgba(21,17,13,0.78); font-size:11px; font-weight:700; color:var(--dark-ink-100);">Main room</span></div><div style="position:relative; height:96px; border-radius:12px; background:radial-gradient(circle at 70% 35%, #d9b88c 0 7%, transparent 22%), linear-gradient(200deg, #7a5a3a 0%, #3a2c1f 55%, #15110d 100%); border:1px solid var(--dark-border); overflow:hidden;"><span style="position:absolute; right:8px; top:8px; width:22px; height:22px; border-radius:50%; background:rgba(21,17,13,0.85); display:flex; align-items:center; justify-content:center;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-300)" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span><span style="position:absolute; left:8px; bottom:8px; padding:3px 8px; border-radius:7px; background:rgba(21,17,13,0.78); font-size:11px; font-weight:700; color:var(--dark-ink-100);">Bar</span></div><div style="position:relative; height:96px; border-radius:12px; background:linear-gradient(180deg, #9fb0b8 0%, #c9b79a 45%, #5b4a38 46%, #2c241c 100%); border:1px solid var(--dark-border); overflow:hidden;"><span style="position:absolute; right:8px; top:8px; width:22px; height:22px; border-radius:50%; background:rgba(21,17,13,0.85); display:flex; align-items:center; justify-content:center;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-300)" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span><span style="position:absolute; left:8px; bottom:8px; padding:3px 8px; border-radius:7px; background:rgba(21,17,13,0.78); font-size:11px; font-weight:700; color:var(--dark-ink-100);">Terrace</span></div></div>
+        </div>
+
+        <div style="background:var(--dark-card); border:1px solid var(--dark-border); border-radius:20px; padding:16px 20px;">
+          <div style="display:flex; align-items:center; gap:12px;"><p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Operating hours</p><div style="flex:1;"></div><span class="dk-link" style="font-size:11.5px; font-weight:700; color:var(--gold-600);">Copy Monday to every day</span></div>
+          <div style="display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:7px; margin-top:10px;"><div style="padding:8px 6px; border-radius:12px; border:1px solid var(--dark-border); text-align:center;"><p style="font-size:10.5px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Mon</p><p style="font-size:11.5px; font-weight:700; color:var(--dark-ink-100); margin:5px 0 0;">8 AM – 9 PM</p></div><div style="padding:8px 6px; border-radius:12px; border:1px solid var(--dark-border); text-align:center;"><p style="font-size:10.5px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Tue</p><p style="font-size:11.5px; font-weight:700; color:var(--dark-ink-100); margin:5px 0 0;">8 AM – 9 PM</p></div><div style="padding:8px 6px; border-radius:12px; border:1px solid var(--dark-border); text-align:center;"><p style="font-size:10.5px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Wed</p><p style="font-size:11.5px; font-weight:700; color:var(--dark-ink-100); margin:5px 0 0;">8 AM – 9 PM</p></div><div style="padding:8px 6px; border-radius:12px; border:1px solid var(--dark-border); text-align:center;"><p style="font-size:10.5px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Thu</p><p style="font-size:11.5px; font-weight:700; color:var(--dark-ink-100); margin:5px 0 0;">8 AM – 9 PM</p></div><div style="padding:8px 6px; border-radius:12px; border:1px solid var(--dark-border); text-align:center;"><p style="font-size:10.5px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Fri</p><p style="font-size:11.5px; font-weight:700; color:var(--dark-ink-100); margin:5px 0 0;">8 AM – 9 PM</p></div><div style="padding:8px 6px; border-radius:12px; border:1px solid var(--dark-border); text-align:center;"><p style="font-size:10.5px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Sat</p><p style="font-size:11.5px; font-weight:700; color:var(--dark-ink-100); margin:5px 0 0;">9 AM – 6 PM</p></div><div style="padding:8px 6px; border-radius:12px; border:1px dashed var(--dark-ink-500); text-align:center;"><p style="font-size:10.5px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Sun</p><p style="font-size:11.5px; font-weight:700; color:var(--dark-ink-500); margin:5px 0 0;">Closed</p></div></div>
+        </div>
+
+        <div style="background:var(--dark-card); border:1px solid var(--dark-border); border-radius:20px; padding:16px 20px;">
+          <div style="display:flex; gap:22px; align-items:flex-start;">
+            <div style="flex:1; min-width:0;"><p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Amenities</p><div style="display:flex; flex-wrap:nowrap; gap:6px; margin-top:10px;"><span style="display:inline-flex; align-items:center; padding:6px 11px; border-radius:20px; background:var(--gold-500);"><span style="font-size:11.5px; font-weight:700; color:#FFFFFF; white-space:nowrap;">High-speed WiFi</span></span><span style="display:inline-flex; align-items:center; padding:6px 11px; border-radius:20px; background:var(--gold-500);"><span style="font-size:11.5px; font-weight:700; color:#FFFFFF; white-space:nowrap;">Co-working</span></span><span style="display:inline-flex; align-items:center; padding:6px 11px; border-radius:20px; background:var(--gold-500);"><span style="font-size:11.5px; font-weight:700; color:#FFFFFF; white-space:nowrap;">Lounge and bar</span></span><span class="dk-ghost" style="display:inline-flex; align-items:center; gap:6px; padding:6px 11px; border-radius:20px; border:1.5px dashed var(--dark-ink-500);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span style="font-size:11.5px; font-weight:700; color:var(--dark-ink-300);">2 more</span></span></div></div>
+            <div><p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Seats</p><div style="display:flex; align-items:center; height:36px; margin-top:6px;"><div class="dk-input" style="display:flex; align-items:center; height:44px; min-height:44px; padding:0 15px; background:var(--panel-black); border:1px solid var(--dark-border); border-radius:11px; width:60px; height:36px; min-height:36px;"><span style="font-size:15px; font-weight:800; color:var(--dark-ink-100);">24</span></div></div></div>
+            <div><p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Booking restrictions</p><div style="display:flex; gap:6px; margin-top:10px;"><span style="display:inline-flex; align-items:center; gap:4px; padding:6px 11px; border-radius:20px; border:1px solid var(--dark-border);"><span style="font-size:11.5px; font-weight:700; color:var(--dark-ink-300); white-space:nowrap;">Members only</span><span style="display:flex; margin-left:4px;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-300)" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></span><span class="dk-ghost" style="display:inline-flex; align-items:center; gap:6px; padding:6px 11px; border-radius:20px; border:1.5px dashed var(--dark-ink-500);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span style="font-size:11.5px; font-weight:700; color:var(--dark-ink-300);">Add</span></span></div></div>
+          </div>
+        </div>
+
+      
+        <div style="background:var(--dark-card); border:1px solid var(--dark-border); border-radius:20px; padding:16px 20px;">
+          <div style="display:flex; align-items:center; gap:12px;"><p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Partners · 3</p><div style="flex:1;"></div><p style="font-size:11.5px; color:var(--dark-ink-500); margin:0;">New partners are invited when you publish · at least one is needed</p></div>
+          <div style="margin-top:10px;">
+            <div style="display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid rgba(58,50,42,0.6);">
+              <div style="width:36px; height:36px; min-width:36px; border-radius:50%; background:rgba(201,168,118,0.14); border:1px solid var(--gold-600); display:flex; align-items:center; justify-content:center; font-family:'Bodoni Moda',serif; font-size:14px; color:var(--gold-500); ">CD</div>
+              <p style="flex:0 0 200px; font-size:13px; font-weight:700; color:var(--dark-ink-100); margin:0;">Camille Duarte</p>
+              <p style="flex:1; min-width:0; font-size:12.5px; color:var(--dark-ink-500); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">camille.duarte@thelarkspur.com</p>
+              <span style="display:inline-flex; align-items:center; padding:3px 9px; border-radius:20px; background:rgba(201,168,118,0.16); border:1px solid var(--gold-600); color:var(--dark-ink-100); font-size:10.5px; font-weight:800; letter-spacing:0.04em; white-space:nowrap;">Active</span>
+              <div style="width:30px; display:flex; justify-content:flex-end;"></div>
+            </div>
+            <div style="display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid rgba(58,50,42,0.6);">
+              <div style="width:36px; height:36px; min-width:36px; border-radius:50%; background:rgba(201,168,118,0.14); border:1px solid var(--gold-600); display:flex; align-items:center; justify-content:center; font-family:'Bodoni Moda',serif; font-size:14px; color:var(--gold-500); ">JM</div>
+              <p style="flex:0 0 200px; font-size:13px; font-weight:700; color:var(--dark-ink-100); margin:0;">Julian Mercer</p>
+              <p style="flex:1; min-width:0; font-size:12.5px; color:var(--dark-ink-500); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">julian.mercer@thelarkspur.com</p>
+              <span style="display:inline-flex; align-items:center; padding:3px 9px; border-radius:20px; border:1px dashed var(--gold-600); color:var(--dark-ink-300); font-size:10.5px; font-weight:800; letter-spacing:0.04em; white-space:nowrap;">Invited</span>
+              <div style="width:30px; display:flex; justify-content:flex-end;"></div>
+            </div>
+            <div style="display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid rgba(58,50,42,0.6);">
+              <div style="width:36px; height:36px; min-width:36px; border-radius:50%; background:rgba(201,168,118,0.14); border:1px solid var(--gold-600); display:flex; align-items:center; justify-content:center; font-family:'Bodoni Moda',serif; font-size:14px; color:var(--gold-500); ">RO</div>
+              <p style="flex:0 0 200px; font-size:13px; font-weight:700; color:var(--dark-ink-100); margin:0;">Rafael Ortiz</p>
+              <p style="flex:1; min-width:0; font-size:12.5px; color:var(--dark-ink-500); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">rafael.ortiz@thelarkspur.com</p>
+              <span style="display:inline-flex; align-items:center; padding:3px 9px; border-radius:20px; border:1px dashed var(--gold-600); color:var(--dark-ink-300); font-size:10.5px; font-weight:800; letter-spacing:0.04em; white-space:nowrap;">On publish</span>
+              <div style="width:30px; display:flex; justify-content:flex-end;"><span class="dk-ghost" title="Remove from this lounge" style="width:30px; height:30px; min-width:30px; border-radius:9px; border:1px solid var(--dark-border); display:flex; align-items:center; justify-content:center;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-300)" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></span></div>
+            </div>
+          </div>
+          <div style="margin-top:8px; padding:14px; border-radius:14px; border:1.5px dashed var(--dark-ink-500);">
+            <div style="display:grid; grid-template-columns:repeat(4, minmax(0, 1fr)); gap:12px; align-items:start;">
+              <div style="display:flex; flex-direction:column; gap:7px; min-width:0;"><span style="font-size:12.5px; font-weight:700; color:var(--dark-ink-500);">First name</span><div style="display:flex; align-items:center; height:44px; min-height:44px; padding:0 15px; background:var(--panel-black); border:1px solid var(--dark-border); border-radius:11px;"><span style="font-size:13.5px; color:var(--dark-ink-100); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Noor</span></div></div><div style="display:flex; flex-direction:column; gap:7px; min-width:0;"><span style="font-size:12.5px; font-weight:700; color:var(--dark-ink-500);">Last name</span><div style="display:flex; align-items:center; height:44px; min-height:44px; padding:0 15px; background:var(--panel-black); border:1px solid var(--dark-border); border-radius:11px;"><span style="font-size:13.5px; color:var(--dark-ink-100); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Haddad</span></div></div>
+              <div style="display:flex; flex-direction:column; gap:7px; min-width:0;"><span style="font-size:12.5px; font-weight:700; color:var(--dark-ink-500);">Work email</span><div style="display:flex; align-items:center; height:44px; min-height:44px; padding:0 15px; background:var(--panel-black); border-radius:11px;border:1.5px solid #D9826B; box-shadow:0 0 0 3px rgba(217,130,107,0.15);"><span style="font-size:13.5px; color:var(--dark-ink-100); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">noor@theainsworth.com</span></div><span style="font-size:11.5px; font-weight:700; color:#E39A85;">Already in use by another lounge</span></div><div style="display:flex; flex-direction:column; gap:7px; min-width:0;"><span style="font-size:12.5px; font-weight:700; color:var(--dark-ink-500);">Mobile · optional</span><div style="display:flex; align-items:center; height:44px; min-height:44px; padding:0 15px; background:var(--panel-black); border:1px solid var(--dark-border); border-radius:11px;"><span style="font-size:13.5px; color:var(--dark-ink-100); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">+1 917 555 0102</span></div></div>
+            </div>
+            <div style="display:flex; justify-content:flex-end; margin-top:12px;"><div class="dk-ghost" style="display:flex; align-items:center; gap:7px; height:38px; padding:0 16px; border-radius:10px; border:1.5px solid var(--dark-border);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg><span style="font-size:12px; font-weight:700; color:var(--dark-ink-300);">Add partner</span></div></div>
+          </div>
+        </div>
+</div>
+
+
+      <!-- Rail -->
+      <div style="width:300px; min-width:300px; display:flex; flex-direction:column; gap:12px;">
+        <div style="background:var(--dark-card); border:1px solid var(--dark-border); border-radius:20px; padding:16px 20px; padding-top:14px; padding-bottom:10px;">
+          <div style="display:flex; align-items:center;"><p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Before it can be published</p><div style="flex:1;"></div><p style="font-size:11.5px; color:var(--dark-ink-500); margin:0;">All set</p></div>
+          <div style="margin-top:6px;"><div style="display:flex; align-items:center; gap:10px; padding:7px 0;"><span style="width:18px; height:18px; min-width:18px; border-radius:50%; background:var(--gold-500); display:flex; align-items:center; justify-content:center;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg></span><span style="font-size:12px; font-weight:700; color:var(--dark-ink-100);">Name and contact</span></div><div style="display:flex; align-items:center; gap:10px; padding:7px 0;"><span style="width:18px; height:18px; min-width:18px; border-radius:50%; background:var(--gold-500); display:flex; align-items:center; justify-content:center;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg></span><span style="font-size:12px; font-weight:700; color:var(--dark-ink-100);">Address on the map</span></div><div style="display:flex; align-items:center; gap:10px; padding:7px 0;"><span style="width:18px; height:18px; min-width:18px; border-radius:50%; background:var(--gold-500); display:flex; align-items:center; justify-content:center;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg></span><span style="font-size:12px; font-weight:700; color:var(--dark-ink-100);">Operating hours</span></div><div style="display:flex; align-items:center; gap:10px; padding:7px 0;"><span style="width:18px; height:18px; min-width:18px; border-radius:50%; background:var(--gold-500); display:flex; align-items:center; justify-content:center;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg></span><span style="font-size:12px; font-weight:700; color:var(--dark-ink-100);">Seats per slot</span></div><div style="display:flex; align-items:center; gap:10px; padding:7px 0;"><span style="width:18px; height:18px; min-width:18px; border-radius:50%; background:var(--gold-500); display:flex; align-items:center; justify-content:center;"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg></span><span style="font-size:12px; font-weight:700; color:var(--dark-ink-100);">Partners</span></div></div>
+        </div>
+        <div style="background:var(--panel-black); border:1px dashed var(--gold-600); border-radius:16px; padding:13px 16px;">
+          <p style="font-size:11.5px; color:var(--dark-ink-300); margin:0; line-height:1.55;">A partner runs one lounge. An email already used by another lounge — or by a member — cannot be added here.</p>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

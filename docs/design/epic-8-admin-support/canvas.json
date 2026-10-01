@@ -175,6 +175,38 @@
       "w": 1440,
       "h": 900,
       "title": "22. Delete a partner account"
+    },
+    {
+      "file": "LoungePartnersMain.dc.html",
+      "x": 0,
+      "y": 7350,
+      "w": 1440,
+      "h": 1300,
+      "title": "23. Partners in the main column"
+    },
+    {
+      "file": "LoungeDraftSaved.dc.html",
+      "x": 1540,
+      "y": 7350,
+      "w": 1440,
+      "h": 900,
+      "title": "24. Draft saved"
+    },
+    {
+      "file": "LoungePublished.dc.html",
+      "x": 3080,
+      "y": 7350,
+      "w": 1440,
+      "h": 900,
+      "title": "25. Published — you stay on the lounge"
+    },
+    {
+      "file": "LoungePhotoViewer.dc.html",
+      "x": 4620,
+      "y": 7350,
+      "w": 1440,
+      "h": 900,
+      "title": "26. Taller photos, full-size viewer"
     }
   ],
   "annotations": [
@@ -240,6 +272,13 @@
       "y": 6205,
       "w": 940,
       "text": "Partners · managed while the lounge stays live. Adding one (20) invites them at once — someone who already runs another lounge is just added. Suspend (21) is reversible and covers every lounge on the account; delete (22) is final. A live lounge always keeps at least one active partner. A partner who has not set a password yet can be sent a fresh 24-hour link (Resend invitation, 17)."
+    },
+    {
+      "id": "lounge-adjustments-note",
+      "x": 0,
+      "y": 7255,
+      "w": 1400,
+      "text": "Lounge adjustments · Partners move to the main column, full width, in both the new-lounge form and a draft (23). A partner runs one lounge: an email already used by another lounge — or by any other account — is refused with 'Already in use'; this replaces the 'simply added' rule of screen 20. Saving a draft and publishing both confirm with a notice and keep the admin on the lounge (24, 25). Photos are 50% taller (144px) and open full size in a viewer with arrows and thumbnails (26)."
     }
   ],
   "launch": {
