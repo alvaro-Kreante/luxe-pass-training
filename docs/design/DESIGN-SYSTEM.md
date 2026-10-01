@@ -355,7 +355,7 @@ Debajo, leyenda con muestras de 16px. El sello de frescura (`Updated N min ago �
 | 7 | Epic 6 — Member Experience & Notifications (tema claro) | ✅ Completa — 11 artboards |
 | 8 | Epic 8 — Admin & Support (tema oscuro) | ✅ Completa — 13 artboards |
 | 9 | Epic 9 — Membership & Referrals (tema claro) | ✅ Completa — 9 artboards |
-| 10 | Epic 10 — Partner Organizations (tema oscuro, admin) | 🟡 En curso — 12 artboards (10.2–10.5) |
+| 10 | Epic 10 — Partner Organizations (tema oscuro, admin y partner) | ✅ Completa — 16 artboards (10.2–10.6) |
 
 Cada fase vive en `design/epic-N-slug/` con sus `.dc.html`, su `canvas.json` y una copia de
 `logo.png`, y se publica como un canvas propio.
@@ -811,13 +811,17 @@ estado, inputs de 44px, formulario discontinuo de partner del artboard 23). Aña
 | `LoungePartner` | Artboard 17 con la tarjeta de partner en solo lectura y "Suspend lounge" | 10.4 / 10.5 |
 | `LoungeSuspend` | Modal de suspender un lounge suelto | 10.4 |
 | `LoungeDraftPartner` | Artboard 23 con el selector de partner (incluye draft) y "An active partner" en la checklist | 10.5 |
+| `PartnerToday` | `Main` de la Fase 2 con el selector partner + lounge al final de la top bar y el usuario real en el sidebar | 10.6 |
+| `PartnerLoungeMenu` | Menú de lounges abierto; la elección se guarda en la cuenta | 10.6 |
+| `PartnerAnalyticsAll` | `Analytics` de la Fase 2 con "All lounges" (solo en Analytics, Guests y Reports) | 10.6 |
+| `PartnerNoLounges` | Estado vacío de un partner sin lounges | 10.6 |
 
 Decisiones: el chip **Suspended** reutiliza el color de error que la Fase 8 ya usa en los
 inputs (`#D9826B` / `#E39A85`); el usuario sin acceso todavía muestra **On activation**, gemelo
 del **On publish** del artboard 23. Los artboards de lounge (9–12) son copias de los 11, 17 y 23
 de la Fase 8 donde solo cambia lo que toca al partner; el resto sigue siendo la fuente de la
 Fase 8. Reactivar un lounge suspendido lo devuelve a draft, igual que al reactivar el partner.
-Pendiente de diseñar en esta misma fase: selector de lounge en la cabecera de `/partner` (10.6).
+El selector de `/partner` (13–16) parte de `Main` y `Analytics` de la Fase 2: el partner es texto fijo y solo el lounge es botón. Las historias 10.7 (emails) y 10.8 (vista del miembro) ajustan artboards de las Fases 2, 3, 4 y 6 y no tienen artboard propio aquí.
 
 ## 7. Cómo regenerar y publicar un canvas
 
