@@ -586,7 +586,16 @@ Reenviar la invitación y añadir más partners a un lounge live ya existen
   `admin_approve_lounge_submission`, `admin_reject_lounge_submission` (y la
   columna `pending_count` de `admin_lounge_list`) siguen en
   `supabase/schemas/admin_content.sql` sin uso. Borrarlas es destructivo
-  (genera `DROP`): hacerlo en una rama propia cuando se confirme.
+  (genera `DROP`); el 1 oct 2026 el usuario decidió **dejarlas** por ahora.
+- **Un lounge por partner (1 oct 2026)** añade el índice único
+  `partner_lounges(partner_id)`. Si un remoto ya tiene un partner en dos
+  lounges, la migración `one_lounge_per_partner` fallará en el deploy:
+  comprobarlo antes del PR con
+  `select partner_id from partner_lounges group by 1 having count(*) > 1`.
+- El aviso tras guardar/publicar desde `/admin/lounges/new` no tiene test
+  de pantalla: guardar exige una dirección de Google Places, que no carga
+  en jsdom. Lo cubren el test del detalle (`[id]/page.test.tsx`, mismo
+  formulario y mismo aviso) y la verificación de Playwright.
 - `deploy.yml` despliega `admin-publish-lounge` y `admin-lounge-partners`
   en los dos jobs, pero (como §4.7) el resto de functions de Epic 8 siguen
   sin desplegarse.

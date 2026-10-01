@@ -196,7 +196,9 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
   es la tabla puente many-to-many con `lounges` (decisión tomada con el
   usuario: un partner puede gestionar varios lounges, no una FK directa
   `lounges.partner_id`). Desde el 29 sept 2026 guarda también
-  `first_name`/`last_name`/`photo_path` de la persona.
+  `first_name`/`last_name`/`photo_path` de la persona. **Desde el 1 oct
+  2026 un partner gestiona un solo lounge** (índice único
+  `partner_lounges(partner_id)`); un lounge sigue teniendo varios partners.
 - `lounge_partner_invites` (Epic 8 dueño, alimenta Epic 7) — los partners
   que el admin escribe para un lounge (varios por lounge, `unique(lounge_id,
   email)`), con `partner_id` → `partners` una vez creada o vinculada la
@@ -310,7 +312,7 @@ el amigo llega por `/join/[code]` → `/signup?ref=` (metadatos de Auth).
 | `payments` | 4 | 8 (refunds) |
 | `notifications` | 6 | 5, 7, 9 |
 | `member_favorite_lounges` | 6 | 2/3 (`lounges`) |
-| `partners` / `partner_lounges` | 7 | 2/3 (`lounges`, many-to-many vía `partner_lounges`) |
+| `partners` / `partner_lounges` | 7 | 2/3 (`lounges` vía `partner_lounges`: varios partners por lounge, un lounge por partner) |
 | `user_roles` | 7 | 1 (auth), 8 (rol admin, cuando se conecte) |
 | `support_tickets` / `support_ticket_messages` | 8 | 1/9 (member), 4 (`bookings`) |
 | `lounge_content_submissions` | 8 | 2/3 (`lounges`) |

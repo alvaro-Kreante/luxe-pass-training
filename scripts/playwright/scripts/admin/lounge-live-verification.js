@@ -1,7 +1,9 @@
 /**
  * Verificación visual del detalle de lounge del admin (29 sept 2026):
  * LoungeLive (17), LoungeEditConfirm (18), LoungeDraftPartners (19),
- * PartnerAdd (20), PartnerSuspend (21) y PartnerDelete (22) de Epic 8.
+ * PartnerAdd (20), PartnerSuspend (21) y PartnerDelete (22) de Epic 8; y
+ * (1 oct 2026) LoungePartnersMain (23), LoungeDraftSaved (24),
+ * LoungePublished (25) y LoungePhotoViewer (26).
  *
  * Contra Supabase local: un lounge live con una foto y dos partners (uno
  * activo, uno invitado) creado con la service role; se borra al terminar.
@@ -100,6 +102,13 @@ async function seed(service) {
     await page.waitForTimeout(1500);
     await takeScreenshot(page, shot('lounge-17-live'));
 
+    // 26 — visor de fotos
+    await page.getByRole('button', { name: 'View photo Main room' }).click();
+    await page.getByRole('dialog').waitFor();
+    await page.waitForTimeout(800);
+    await takeScreenshot(page, shot('lounge-26-photo-viewer'));
+    await page.keyboard.press('Escape');
+
     // 20 — añadir partner
     await page.getByRole('button', { name: 'Add partner' }).click();
     await page.getByRole('dialog').getByLabel('First name').fill('Rafael');
@@ -130,6 +139,20 @@ async function seed(service) {
     await page.getByRole('button', { name: 'Publish lounge' }).waitFor();
     await page.waitForTimeout(1500);
     await takeScreenshot(page, shot('lounge-19-draft'));
+    await page.getByRole('list', { name: 'Partners' }).scrollIntoViewIfNeeded();
+    await takeScreenshot(page, shot('lounge-23-partners-main'));
+
+    // 24 — borrador guardado
+    await page.getByRole('button', { name: 'Save draft' }).click();
+    await page.getByRole('dialog', { name: 'Draft saved' }).waitFor({ timeout: 20000 });
+    await takeScreenshot(page, shot('lounge-24-draft-saved'));
+    await page.getByRole('button', { name: 'Keep editing' }).click();
+
+    // 25 — publicado, sigue en el lounge
+    await page.getByRole('button', { name: 'Publish lounge' }).click();
+    await page.getByRole('dialog', { name: 'The lounge is live' }).waitFor({ timeout: 30000 });
+    await page.waitForTimeout(800);
+    await takeScreenshot(page, shot('lounge-25-published'));
 
     console.log('✓ Capturas en scripts/playwright/screenshots/admin/lounge-*.png');
   } catch (error) {

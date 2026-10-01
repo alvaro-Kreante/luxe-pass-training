@@ -6,6 +6,8 @@ import Link from "next/link";
 
 import { LoungeLocationPreview } from "@/components/admin/address-autocomplete";
 import { LivePartnersCard } from "@/components/admin/lounge-partners-card";
+import { ModalPoint } from "@/components/admin/lounge-saved-notice";
+import { PhotoViewer } from "@/components/admin/photo-viewer";
 import { AdminShell } from "@/components/patterns/admin-shell";
 import { Modal } from "@/components/patterns/modal";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -69,6 +71,7 @@ export function LoungeLiveView({
   const [confirming, setConfirming] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
+  const [viewing, setViewing] = React.useState<number | null>(null);
 
   async function moveToDraft() {
     setBusy(true);
@@ -153,8 +156,14 @@ export function LoungeLiveView({
           <div className={CARD}>
             <CardHead title={`Photos · ${photos.length} of 3`} />
             <div className="mt-3 grid grid-cols-3 gap-2.5">
-              {photos.map((photo) => (
-                <div key={photo.id} className="relative h-24 overflow-hidden rounded-xl border border-line bg-panel-black">
+              {photos.map((photo, index) => (
+                <button
+                  key={photo.id}
+                  type="button"
+                  aria-label={`View photo ${photo.caption}`}
+                  onClick={() => setViewing(index)}
+                  className="relative h-36 cursor-zoom-in overflow-hidden rounded-xl border border-line bg-panel-black text-left transition-colors duration-150 hover:border-accent"
+                >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={photo.url} alt={photo.caption} className="absolute inset-0 size-full object-cover" />
                   {photo.position === 0 ? (
@@ -165,7 +174,7 @@ export function LoungeLiveView({
                   <span className="absolute bottom-2 left-2 rounded-md bg-panel-black/80 px-2 py-0.5 text-[11px] font-bold text-fg">
                     {photo.caption}
                   </span>
-                </div>
+                </button>
               ))}
               {photos.length === 0 ? <p className="m-0 text-[12.5px] text-fg-subtle">No photos yet.</p> : null}
             </div>
@@ -230,6 +239,8 @@ export function LoungeLiveView({
         </div>
       </div>
 
+      <PhotoViewer photos={photos} index={viewing} onIndexChange={setViewing} onClose={() => setViewing(null)} />
+
       <Modal
         open={confirming}
         onOpenChange={setConfirming}
@@ -252,23 +263,11 @@ export function LoungeLiveView({
         <p className="m-0 text-[13.5px] leading-[1.6] text-fg-muted">
           Editing takes the lounge off the member app until you publish it again.
         </p>
-        <Point title="Hidden from members">It leaves Explore and takes no new bookings while it is a draft.</Point>
-        <Point title="Bookings already made stay valid">Upcoming bookings and their passes keep working at the desk.</Point>
-        <Point title="Publish again when you finish">Nothing changes for members until you press Publish lounge.</Point>
+        <ModalPoint title="Hidden from members">It leaves Explore and takes no new bookings while it is a draft.</ModalPoint>
+        <ModalPoint title="Bookings already made stay valid">Upcoming bookings and their passes keep working at the desk.</ModalPoint>
+        <ModalPoint title="Publish again when you finish">Nothing changes for members until you press Publish lounge.</ModalPoint>
         {error ? <p role="alert" className="m-0 mt-3 text-[12.5px] font-bold text-accent-strong">{error}</p> : null}
       </Modal>
     </AdminShell>
-  );
-}
-
-function Point({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div className="mt-3 flex gap-3 border-t border-line/60 pt-3">
-      <span className="mt-[7px] size-1.5 shrink-0 rounded-full bg-accent" />
-      <div>
-        <p className="m-0 text-[13px] font-bold text-fg">{title}</p>
-        <p className="m-0 mt-0.5 text-xs leading-[1.5] text-fg-subtle">{children}</p>
-      </div>
-    </div>
   );
 }

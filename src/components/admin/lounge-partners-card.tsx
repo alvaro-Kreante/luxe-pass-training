@@ -70,24 +70,44 @@ function PartnerRow({
   partner,
   actions,
   footer,
+  wide = false,
 }: {
   partner: { firstName: string; lastName: string; email: string; status: LoungePartnerStatus };
   actions?: React.ReactNode;
   footer?: React.ReactNode;
+  /** LoungePartnersMain.dc.html (23): una sola línea, a todo el ancho de la columna principal. */
+  wide?: boolean;
 }) {
   const suspended = partner.status === "suspended";
   const initials = `${partner.firstName[0] ?? ""}${partner.lastName[0] ?? ""}`.toUpperCase();
+  const avatar = (
+    <span
+      className={cn(
+        "flex size-9 shrink-0 items-center justify-center rounded-full border border-gold-600 bg-accent/14 font-display text-sm text-accent",
+        suspended && "opacity-50",
+      )}
+    >
+      {initials}
+    </span>
+  );
+  if (wide) {
+    return (
+      <li
+        aria-label={`${fullName(partner)} · ${STATUS_LABEL[partner.status]}`}
+        className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-line/60 py-2.5"
+      >
+        {avatar}
+        <p className="m-0 w-50 truncate text-[13px] font-bold text-fg">{fullName(partner)}</p>
+        <p className="m-0 min-w-0 flex-1 truncate text-[12.5px] text-fg-subtle">{partner.email}</p>
+        <StatusChip status={partner.status} />
+        <div className="flex w-[30px] justify-end">{actions}</div>
+      </li>
+    );
+  }
   return (
     <li aria-label={`${fullName(partner)} · ${STATUS_LABEL[partner.status]}`} className="border-t border-line/60 py-3">
       <div className="flex items-center gap-2.5">
-        <span
-          className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-full border border-gold-600 bg-accent/14 font-display text-sm text-accent",
-            suspended && "opacity-50",
-          )}
-        >
-          {initials}
-        </span>
+        {avatar}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5">
             <p className={cn("m-0 truncate text-[13px] font-bold", suspended ? "text-fg-subtle" : "text-fg")}>{fullName(partner)}</p>
@@ -105,28 +125,29 @@ function PartnerRow({
 function PartnerFields({
   value,
   onChange,
-  compact,
+  inline,
 }: {
   value: PartnerInviteInput;
   onChange: (value: PartnerInviteInput) => void;
-  compact?: boolean;
+  /** Los cuatro campos en una fila (LoungePartnersMain.dc.html, 23); si no, 2×2 como el popup 20. */
+  inline?: boolean;
 }) {
   const set = (key: keyof PartnerInviteInput) => (event: React.ChangeEvent<HTMLInputElement>) =>
     onChange({ ...value, [key]: event.target.value });
-  const size = compact ? "compact" : "default";
+  const suffix = inline ? "draft" : "modal";
   return (
-    <div className={cn("grid grid-cols-2", compact ? "gap-2" : "gap-3.5")}>
-      <Field label="First name" htmlFor={`partner-first-${compact ? "rail" : "modal"}`} className="mb-0">
-        <Input id={`partner-first-${compact ? "rail" : "modal"}`} inputSize={size} autoComplete="off" value={value.firstName} onChange={set("firstName")} />
+    <div className={cn("grid grid-cols-2 gap-3.5", inline && "md:grid-cols-4 md:gap-3")}>
+      <Field label="First name" htmlFor={`partner-first-${suffix}`} className="mb-0">
+        <Input id={`partner-first-${suffix}`} autoComplete="off" value={value.firstName} onChange={set("firstName")} />
       </Field>
-      <Field label="Last name" htmlFor={`partner-last-${compact ? "rail" : "modal"}`} className="mb-0">
-        <Input id={`partner-last-${compact ? "rail" : "modal"}`} inputSize={size} autoComplete="off" value={value.lastName} onChange={set("lastName")} />
+      <Field label="Last name" htmlFor={`partner-last-${suffix}`} className="mb-0">
+        <Input id={`partner-last-${suffix}`} autoComplete="off" value={value.lastName} onChange={set("lastName")} />
       </Field>
-      <Field label="Work email" htmlFor={`partner-email-${compact ? "rail" : "modal"}`} className="mb-0">
-        <Input id={`partner-email-${compact ? "rail" : "modal"}`} inputSize={size} type="email" autoComplete="off" value={value.email} onChange={set("email")} />
+      <Field label="Work email" htmlFor={`partner-email-${suffix}`} className="mb-0">
+        <Input id={`partner-email-${suffix}`} type="email" autoComplete="off" value={value.email} onChange={set("email")} />
       </Field>
-      <Field label="Mobile" optional htmlFor={`partner-mobile-${compact ? "rail" : "modal"}`} className="mb-0">
-        <Input id={`partner-mobile-${compact ? "rail" : "modal"}`} inputSize={size} type="tel" autoComplete="off" value={value.mobile} onChange={set("mobile")} />
+      <Field label="Mobile" optional htmlFor={`partner-mobile-${suffix}`} className="mb-0">
+        <Input id={`partner-mobile-${suffix}`} type="tel" autoComplete="off" value={value.mobile} onChange={set("mobile")} />
       </Field>
     </div>
   );
@@ -152,17 +173,19 @@ export function DraftPartnersCard({
 
   return (
     <div className={CARD}>
-      <p className={EYEBROW}>Partners · {linked.length + pending.length}</p>
-      <p className="m-0 mb-2 mt-2 text-[11.5px] leading-[1.5] text-fg-subtle">
-        New partners are invited when you publish. At least one is needed.
-      </p>
-      <ul aria-label="Partners" className="m-0 list-none p-0">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <p className={EYEBROW}>Partners · {linked.length + pending.length}</p>
+        <div className="flex-1" />
+        <p className="m-0 text-[11.5px] text-fg-subtle">New partners are invited when you publish · at least one is needed</p>
+      </div>
+      <ul aria-label="Partners" className="m-0 mt-2.5 list-none p-0">
         {linked.map((partner) => (
-          <PartnerRow key={partner.email} partner={partner} />
+          <PartnerRow key={partner.email} partner={partner} wide />
         ))}
         {pending.map((partner) => (
           <PartnerRow
             key={partner.email}
+            wide
             partner={{ ...partner, status: "on_publish" }}
             actions={
               <IconAction label={`Remove ${fullName(partner)}`} onClick={() => onPendingChange(pending.filter((p) => p !== partner))}>
@@ -172,15 +195,14 @@ export function DraftPartnersCard({
           />
         ))}
       </ul>
-      <div className="mt-1.5 rounded-[14px] border-[1.5px] border-dashed border-fg-subtle p-3">
-        <PartnerFields value={draft} onChange={setDraft} compact />
-        {taken ? <p className="m-0 mt-2 text-[11.5px] text-accent-strong">That email is already on this lounge.</p> : null}
+      <div className="mt-2 rounded-[14px] border-[1.5px] border-dashed border-fg-subtle p-3.5">
+        <PartnerFields value={draft} onChange={setDraft} inline />
+        {taken ? <p className="m-0 mt-2 text-[11.5px] font-bold text-accent-strong">That email is already on this lounge.</p> : null}
         <Button
           type="button"
           variant="ghost"
           size="md"
-          block
-          className="mt-2 normal-case"
+          className="ml-auto mt-3 flex normal-case"
           disabled={!canAdd}
           onClick={() => {
             onPendingChange([...pending, { ...draft, email: draft.email.trim().toLowerCase() }]);
@@ -347,7 +369,7 @@ export function LivePartnersCard({
         {error && adding ? <p role="alert" className="m-0 mt-3 text-[12.5px] font-bold text-accent-strong">{error}</p> : null}
         <p className="m-0 mt-4 rounded-[14px] border border-line px-3.5 py-3 text-xs leading-[1.55] text-fg-muted">
           The invitation goes out now — the lounge stays live. The link works for 24 hours; you can resend it from the list.
-          Someone who already runs another lounge is simply added, without a new invitation.
+          An email already used by another lounge — or by any other account — cannot be added.
         </p>
       </Modal>
 

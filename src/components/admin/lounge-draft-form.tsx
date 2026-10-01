@@ -3,10 +3,10 @@
 import * as React from "react";
 import { Check, Plus, X } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 import { AddressAutocomplete } from "@/components/admin/address-autocomplete";
 import { DraftPartnersCard } from "@/components/admin/lounge-partners-card";
+import type { LoungeSavedKind } from "@/components/admin/lounge-saved-notice";
 import { PhotoCaptionDialog, type DraftPhotoItem } from "@/components/admin/photo-caption-dialog";
 import { AdminShell } from "@/components/patterns/admin-shell";
 import { Button } from "@/components/ui/button";
@@ -64,19 +64,23 @@ function locationOf(lounge: LoungeContentDetail): LoungeLocation | null {
  * los recuerda; publicar crea sus cuentas y les envía la invitación
  * (`admin-publish-lounge`). Es también la vista de edición de un lounge que
  * estuvo live y volvió a borrador (LoungeEditConfirm.dc.html, 18).
+ *
+ * Guardar o publicar no saca al admin del lounge: `onSaved` decide qué
+ * mostrar después (LoungeDraftSaved.dc.html, 24 · LoungePublished.dc.html, 25).
  */
 export function LoungeDraftForm({
   lounge,
   linkedPartners = [],
   pendingPartners = [],
+  onSaved,
 }: {
   lounge?: LoungeContentDetail;
   /** Partners con cuenta (de cuando el lounge estuvo live). */
   linkedPartners?: LoungePartner[];
   /** Partners escritos en el borrador, pendientes de invitar al publicar. */
   pendingPartners?: PartnerInviteInput[];
+  onSaved: (loungeId: string, kind: LoungeSavedKind, loungeName: string) => void | Promise<void>;
 }) {
-  const router = useRouter();
   const supabase = React.useMemo(() => createClient(), []);
 
   const [name, setName] = React.useState(lounge?.name ?? "");
@@ -187,15 +191,14 @@ export function LoungeDraftForm({
 
   const saveDraft = () =>
     run(async () => {
-      const id = await save();
-      if (!lounge) router.replace(`/admin/lounges/${id}`);
+      await onSaved(await save(), "draft", name.trim());
     });
 
   const publish = () =>
     run(async () => {
       const id = await save();
       await publishLounge(supabase, id);
-      router.push("/admin/lounges");
+      await onSaved(id, "live", name.trim());
     });
 
   return (
@@ -436,11 +439,11 @@ export function LoungeDraftForm({
               </form>
             </div>
           </div>
+
+          <DraftPartnersCard linked={linkedPartners} pending={partners} onPendingChange={setPartners} />
         </div>
 
         <div className="flex h-fit w-[344px] shrink-0 flex-col gap-3.5">
-          <DraftPartnersCard linked={linkedPartners} pending={partners} onPendingChange={setPartners} />
-
           <div className="rounded-content border border-line bg-dark-card px-5.5 pb-2 pt-5">
             <p id="checklist-title" className={EYEBROW}>
               Before it can be published

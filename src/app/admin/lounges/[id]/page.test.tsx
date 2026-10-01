@@ -18,12 +18,13 @@ import LoungeEditPage from "./page";
  * functions serve`).
  */
 
+const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }));
 let currentId = "";
 const params = { get id() { return currentId; } };
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/admin/lounges/x",
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
+  useRouter: () => router,
   useParams: () => ({ id: params.id }),
   notFound: () => {
     throw new Error("NEXT_NOT_FOUND");
@@ -270,7 +271,7 @@ describe("un lounge en borrador", () => {
     expect(within(list).queryByRole("listitem", { name: /Julian/ })).toBeNull();
   });
 
-  it("publicar invita a los partners y deja el lounge live", async () => {
+  it("publicar invita a los partners, avisa y se queda en el lounge, ya live", async () => {
     const user = userEvent.setup({ delay: null });
     const id = await createLounge(`Draft Lounge ${Date.now()}`, { content_status: "draft" });
     await admin
@@ -280,6 +281,63 @@ describe("un lounge en borrador", () => {
 
     await user.click(await screen.findByRole("button", { name: "Publish lounge" }));
 
-    await waitFor(async () => expect(await contentStatus(id)).toBe("live"), { timeout: 5000 });
+    const notice = await screen.findByRole("dialog", { name: "The lounge is live" }, { timeout: 8000 });
+    expect(await contentStatus(id)).toBe("live");
+    await user.click(within(notice).getByRole("button", { name: "Done" }));
+    await dialogClosed();
+    expect(screen.getByRole("button", { name: "Edit lounge" })).toBeInTheDocument();
+    expect(router.push).not.toHaveBeenCalled();
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+
+  it("guardar el borrador avisa y sigue en el borrador", async () => {
+    const user = userEvent.setup({ delay: null });
+    await createLounge(`Draft Lounge ${Date.now()}`, { content_status: "draft" });
+    render(<LoungeEditPage />);
+
+    await user.click(await screen.findByRole("button", { name: "Save draft" }));
+
+    const notice = await screen.findByRole("dialog", { name: "Draft saved" }, { timeout: 8000 });
+    await user.click(within(notice).getByRole("button", { name: "Keep editing" }));
+    await dialogClosed();
+    expect(screen.getByRole("button", { name: "Publish lounge" })).toBeInTheDocument();
+  });
+
+  it("un email que ya usa otro lounge no se guarda y lo dice", async () => {
+    const user = userEvent.setup({ delay: null });
+    const other = await createLounge(`Live Lounge ${Date.now()}`);
+    const { email } = await linkPartner(other, "Noor", "active");
+    await createLounge(`Draft Lounge ${Date.now()}`, { content_status: "draft" });
+    render(<LoungeEditPage />);
+    await screen.findByText(/Draft · not visible to members/);
+
+    await user.type(screen.getByLabelText("First name"), "Noor");
+    await user.type(screen.getByLabelText("Last name"), "Haddad");
+    await user.type(screen.getByLabelText("Work email"), email);
+    await user.click(screen.getByRole("button", { name: "Add partner" }));
+    await user.click(screen.getByRole("button", { name: "Save draft" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/already in use/i);
+    expect(screen.queryByRole("dialog", { name: "Draft saved" })).toBeNull();
+  });
+});
+
+describe("las fotos del lounge", () => {
+  it("al hacer clic en una se abre a tamaño completo y se pasa a la siguiente", async () => {
+    const user = userEvent.setup({ delay: null });
+    const id = await createLounge(`Live Lounge ${Date.now()}`);
+    await admin.from("lounge_images").insert([
+      { lounge_id: id, url: "https://example.com/main-room.jpg", caption: "Main room", position: 0 },
+      { lounge_id: id, url: "https://example.com/bar.jpg", caption: "Bar", position: 1 },
+    ]);
+    await linkPartner(id, "Camille", "active");
+    render(<LoungeEditPage />);
+
+    await user.click(await screen.findByRole("button", { name: "View photo Main room" }));
+
+    const viewer = await screen.findByRole("dialog", { name: "Main room · 1 of 2" });
+    expect(within(viewer).getByRole("img", { name: "Main room" })).toHaveAttribute("src", "https://example.com/main-room.jpg");
+    await user.click(within(viewer).getByRole("button", { name: "Next photo" }));
+    expect(await screen.findByRole("dialog", { name: "Bar · 2 of 2" })).toBeInTheDocument();
   });
 });

@@ -5,6 +5,7 @@ import { notFound, useParams } from "next/navigation";
 
 import { LoungeDraftForm } from "@/components/admin/lounge-draft-form";
 import { LoungeLiveView } from "@/components/admin/lounge-live-view";
+import { LoungeSavedNotice, type LoungeSavedKind } from "@/components/admin/lounge-saved-notice";
 import { RequireAdminSession } from "@/components/admin/require-admin-session";
 import {
   getLoungeContentDetail,
@@ -20,7 +21,8 @@ import { createClient } from "@/lib/supabase/client";
  * bloqueado (`LoungeLiveView`); en borrador se edita con el mismo formulario
  * del alta (`LoungeDraftForm`), ubicación incluida. Sustituye al editor de
  * LoungeEdit.dc.html y a su cola de aprobación (decisión 29 sept 2026:
- * cualquier admin publica, sin revisión).
+ * cualquier admin publica, sin revisión). Guardar o publicar avisa y deja
+ * al admin en el lounge (LoungeDraftSaved 24 · LoungePublished 25).
  */
 export default function LoungeEditPage() {
   return (
@@ -35,6 +37,7 @@ function LoungeEditScreen() {
   const supabase = React.useMemo(() => createClient(), []);
   const [lounge, setLounge] = React.useState<LoungeContentDetail | null | undefined>(undefined);
   const [partners, setPartners] = React.useState<LoungePartner[]>([]);
+  const [notice, setNotice] = React.useState<LoungeSavedKind | null>(null);
 
   const load = React.useCallback(async () => {
     const [detail, list] = await Promise.all([getLoungeContentDetail(supabase, id), getLoungePartners(supabase, id)]);
@@ -57,18 +60,32 @@ function LoungeEditScreen() {
   if (lounge === null) notFound();
   if (lounge === undefined) return null;
 
+  const savedNotice = <LoungeSavedNotice kind={notice} loungeName={lounge.name} onClose={() => setNotice(null)} />;
+
   if (lounge.contentStatus === "draft") {
     return (
-      <LoungeDraftForm
-        key={`draft-${lounge.id}`}
-        lounge={lounge}
-        linkedPartners={partners.filter((partner) => partner.status !== "on_publish")}
-        pendingPartners={partners
-          .filter((partner) => partner.status === "on_publish")
-          .map(({ firstName, lastName, email, mobile }) => ({ firstName, lastName, email, mobile }))}
-      />
+      <>
+        <LoungeDraftForm
+          key={`draft-${lounge.id}`}
+          lounge={lounge}
+          linkedPartners={partners.filter((partner) => partner.status !== "on_publish")}
+          pendingPartners={partners
+            .filter((partner) => partner.status === "on_publish")
+            .map(({ firstName, lastName, email, mobile }) => ({ firstName, lastName, email, mobile }))}
+          onSaved={async (_, kind) => {
+            await load();
+            setNotice(kind);
+          }}
+        />
+        {savedNotice}
+      </>
     );
   }
 
-  return <LoungeLiveView lounge={lounge} partners={partners} onPartnersChanged={load} onMovedToDraft={load} />;
+  return (
+    <>
+      <LoungeLiveView lounge={lounge} partners={partners} onPartnersChanged={load} onMovedToDraft={load} />
+      {savedNotice}
+    </>
+  );
 }

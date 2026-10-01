@@ -368,7 +368,12 @@ dashboard, ver `docs/PENDIENTES.md` §4.12).
 varios partners (`lounge_partner_invites` ya no es 1:1). Al publicar,
 `admin-publish-lounge` invita a todos los pendientes y vincula sin cuenta
 nueva a quien ya es partner de otro lounge (`_shared/partner-accounts.ts`,
-compartido con la function de abajo). Con el lounge live, la Edge Function
+compartido con la function de abajo). **Desde el 1 oct 2026 ya no se
+vincula**: un partner gestiona un solo lounge, y un email que ya usa otro
+lounge (pendiente o con cuenta) o cualquier otra cuenta de LuxePass se
+rechaza con "is already in use" — al guardar el borrador
+(`admin_apply_lounge_draft`), al publicar y al añadir con el lounge live;
+`partner_lounges(partner_id)` es único como última barrera. Con el lounge live, la Edge Function
 `admin-lounge-partners` gestiona la lista sin despublicar: `add`, `resend`
 (solo si el usuario de Auth no tiene `email_confirmed_at`), `suspend`
 (`partners.suspended_at` + `ban_duration` en Auth: no puede iniciar sesión
