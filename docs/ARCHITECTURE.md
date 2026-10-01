@@ -365,6 +365,21 @@ la misma tabla cuando se conecte.
 - Editar un lounge live lo devuelve a borrador (`admin_unpublish_lounge`); la
   policy de `lounges` lo mantiene visible para su partner y para quien tiene
   reserva allí.
+- **Acceso (Story 10.4).** La Edge Function `admin-partners` (verifica JWT +
+  `has_role('admin')`) hace lo que necesita la API de Auth: activar crea la
+  cuenta invitada de cada usuario (`generateLink`, no envía nada), su rol y
+  `partner_members.user_id`, y después envía la invitación por Brevo
+  (`_shared/partner-invite-email.ts`); si una cuenta falla, borra las ya
+  creadas y el partner sigue en draft. Añadir a un partner activo invita al
+  momento; reenviar solo a quien no tiene `email_confirmed_at`; suspender un
+  usuario es `suspended_at` + `ban_duration`; borrar, la fila (el trigger
+  protege al representante) y luego su usuario de Auth. Suspender/reactivar
+  el partner es la RPC más el ban de todos sus usuarios (al reactivar, salvo
+  los suspendidos uno a uno). El estado de lounges lo deciden las RPC
+  (`admin_suspend_partner`, `admin_reactivate_partner`, `admin_suspend_lounge`,
+  `admin_reactivate_lounge`).
+- `confirm_booking`/`join_waitlist` rechazan un lounge que no esté `live`
+  ("This lounge is not taking bookings"): antes no comprobaban el estado.
 - Datos de muestra en local: `scripts/seed-partners.mjs`.
 
 ## Notificaciones al partner reales (Database Webhook + pg_cron)

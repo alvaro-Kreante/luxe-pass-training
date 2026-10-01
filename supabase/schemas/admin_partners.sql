@@ -55,7 +55,9 @@ grant execute on function public.admin_partner_list() to authenticated;
 /* -------------------------------------------------------------------- */
 
 -- Estado de cada usuario: 'on_activation' sin cuenta todavía (partner en
--- draft), 'invited' con cuenta sin contraseña, 'active' o 'suspended'.
+-- draft), 'invited' con cuenta sin contraseña, 'active' o 'suspended'. El
+-- representante va primero; los demás por orden de alta (los que nacen en
+-- la misma transacción comparten `created_at`, de ahí el email detrás).
 create or replace function public.admin_partner_detail(p_partner_id uuid)
 returns jsonb
 language plpgsql
@@ -82,6 +84,8 @@ begin
     'country', p.country,
     'status', p.status,
     'created_at', p.created_at,
+    'activated_at', p.activated_at,
+    'suspended_at', p.suspended_at,
     'users', coalesce((
       select jsonb_agg(jsonb_build_object(
         'id', m.id,
@@ -96,7 +100,7 @@ begin
           when u.email_confirmed_at is null then 'invited'
           else 'active'
         end
-      ) order by m.created_at, m.id)
+      ) order by m.id = p.representative_id desc, m.created_at, m.email)
       from public.partner_members m
       left join auth.users u on u.id = m.user_id
       where m.partner_id = p.id
@@ -107,6 +111,7 @@ begin
         'name', l.name,
         'area', l.neighborhood || ', ' || l.city,
         'content_status', l.content_status,
+        'suspended_by', l.suspended_by,
         'capacity', l.capacity
       ) order by l.name)
       from public.lounges l
@@ -282,8 +287,8 @@ $$;
 revoke execute on function public.admin_set_partner_representative(uuid, uuid) from public, anon;
 grant execute on function public.admin_set_partner_representative(uuid, uuid) to authenticated;
 
--- Solo usuarios sin cuenta (partner en draft). Borrar a uno con cuenta borra
--- también su usuario de Auth: llega con la Story 10.4.
+-- Solo usuarios sin cuenta (partner en draft). A uno con cuenta lo borra la
+-- Edge Function `admin-partners`, que borra también su usuario de Auth.
 create or replace function public.admin_delete_partner_member(p_member_id uuid)
 returns void
 language plpgsql
@@ -303,3 +308,116 @@ $$;
 
 revoke execute on function public.admin_delete_partner_member(uuid) from public, anon;
 grant execute on function public.admin_delete_partner_member(uuid) to authenticated;
+
+/* -------------------------------------------------------------------- */
+/* Story 10.4 — suspender y reactivar (PartnerSuspend 7, PartnerSuspended */
+/* 8, LoungeSuspend 11). Bloquear a los usuarios en Auth lo hace la Edge  */
+/* Function `admin-partners`; aquí, el estado de partner y lounges.       */
+/* -------------------------------------------------------------------- */
+
+-- Sus lounges publicados pasan a suspendidos "por el partner"; los
+-- borradores y los que el admin ya suspendió no cambian.
+create or replace function public.admin_suspend_partner(p_partner_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.has_role('admin') then
+    raise exception 'Not authorized';
+  end if;
+
+  update public.partners set status = 'suspended', suspended_at = now(), updated_at = now()
+  where id = p_partner_id and status = 'active';
+  if not found then
+    raise exception 'Only an active partner can be suspended';
+  end if;
+
+  update public.lounges set content_status = 'suspended', suspended_by = 'partner', updated_at = now()
+  where partner_id = p_partner_id and content_status = 'live';
+end;
+$$;
+
+revoke execute on function public.admin_suspend_partner(uuid) from public, anon;
+grant execute on function public.admin_suspend_partner(uuid) to authenticated;
+
+-- Lo que su suspensión dejó suspendido vuelve a draft, para revisarlo y
+-- publicarlo de nuevo; lo que el admin suspendió a mano sigue suspendido.
+create or replace function public.admin_reactivate_partner(p_partner_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.has_role('admin') then
+    raise exception 'Not authorized';
+  end if;
+
+  update public.partners set status = 'active', suspended_at = null, updated_at = now()
+  where id = p_partner_id and status = 'suspended';
+  if not found then
+    raise exception 'Only a suspended partner can be reactivated';
+  end if;
+
+  update public.lounges set content_status = 'draft', suspended_by = null, updated_at = now()
+  where partner_id = p_partner_id and content_status = 'suspended' and suspended_by = 'partner';
+end;
+$$;
+
+revoke execute on function public.admin_reactivate_partner(uuid) from public, anon;
+grant execute on function public.admin_reactivate_partner(uuid) to authenticated;
+
+-- LoungeSuspend.dc.html (11) — sale del catálogo y no acepta reservas
+-- nuevas; las hechas se mantienen y su partner lo sigue viendo.
+create or replace function public.admin_suspend_lounge(p_lounge_id text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.has_role('admin') then
+    raise exception 'Not authorized';
+  end if;
+
+  update public.lounges set content_status = 'suspended', suspended_by = 'admin', updated_at = now()
+  where id = p_lounge_id and content_status = 'live';
+  if not found then
+    raise exception 'Only a live lounge can be suspended';
+  end if;
+end;
+$$;
+
+revoke execute on function public.admin_suspend_lounge(text) from public, anon;
+grant execute on function public.admin_suspend_lounge(text) to authenticated;
+
+-- Vuelve a draft, no a live: se revisa y se publica de nuevo.
+create or replace function public.admin_reactivate_lounge(p_lounge_id text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_lounge public.lounges;
+begin
+  if not public.has_role('admin') then
+    raise exception 'Not authorized';
+  end if;
+
+  select * into v_lounge from public.lounges where id = p_lounge_id and content_status = 'suspended' for update;
+  if v_lounge.id is null then
+    raise exception 'Only a suspended lounge can be reactivated';
+  end if;
+  if v_lounge.suspended_by = 'partner' then
+    raise exception 'This lounge was suspended with its partner — reactivate the partner instead';
+  end if;
+
+  update public.lounges set content_status = 'draft', suspended_by = null, updated_at = now() where id = p_lounge_id;
+end;
+$$;
+
+revoke execute on function public.admin_reactivate_lounge(text) from public, anon;
+grant execute on function public.admin_reactivate_lounge(text) to authenticated;

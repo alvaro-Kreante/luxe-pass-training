@@ -325,18 +325,19 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `lib/admin-content.ts` | Story 8.3 — catálogo de 13 lounges (`ADMIN_LOUNGES`), los 3 cambios pendientes literales de The Vestry y su comparación live/propuesto |
 | `admin/partner-status-chip.tsx` | Story 10.2 — `PartnerStatusChip`: Active / Draft / Suspended sobre `StatusChip`, mismo mapa que `LoungeStatusChip` |
 | `admin/status-filter.tsx` | `StatusFilter`, el filtro rápido de estado de `/admin/lounges` (11) y `/admin/partners` (Fase 10 · 1): una pulsación filtra, otra lo quita. Extraído de la página de lounges |
-| `lib/admin-partners.ts` | Epic 10 — `listAdminPartners` (10.2); `getAdminPartner`, `createPartnerDraft` (con sus primeros usuarios, en una transacción), `updatePartner`, `addPartnerMember`, `updatePartnerMember`, `setPartnerRepresentative`, `deletePartnerMember` (10.3), sobre las RPC de `supabase/schemas/admin_partners.sql` |
+| `lib/admin-partners.ts` | Epic 10 — `listAdminPartners` (10.2); `getAdminPartner`, `createPartnerDraft` (con sus primeros usuarios, en una transacción), `updatePartner`, `addPartnerMember`, `updatePartnerMember`, `setPartnerRepresentative`, `deletePartnerMember` (10.3); `activatePartner`, `suspendPartner`/`reactivatePartner`, `suspendPartnerMember`/`reactivatePartnerMember`, `resendPartnerMemberInvite`, `suspendLounge`/`reactivateLounge` (10.4). Lo que toca cuentas de Auth va por la Edge Function `admin-partners`; el resto, por las RPC de `supabase/schemas/admin_partners.sql` |
 | `admin/partner-header.tsx` | Story 10.3 — `PartnerHeader` (iniciales, nombre, status, acciones) y `PartnerBreadcrumb`, misma anatomía que la cabecera de lounge (17) |
 | `admin/partner-details-card.tsx` | Story 10.3 — "Partner details" (2, 3): nombre, contacto y edificio central en texto, sin mapa. Exporta `ADMIN_CARD`/`ADMIN_EYEBROW` |
 | `admin/partner-user-fields.tsx` | Story 10.3 — los cuatro campos de un usuario partner en fila (lógica de 23); `emailLocked` para el lápiz (4) |
-| `admin/partner-users-card.tsx` | Story 10.3 — tabla de usuarios (3, 4): lápiz en la fila, "Make representative", borrar con el aviso del representante, "Add user" |
+| `admin/partner-users-card.tsx` | Story 10.3 — tabla de usuarios (3, 4): lápiz en la fila, "Make representative", borrar con el aviso del representante, "Add user". Story 10.4 (6): suspender/reactivar, "Resend invitation", y confirmación al suspender o borrar a alguien con cuenta |
 | `admin/partner-lounges-card.tsx` | Story 10.3 — los lounges del partner con su status y "Open lounge" a `/admin/lounges/[id]` |
-| `admin/partner-activation-checklist.tsx` | Story 10.3 — "Ready to activate" y la nota del rail (2, 3); el botón de activar llega con la 10.4 |
+| `admin/partner-activation-checklist.tsx` | Story 10.3 — "Ready to activate" y la nota del rail (2, 3), con el botón de activar como `children`; Story 10.4 la reutiliza para "When you reactivate" (8) |
+| `admin/confirm-modal.tsx` | Story 10.4 — `ConfirmModal`, la confirmación con la geometría de PartnerSuspend (Fase 8 · 21): activar (5), suspender partner (7), suspender/borrar usuario y suspender lounge (11) |
 | `admin/lounge-status-chip.tsx` | Story 8.3 — `LoungeStatusChip`, el mapa Live/Draft/N to approve sobre `StatusChip` |
 | `admin/city-filter-popover.tsx` | Story 8.3 — `CityFilterPopover`, el botón de ciudad de `/admin/lounges` con su popover de Radix: busca solo entre las ciudades que ya tienen lounge (artboards 27–28). Los filtros Live/Draft no son componente propio: un `StatusChip` (`available`+`outlined` cuando está pulsado) dentro de un botón `aria-pressed` |
 | `app/admin/lounges/page.tsx` | Story 8.3 — "Add/edit/remove lounge profiles" y "Bulk update capabilities": la lista con selección y barra de acción masiva (`Lounges.dc.html`) |
 | `app/admin/lounges/[id]/page.tsx` | Story 8.3 — detalle de lounge: compone `LoungeLiveView` (live, bloqueado) o `LoungeDraftForm` (borrador) |
-| `components/admin/lounge-live-view.tsx` | `LoungeLive.dc.html` (17) + popup `LoungeEditConfirm` (18): todo en solo lectura, ubicación con mapa (`LoungeLocationPreview`), fotos reales |
+| `components/admin/lounge-live-view.tsx` | `LoungeLive.dc.html` (17) + popup `LoungeEditConfirm` (18): todo en solo lectura, ubicación con mapa (`LoungeLocationPreview`), fotos reales. Story 10.4: "Suspend lounge" (Fase 10 · 11) y, suspendido, solo "Reactivate lounge" (vuelve a draft) |
 | `components/admin/lounge-saved-notice.tsx` | `LoungeDraftSaved.dc.html` (24) y `LoungePublished.dc.html` (25): aviso informativo tras guardar o publicar, sobre el patrón `Modal` centrado; exporta `ModalPoint`, los puntos de los popups del lounge |
 | `components/admin/photo-viewer.tsx` | `LoungePhotoViewer.dc.html` (26): visor a pantalla completa con flechas, teclado y miniaturas (Radix Dialog) |
 | `lib/membership.ts` | Story 9.1 — backend real desde Epic 9 (ver "Backend real — Epic 9"): los dos planes ($249/mes, $2,400/año), `fetchMembership`/`fetchMembershipAccount`/`fetchMembershipQuote`/`chargeMembershipWithSavedCard`/`createMembershipCheckoutSession`/`setMembershipAutoRenew`/`fetchVisitsThisMonth`, los 6 beneficios y la tabla comparativa. `ALEXANDRA_MEMBERSHIP`/`NAOMI_MEMBERSHIP` quedan como fixtures de componente, sin tocar Supabase |
@@ -905,7 +906,7 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 
 ## Desviaciones conscientes respecto a los artboards
 
-- **Epic 10 · 10.3 sin botón de activar.** `PartnerNew`/`PartnerDetail` (2, 3) dibujan *Activate partner* en el rail; hasta la Story 10.4 solo se muestra la lista. Borrar un usuario con cuenta también llega con la 10.4 (borra su usuario de Auth).
+- **Epic 10 · Activar solo desde el detalle.** `PartnerNew` (2) dibuja *Activate partner* deshabilitado en el rail del alta; en código el alta no lo muestra: se activa desde el detalle, una vez guardado el draft.
 - **Epic 10 · Suspended sin rojo.** `Partners.dc.html` y los demás artboards de la Fase 10 pintan *Suspended* en `#D9826B`/`#E39A85`, pero el design system no admite verde ni rojo (§5 "Estados") y `globals.css` no tiene ese token. `PartnerStatusChip` usa el chip de "no disponible" (`StatusChip available={false}`). Si se quiere el rojo, hay que añadirlo antes a DESIGN-SYSTEM.md §2.
 
 | Qué | Por qué |

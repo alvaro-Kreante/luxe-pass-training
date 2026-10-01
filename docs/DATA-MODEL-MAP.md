@@ -313,6 +313,10 @@ el amigo llega por `/join/[code]` → `/signup?ref=` (metadatos de Auth).
   lounges del partner del usuario, si partner y usuario están activos.
 - Un miembro solo lee `id`/`name`/`status` de `partners` (privilegio por
   columna) y solo del partner de un lounge publicado.
+- Story 10.4: `lounges.content_status` admite `suspended`, con
+  `lounges.suspended_by` (`admin` suelto / `partner` con su partner) para
+  saber qué vuelve a draft al reactivar el partner. `partner_members.suspended_at`
+  marca a un usuario suspendido uno a uno.
 
 ## Quién es dueño de qué
 

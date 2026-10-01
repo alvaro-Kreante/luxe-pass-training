@@ -26,7 +26,7 @@ import {
  * verdad detrás — desviación anotada en `docs/design/COMPONENT-MAP.md`.
  */
 
-export type LoungeContentStatus = "live" | "draft" | "archived";
+export type LoungeContentStatus = "live" | "draft" | "archived" | "suspended";
 
 /** Fila cruda de `admin_lounge_list`. */
 export interface AdminLoungeListRow {

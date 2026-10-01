@@ -40,7 +40,11 @@ create table if not exists public.lounges (
   -- `lounge_content_submissions`, ver `supabase/schemas/admin_content.sql`)
   -- — un lounge 'live' con una edición en revisión sigue siendo visible
   -- para los miembros con su contenido ya publicado hasta que se apruebe.
-  content_status       text not null default 'live' check (content_status in ('live', 'draft', 'archived')),
+  content_status       text not null default 'live' check (content_status in ('live', 'draft', 'archived', 'suspended')),
+  -- Story 10.4 — quién lo suspendió: 'admin' (suelto) o 'partner' (al
+  -- suspender su partner). Al reactivar el partner solo vuelven a draft los
+  -- suyos; los que el admin suspendió a mano siguen suspendidos.
+  suspended_by         text check (suspended_by in ('admin', 'partner')),
   -- Story 10.1 — el partner (organización) que opera el lounge. Null solo
   -- mientras es borrador: publicar exige un partner activo.
   partner_id           uuid references public.partners (id) on delete restrict,

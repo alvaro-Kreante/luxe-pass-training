@@ -72,7 +72,7 @@ function LoungeEditScreen() {
 
   return (
     <>
-      <LoungeLiveView lounge={lounge} onMovedToDraft={load} />
+      <LoungeLiveView lounge={lounge} onMovedToDraft={load} onStatusChanged={load} />
       {savedNotice}
     </>
   );

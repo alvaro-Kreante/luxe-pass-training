@@ -11,13 +11,22 @@ export interface ActivationItem {
 
 /**
  * Story 10.3 — "Ready to activate" del rail de PartnerNew.dc.html (2) y
- * PartnerDetail.dc.html (3). El botón de activar llega con la Story 10.4.
+ * PartnerDetail.dc.html (3), con el botón de activar debajo (`children`).
+ * Story 10.4: la misma lista sirve a "When you reactivate" (PartnerSuspended 8).
  */
-export function PartnerActivationChecklist({ items, children }: { items: ActivationItem[]; children?: React.ReactNode }) {
+export function PartnerActivationChecklist({
+  items,
+  title = "Ready to activate",
+  children,
+}: {
+  items: ActivationItem[];
+  title?: string;
+  children?: React.ReactNode;
+}) {
   return (
     <div className="rounded-content border border-line bg-dark-card px-5.5 pb-2 pt-5">
       <p id="activation-title" className={ADMIN_EYEBROW}>
-        Ready to activate
+        {title}
       </p>
       <ul aria-labelledby="activation-title" className="m-0 mt-2.5 list-none p-0">
         {items.map((item) => (

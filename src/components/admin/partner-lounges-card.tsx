@@ -36,7 +36,14 @@ export function PartnerLoungesCard({ lounges, hint }: { lounges: AdminPartnerLou
                   {lounge.area} · capacity {lounge.capacity}
                 </p>
               </div>
-              {lounge.contentStatus === "draft" ? (
+              {lounge.contentStatus === "suspended" ? (
+                <>
+                  <span className="text-[11px] text-fg-subtle">
+                    {lounge.suspendedBy === "partner" ? "was live" : "suspended by admin"}
+                  </span>
+                  <StatusChip available={false}>Suspended</StatusChip>
+                </>
+              ) : lounge.contentStatus === "draft" ? (
                 <StatusChip dashed>Draft</StatusChip>
               ) : (
                 <StatusChip available outlined>

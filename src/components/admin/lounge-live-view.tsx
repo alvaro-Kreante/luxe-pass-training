@@ -5,6 +5,7 @@ import { Lock, Pencil } from "lucide-react";
 import Link from "next/link";
 
 import { LoungeLocationPreview } from "@/components/admin/address-autocomplete";
+import { ConfirmModal } from "@/components/admin/confirm-modal";
 import { ModalPoint } from "@/components/admin/lounge-saved-notice";
 import { PhotoViewer } from "@/components/admin/photo-viewer";
 import { AdminShell } from "@/components/patterns/admin-shell";
@@ -12,6 +13,7 @@ import { Modal } from "@/components/patterns/modal";
 import { Button } from "@/components/ui/button";
 import { amenityLabel, type AmenityId } from "@/lib/amenities";
 import { unpublishLounge, type LoungeContentDetail } from "@/lib/admin-content";
+import { reactivateLounge, suspendLounge } from "@/lib/admin-partners";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -53,20 +55,41 @@ function Value({ label, value }: { label: string; value: string }) {
  * Epic 8 · LoungeLive.dc.html (17) — un lounge publicado se ve entero y
  * bloqueado, ubicación incluida. "Edit lounge" pide confirmación
  * (LoungeEditConfirm.dc.html, 18) y lo devuelve a borrador. Los usuarios
- * partner se gestionan en el partner (Epic 10), no en el lounge.
+ * partner se gestionan en el partner (Epic 10), no en el lounge. Story 10.4
+ * (LoungeSuspend.dc.html, Fase 10 · 11): "Suspend lounge" lo saca del
+ * catálogo; suspendido se ve igual de bloqueado y solo ofrece reactivarlo,
+ * que lo devuelve a borrador.
  */
 export function LoungeLiveView({
   lounge,
   onMovedToDraft,
+  onStatusChanged,
 }: {
   lounge: LoungeContentDetail;
   onMovedToDraft: () => Promise<void>;
+  onStatusChanged: () => Promise<void>;
 }) {
   const supabase = React.useMemo(() => createClient(), []);
   const [confirming, setConfirming] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
   const [viewing, setViewing] = React.useState<number | null>(null);
+  const [suspending, setSuspending] = React.useState(false);
+  const suspended = lounge.contentStatus === "suspended";
+
+  async function changeStatus(action: () => Promise<void>) {
+    setBusy(true);
+    setError("");
+    try {
+      await action();
+      setSuspending(false);
+      await onStatusChanged();
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Something went wrong");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function moveToDraft() {
     setBusy(true);
@@ -106,22 +129,45 @@ export function LoungeLiveView({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2.5">
             <h1 className="m-0 font-display text-[22px] text-fg">{lounge.name}</h1>
-            <span className="inline-flex items-center gap-1.5 rounded-pill border border-gold-600 bg-accent/16 px-3 py-1.5 text-[11.5px] font-bold text-fg-muted">
-              <span className="size-1.5 rounded-full bg-accent" />
-              Live · visible to members
-            </span>
+            {suspended ? (
+              <span className="inline-flex items-center rounded-pill border border-line px-3 py-1.5 text-[11.5px] font-bold text-fg-subtle">
+                Suspended · hidden from members
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-pill border border-gold-600 bg-accent/16 px-3 py-1.5 text-[11.5px] font-bold text-fg-muted">
+                <span className="size-1.5 rounded-full bg-accent" />
+                Live · visible to members
+              </span>
+            )}
           </div>
           <p className="mt-1.5 text-[12.5px] text-fg-subtle">
             {lounge.area}
           </p>
         </div>
         <div className="flex items-center gap-2.5">
-          <Button size="md" onClick={() => setConfirming(true)}>
-            <Pencil size={15} strokeWidth={2} />
-            Edit lounge
-          </Button>
+          {suspended ? (
+            <Button size="md" disabled={busy} onClick={() => changeStatus(() => reactivateLounge(supabase, lounge.id))}>
+              Reactivate lounge
+            </Button>
+          ) : (
+            <>
+              <Button variant="ghost" size="md" onClick={() => setSuspending(true)}>
+                Suspend lounge
+              </Button>
+              <Button size="md" onClick={() => setConfirming(true)}>
+                <Pencil size={15} strokeWidth={2} />
+                Edit lounge
+              </Button>
+            </>
+          )}
         </div>
       </div>
+
+      {error && !confirming && !suspending ? (
+        <p role="alert" className="mt-4 text-[13px] font-bold text-accent-strong">
+          {error}
+        </p>
+      ) : null}
 
       <div className="mt-4.5 flex min-h-0 gap-4">
         <div className="flex min-w-0 flex-1 flex-col gap-3">
@@ -230,6 +276,23 @@ export function LoungeLiveView({
       </div>
 
       <PhotoViewer photos={photos} index={viewing} onIndexChange={setViewing} onClose={() => setViewing(null)} />
+
+      <ConfirmModal
+        open={suspending}
+        onOpenChange={setSuspending}
+        eyebrow={`${lounge.name} · lounge`}
+        title="Suspend this lounge?"
+        intro={`Members stop seeing ${lounge.name}. Its partner and their other lounges keep working.`}
+        points={[
+          { title: "Hidden from members", detail: "It leaves Explore and can't take new bookings. Bookings already made are kept." },
+          { title: "Partner users still see it", detail: "Its guest list stays in the Partner Dashboard." },
+          { title: "Reactivating brings it back as a draft", detail: "Review it and publish it again when it's ready." },
+        ]}
+        confirmLabel="Suspend lounge"
+        busy={busy}
+        error={error}
+        onConfirm={() => changeStatus(() => suspendLounge(supabase, lounge.id))}
+      />
 
       <Modal
         open={confirming}

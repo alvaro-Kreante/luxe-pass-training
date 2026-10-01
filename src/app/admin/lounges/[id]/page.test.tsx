@@ -142,6 +142,33 @@ describe("un lounge live se ve entero y bloqueado", () => {
   });
 });
 
+describe("suspender un lounge suelto (Story 10.4)", () => {
+  it("pide confirmación y lo deja suspendido, sin editar ni volver a suspender", async () => {
+    const user = userEvent.setup({ delay: null });
+    const id = await liveLounge();
+
+    await user.click(screen.getByRole("button", { name: "Suspend lounge" }));
+    const dialog = await screen.findByRole("dialog", { name: "Suspend this lounge?" });
+    await user.click(within(dialog).getByRole("button", { name: "Suspend lounge" }));
+
+    expect(await screen.findByText(/Suspended · hidden from members/)).toBeInTheDocument();
+    expect(await contentStatus(id)).toBe("suspended");
+    expect(screen.getByRole("button", { name: "Reactivate lounge" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit lounge" })).toBeNull();
+  });
+
+  it("reactivarlo lo devuelve a borrador para publicarlo de nuevo", async () => {
+    const user = userEvent.setup({ delay: null });
+    const id = await createLounge(`Live Lounge ${Date.now()}`, { content_status: "suspended", suspended_by: "admin" });
+    render(<LoungeEditPage />);
+
+    await user.click(await screen.findByRole("button", { name: "Reactivate lounge" }));
+
+    expect(await screen.findByText(/Draft · not visible to members/)).toBeInTheDocument();
+    expect(await contentStatus(id)).toBe("draft");
+  });
+});
+
 describe("un lounge en borrador", () => {
   it("se edita entero, ubicación incluida, y se publica — sin cola de revisión", async () => {
     await createLounge(`Draft Lounge ${Date.now()}`, { content_status: "draft" });

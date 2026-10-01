@@ -81,7 +81,9 @@ export interface AdminPartnerLounge {
   id: string;
   name: string;
   area: string;
-  contentStatus: "live" | "draft" | "archived";
+  contentStatus: "live" | "draft" | "archived" | "suspended";
+  /** Solo si está suspendido: suelto ('admin') o con su partner ('partner'). */
+  suspendedBy: "admin" | "partner" | null;
   capacity: number;
 }
 
@@ -89,6 +91,8 @@ export interface AdminPartnerDetail extends PartnerDetailsInput {
   id: string;
   status: PartnerStatus;
   createdAt: string;
+  activatedAt: string | null;
+  suspendedAt: string | null;
   users: AdminPartnerMember[];
   lounges: AdminPartnerLounge[];
 }
@@ -130,8 +134,10 @@ export async function getAdminPartner(supabase: SupabaseClient, partnerId: strin
     country: string;
     status: PartnerStatus;
     created_at: string;
+    activated_at: string | null;
+    suspended_at: string | null;
     users: { id: string; first_name: string; last_name: string; email: string; mobile: string; status: PartnerMemberStatus; is_representative: boolean }[];
-    lounges: { id: string; name: string; area: string; content_status: AdminPartnerLounge["contentStatus"]; capacity: number }[];
+    lounges: { id: string; name: string; area: string; content_status: AdminPartnerLounge["contentStatus"]; suspended_by: AdminPartnerLounge["suspendedBy"]; capacity: number }[];
   };
   const raw = await rpc<Raw | null>(supabase, "admin_partner_detail", { p_partner_id: partnerId });
   if (!raw) return null;
@@ -147,6 +153,8 @@ export async function getAdminPartner(supabase: SupabaseClient, partnerId: strin
     country: raw.country,
     status: raw.status,
     createdAt: raw.created_at,
+    activatedAt: raw.activated_at,
+    suspendedAt: raw.suspended_at,
     users: raw.users.map((u) => ({
       id: u.id,
       firstName: u.first_name,
@@ -156,7 +164,14 @@ export async function getAdminPartner(supabase: SupabaseClient, partnerId: strin
       status: u.status,
       isRepresentative: u.is_representative,
     })),
-    lounges: raw.lounges.map((l) => ({ id: l.id, name: l.name, area: l.area, contentStatus: l.content_status, capacity: l.capacity })),
+    lounges: raw.lounges.map((l) => ({
+      id: l.id,
+      name: l.name,
+      area: l.area,
+      contentStatus: l.content_status,
+      suspendedBy: l.suspended_by,
+      capacity: l.capacity,
+    })),
   };
 }
 
@@ -178,9 +193,20 @@ export async function updatePartner(supabase: SupabaseClient, partnerId: string,
   await rpc(supabase, "admin_update_partner", { p_partner_id: partnerId, p_partner: detailsPayload(input) });
 }
 
-/** El primero que se añade queda como representante. Devuelve el id del usuario. */
-export function addPartnerMember(supabase: SupabaseClient, partnerId: string, input: PartnerMemberInput): Promise<string> {
-  return rpc<string>(supabase, "admin_add_partner_member", { p_partner_id: partnerId, p_member: memberPayload(input) });
+async function invoke<T = Record<string, unknown>>(supabase: SupabaseClient, body: Record<string, unknown>): Promise<T> {
+  const { data, error } = await supabase.functions.invoke("admin-partners", { body });
+  if (!error) return data as T;
+  const detail = error.context instanceof Response ? await error.context.json().catch(() => null) : null;
+  throw new Error(detail?.error ?? error.message);
+}
+
+/**
+ * El primero que se añade queda como representante. En un partner activo
+ * recibe la invitación al momento (Story 10.4). Devuelve el id del usuario.
+ */
+export async function addPartnerMember(supabase: SupabaseClient, partnerId: string, input: PartnerMemberInput): Promise<string> {
+  const { memberId } = await invoke<{ memberId: string }>(supabase, { action: "add_member", partnerId, member: input });
+  return memberId;
 }
 
 /** El lápiz: nombre, apellido y móvil. El email es el inicio de sesión y no cambia. */
@@ -199,8 +225,49 @@ export async function setPartnerRepresentative(supabase: SupabaseClient, partner
   await rpc(supabase, "admin_set_partner_representative", { p_partner_id: partnerId, p_member_id: memberId });
 }
 
+/** Con cuenta, la borra también. El representante no se borra mientras queden otros. */
 export async function deletePartnerMember(supabase: SupabaseClient, memberId: string): Promise<void> {
-  await rpc(supabase, "admin_delete_partner_member", { p_member_id: memberId });
+  await invoke(supabase, { action: "delete_member", memberId });
+}
+
+/* Story 10.4 — acceso (Edge Function `admin-partners`) y suspensión. */
+
+/** PartnerActivate.dc.html (5) — exige al menos un usuario; cada uno recibe el email de crear contraseña. */
+export async function activatePartner(supabase: SupabaseClient, partnerId: string): Promise<void> {
+  await invoke(supabase, { action: "activate", partnerId });
+}
+
+/** Solo a quien aún no creó su contraseña. */
+export async function resendPartnerMemberInvite(supabase: SupabaseClient, memberId: string): Promise<void> {
+  await invoke(supabase, { action: "resend", memberId });
+}
+
+export async function suspendPartnerMember(supabase: SupabaseClient, memberId: string): Promise<void> {
+  await invoke(supabase, { action: "suspend_member", memberId });
+}
+
+export async function reactivatePartnerMember(supabase: SupabaseClient, memberId: string): Promise<void> {
+  await invoke(supabase, { action: "reactivate_member", memberId });
+}
+
+/** PartnerSuspend.dc.html (7) — suspende sus lounges publicados y bloquea a todos sus usuarios. */
+export async function suspendPartner(supabase: SupabaseClient, partnerId: string): Promise<void> {
+  await invoke(supabase, { action: "suspend_partner", partnerId });
+}
+
+/** PartnerSuspended.dc.html (8) — lo que era live vuelve a draft; lo suspendido a mano sigue igual. */
+export async function reactivatePartner(supabase: SupabaseClient, partnerId: string): Promise<void> {
+  await invoke(supabase, { action: "reactivate_partner", partnerId });
+}
+
+/** LoungeSuspend.dc.html (11) — sale del catálogo y deja de aceptar reservas. */
+export async function suspendLounge(supabase: SupabaseClient, loungeId: string): Promise<void> {
+  await rpc(supabase, "admin_suspend_lounge", { p_lounge_id: loungeId });
+}
+
+/** Vuelve a draft para revisarlo y publicarlo de nuevo. */
+export async function reactivateLounge(supabase: SupabaseClient, loungeId: string): Promise<void> {
+  await rpc(supabase, "admin_reactivate_lounge", { p_lounge_id: loungeId });
 }
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

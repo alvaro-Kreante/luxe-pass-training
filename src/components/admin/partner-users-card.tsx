@@ -1,8 +1,9 @@
 "use client";
 
 import * as React from "react";
-import { Info, Pencil, Plus, Star, Trash2 } from "lucide-react";
+import { Info, Pause, Pencil, Play, Plus, RotateCw, Star, Trash2 } from "lucide-react";
 
+import { ConfirmModal } from "@/components/admin/confirm-modal";
 import { ADMIN_CARD, ADMIN_EYEBROW } from "@/components/admin/partner-details-card";
 import { EMPTY_PARTNER_USER, PartnerUserFields } from "@/components/admin/partner-user-fields";
 import { Button } from "@/components/ui/button";
@@ -68,8 +69,10 @@ function IconAction({
  * Story 10.3 — "Partner users" de PartnerDetail.dc.html (3) y
  * PartnerUserEdit.dc.html (4). Lápiz para editar en la misma fila (sin
  * email), "Make representative" y borrar; el representante no se borra
- * mientras queden otros (el servidor lo vuelve a comprobar). Cada acción la
- * resuelve la pantalla (`on*`); un error se muestra aquí.
+ * mientras queden otros (el servidor lo vuelve a comprobar). Story 10.4
+ * (PartnerActive.dc.html 6): con cuenta, suspender/reactivar y reenviar la
+ * invitación; suspender y borrar a alguien con cuenta piden confirmación.
+ * Cada acción la resuelve la pantalla (`on*`); un error se muestra aquí.
  */
 export function PartnerUsersCard({
   users,
@@ -78,6 +81,9 @@ export function PartnerUsersCard({
   onEdit,
   onMakeRepresentative,
   onDelete,
+  onSuspend,
+  onReactivate,
+  onResend,
 }: {
   users: AdminPartnerMember[];
   hint: string;
@@ -85,7 +91,12 @@ export function PartnerUsersCard({
   onEdit: (id: string, input: PartnerMemberInput) => Promise<void>;
   onMakeRepresentative: (id: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  onSuspend: (id: string) => Promise<void>;
+  onReactivate: (id: string) => Promise<void>;
+  onResend: (id: string) => Promise<void>;
 }) {
+  const [confirming, setConfirming] = React.useState<{ kind: "suspend" | "delete"; user: AdminPartnerMember } | null>(null);
+  const [notice, setNotice] = React.useState("");
   const [adding, setAdding] = React.useState(false);
   const [draft, setDraft] = React.useState<PartnerMemberInput>(EMPTY_PARTNER_USER);
   const [editing, setEditing] = React.useState<{ id: string; value: PartnerMemberInput } | null>(null);
@@ -113,7 +124,14 @@ export function PartnerUsersCard({
       return;
     }
     setBlockedRepresentative(null);
-    void run(() => onDelete(user.id));
+    if (user.status === "on_activation") void run(() => onDelete(user.id));
+    else setConfirming({ kind: "delete", user });
+  }
+
+  async function confirm() {
+    if (!confirming) return;
+    const { kind, user } = confirming;
+    if (await run(() => (kind === "suspend" ? onSuspend(user.id) : onDelete(user.id)))) setConfirming(null);
   }
 
   const taken = users.some((u) => u.email.toLowerCase() === draft.email.trim().toLowerCase());
@@ -150,9 +168,14 @@ export function PartnerUsersCard({
           </button>
         </div>
       ) : null}
-      {error ? (
+      {error && !confirming ? (
         <p role="alert" className="m-0 mt-3 text-[12.5px] font-bold text-accent-strong">
           {error}
+        </p>
+      ) : null}
+      {notice ? (
+        <p role="status" className="m-0 mt-3 text-[12.5px] font-bold text-accent-strong">
+          {notice}
         </p>
       ) : null}
 
@@ -219,6 +242,21 @@ export function PartnerUsersCard({
                   {fullName(user)}
                 </p>
                 <p className="m-0 mt-0.5 truncate text-[11.5px] text-fg-subtle">{user.email}</p>
+                {user.status === "invited" ? (
+                  <button
+                    type="button"
+                    aria-label={`Resend invitation to ${fullName(user)}`}
+                    disabled={busy}
+                    onClick={async () => {
+                      setNotice("");
+                      if (await run(() => onResend(user.id))) setNotice(`Invitation sent again to ${user.email}`);
+                    }}
+                    className="mt-1 inline-flex items-center gap-1 text-[11.5px] font-bold text-accent-strong transition-colors duration-150 hover:text-accent"
+                  >
+                    <RotateCw size={12} strokeWidth={1.9} aria-hidden />
+                    Resend invitation
+                  </button>
+                ) : null}
               </div>
               <p role="cell" className="m-0 hidden whitespace-nowrap text-[12.5px] text-fg-muted md:block">
                 {user.mobile || "—"}
@@ -246,6 +284,16 @@ export function PartnerUsersCard({
                 )}
               </div>
               <div role="cell" className="flex justify-end gap-1.5">
+                {user.status === "invited" || user.status === "active" ? (
+                  <IconAction label={`Suspend ${fullName(user)}`} onClick={() => setConfirming({ kind: "suspend", user })}>
+                    <Pause size={14} strokeWidth={1.9} />
+                  </IconAction>
+                ) : null}
+                {user.status === "suspended" ? (
+                  <IconAction label={`Reactivate ${fullName(user)}`} onClick={() => void run(() => onReactivate(user.id))}>
+                    <Play size={13} strokeWidth={1.9} />
+                  </IconAction>
+                ) : null}
                 <IconAction
                   label={`Edit ${fullName(user)}`}
                   onClick={() =>
@@ -303,6 +351,33 @@ export function PartnerUsersCard({
           </div>
         </div>
       ) : null}
+      <ConfirmModal
+        open={confirming?.kind === "suspend"}
+        onOpenChange={(open) => !open && setConfirming(null)}
+        eyebrow={confirming ? `${fullName(confirming.user)} · partner user` : ""}
+        title="Suspend this user?"
+        intro={`${confirming?.user.firstName ?? ""} won't be able to sign in to the Partner Dashboard until you reactivate them.`}
+        points={[
+          { title: "Every lounge of the partner", detail: "The suspension covers all of them." },
+          { title: "Nothing else changes", detail: "Bookings, guest lists and the other users keep working." },
+        ]}
+        confirmLabel="Suspend user"
+        busy={busy}
+        error={error}
+        onConfirm={confirm}
+      />
+      <ConfirmModal
+        open={confirming?.kind === "delete"}
+        onOpenChange={(open) => !open && setConfirming(null)}
+        eyebrow={confirming ? `${fullName(confirming.user)} · partner user` : ""}
+        title="Delete this user?"
+        intro={`This removes ${confirming?.user.firstName ?? ""}'s account for good. To bring them back you would add them again.`}
+        points={[{ title: "Suspend instead if it's only for a while", detail: "A suspended user can be reactivated from this list." }]}
+        confirmLabel="Delete user"
+        busy={busy}
+        error={error}
+        onConfirm={confirm}
+      />
     </div>
   );
 }

@@ -1,5 +1,6 @@
-// Epic 7 · EmailInvite.dc.html — la invitación del partner (al publicar el
-// lounge, al añadirlo a uno live o al reenviarla), con estilos
+// Epic 7 · EmailInvite.dc.html — la invitación de un usuario partner. Desde
+// la Story 10.4 sale al activar su partner, al añadirlo a uno activo o al
+// reenviarla, y presenta al partner (la organización), no un lounge. Estilos
 // inline (los clientes de email no leen <style> de forma fiable).
 
 export interface PartnerInviteEmail {
@@ -7,8 +8,8 @@ export interface PartnerInviteEmail {
   lastName: string;
   email: string;
   mobile: string;
-  loungeName: string;
-  loungeAddress: string;
+  partnerName: string;
+  partnerAddress: string;
   invitedBy: string;
   welcomeUrl: string;
 }
@@ -32,12 +33,12 @@ export function renderPartnerInvite(invite: PartnerInviteEmail): string {
   <div style="max-width:600px; margin:0 auto; background:#FFFFFF; border:1px solid #E7D9C9; border-radius:20px; overflow:hidden;">
     <div style="background:#15110D; padding:24px 32px; text-align:center;">
       <p style="font-size:11px; font-weight:700; letter-spacing:0.16em; text-transform:uppercase; color:#8A7C6C; margin:0;">Welcome to the partner network</p>
-      <h2 style="font-family:'Bodoni Moda',Georgia,serif; font-weight:500; font-size:30px; color:#F1E3D0; margin:10px 0 0;">${e.loungeName}</h2>
-      <p style="font-size:12.5px; color:#C9BDAF; margin:8px 0 0;">${e.loungeAddress}</p>
+      <h2 style="font-family:'Bodoni Moda',Georgia,serif; font-weight:500; font-size:30px; color:#F1E3D0; margin:10px 0 0;">${e.partnerName}</h2>
+      <p style="font-size:12.5px; color:#C9BDAF; margin:8px 0 0;">${e.partnerAddress}</p>
     </div>
     <div style="padding:22px 32px;">
       <p style="font-size:14px; color:#221A14; font-weight:700; margin:0;">Hello ${e.firstName},</p>
-      <p style="font-size:14px; color:#55483D; line-height:1.6; margin:8px 0 0;">${e.invitedBy} at En Soleil has added you as the partner for ${e.loungeName}. Create a password to open the Partner Dashboard — the day's guest list, check-ins and the month's numbers for your venue.</p>
+      <p style="font-size:14px; color:#55483D; line-height:1.6; margin:8px 0 0;">${e.invitedBy} at En Soleil has added you as the partner for ${e.partnerName}. Create a password to open the Partner Dashboard — the day's guest list, check-ins and the month's numbers for your venue.</p>
       <div style="margin-top:16px; padding:16px 18px; background:#FCF4EE; border:1px solid #E7D9C9; border-radius:16px;">
         <p style="font-size:11px; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; color:#9C8D80; margin:0;">Your account</p>
         <p style="font-size:13.5px; font-weight:700; color:#221A14; margin:4px 0 0;">${e.firstName} ${e.lastName}</p>
