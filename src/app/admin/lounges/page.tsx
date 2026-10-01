@@ -9,9 +9,9 @@ import { AdminShell } from "@/components/patterns/admin-shell";
 import { RequireAdminSession } from "@/components/admin/require-admin-session";
 import { CityFilterPopover } from "@/components/admin/city-filter-popover";
 import { LoungeStatusChip } from "@/components/admin/lounge-status-chip";
+import { StatusFilter } from "@/components/admin/status-filter";
 import { BulkActionBar, BulkActionButton } from "@/components/ui/bulk-action-bar";
 import { Checkbox } from "@/components/ui/checkbox";
-import { StatusChip } from "@/components/ui/status-chip";
 import { createClient } from "@/lib/supabase/client";
 import { getTicketCounts, type TicketCounts } from "@/lib/admin";
 import {
@@ -248,32 +248,6 @@ function LoungesScreen() {
         edit does — nothing reaches the member app until a content manager has seen it.
       </p>
     </AdminShell>
-  );
-}
-
-function StatusFilter({
-  label,
-  count,
-  pressed,
-  onToggle,
-}: {
-  label: string;
-  count: number;
-  pressed: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={pressed}
-      onClick={onToggle}
-      className="rounded-pill focus-visible:outline-none focus-visible:shadow-ring"
-    >
-      <StatusChip available={pressed} outlined={pressed} className="cursor-pointer px-3.5 py-1.5">
-        <span className={pressed ? "text-fg" : "text-fg-muted"}>{label}</span>
-        <span className="font-semibold text-fg-subtle">{count}</span>
-      </StatusChip>
-    </button>
   );
 }
 

@@ -48,8 +48,12 @@ afterAll(async () => {
   // El lounge efímero es una fila real en el catálogo compartido de Epic 2
   // (`public.lounges`) — sin borrarlo, `lounge-directory.test.ts` (que
   // cuenta el catálogo completo) ve una fila de más y falla. `on delete
-  // cascade` en `bookings`/`partner_lounges` limpia el resto solo.
-  if (loungeId) await admin.from("lounges").delete().eq("id", loungeId);
+  // cascade` en `bookings` limpia el resto solo.
+  if (!loungeId) return;
+  // Story 10.1 — el lounge efímero trae su propio partner de test: se borra con él.
+  const { data: lounge } = await admin.from("lounges").select("partner_id").eq("id", loungeId).maybeSingle();
+  await admin.from("lounges").delete().eq("id", loungeId);
+  if (lounge?.partner_id) await admin.from("partners").delete().eq("id", lounge.partner_id);
 });
 
 beforeAll(async () => {

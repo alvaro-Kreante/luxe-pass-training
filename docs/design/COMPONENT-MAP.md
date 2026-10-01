@@ -221,6 +221,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `/admin/analytics/demand` | `Popularity.dc.html` | 8.2 |
 | `/admin/reports` | `Export.dc.html` | 8.2 |
 | `/admin/reports/scheduled` | `ScheduledReports.dc.html` | 8.2 |
+| `/admin/partners` | Fase 10 · `Partners.dc.html` (1) | 10.2 |
 | `/admin/lounges` | `Lounges.dc.html` (11) + `LoungeFilterCity` (27) + `LoungeFilterApplied` (28) | 8.3 |
 | `/admin/lounges/[id]` | `LoungeLive.dc.html` (17, live) + `LoungeEditConfirm` (18) + `PartnerAdd`/`PartnerSuspend`/`PartnerDelete` (20–22) + `LoungePhotoViewer` (26) · `LoungeDraftPartners.dc.html` (19, borrador) + `LoungePartnersMain` (23) · avisos `LoungeDraftSaved`/`LoungePublished` (24–25) — sustituyen a `LoungeEdit` (12) | 8.3 |
 | `/admin/lounges/new` | `LoungeDraftPartners.dc.html` (19) + `LoungePartnersMain` (23) — sustituyen a `LoungeNew`/`LoungeNewPartner` — + `PhotoCaption.dc.html` + avisos 24–25 | 8.3 |
@@ -320,6 +321,9 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `app/admin/reports/page.tsx` | Story 8.2 — "Export data": dataset, filtros, columnas anonimizadas por defecto y entrega (`Export.dc.html`) |
 | `app/admin/reports/scheduled/page.tsx` | Story 8.2 — "Reports that send themselves": reportes automáticos y su historial de entrega (`ScheduledReports.dc.html`) |
 | `lib/admin-content.ts` | Story 8.3 — catálogo de 13 lounges (`ADMIN_LOUNGES`), los 3 cambios pendientes literales de The Vestry y su comparación live/propuesto |
+| `admin/partner-status-chip.tsx` | Story 10.2 — `PartnerStatusChip`: Active / Draft / Suspended sobre `StatusChip`, mismo mapa que `LoungeStatusChip` |
+| `admin/status-filter.tsx` | `StatusFilter`, el filtro rápido de estado de `/admin/lounges` (11) y `/admin/partners` (Fase 10 · 1): una pulsación filtra, otra lo quita. Extraído de la página de lounges |
+| `lib/admin-partners.ts` | Epic 10 — `listAdminPartners` (Story 10.2) sobre `admin_partner_list` (`supabase/schemas/admin_partners.sql`) |
 | `admin/lounge-status-chip.tsx` | Story 8.3 — `LoungeStatusChip`, el mapa Live/Draft/N to approve sobre `StatusChip` |
 | `admin/city-filter-popover.tsx` | Story 8.3 — `CityFilterPopover`, el botón de ciudad de `/admin/lounges` con su popover de Radix: busca solo entre las ciudades que ya tienen lounge (artboards 27–28). Los filtros Live/Draft no son componente propio: un `StatusChip` (`available`+`outlined` cuando está pulsado) dentro de un botón `aria-pressed` |
 | `app/admin/lounges/page.tsx` | Story 8.3 — "Add/edit/remove lounge profiles" y "Bulk update capabilities": la lista con selección y barra de acción masiva (`Lounges.dc.html`) |
@@ -892,6 +896,8 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 ---
 
 ## Desviaciones conscientes respecto a los artboards
+
+- **Epic 10 · Suspended sin rojo.** `Partners.dc.html` y los demás artboards de la Fase 10 pintan *Suspended* en `#D9826B`/`#E39A85`, pero el design system no admite verde ni rojo (§5 "Estados") y `globals.css` no tiene ese token. `PartnerStatusChip` usa el chip de "no disponible" (`StatusChip available={false}`). Si se quiere el rojo, hay que añadirlo antes a DESIGN-SYSTEM.md §2.
 
 | Qué | Por qué |
 |---|---|

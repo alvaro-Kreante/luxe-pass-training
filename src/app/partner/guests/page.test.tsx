@@ -47,7 +47,11 @@ afterAll(async () => {
   // Mismo motivo que en analytics/page.test.tsx: sin borrar el lounge
   // efímero, `lounge-directory.test.ts` cuenta una fila de más en el
   // catálogo compartido de Epic 2.
-  if (loungeId) await admin.from("lounges").delete().eq("id", loungeId);
+  if (!loungeId) return;
+  // Story 10.1 — el lounge efímero trae su propio partner de test: se borra con él.
+  const { data: lounge } = await admin.from("lounges").select("partner_id").eq("id", loungeId).maybeSingle();
+  await admin.from("lounges").delete().eq("id", loungeId);
+  if (lounge?.partner_id) await admin.from("partners").delete().eq("id", lounge.partner_id);
 });
 
 beforeAll(async () => {

@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3,
   Bell,
+  BriefcaseBusiness,
   Building2,
   ChevronDown,
   ClipboardList,
@@ -23,7 +24,7 @@ import { cn } from "@/lib/utils";
 /**
  * DESIGN-SYSTEM.md §5 patrón 21 — App shell del admin (oscuro), fijado en la
  * Fase 8 sobre la misma anatomía del patrón 15 (partner). Nav propia: Support
- * · Members · Bookings · Lounges · Analytics · Reports, donde Support y
+ * · Members · Bookings · Partners (Epic 10) · Lounges · Analytics · Reports, donde Support y
  * Lounges pueden llevar el badge de nav con lo pendiente. Bloque de la
  * persona (no del local) abajo, y el chip "Every action logged" en vez del
  * "Live · updated …" del partner en la topbar.
@@ -37,6 +38,7 @@ const NAV_ITEMS = [
   { href: "/admin/support", label: "Support", icon: ClipboardList, badgeKey: "support" as const },
   { href: "/admin/members", label: "Members", icon: Users },
   { href: null, label: "Bookings", icon: ClipboardList },
+  { href: "/admin/partners", label: "Partners", icon: BriefcaseBusiness },
   { href: "/admin/lounges", label: "Lounges", icon: Building2, badgeKey: "lounges" as const },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/admin/reports", label: "Reports", icon: FileBarChart },
