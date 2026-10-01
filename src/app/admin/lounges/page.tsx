@@ -64,9 +64,8 @@ function LoungesScreen() {
   const filtered = query.trim()
     ? visible.filter((l) => l.name.toLowerCase().includes(query.trim().toLowerCase()))
     : visible;
-  const pendingApprovalCount = visible.filter((l) => l.pendingCount > 0).length;
   const draftCount = visible.filter((l) => l.contentStatus === "draft").length;
-  const liveCount = visible.filter((l) => l.contentStatus === "live" && l.pendingCount === 0).length;
+  const liveCount = visible.filter((l) => l.contentStatus === "live").length;
 
   function toggle(id: string, checked: boolean) {
     setSelected((current) => (checked ? [...current, id] : current.filter((i) => i !== id)));
@@ -83,12 +82,11 @@ function LoungesScreen() {
       topbarLabel={<span className="text-[13.5px] font-bold text-fg">Lounges</span>}
       topbarMeta="· All cities"
       supportBadge={counts?.open}
-      loungesBadge={pendingApprovalCount}
     >
       <div className="flex items-center gap-6">
         <div className="min-w-0 flex-1">
           <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">
-            {liveCount} live · {draftCount} draft · {pendingApprovalCount} changes waiting for approval
+            {liveCount} live · {draftCount} draft
           </p>
           <h1 className="mt-2 font-display text-[34px] text-fg">Lounges</h1>
         </div>
@@ -151,7 +149,6 @@ function LoungesScreen() {
             className={cn(
               "grid items-center gap-3.5 border-b border-[rgba(58,50,42,0.6)] px-5.5 last:border-b-0",
               GRID,
-              lounge.pendingCount > 0 && "shadow-[inset_3px_0_0_var(--gold-500)]",
             )}
             style={{ height: 54 }}
           >

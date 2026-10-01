@@ -1,11 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { Check, Mail, Plus } from "lucide-react";
+import { Check, Plus, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { AddressAutocomplete } from "@/components/admin/address-autocomplete";
+import { DraftPartnersCard } from "@/components/admin/lounge-partners-card";
 import { PhotoCaptionDialog, type DraftPhotoItem } from "@/components/admin/photo-caption-dialog";
 import { AdminShell } from "@/components/patterns/admin-shell";
 import { Button } from "@/components/ui/button";
@@ -21,6 +22,7 @@ import {
   updateLoungeDraft,
   uploadLoungeImage,
   type LoungeContentDetail,
+  type LoungePartner,
 } from "@/lib/admin-content";
 import {
   CLOSED,
@@ -57,16 +59,22 @@ function locationOf(lounge: LoungeContentDetail): LoungeLocation | null {
  * PhotoCaption.dc.html (15). Un borrador no aparece a los miembros; se
  * publica directo, sin cola de aprobación (decisión 25 sept 2026).
  *
- * Con LoungeNewPartner.dc.html (16): el formulario lleva también al partner
- * que gestiona el lounge. El borrador solo lo recuerda; publicar crea su
- * cuenta y le envía la invitación (`admin-publish-lounge`).
+ * Con LoungeDraftPartners.dc.html (19): el formulario lleva también a los
+ * partners (uno o varios) y las restricciones de reserva. El borrador solo
+ * los recuerda; publicar crea sus cuentas y les envía la invitación
+ * (`admin-publish-lounge`). Es también la vista de edición de un lounge que
+ * estuvo live y volvió a borrador (LoungeEditConfirm.dc.html, 18).
  */
 export function LoungeDraftForm({
   lounge,
-  partner: savedPartner,
+  linkedPartners = [],
+  pendingPartners = [],
 }: {
   lounge?: LoungeContentDetail;
-  partner?: PartnerInviteInput | null;
+  /** Partners con cuenta (de cuando el lounge estuvo live). */
+  linkedPartners?: LoungePartner[];
+  /** Partners escritos en el borrador, pendientes de invitar al publicar. */
+  pendingPartners?: PartnerInviteInput[];
 }) {
   const router = useRouter();
   const supabase = React.useMemo(() => createClient(), []);
@@ -81,10 +89,9 @@ export function LoungeDraftForm({
   );
   const [amenities, setAmenities] = React.useState<string[]>(lounge?.amenities ?? []);
   const [capacity, setCapacity] = React.useState(lounge?.capacity ?? 0);
-  const [partnerFirstName, setPartnerFirstName] = React.useState(savedPartner?.firstName ?? "");
-  const [partnerLastName, setPartnerLastName] = React.useState(savedPartner?.lastName ?? "");
-  const [partnerEmail, setPartnerEmail] = React.useState(savedPartner?.email ?? "");
-  const [partnerMobile, setPartnerMobile] = React.useState(savedPartner?.mobile ?? "");
+  const [partners, setPartners] = React.useState<PartnerInviteInput[]>(pendingPartners);
+  const [restrictions, setRestrictions] = React.useState<string[]>(lounge?.bookingRestrictions ?? []);
+  const [newRestriction, setNewRestriction] = React.useState("");
   const [photos, setPhotos] = React.useState<DraftPhotoItem[]>(
     (lounge?.images ?? []).map((image) => ({
       key: image.id,
@@ -100,9 +107,19 @@ export function LoungeDraftForm({
   const [busy, setBusy] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const partnerFields = { firstName: partnerFirstName, lastName: partnerLastName, email: partnerEmail, mobile: partnerMobile };
-  const partner = Object.values(partnerFields).some((value) => value.trim() !== "") ? partnerFields : null;
-  const draft: LoungeDraftInput = { name, phone, email, website, location, weeklyHours, amenities, capacity, partner };
+  const draft: LoungeDraftInput = {
+    name,
+    phone,
+    email,
+    website,
+    location,
+    weeklyHours,
+    amenities,
+    capacity,
+    bookingRestrictions: restrictions,
+    partners,
+    linkedPartners: linkedPartners.filter((partner) => partner.status !== "suspended").length,
+  };
   const checklist = publishChecklist(draft);
   const ready = checklist.every((item) => item.done);
   const canSave = name.trim() !== "" && location !== null && !busy;
@@ -244,35 +261,6 @@ export function LoungeDraftForm({
 
           <div className={CARD}>
             <div className="flex items-center gap-3">
-              <p className={EYEBROW}>Partner account</p>
-              <div className="flex-1" />
-              <p className="m-0 text-[11.5px] text-fg-subtle">
-                The person who runs the lounge day to day — they sign in to the Partner Dashboard
-              </p>
-            </div>
-            <div className="mt-3 grid grid-cols-4 gap-3">
-              <Field label="First name" htmlFor="partner-first-name" className="mb-0">
-                <Input id="partner-first-name" inputSize="compact" autoComplete="off" value={partnerFirstName} onChange={(e) => setPartnerFirstName(e.target.value)} />
-              </Field>
-              <Field label="Last name" htmlFor="partner-last-name" className="mb-0">
-                <Input id="partner-last-name" inputSize="compact" autoComplete="off" value={partnerLastName} onChange={(e) => setPartnerLastName(e.target.value)} />
-              </Field>
-              <Field label="Work email" htmlFor="partner-email" className="mb-0">
-                <Input id="partner-email" inputSize="compact" type="email" autoComplete="off" value={partnerEmail} onChange={(e) => setPartnerEmail(e.target.value)} />
-              </Field>
-              <Field label="Mobile" htmlFor="partner-mobile" className="mb-0">
-                <Input id="partner-mobile" inputSize="compact" type="tel" autoComplete="off" value={partnerMobile} onChange={(e) => setPartnerMobile(e.target.value)} />
-              </Field>
-            </div>
-            <p className="m-0 mt-3 flex items-center gap-2.5 text-[11.5px] text-fg-muted">
-              <Mail size={15} strokeWidth={1.8} className="shrink-0 text-accent" aria-hidden />
-              Publishing the lounge emails this address a link to set a password. The email can&apos;t be changed later by the
-              partner.
-            </p>
-          </div>
-
-          <div className={CARD}>
-            <div className="flex items-center gap-3">
               <p className={EYEBROW}>Location</p>
               <div className="flex-1" />
               <p className="m-0 text-[11.5px] text-fg-subtle">Pick the address from the list — the pin is where members are sent</p>
@@ -408,9 +396,51 @@ export function LoungeDraftForm({
               </div>
             </div>
           </div>
+
+          <div className={CARD}>
+            <p className={EYEBROW}>Booking restrictions</p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {restrictions.map((restriction) => (
+                <span
+                  key={restriction}
+                  className="inline-flex items-center gap-1.5 rounded-pill border border-line px-3 py-1.5 text-[11.5px] font-bold text-fg-muted"
+                >
+                  {restriction}
+                  <button
+                    type="button"
+                    aria-label={`Remove ${restriction}`}
+                    onClick={() => setRestrictions((current) => current.filter((r) => r !== restriction))}
+                    className="flex text-fg-subtle transition-colors duration-150 hover:text-accent"
+                  >
+                    <X size={12} strokeWidth={2.2} />
+                  </button>
+                </span>
+              ))}
+              <form
+                className="flex items-center gap-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const value = newRestriction.trim();
+                  if (value && !restrictions.includes(value)) setRestrictions((current) => [...current, value]);
+                  setNewRestriction("");
+                }}
+              >
+                <Input
+                  aria-label="Add a booking restriction"
+                  inputSize="compact"
+                  placeholder="Add a restriction"
+                  value={newRestriction}
+                  onChange={(event) => setNewRestriction(event.target.value)}
+                  className="w-52"
+                />
+              </form>
+            </div>
+          </div>
         </div>
 
         <div className="flex h-fit w-[344px] shrink-0 flex-col gap-3.5">
+          <DraftPartnersCard linked={linkedPartners} pending={partners} onPendingChange={setPartners} />
+
           <div className="rounded-content border border-line bg-dark-card px-5.5 pb-2 pt-5">
             <p id="checklist-title" className={EYEBROW}>
               Before it can be published
@@ -495,8 +525,8 @@ export function LoungeDraftForm({
 
           <div className="rounded-2xl border border-dashed border-gold-600 bg-panel-black px-4 py-3.5">
             <p className="m-0 text-[11.5px] leading-[1.55] text-fg-muted">
-              Publishing puts the lounge in the member app, creates {partnerFirstName.trim() ? `${partnerFirstName.trim()}'s` : "the"}{" "}
-              partner account and sends the invitation. A draft stays hidden and invites nobody yet.
+              Publishing puts the lounge in the member app and invites the new partners. A draft stays hidden and invites
+              nobody yet.
             </p>
           </div>
         </div>

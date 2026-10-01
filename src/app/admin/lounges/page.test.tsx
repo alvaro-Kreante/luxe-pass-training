@@ -48,6 +48,7 @@ beforeAll(async () => {
       lat: 0,
       lng: 0,
       hours: "Open 24 hours",
+      content_status: "draft",
     },
     {
       id: loungeBId,
@@ -58,13 +59,10 @@ beforeAll(async () => {
       lat: 0,
       lng: 0,
       hours: "Open 24 hours",
+      content_status: "live",
     },
   ]);
 
-  await admin.from("lounge_content_submissions").insert({
-    lounge_id: loungeAId,
-    proposed: { capacity: 50 },
-  });
 
   const adminClient = createClient();
   await signUpConfirmedAdminAndSignIn(adminClient, `lounges-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
@@ -87,7 +85,7 @@ describe("Lounges (/admin/lounges)", () => {
     expect(await screen.findByRole("heading", { name: "Lounges" })).toBeInTheDocument();
     await waitFor(() => expect(screen.getByText(loungeAName)).toBeInTheDocument());
     const rowA = screen.getByText(loungeAName).closest("button")!.parentElement!;
-    expect(within(rowA).getByText("1 to approve")).toBeInTheDocument();
+    expect(within(rowA).getByText("Draft")).toBeInTheDocument();
     const rowB = screen.getByText(loungeBName).closest("button")!.parentElement!;
     expect(within(rowB).getByText("Live")).toBeInTheDocument();
   });
