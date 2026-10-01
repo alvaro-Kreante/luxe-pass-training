@@ -46,8 +46,9 @@ const findings = [];
 async function publishOrFallback(page, label) {
   await page.getByRole('button', { name: 'Publish lounge' }).click();
   const live = page.getByRole('dialog', { name: 'The lounge is live' });
-  const alert = page.getByRole('alert');
-  await Promise.race([live.waitFor({ timeout: 20000 }), alert.waitFor({ timeout: 20000 })]).catch(() => undefined);
+  // El anunciador de rutas de Next.js también es role="alert": solo el del formulario.
+  const alert = page.getByRole('alert').filter({ hasText: /\S/ }).filter({ hasNotText: /^Passaic|^Lounges/ });
+  await Promise.race([live.waitFor({ timeout: 90000 }), alert.waitFor({ timeout: 90000 })]).catch(() => undefined);
   if (await live.isVisible().catch(() => false)) {
     await page.getByRole('button', { name: 'Done' }).click();
     return;
@@ -200,5 +201,8 @@ async function publishOrFallback(page, label) {
     }
     if (memberId) await service.auth.admin.deleteUser(memberId);
     console.log(errors.length ? `errores de página:\n${errors.join('\n')}` : 'sin errores de página');
+    console.log(findings.length ? 'hallazgos:
+' + findings.join('
+') : 'sin hallazgos');
   }
 })();

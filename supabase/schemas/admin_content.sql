@@ -434,7 +434,13 @@ begin
     raise exception 'Only drafts can be edited this way';
   end if;
 
-  if jsonb_array_length(coalesce(p_photos, '[]'::jsonb)) > 3 then
+  -- Hasta 3 fotos. Un lounge que ya tenía más (los sembrados traen 6) se
+  -- guarda con las que tiene, pero no admite ninguna nueva hasta bajar de 3
+  -- (decisión 1 oct 2026, revisión del Epic 10).
+  if jsonb_array_length(coalesce(p_photos, '[]'::jsonb)) > greatest(
+       3,
+       (select count(*) from public.lounge_images i where i.lounge_id = p_lounge_id)
+     ) then
     raise exception 'A lounge has up to 3 photos';
   end if;
 

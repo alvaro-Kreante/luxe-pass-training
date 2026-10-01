@@ -168,6 +168,19 @@ describe("editar un borrador", () => {
     ]);
   });
 
+  it("un lounge que ya tenía más de 3 fotos se guarda con las que tiene, pero no admite más", async () => {
+    const id = await create();
+    const six = Array.from({ length: 6 }, (_, index) => ({ lounge_id: id, url: `https://example.com/seed-${index}.jpg`, caption: `Seed ${index}`, position: index }));
+    await service.from("lounge_images").insert(six);
+    const asStored = six.map((photo) => ({ url: photo.url, caption: photo.caption, detail: null }));
+
+    await expect(setDraftLoungePhotos(supabase, id, asStored)).resolves.toBeUndefined();
+    await expect(setDraftLoungePhotos(supabase, id, asStored.slice(0, 5))).resolves.toBeUndefined();
+    await expect(
+      setDraftLoungePhotos(supabase, id, [...asStored.slice(0, 5), { url: "https://example.com/new-1.jpg", caption: "New", detail: null }, { url: "https://example.com/new-2.jpg", caption: "New 2", detail: null }]),
+    ).rejects.toThrow(/up to 3/i);
+  });
+
   it("no admite más de 3 fotos", async () => {
     const id = await create();
     const four = Array.from({ length: 4 }, (_, index) => ({ url: `https://example.com/${index}.jpg`, caption: `p${index}`, detail: null }));
