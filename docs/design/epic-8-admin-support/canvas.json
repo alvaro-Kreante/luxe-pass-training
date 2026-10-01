@@ -133,7 +133,7 @@
       "x": 0,
       "y": 5250,
       "w": 1440,
-      "h": 900,
+      "h": 1080,
       "title": "17. A live lounge, locked"
     },
     {
@@ -141,7 +141,7 @@
       "x": 1540,
       "y": 5250,
       "w": 1440,
-      "h": 900,
+      "h": 1080,
       "title": "18. Move it to draft to edit"
     },
     {
@@ -149,37 +149,37 @@
       "x": 3080,
       "y": 5250,
       "w": 1440,
-      "h": 900,
-      "title": "19. Edit a draft, several partners"
+      "h": 1300,
+      "title": "19. Edit a draft, partners in the main column"
     },
     {
       "file": "PartnerAdd.dc.html",
       "x": 0,
-      "y": 6300,
+      "y": 6700,
       "w": 1440,
-      "h": 900,
+      "h": 1080,
       "title": "20. Add a partner to a live lounge"
     },
     {
       "file": "PartnerSuspend.dc.html",
       "x": 1540,
-      "y": 6300,
+      "y": 6700,
       "w": 1440,
-      "h": 900,
+      "h": 1080,
       "title": "21. Suspend a partner"
     },
     {
       "file": "PartnerDelete.dc.html",
       "x": 3080,
-      "y": 6300,
+      "y": 6700,
       "w": 1440,
-      "h": 900,
+      "h": 1080,
       "title": "22. Delete a partner account"
     },
     {
       "file": "LoungePartnersMain.dc.html",
       "x": 0,
-      "y": 7350,
+      "y": 7930,
       "w": 1440,
       "h": 1300,
       "title": "23. Partners in the main column"
@@ -187,25 +187,25 @@
     {
       "file": "LoungeDraftSaved.dc.html",
       "x": 1540,
-      "y": 7350,
+      "y": 7930,
       "w": 1440,
-      "h": 900,
+      "h": 1300,
       "title": "24. Draft saved"
     },
     {
       "file": "LoungePublished.dc.html",
       "x": 3080,
-      "y": 7350,
+      "y": 7930,
       "w": 1440,
-      "h": 900,
+      "h": 1080,
       "title": "25. Published — you stay on the lounge"
     },
     {
       "file": "LoungePhotoViewer.dc.html",
       "x": 4620,
-      "y": 7350,
+      "y": 7930,
       "w": 1440,
-      "h": 900,
+      "h": 1080,
       "title": "26. Taller photos, full-size viewer"
     }
   ],
@@ -269,16 +269,16 @@
     {
       "id": "partners-note",
       "x": 0,
-      "y": 6205,
+      "y": 6605,
       "w": 940,
       "text": "Partners · managed while the lounge stays live. Adding one (20) invites them at once — someone who already runs another lounge is just added. Suspend (21) is reversible and covers every lounge on the account; delete (22) is final. A live lounge always keeps at least one active partner. A partner who has not set a password yet can be sent a fresh 24-hour link (Resend invitation, 17)."
     },
     {
       "id": "lounge-adjustments-note",
       "x": 0,
-      "y": 7255,
+      "y": 7835,
       "w": 1400,
-      "text": "Lounge adjustments · Partners move to the main column, full width, in both the new-lounge form and a draft (23). A partner runs one lounge: an email already used by another lounge — or by any other account — is refused with 'Already in use'; this replaces the 'simply added' rule of screen 20. Saving a draft and publishing both confirm with a notice and keep the admin on the lounge (24, 25). Photos are 50% taller (144px) and open full size in a viewer with arrows and thumbnails (26)."
+      "text": "Lounge adjustments · A partner runs one lounge: an email already used by another lounge — or by any other account — is refused with 'Already in use' (screen 20 no longer adds them silently). Partners sit in the main column of the new-lounge form and the draft; the form saves with 'Save partner' and closes, and 'Add partner' opens a new one (19, 23). Saving a draft and publishing confirm with a notice and keep the admin on the lounge (24, 25). Location is one column — address on top, the map full width below. Live photos are 144px tall and open full size in a viewer (26). The week starts on Monday. No 'Preview as a member': no story asks for it."
     }
   ],
   "launch": {
