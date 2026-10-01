@@ -258,10 +258,11 @@ describe("un lounge en borrador", () => {
     await screen.findByText(/Draft · not visible to members/);
 
     for (const name of ["Camille", "Julian"]) {
+      if (name !== "Camille") await user.click(screen.getByRole("button", { name: "Add partner" }));
       await user.type(screen.getByLabelText("First name"), name);
       await user.type(screen.getByLabelText("Last name"), "Duarte");
       await user.type(screen.getByLabelText("Work email"), `${name.toLowerCase()}-${stamp}@thelarkspur-test.com`);
-      await user.click(screen.getByRole("button", { name: "Add partner" }));
+      await user.click(screen.getByRole("button", { name: "Save partner" }));
     }
 
     const list = partnersList();
@@ -314,7 +315,7 @@ describe("un lounge en borrador", () => {
     await user.type(screen.getByLabelText("First name"), "Noor");
     await user.type(screen.getByLabelText("Last name"), "Haddad");
     await user.type(screen.getByLabelText("Work email"), email);
-    await user.click(screen.getByRole("button", { name: "Add partner" }));
+    await user.click(screen.getByRole("button", { name: "Save partner" }));
     await user.click(screen.getByRole("button", { name: "Save draft" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/already in use/i);

@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Eye, Lock, Pencil } from "lucide-react";
+import { Lock, Pencil } from "lucide-react";
 import Link from "next/link";
 
 import { LoungeLocationPreview } from "@/components/admin/address-autocomplete";
@@ -10,7 +10,7 @@ import { ModalPoint } from "@/components/admin/lounge-saved-notice";
 import { PhotoViewer } from "@/components/admin/photo-viewer";
 import { AdminShell } from "@/components/patterns/admin-shell";
 import { Modal } from "@/components/patterns/modal";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { amenityLabel, type AmenityId } from "@/lib/amenities";
 import { unpublishLounge, type LoungeContentDetail, type LoungePartner } from "@/lib/admin-content";
 import { createClient } from "@/lib/supabase/client";
@@ -121,10 +121,6 @@ export function LoungeLiveView({
           </p>
         </div>
         <div className="flex items-center gap-2.5">
-          <Link href={`/lounges/${lounge.id}`} target="_blank" className={buttonVariants({ variant: "ghost", size: "md", className: "normal-case" })}>
-            <Eye size={16} strokeWidth={1.8} />
-            Preview as a member
-          </Link>
           <Button size="md" onClick={() => setConfirming(true)}>
             <Pencil size={15} strokeWidth={2} />
             Edit lounge

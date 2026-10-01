@@ -41,6 +41,8 @@ import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 const WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+// `weekly_hours` va domingo primero; la pantalla empieza el lunes.
+const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const MAX_PHOTOS = 3;
 const MONDAY = 1;
 
@@ -295,7 +297,8 @@ export function LoungeDraftForm({
               </button>
             </div>
             <div className="mt-3 grid gap-2">
-              {WEEKDAY_NAMES.map((day, index) => {
+              {WEEK_ORDER.map((index) => {
+                const day = WEEKDAY_NAMES[index];
                 const hours = parseDayHours(weeklyHours[index]);
                 const update = (next: DayHours) =>
                   setWeeklyHours((current) => current.map((value, i) => (i === index ? formatDayHours(next) : value)));

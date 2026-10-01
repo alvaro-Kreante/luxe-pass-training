@@ -154,10 +154,11 @@ describe("los partners del lounge", () => {
     expect(within(checklist).getByRole("listitem", { name: /Partners · pending/ })).toBeInTheDocument();
 
     for (const name of ["Camille", "Julian"]) {
+      if (name !== "Camille") await user.click(screen.getByRole("button", { name: "Add partner" }));
       await user.type(screen.getByLabelText("First name"), name);
       await user.type(screen.getByLabelText("Last name"), "Duarte");
       await user.type(screen.getByLabelText("Work email"), `${name.toLowerCase()}@thelarkspur.com`);
-      await user.click(screen.getByRole("button", { name: "Add partner" }));
+      await user.click(screen.getByRole("button", { name: "Save partner" }));
     }
 
     const partners = screen.getByRole("list", { name: "Partners" });
@@ -165,18 +166,35 @@ describe("los partners del lounge", () => {
     expect(within(checklist).getByRole("listitem", { name: /Partners · done/ })).toBeInTheDocument();
   });
 
+  it("guardado un partner, el formulario se cierra y 'Add partner' abre otro", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<NewLoungePage />);
+
+    expect(await screen.findByRole("button", { name: "Save partner" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add partner" })).toBeNull();
+    await user.type(screen.getByLabelText("First name"), "Camille");
+    await user.type(screen.getByLabelText("Last name"), "Duarte");
+    await user.type(screen.getByLabelText("Work email"), "camille@thelarkspur.com");
+    await user.click(screen.getByRole("button", { name: "Save partner" }));
+
+    expect(screen.queryByLabelText("First name")).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Add partner" }));
+    expect(screen.getByLabelText("First name")).toHaveValue("");
+  });
+
   it("no deja añadir dos veces el mismo email", async () => {
     const user = userEvent.setup({ delay: null });
     render(<NewLoungePage />);
 
     for (let i = 0; i < 2; i++) {
+      if (i === 1) await user.click(screen.getByRole("button", { name: "Add partner" }));
       await user.type(await screen.findByLabelText("First name"), "Camille");
       await user.type(screen.getByLabelText("Last name"), "Duarte");
       await user.type(screen.getByLabelText("Work email"), "camille@thelarkspur.com");
-      if (i === 0) await user.click(screen.getByRole("button", { name: "Add partner" }));
+      if (i === 0) await user.click(screen.getByRole("button", { name: "Save partner" }));
     }
 
-    expect(screen.getByRole("button", { name: "Add partner" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Save partner" })).toBeDisabled();
   });
 });
 
@@ -200,6 +218,15 @@ describe("horario de apertura", () => {
 
     expect(await screen.findByRole("switch", { name: "Sun open" })).toHaveAttribute("aria-checked", "false");
     expect(screen.queryByLabelText("Sun opens at")).toBeNull();
+  });
+
+  it("la semana empieza el lunes", async () => {
+    render(<NewLoungePage />);
+
+    const switches = await screen.findAllByRole("switch", { name: / open$/ });
+    expect(switches.map((s) => s.getAttribute("aria-label"))).toEqual([
+      "Mon open", "Tue open", "Wed open", "Thu open", "Fri open", "Sat open", "Sun open",
+    ]);
   });
 
   it("copia el horario del lunes a todos los días", async () => {

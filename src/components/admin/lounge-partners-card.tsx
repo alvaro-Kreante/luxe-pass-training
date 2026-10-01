@@ -168,6 +168,7 @@ export function DraftPartnersCard({
   onPendingChange: (pending: PartnerInviteInput[]) => void;
 }) {
   const [draft, setDraft] = React.useState<PartnerInviteInput>(EMPTY);
+  const [open, setOpen] = React.useState(linked.length + pending.length === 0);
   const taken = [...linked, ...pending].some((p) => p.email.trim().toLowerCase() === draft.email.trim().toLowerCase());
   const canAdd = isPartnerComplete(draft) && !taken;
 
@@ -195,24 +196,46 @@ export function DraftPartnersCard({
           />
         ))}
       </ul>
-      <div className="mt-2 rounded-[14px] border-[1.5px] border-dashed border-fg-subtle p-3.5">
-        <PartnerFields value={draft} onChange={setDraft} inline />
-        {taken ? <p className="m-0 mt-2 text-[11.5px] font-bold text-accent-strong">That email is already on this lounge.</p> : null}
-        <Button
-          type="button"
-          variant="ghost"
-          size="md"
-          className="ml-auto mt-3 flex normal-case"
-          disabled={!canAdd}
-          onClick={() => {
-            onPendingChange([...pending, { ...draft, email: draft.email.trim().toLowerCase() }]);
-            setDraft(EMPTY);
-          }}
-        >
+      {open ? (
+        <div className="mt-2 rounded-[14px] border-[1.5px] border-dashed border-fg-subtle p-3.5">
+          <PartnerFields value={draft} onChange={setDraft} inline />
+          {taken ? <p className="m-0 mt-2 text-[11.5px] font-bold text-accent-strong">That email is already on this lounge.</p> : null}
+          <div className="mt-3 flex justify-end gap-2.5">
+            {linked.length + pending.length > 0 ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="md"
+                className="normal-case"
+                onClick={() => {
+                  setDraft(EMPTY);
+                  setOpen(false);
+                }}
+              >
+                Cancel
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              size="md"
+              className="normal-case"
+              disabled={!canAdd}
+              onClick={() => {
+                onPendingChange([...pending, { ...draft, email: draft.email.trim().toLowerCase() }]);
+                setDraft(EMPTY);
+                setOpen(false);
+              }}
+            >
+              Save partner
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <Button type="button" variant="ghost" size="md" className="ml-auto mt-3 flex normal-case" onClick={() => setOpen(true)}>
           <Plus size={14} strokeWidth={2.2} />
           Add partner
         </Button>
-      </div>
+      )}
     </div>
   );
 }
