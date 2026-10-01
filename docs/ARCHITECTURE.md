@@ -364,6 +364,20 @@ fija su contraseña (`lib/partner-invite.ts`). El token caduca según
 `[auth.email] otp_expiry` (24 h en local; en los remotos se fija en el
 dashboard, ver `docs/PENDIENTES.md` §4.12).
 
+**Varios partners y gestión en live (29 sept 2026).** Un lounge admite
+varios partners (`lounge_partner_invites` ya no es 1:1). Al publicar,
+`admin-publish-lounge` invita a todos los pendientes y vincula sin cuenta
+nueva a quien ya es partner de otro lounge (`_shared/partner-accounts.ts`,
+compartido con la function de abajo). Con el lounge live, la Edge Function
+`admin-lounge-partners` gestiona la lista sin despublicar: `add`, `resend`
+(solo si el usuario de Auth no tiene `email_confirmed_at`), `suspend`
+(`partners.suspended_at` + `ban_duration` en Auth: no puede iniciar sesión
+en ningún lounge), `reactivate` y `delete` (`auth.admin.deleteUser`,
+cascade). Ninguna acción deja un lounge live sin un partner no suspendido.
+Editar un lounge live lo devuelve a borrador (`admin_unpublish_lounge`); la
+policy de `lounges` mantiene visible ese borrador para sus partners y para
+quien tiene reserva allí, así que pases y dashboard siguen funcionando.
+
 ## Notificaciones al partner reales (Database Webhook + pg_cron)
 
 Story 7.2 — "Email notification for each new booking", "Cancellation

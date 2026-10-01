@@ -115,6 +115,10 @@ jobs:
       # este mismo job.
       - name: Desplegar la Edge Function admin-publish-lounge
         run: supabase functions deploy admin-publish-lounge
+      # Epic 8 · LoungeLive.dc.html — añadir, suspender, reactivar, eliminar y
+      # reinvitar partners de un lounge live. Mismo patrón que la de arriba.
+      - name: Desplegar la Edge Function admin-lounge-partners
+        run: supabase functions deploy admin-lounge-partners
       - name: Instalar Vercel CLI
         run: npm install --global vercel@latest
       - name: Descargar configuración del proyecto luxepass-dev
@@ -196,6 +200,10 @@ jobs:
       # este mismo job.
       - name: Desplegar la Edge Function admin-publish-lounge
         run: supabase functions deploy admin-publish-lounge
+      # Epic 8 · LoungeLive.dc.html — añadir, suspender, reactivar, eliminar y
+      # reinvitar partners de un lounge live. Mismo patrón que la de arriba.
+      - name: Desplegar la Edge Function admin-lounge-partners
+        run: supabase functions deploy admin-lounge-partners
       - name: Instalar Vercel CLI
         run: npm install --global vercel@latest
       - name: Descargar configuración del proyecto luxepass-prod

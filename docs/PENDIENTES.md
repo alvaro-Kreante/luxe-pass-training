@@ -577,16 +577,19 @@ que poner a mano *Authentication → Providers → Email → Email OTP
 Expiration* a `86400` (hoy, por defecto, 1 h). Afecta también a los
 enlaces de confirmación y recovery.
 
-**Además, sin pantalla todavía:**
-- **Reenviar la invitación.** Si el enlace caduca o el email falla
-  (`admin-publish-lounge` responde 502 con el lounge ya publicado), no hay
-  botón para mandar otro — la pantalla de enlace caducado pide al partner
-  que se lo pida a su account manager. Hace falta decidir dónde vive ese
-  botón (probablemente la ficha del lounge publicado) y diseñarlo.
-- **Añadir un segundo partner a un lounge ya publicado** (`partner_lounges`
-  es many-to-many): tampoco hay artboard.
-- `deploy.yml` despliega `admin-publish-lounge` en los dos jobs, pero
-  (como §4.7) el resto de functions de Epic 8 siguen sin desplegarse.
+Reenviar la invitación y añadir más partners a un lounge live ya existen
+(29 sept 2026, `/admin/lounges/[id]`, artboards 17–22).
+
+**Además:**
+- **La cola de aprobación se retiró de la UI pero no de la base.** La
+  tabla `lounge_content_submissions` y las RPC `admin_submit_lounge_content_change`,
+  `admin_approve_lounge_submission`, `admin_reject_lounge_submission` (y la
+  columna `pending_count` de `admin_lounge_list`) siguen en
+  `supabase/schemas/admin_content.sql` sin uso. Borrarlas es destructivo
+  (genera `DROP`): hacerlo en una rama propia cuando se confirme.
+- `deploy.yml` despliega `admin-publish-lounge` y `admin-lounge-partners`
+  en los dos jobs, pero (como §4.7) el resto de functions de Epic 8 siguen
+  sin desplegarse.
 
 ## 5. Decisiones abiertas
 

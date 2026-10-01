@@ -197,9 +197,10 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
   usuario: un partner puede gestionar varios lounges, no una FK directa
   `lounges.partner_id`). Desde el 29 sept 2026 guarda también
   `first_name`/`last_name`/`photo_path` de la persona.
-- `lounge_partner_invites` (Epic 8 dueño, alimenta Epic 7) — el partner que
-  el admin escribe en el borrador de un lounge (1:1 con `lounges`), con
-  `partner_id` → `partners` una vez creada la cuenta al publicar.
+- `lounge_partner_invites` (Epic 8 dueño, alimenta Epic 7) — los partners
+  que el admin escribe para un lounge (varios por lounge, `unique(lounge_id,
+  email)`), con `partner_id` → `partners` una vez creada o vinculada la
+  cuenta. `partners.suspended_at` marca una cuenta suspendida.
 - Auth de partners: tabla `user_roles` (`user_id`, `role` — 'partner'/'admin'),
   no un custom claim en el JWT ni esquemas separados. Sin fila = miembro
   corriente; solo se registran roles elevados. Ver `supabase/schemas/user_roles.sql`.
