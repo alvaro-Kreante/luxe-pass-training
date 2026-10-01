@@ -360,8 +360,11 @@ la misma tabla cuando se conecte.
 - El usuario partner ve todos los lounges de su partner
   (`partner_lounge_ids()`), nunca escribe en `lounges` (solo el admin) y
   pierde todo acceso si el partner o él mismo están suspendidos.
-- Notificaciones (`partner_notifications.sql`): una por usuario activo del
-  partner del lounge, con `partners.name` como nombre de negocio.
+- Notificaciones (`partner_notifications.sql`, Story 10.7): los destinatarios
+  salen de `partner_notification_recipients(lounge)` (usuarios con cuenta del
+  partner activo, sin suspendidos) y el digest de `partner_digest_batches(fecha)`
+  (uno por usuario, sus lounges agrupados y los invitados por hora real). Las
+  plantillas viven en `_shared/partner-emails.ts`.
 - Editar un lounge live lo devuelve a borrador (`admin_unpublish_lounge`); la
   policy de `lounges` lo mantiene visible para su partner y para quien tiene
   reserva allí.

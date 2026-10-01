@@ -10,6 +10,75 @@ create extension if not exists pg_net with schema extensions;
 create extension if not exists pg_cron with schema extensions;
 
 /* -------------------------------------------------------------------- */
+/* Story 10.7 — a quién llegan                                            */
+/* -------------------------------------------------------------------- */
+
+-- Todos los usuarios con cuenta del partner del lounge, salvo los
+-- suspendidos; nadie si el partner no está activo. Uno por fila, con el
+-- nombre del partner y del lounge para el email.
+create or replace function public.partner_notification_recipients(p_lounge_id text)
+returns table (email text, partner_name text, lounge_name text)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select m.email, p.name, l.name
+  from public.lounges l
+  join public.partners p on p.id = l.partner_id and p.status = 'active'
+  join public.partner_members m on m.partner_id = p.id
+  where l.id = p_lounge_id and m.user_id is not null and m.suspended_at is null
+  order by m.email;
+$$;
+
+revoke execute on function public.partner_notification_recipients(text) from public, anon, authenticated;
+
+-- El resumen de la mañana: uno por usuario, con todos los lounges de su
+-- partner agrupados (por nombre) y sus invitados por hora real, no por el
+-- texto de la hora ("2:00 PM" iba antes que "9:00 AM").
+create or replace function public.partner_digest_batches(p_date date)
+returns table (email text, partner_name text, lounges jsonb)
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select
+    m.email,
+    p.name,
+    (
+      select coalesce(jsonb_agg(jsonb_build_object(
+        'lounge_id', l.id,
+        'lounge_name', l.name,
+        'guest_count', (
+          select count(*)::int from public.bookings b
+          where b.lounge_id = l.id and b.date = p_date and b.status <> 'cancelled'
+        ),
+        'guests', coalesce((
+          select jsonb_agg(jsonb_build_object(
+            'name', coalesce(prof.full_name, split_part(u.email::text, '@', 1)),
+            'slot_time', b.slot_time,
+            'status', b.status
+          ) order by to_timestamp(b.slot_time, 'HH12:MI AM')::time, b.created_at)
+          from public.bookings b
+          left join auth.users u on u.id = b.member_id
+          left join public.profiles prof on prof.id = b.member_id
+          where b.lounge_id = l.id and b.date = p_date and b.status <> 'cancelled'
+        ), '[]'::jsonb)
+      ) order by l.name, l.id), '[]'::jsonb)
+      from public.lounges l
+      where l.partner_id = p.id and l.content_status in ('live', 'draft')
+    )
+  from public.partners p
+  join public.partner_members m on m.partner_id = p.id and m.user_id is not null and m.suspended_at is null
+  where p.status = 'active'
+    and exists (select 1 from public.lounges l where l.partner_id = p.id)
+  order by p.name, m.email;
+$$;
+
+revoke execute on function public.partner_digest_batches(date) from public, anon, authenticated;
+
+/* -------------------------------------------------------------------- */
 /* "Email notification for each new booking"                            */
 /* -------------------------------------------------------------------- */
 
@@ -46,12 +115,9 @@ begin
   select l.name into v_lounge_name from public.lounges l where l.id = new.lounge_id;
 
   for v_partner in
-    -- Story 10.1 — cada usuario activo del partner del lounge.
-    select m.email as contact_email, p.name as business_name
-    from public.lounges l
-    join public.partners p on p.id = l.partner_id and p.status = 'active'
-    join public.partner_members m on m.partner_id = p.id
-    where l.id = new.lounge_id and m.user_id is not null and m.suspended_at is null
+    -- Story 10.7 — cada usuario activo del partner del lounge.
+    select r.email as contact_email, r.partner_name as business_name
+    from public.partner_notification_recipients(new.lounge_id) r
   loop
     perform net.http_post(
       url := v_url,
@@ -123,12 +189,9 @@ begin
   where b.lounge_id = new.lounge_id and b.date = new.date and b.status <> 'cancelled';
 
   for v_partner in
-    -- Story 10.1 — cada usuario activo del partner del lounge.
-    select m.email as contact_email, p.name as business_name
-    from public.lounges l
-    join public.partners p on p.id = l.partner_id and p.status = 'active'
-    join public.partner_members m on m.partner_id = p.id
-    where l.id = new.lounge_id and m.user_id is not null and m.suspended_at is null
+    -- Story 10.7 — cada usuario activo del partner del lounge.
+    select r.email as contact_email, r.partner_name as business_name
+    from public.partner_notification_recipients(new.lounge_id) r
   loop
     perform net.http_post(
       url := v_url,
@@ -196,45 +259,16 @@ begin
     return;
   end if;
 
-  for v_row in
-    select
-      m.email as contact_email,
-      p.name as business_name,
-      l.id as lounge_id,
-      l.name as lounge_name,
-      count(b.id) filter (where b.status <> 'cancelled')::int as guest_count,
-      coalesce(
-        jsonb_agg(
-          jsonb_build_object(
-            'name', coalesce(prof.full_name, split_part(u.email::text, '@', 1)),
-            'slot_time', b.slot_time,
-            'status', b.status
-          )
-          order by b.slot_time
-        ) filter (where b.status <> 'cancelled'),
-        '[]'::jsonb
-      ) as guests
-    from public.partners p
-    join public.partner_members m on m.partner_id = p.id and m.user_id is not null and m.suspended_at is null
-    join public.lounges l on l.partner_id = p.id
-    left join public.bookings b
-      on b.lounge_id = l.id and b.date = (now() at time zone 'UTC')::date
-    left join auth.users u on u.id = b.member_id
-    left join public.profiles prof on prof.id = b.member_id
-    where p.status = 'active'
-    group by m.email, p.name, l.id, l.name
-  loop
+  -- Story 10.7 — un email por usuario con todos los lounges de su partner.
+  for v_row in select * from public.partner_digest_batches((now() at time zone 'UTC')::date) loop
     perform net.http_post(
       url := v_url,
       body := jsonb_build_object(
         'type', 'morning_digest',
-        'partner_email', v_row.contact_email,
-        'partner_business_name', v_row.business_name,
-        'lounge_id', v_row.lounge_id,
-        'lounge_name', v_row.lounge_name,
+        'partner_email', v_row.email,
+        'partner_business_name', v_row.partner_name,
         'date', (now() at time zone 'UTC')::date,
-        'guest_count', v_row.guest_count,
-        'guests', v_row.guests
+        'lounges', v_row.lounges
       ),
       headers := jsonb_build_object(
         'Content-Type', 'application/json',
