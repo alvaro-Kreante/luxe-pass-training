@@ -201,8 +201,6 @@ async function publishOrFallback(page, label) {
     }
     if (memberId) await service.auth.admin.deleteUser(memberId);
     console.log(errors.length ? `errores de página:\n${errors.join('\n')}` : 'sin errores de página');
-    console.log(findings.length ? 'hallazgos:
-' + findings.join('
-') : 'sin hallazgos');
+    console.log(findings.length ? `hallazgos:\n${findings.join('\n')}` : 'sin hallazgos');
   }
 })();
