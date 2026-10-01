@@ -355,7 +355,7 @@ Debajo, leyenda con muestras de 16px. El sello de frescura (`Updated N min ago �
 | 7 | Epic 6 — Member Experience & Notifications (tema claro) | ✅ Completa — 11 artboards |
 | 8 | Epic 8 — Admin & Support (tema oscuro) | ✅ Completa — 13 artboards |
 | 9 | Epic 9 — Membership & Referrals (tema claro) | ✅ Completa — 9 artboards |
-| 10 | Epic 10 — Partner Organizations (tema oscuro, admin) | 🟡 En curso — 4 artboards (10.2, 10.3) |
+| 10 | Epic 10 — Partner Organizations (tema oscuro, admin) | 🟡 En curso — 12 artboards (10.2–10.5) |
 
 Cada fase vive en `design/epic-N-slug/` con sus `.dc.html`, su `canvas.json` y una copia de
 `logo.png`, y se publica como un canvas propio.
@@ -803,12 +803,21 @@ estado, inputs de 44px, formulario discontinuo de partner del artboard 23). Aña
 | `PartnerNew` | Partner nuevo en draft: datos, edificio central como texto (sin mapa) y el primer usuario, que queda como representante | 10.3 |
 | `PartnerDetail` | Detalle en draft: datos editables, tabla de usuarios con lápiz y "Make representative", lounges con "Open lounge", checklist para activar | 10.3 |
 | `PartnerUserEdit` | Edición en línea de un usuario (email bloqueado) y aviso al intentar borrar al representante | 10.3 |
+| `PartnerActivate` | Modal de activar: lista de usuarios que reciben el email de crear contraseña | 10.4 |
+| `PartnerActive` | Partner activo: usuarios Active / Invited (reenviar) / Suspended, "Suspend partner" | 10.4 |
+| `PartnerSuspend` | Modal de suspender el partner: lounges suspendidos, usuarios sin acceso | 10.4 |
+| `PartnerSuspended` | Partner suspendido: qué pasa con cada lounge al reactivar | 10.4 |
+| `LoungesWithPartner` | Artboard 11 de la Fase 8 con columna Partner y filtro Suspended | 10.5 |
+| `LoungePartner` | Artboard 17 con la tarjeta de partner en solo lectura y "Suspend lounge" | 10.4 / 10.5 |
+| `LoungeSuspend` | Modal de suspender un lounge suelto | 10.4 |
+| `LoungeDraftPartner` | Artboard 23 con el selector de partner (incluye draft) y "An active partner" en la checklist | 10.5 |
 
 Decisiones: el chip **Suspended** reutiliza el color de error que la Fase 8 ya usa en los
 inputs (`#D9826B` / `#E39A85`); el usuario sin acceso todavía muestra **On activation**, gemelo
-del **On publish** del artboard 23. Pendiente de diseñar en esta misma fase: modales de activar y
-suspender (10.4), selector de partner en el formulario de lounge (10.5) y selector de lounge en
-la cabecera de `/partner` (10.6).
+del **On publish** del artboard 23. Los artboards de lounge (9–12) son copias de los 11, 17 y 23
+de la Fase 8 donde solo cambia lo que toca al partner; el resto sigue siendo la fuente de la
+Fase 8. Reactivar un lounge suspendido lo devuelve a draft, igual que al reactivar el partner.
+Pendiente de diseñar en esta misma fase: selector de lounge en la cabecera de `/partner` (10.6).
 
 ## 7. Cómo regenerar y publicar un canvas
 
