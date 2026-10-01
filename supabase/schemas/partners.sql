@@ -45,6 +45,11 @@ create table if not exists public.partner_members (
   -- `profile-photos`, la sube el propio usuario en /partner/welcome.
   photo_path  text,
   suspended_at timestamptz,
+  -- Story 10.6 — el lounge que abre el dashboard, guardado en la cuenta (no
+  -- en el navegador). `all_lounges` es "All lounges" en Analytics, Guests y
+  -- Reports; Today y el check-in siguen usando `selected_lounge_id`.
+  selected_lounge_id text references public.lounges (id) on delete set null,
+  all_lounges boolean not null default false,
   created_at  timestamptz not null default now(),
   updated_at  timestamptz not null default now(),
   unique (id, partner_id)
@@ -246,3 +251,83 @@ revoke execute on function public.partner_lounge_ids() from public, anon;
 grant execute on function public.partner_lounge_ids() to authenticated;
 
 -- Alta a mano para cuentas de muestra en local: `scripts/seed-partners.mjs`.
+
+/* -------------------------------------------------------------------- */
+/* Story 10.6 — el selector de lounge del dashboard (PartnerToday 13,    */
+/* PartnerLoungeMenu 14, PartnerAnalyticsAll 15, PartnerNoLounges 16)    */
+/* -------------------------------------------------------------------- */
+
+-- El partner fijo, el usuario y sus lounges, con la elección ya validada:
+-- si el lounge guardado ya no es del partner, se usa el primero.
+create or replace function public.partner_context()
+returns jsonb
+language plpgsql
+stable
+security invoker
+set search_path = ''
+as $$
+declare
+  v_member public.partner_members;
+  v_partner_name text;
+  v_lounges jsonb;
+  v_selected text;
+begin
+  select * into v_member from public.partner_members where user_id = (select auth.uid());
+  if v_member.id is null then
+    return null;
+  end if;
+
+  select p.name into v_partner_name from public.partners p where p.id = v_member.partner_id;
+
+  select coalesce(jsonb_agg(jsonb_build_object(
+    'id', l.id,
+    'name', l.name,
+    'neighborhood', l.neighborhood,
+    'content_status', l.content_status
+  ) order by l.name, l.id), '[]'::jsonb)
+  into v_lounges
+  from public.lounges l
+  where l.id in (select public.partner_lounge_ids());
+
+  if v_member.selected_lounge_id is not null
+     and v_member.selected_lounge_id in (select public.partner_lounge_ids()) then
+    v_selected := v_member.selected_lounge_id;
+  else
+    v_selected := v_lounges->0->>'id';
+  end if;
+
+  return jsonb_build_object(
+    'partner', jsonb_build_object('id', v_member.partner_id, 'name', v_partner_name),
+    'user', jsonb_build_object('first_name', v_member.first_name, 'last_name', v_member.last_name),
+    'lounges', v_lounges,
+    'selected_lounge_id', v_selected,
+    'all_lounges', v_member.all_lounges and jsonb_array_length(v_lounges) > 0
+  );
+end;
+$$;
+
+revoke execute on function public.partner_context() from public, anon;
+grant execute on function public.partner_context() to authenticated;
+
+-- `p_lounge_id` null = "All lounges". Un lounge que no es del partner se rechaza.
+create or replace function public.partner_select_lounge(p_lounge_id text)
+returns void
+language plpgsql
+security invoker
+set search_path = ''
+as $$
+begin
+  if p_lounge_id is null then
+    update public.partner_members set all_lounges = true where user_id = (select auth.uid());
+    return;
+  end if;
+  if p_lounge_id not in (select public.partner_lounge_ids()) then
+    raise exception 'That lounge is not one of your lounges';
+  end if;
+  update public.partner_members set selected_lounge_id = p_lounge_id, all_lounges = false
+  where user_id = (select auth.uid());
+end;
+$$;
+
+revoke execute on function public.partner_select_lounge(text) from public, anon;
+grant execute on function public.partner_select_lounge(text) to authenticated;

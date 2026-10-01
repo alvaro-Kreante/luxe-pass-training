@@ -612,9 +612,8 @@ partner-persona por el partner-organización. Antes del primer PR a
   `scripts/seed-partners.mjs` siguen live sin partner (la base lo admite;
   solo publicar lo exige). Para asignarles uno hay que pasarlos a draft
   ("Edit lounge"), elegir el partner y publicar.
-- **`/partner` abre el primer lounge** del partner (`firstPartnerLoungeId`)
-  hasta el selector de la Story 10.6, y su cabecera sigue con el venue fijo
-  de `PARTNER_VENUE`.
+- **Vistas previas de email de `/partner/emails/*`** siguen con el venue fijo
+  de `PARTNER_VENUE`; el resto de /partner ya usa el partner real (10.6).
 - **`admin_revenue_by_partner`** sigue agrupando por lounge, no por partner.
 - **`admin-partners` (Story 10.4) es una Edge Function nueva:** ya está en `deploy.yml`, pero necesita `APP_URL` y `BREVO_*` en los remotos, como las demás que envían emails.
 - **Suspender un usuario no corta una sesión ya abierta al instante:** el ban impide renovar el token, y `partner_lounge_ids()` deja de devolver lounges, pero el access token vigente sigue siendo válido hasta que caduca (1 h).

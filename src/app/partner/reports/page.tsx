@@ -8,6 +8,8 @@ import { PartnerShell } from "@/components/patterns/partner-shell";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PaymentOptionRow } from "@/components/ui/payment-option-row";
 import { Segmented } from "@/components/ui/segmented";
+import { usePartnerContext } from "@/components/partner/partner-context";
+import { analyticsLoungeId, type PartnerContext } from "@/lib/partner-lounges";
 import { createClient } from "@/lib/supabase/client";
 import { TODAY, addDays } from "@/lib/availability";
 import {
@@ -26,7 +28,6 @@ import {
   revenueBreakdownToCsv,
 } from "@/lib/partner";
 import { downloadTextFile } from "@/lib/download";
-import { firstPartnerLoungeId } from "@/lib/partner-lounges";
 import { cn } from "@/lib/utils";
 
 const MONTHLY_COLUMNS = [
@@ -53,9 +54,13 @@ const RANGE_FROM = addDays(TODAY, -89);
 async function reportToCsv(
   supabase: ReturnType<typeof createClient>,
   reportId: PartnerReport["id"],
+  context: PartnerContext | null,
 ): Promise<string> {
+  // Story 10.6 — la lista del día es siempre de un lounge; el resto, del
+  // elegido en la cabecera o de todos con "All lounges".
+  const scope = analyticsLoungeId(context);
   if (reportId === "daily-guest-list") {
-    const loungeId = await firstPartnerLoungeId(supabase);
+    const loungeId = context?.selectedLoungeId ?? null;
     if (!loungeId) return guestListToCsv([]);
     const { data: guestRows } = await supabase.rpc("partner_guest_list", {
       p_lounge_id: loungeId,
@@ -65,12 +70,12 @@ async function reportToCsv(
   }
 
   if (reportId === "repeat-guests") {
-    const { data } = await supabase.rpc("partner_repeat_guests");
+    const { data } = await supabase.rpc("partner_repeat_guests", { p_lounge_id: scope });
     return repeatGuestsToCsv(((data as PartnerRepeatGuestRow[] | null) ?? []).map(mapRepeatGuestRow));
   }
 
   if (reportId === "revenue-attribution") {
-    const { data } = await supabase.rpc("partner_analytics_summary", { p_from: RANGE_FROM, p_to: TODAY });
+    const { data } = await supabase.rpc("partner_analytics_summary", { p_from: RANGE_FROM, p_to: TODAY, p_lounge_id: scope });
     const summary = (data as PartnerAnalyticsSummary[] | null)?.[0] ?? {
       bookings: 0,
       day_pass_visits: 0,
@@ -102,6 +107,7 @@ function ReportsContent() {
     "download",
   );
   const [downloading, setDownloading] = React.useState(false);
+  const context = usePartnerContext()?.context ?? null;
 
   const selected = PARTNER_REPORTS.find((r) => r.id === selectedId)!;
 
@@ -112,7 +118,7 @@ function ReportsContent() {
   async function download() {
     setDownloading(true);
     try {
-      const csv = await reportToCsv(supabase, selected.id);
+      const csv = await reportToCsv(supabase, selected.id, context);
       downloadTextFile(`partner-${selected.id}.csv`, csv);
     } finally {
       setDownloading(false);
@@ -121,8 +127,8 @@ function ReportsContent() {
 
   return (
     <PartnerShell
+      allowAllLounges
       topbarLabel="Reports"
-      topbarMeta="· The Ainsworth"
       topbarRight={
         <button
           type="button"

@@ -380,6 +380,11 @@ la misma tabla cuando se conecte.
   `admin_reactivate_lounge`).
 - `confirm_booking`/`join_waitlist` rechazan un lounge que no esté `live`
   ("This lounge is not taking bookings"): antes no comprobaban el estado.
+- **Selector de lounge (Story 10.6).** `partner_context()` devuelve partner,
+  usuario y lounges con la elección ya validada (si el lounge guardado dejó
+  de ser del partner, el primero); `partner_select_lounge()` la guarda en
+  `partner_members.selected_lounge_id`/`all_lounges`. Today usa siempre un
+  lounge concreto; las RPC de analítica aceptan `p_lounge_id` (null = todos).
 - Datos de muestra en local: `scripts/seed-partners.mjs`.
 
 ## Notificaciones al partner reales (Database Webhook + pg_cron)

@@ -3,6 +3,7 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 
+import { PartnerContextProvider } from "@/components/partner/partner-context";
 import { createClient } from "@/lib/supabase/client";
 
 /**
@@ -10,7 +11,9 @@ import { createClient } from "@/lib/supabase/client";
  * sesión de Supabase real y el rol `partner` (`has_role`, ver
  * `supabase/schemas/user_roles.sql`). Gemelo de `RequireSession`
  * (`components/onboarding/require-session.tsx`) para el lado de partner —
- * no lo reutiliza porque además del check de sesión valida el rol.
+ * no lo reutiliza porque además del check de sesión valida el rol. Story
+ * 10.6: monta además el contexto del partner (partner, usuario y lounge
+ * elegido) para todo /partner.
  */
 export function RequirePartnerSession({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -45,5 +48,5 @@ export function RequirePartnerSession({ children }: { children: React.ReactNode 
   }, [supabase, router]);
 
   if (!authorized) return null;
-  return <>{children}</>;
+  return <PartnerContextProvider>{children}</PartnerContextProvider>;
 }

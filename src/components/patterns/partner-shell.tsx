@@ -6,7 +6,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronDown, LayoutGrid, RefreshCw, Settings, Ticket, UsersRound } from "lucide-react";
 
-import { PARTNER_VENUE } from "@/lib/partner";
+import { LoungeSwitcher } from "@/components/partner/lounge-switcher";
+import { usePartnerContext } from "@/components/partner/partner-context";
 import { cn } from "@/lib/utils";
 
 /**
@@ -22,6 +23,10 @@ import { cn } from "@/lib/utils";
  * "repeat guest identification") — solo "Settings → Notifications" queda
  * declarado en pantalla sin diseñar, igual que "Membership" en el sub-nav de
  * cuenta del Epic 6.
+ *
+ * Story 10.6 (PartnerToday.dc.html, Fase 10 · 13): el bloque de abajo es el
+ * usuario real y su partner (antes `PARTNER_VENUE`, fijo), y la topbar
+ * termina con el selector de lounge.
  */
 const NAV_ITEMS = [
   { href: "/partner", label: "Today", icon: Ticket },
@@ -45,6 +50,8 @@ export interface PartnerShellProps {
   topbarRight?: React.ReactNode;
   /** §5 patrón 18 — la pantalla de fondo se difumina tras un modal/drawer oscuro. */
   blurred?: boolean;
+  /** Story 10.6 — "All lounges" en el selector (Analytics, Guests, Reports; nunca Today). */
+  allowAllLounges?: boolean;
   children: React.ReactNode;
 }
 
@@ -53,9 +60,13 @@ export function PartnerShell({
   topbarMeta,
   topbarRight,
   blurred = false,
+  allowAllLounges = false,
   children,
 }: PartnerShellProps) {
   const pathname = usePathname();
+  const context = usePartnerContext()?.context ?? null;
+  const userName = context ? `${context.user.firstName} ${context.user.lastName}`.trim() : "";
+  const userInitials = context ? `${context.user.firstName[0] ?? ""}${context.user.lastName[0] ?? ""}`.toUpperCase() : "";
 
   const onClient = React.useSyncExternalStore(
     () => () => {},
@@ -120,18 +131,18 @@ export function PartnerShell({
 
         <div className="flex-1" />
 
-        <div className="flex items-center gap-2.5 border-t border-line pt-4.5">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-nav border border-gold-600 bg-[rgba(201,168,118,0.14)] font-display text-base text-accent">
-            {PARTNER_VENUE.initial}
-          </span>
-          <span className="flex-1 overflow-hidden">
-            <span className="block truncate text-[13px] font-bold text-fg">{PARTNER_VENUE.name}</span>
-            <span className="mt-0.5 block text-[11.5px] text-fg-subtle">
-              {PARTNER_VENUE.staffName} · {PARTNER_VENUE.staffRole}
+        {context ? (
+          <div className="flex items-center gap-2.5 border-t border-line pt-4.5">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-gold-600 bg-[rgba(201,168,118,0.14)] font-display text-sm text-accent">
+              {userInitials}
             </span>
-          </span>
-          <ChevronDown size={16} strokeWidth={1.8} className="text-fg-subtle" aria-hidden />
-        </div>
+            <span className="flex-1 overflow-hidden">
+              <span className="block truncate text-[13px] font-bold text-fg">{userName}</span>
+              <span className="mt-0.5 block truncate text-[11.5px] text-fg-subtle">{context.partner.name}</span>
+            </span>
+            <ChevronDown size={16} strokeWidth={1.8} className="text-fg-subtle" aria-hidden />
+          </div>
+        ) : null}
       </nav>
 
       <div className="surface-night dot-pattern relative flex flex-1 flex-col overflow-hidden">
@@ -140,6 +151,7 @@ export function PartnerShell({
           {topbarMeta ? <span className="text-[12.5px] text-fg-subtle">{topbarMeta}</span> : null}
           <div className="flex-1" />
           {topbarRight}
+          <LoungeSwitcher allowAll={allowAllLounges} />
         </div>
 
         <main className="relative min-h-0 flex-1 overflow-y-auto px-6 py-6.5 lg:px-10">{children}</main>
