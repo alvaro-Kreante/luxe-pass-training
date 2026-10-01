@@ -617,7 +617,7 @@ partner-persona por el partner-organización. Antes del primer PR a
   hasta el selector de la Story 10.6, y su cabecera sigue con el venue fijo
   de `PARTNER_VENUE`.
 - **`admin_revenue_by_partner`** sigue agrupando por lounge, no por partner.
-- **`/admin/partners` (Story 10.2) enlaza a `/admin/partners/new` y a `/admin/partners/[id]`**, que dan 404 hasta la Story 10.3.
+- **Detalle de partner (Story 10.3):** sin activar ni suspender todavía (10.4); solo se borran usuarios sin cuenta.
 
 ## 5. Decisiones abiertas
 

@@ -49,3 +49,257 @@ $$;
 
 revoke execute on function public.admin_partner_list() from public, anon;
 grant execute on function public.admin_partner_list() to authenticated;
+
+/* -------------------------------------------------------------------- */
+/* Story 10.3 — crear y editar un partner (PartnerNew / PartnerDetail)   */
+/* -------------------------------------------------------------------- */
+
+-- Estado de cada usuario: 'on_activation' sin cuenta todavía (partner en
+-- draft), 'invited' con cuenta sin contraseña, 'active' o 'suspended'.
+create or replace function public.admin_partner_detail(p_partner_id uuid)
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_result jsonb;
+begin
+  if not public.has_role('admin') then
+    raise exception 'Not authorized';
+  end if;
+
+  select jsonb_build_object(
+    'id', p.id,
+    'name', p.name,
+    'contact_email', p.contact_email,
+    'address_line1', p.address_line1,
+    'address_line2', p.address_line2,
+    'city', p.city,
+    'region', p.region,
+    'postal_code', p.postal_code,
+    'country', p.country,
+    'status', p.status,
+    'created_at', p.created_at,
+    'users', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', m.id,
+        'first_name', m.first_name,
+        'last_name', m.last_name,
+        'email', m.email,
+        'mobile', m.mobile,
+        'is_representative', m.id = p.representative_id,
+        'status', case
+          when m.suspended_at is not null then 'suspended'
+          when m.user_id is null then 'on_activation'
+          when u.email_confirmed_at is null then 'invited'
+          else 'active'
+        end
+      ) order by m.created_at, m.id)
+      from public.partner_members m
+      left join auth.users u on u.id = m.user_id
+      where m.partner_id = p.id
+    ), '[]'::jsonb),
+    'lounges', coalesce((
+      select jsonb_agg(jsonb_build_object(
+        'id', l.id,
+        'name', l.name,
+        'area', l.neighborhood || ', ' || l.city,
+        'content_status', l.content_status,
+        'capacity', l.capacity
+      ) order by l.name)
+      from public.lounges l
+      where l.partner_id = p.id and l.content_status <> 'archived'
+    ), '[]'::jsonb)
+  )
+  into v_result
+  from public.partners p
+  where p.id = p_partner_id;
+
+  return v_result;
+end;
+$$;
+
+revoke execute on function public.admin_partner_detail(uuid) from public, anon;
+grant execute on function public.admin_partner_detail(uuid) to authenticated;
+
+-- `p_partner`: name, contact_email, address_line1, address_line2, city,
+-- region, postal_code, country. Solo campos de texto, sin Google Maps.
+create or replace function public.admin_apply_partner_details(p_partner_id uuid, p_partner jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if coalesce(trim(p_partner->>'name'), '') = '' then
+    raise exception 'A partner needs a name';
+  end if;
+
+  update public.partners p set
+    name = trim(p_partner->>'name'),
+    contact_email = lower(coalesce(trim(p_partner->>'contact_email'), '')),
+    address_line1 = coalesce(trim(p_partner->>'address_line1'), ''),
+    address_line2 = coalesce(trim(p_partner->>'address_line2'), ''),
+    city = coalesce(trim(p_partner->>'city'), ''),
+    region = coalesce(trim(p_partner->>'region'), ''),
+    postal_code = coalesce(trim(p_partner->>'postal_code'), ''),
+    country = coalesce(trim(p_partner->>'country'), ''),
+    updated_at = now()
+  where p.id = p_partner_id;
+end;
+$$;
+
+revoke execute on function public.admin_apply_partner_details(uuid, jsonb) from public, anon, authenticated;
+
+-- `p_partner.users` (opcional): [{first_name, last_name, email, mobile}] —
+-- PartnerNew.dc.html guarda el partner y su primer usuario a la vez. Todo
+-- en la misma transacción: un email en uso no deja un partner a medias.
+create or replace function public.admin_create_partner(p_partner jsonb)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id uuid;
+  v_user jsonb;
+begin
+  if not public.has_role('admin') then
+    raise exception 'Not authorized';
+  end if;
+  if coalesce(trim(p_partner->>'name'), '') = '' then
+    raise exception 'A partner needs a name';
+  end if;
+
+  insert into public.partners (name, status) values (trim(p_partner->>'name'), 'draft') returning id into v_id;
+  perform public.admin_apply_partner_details(v_id, p_partner);
+  for v_user in select * from jsonb_array_elements(coalesce(p_partner->'users', '[]'::jsonb)) loop
+    perform public.admin_add_partner_member(v_id, v_user);
+  end loop;
+  return v_id;
+end;
+$$;
+
+revoke execute on function public.admin_create_partner(jsonb) from public, anon;
+grant execute on function public.admin_create_partner(jsonb) to authenticated;
+
+create or replace function public.admin_update_partner(p_partner_id uuid, p_partner jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.has_role('admin') then
+    raise exception 'Not authorized';
+  end if;
+  perform public.admin_apply_partner_details(p_partner_id, p_partner);
+end;
+$$;
+
+revoke execute on function public.admin_update_partner(uuid, jsonb) from public, anon;
+grant execute on function public.admin_update_partner(uuid, jsonb) to authenticated;
+
+-- `p_member`: first_name, last_name, email, mobile. Sin cuenta todavía: la
+-- cuenta nace al activar el partner (Story 10.4). El trigger
+-- `partner_members_require_new_email` rechaza un email que ya tiene cuenta.
+create or replace function public.admin_add_partner_member(p_partner_id uuid, p_member jsonb)
+returns uuid
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_email text := lower(coalesce(trim(p_member->>'email'), ''));
+  v_id uuid;
+begin
+  if not public.has_role('admin') then
+    raise exception 'Not authorized';
+  end if;
+  if coalesce(trim(p_member->>'first_name'), '') = '' or coalesce(trim(p_member->>'last_name'), '') = '' then
+    raise exception 'A partner user needs a first name, last name and work email';
+  end if;
+  if v_email !~ '^[^\s@]+@[^\s@]+\.[^\s@]+$' then
+    raise exception 'A partner user needs a valid email';
+  end if;
+  if exists (select 1 from public.partner_members m where lower(m.email) = v_email) then
+    raise exception '% is already in use', v_email;
+  end if;
+
+  insert into public.partner_members (partner_id, first_name, last_name, email, mobile)
+  values (p_partner_id, trim(p_member->>'first_name'), trim(p_member->>'last_name'), v_email, coalesce(trim(p_member->>'mobile'), ''))
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+
+revoke execute on function public.admin_add_partner_member(uuid, jsonb) from public, anon;
+grant execute on function public.admin_add_partner_member(uuid, jsonb) to authenticated;
+
+-- PartnerUserEdit.dc.html — el lápiz: nombre, apellido y móvil. El email es
+-- el inicio de sesión y no cambia.
+create or replace function public.admin_update_partner_member(p_member_id uuid, p_member jsonb)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.has_role('admin') then
+    raise exception 'Not authorized';
+  end if;
+  if coalesce(trim(p_member->>'first_name'), '') = '' or coalesce(trim(p_member->>'last_name'), '') = '' then
+    raise exception 'A partner user needs a first name and last name';
+  end if;
+
+  update public.partner_members m set
+    first_name = trim(p_member->>'first_name'),
+    last_name = trim(p_member->>'last_name'),
+    mobile = coalesce(trim(p_member->>'mobile'), '')
+  where m.id = p_member_id;
+end;
+$$;
+
+revoke execute on function public.admin_update_partner_member(uuid, jsonb) from public, anon;
+grant execute on function public.admin_update_partner_member(uuid, jsonb) to authenticated;
+
+create or replace function public.admin_set_partner_representative(p_partner_id uuid, p_member_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.has_role('admin') then
+    raise exception 'Not authorized';
+  end if;
+  update public.partners set representative_id = p_member_id, updated_at = now() where id = p_partner_id;
+end;
+$$;
+
+revoke execute on function public.admin_set_partner_representative(uuid, uuid) from public, anon;
+grant execute on function public.admin_set_partner_representative(uuid, uuid) to authenticated;
+
+-- Solo usuarios sin cuenta (partner en draft). Borrar a uno con cuenta borra
+-- también su usuario de Auth: llega con la Story 10.4.
+create or replace function public.admin_delete_partner_member(p_member_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.has_role('admin') then
+    raise exception 'Not authorized';
+  end if;
+  if exists (select 1 from public.partner_members m where m.id = p_member_id and m.user_id is not null) then
+    raise exception 'This user already has an account';
+  end if;
+  delete from public.partner_members where id = p_member_id;
+end;
+$$;
+
+revoke execute on function public.admin_delete_partner_member(uuid) from public, anon;
+grant execute on function public.admin_delete_partner_member(uuid) to authenticated;
