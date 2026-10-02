@@ -127,7 +127,7 @@ begin
       l.id, l.name, l.neighborhood || ', ' || l.city, l.capacity, l.content_status,
       l.amenities, l.bands, l.closed_weekdays, l.weekly_hours, l.booking_restrictions,
       coalesce(
-        (select jsonb_agg(jsonb_build_object('id', i.id, 'url', i.url, 'caption', i.caption, 'detail', i.detail, 'position', i.position) order by i.position)
+        (select jsonb_agg(jsonb_build_object('id', i.id, 'url', i.url, 'caption', i.caption, 'detail', i.detail, 'position', i.position, 'original_url', i.original_url, 'crop', i.crop) order by i.position)
          from public.lounge_images i where i.lounge_id = l.id),
         '[]'::jsonb
       ),
@@ -446,8 +446,11 @@ begin
 
   delete from public.lounge_images where lounge_id = p_lounge_id;
   for v_photo in select * from jsonb_array_elements(coalesce(p_photos, '[]'::jsonb)) loop
-    insert into public.lounge_images (lounge_id, url, caption, detail, position)
-    values (p_lounge_id, v_photo->>'url', coalesce(v_photo->>'caption', ''), nullif(v_photo->>'detail', ''), v_position);
+    insert into public.lounge_images (lounge_id, url, caption, detail, position, original_url, crop)
+    values (
+      p_lounge_id, v_photo->>'url', coalesce(v_photo->>'caption', ''), nullif(v_photo->>'detail', ''), v_position,
+      nullif(v_photo->>'originalUrl', ''), case when jsonb_typeof(v_photo->'crop') = 'object' then v_photo->'crop' end
+    );
     v_position := v_position + 1;
   end loop;
 end;

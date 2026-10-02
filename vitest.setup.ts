@@ -66,3 +66,43 @@ Object.defineProperty(globalThis, "WebSocket", {
   configurable: true,
   value: InertWebSocket,
 });
+
+/**
+ * Story 10.10 — el editor de fotos (`react-easy-crop` + recorte en
+ * `<canvas>`, `src/lib/photo-crop.ts`) usa APIs que jsdom no trae:
+ * `URL.createObjectURL`, `createImageBitmap`, `ResizeObserver` y un canvas
+ * 2D con `toBlob`. Estos rellenos no dibujan nada: dan unas medidas fijas
+ * (3000 × 2000) y un blob JPEG de unos bytes, lo justo para que el flujo
+ * real (encuadre → recorte → subida a Storage) corra entero. Como el
+ * `IntersectionObserver` de arriba, no sustituyen código del proyecto.
+ */
+if (typeof URL.createObjectURL !== "function") {
+  URL.createObjectURL = () => "blob:jsdom-photo";
+  URL.revokeObjectURL = () => {};
+}
+
+Object.defineProperty(globalThis, "createImageBitmap", {
+  writable: true,
+  configurable: true,
+  value: async () => ({ width: 3000, height: 2000, close() {} }),
+});
+
+if (typeof globalThis.ResizeObserver === "undefined") {
+  Object.defineProperty(globalThis, "ResizeObserver", {
+    writable: true,
+    configurable: true,
+    value: class {
+      observe() {}
+      unobserve() {}
+      disconnect() {}
+    },
+  });
+}
+
+HTMLCanvasElement.prototype.getContext = function getContext() {
+  return { drawImage() {}, imageSmoothingQuality: "high" } as unknown as CanvasRenderingContext2D;
+} as unknown as typeof HTMLCanvasElement.prototype.getContext;
+
+HTMLCanvasElement.prototype.toBlob = function toBlob(callback: BlobCallback, type?: string) {
+  callback(new Blob(["jsdom-canvas"], { type: type ?? "image/png" }));
+};

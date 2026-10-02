@@ -86,9 +86,10 @@ async function cleanStorage(admin: SupabaseClient, liveUserIds: Set<string>): Pr
 
   // Fotos de lounge: `lounge-images/<lounge id | new-uuid>/…`, se usan desde `lounge_images.url`.
   const images = await listObjects(admin, "lounge-images");
-  const { data: used, error } = await admin.from("lounge_images").select("url");
+  // Story 10.10 — el original de una foto recortada también está en uso.
+  const { data: used, error } = await admin.from("lounge_images").select("url, original_url");
   if (error) throw error;
-  const usedUrls = (used ?? []).map((row) => row.url as string);
+  const usedUrls = (used ?? []).flatMap((row) => [row.url as string, row.original_url as string | null]).filter(Boolean) as string[];
   const orphanImages = images.filter((path) => !usedUrls.some((url) => url.endsWith(`/lounge-images/${path}`)));
 
   return (await removeObjects(admin, "profile-photos", orphanPhotos)) + (await removeObjects(admin, "lounge-images", orphanImages));

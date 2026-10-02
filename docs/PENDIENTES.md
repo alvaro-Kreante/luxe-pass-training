@@ -609,10 +609,12 @@ no publicar el lounge; reenviarla vuelve con la Story 10.4.
   - Las bandas (mañana/tarde/noche) son del lounge, no de la temporada.
   - "Save anyway" sobre reservas confirmadas solo avisa: no cancela ni
     notifica a esos miembros (la historia no lo pide; decidir si hace falta).
-- **10.10 y 10.11 esperan artboards** (`/design`, carpeta
-  `docs/design/epic-10-partner-organizations/`): editor de fotos con
-  `react-easy-crop` y selección múltiple + modales masivos en el detalle
-  del partner.
+- **10.10 hecha** (editor con `react-easy-crop`, recorte en `<canvas>`,
+  original y encuadre guardados en `lounge_images`). Abierto: sin
+  porcentaje de subida ni "Retry" (ver desviaciones de COMPONENT-MAP);
+  los originales ocupan Storage aunque el lounge cambie de foto, solo los
+  limpia `cleanTestData` en local — en remoto no hay limpieza de huérfanos.
+- **10.11 tiene artboards (28–34)**, falta implementarla.
 
 ### 4.13 Epic 10: el modelo de partners cambió y los remotos no lo tienen
 

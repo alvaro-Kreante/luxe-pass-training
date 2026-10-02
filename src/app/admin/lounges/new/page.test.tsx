@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -28,12 +28,23 @@ function image(name: string) {
   return new File(["fake-bytes"], name, { type: "image/jpeg" });
 }
 
+/** Story 10.10 — cada foto pasa por el editor ("Use photo") antes de subirse. */
 async function renderWithPhotos(names: string[]) {
   const user = userEvent.setup({ delay: null });
   render(<NewLoungePage />);
   const input = await screen.findByLabelText("Add lounge photos");
   await user.upload(input, names.map(image));
-  await screen.findAllByRole("button", { name: /^Edit photo/ });
+  const accepted = names.slice(0, 3);
+  for (const name of accepted) {
+    const editor = await waitFor(() => {
+      const dialog = screen.getByRole("dialog", { name: "Frame this photo" });
+      expect(within(dialog).getByText(name)).toBeInTheDocument();
+      return dialog;
+    });
+    await user.click(within(editor).getByRole("button", { name: "Use photo" }));
+  }
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  await waitFor(() => expect(screen.getAllByRole("button", { name: /^Edit photo/ })).toHaveLength(accepted.length), { timeout: 8000 });
   return user;
 }
 

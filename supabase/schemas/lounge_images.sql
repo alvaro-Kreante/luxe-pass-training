@@ -10,6 +10,11 @@ create table if not exists public.lounge_images (
   caption    text not null,
   detail     text,
   position   smallint not null,
+  -- Story 10.10 — la foto que ve el miembro es un recorte; su original y el
+  -- encuadre ({x, y, width, height} en píxeles del original, y `size`) se
+  -- guardan para reencuadrarla sin perder calidad. Null en las sembradas.
+  original_url text,
+  crop       jsonb,
   created_at timestamptz not null default now(),
   unique (lounge_id, position)
 );

@@ -97,12 +97,23 @@ export async function archiveLounges(supabase: SupabaseClient, loungeIds: string
 /* Ficha de contenido de un lounge (LoungeEdit.dc.html)                 */
 /* ------------------------------------------------------------------ */
 
+/** Story 10.10 — encuadre en píxeles del original y tamaño elegido. */
+export interface PhotoCrop {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  size: "large" | "standard" | "light";
+}
+
 export interface LoungeImage {
   id: string;
   url: string;
   caption: string;
   detail: string | null;
   position: number;
+  originalUrl: string | null;
+  crop: PhotoCrop | null;
 }
 
 export interface LoungeClosure {
@@ -175,7 +186,7 @@ interface AdminLoungeDetailRow {
   closed_weekdays: number[];
   weekly_hours: string[];
   booking_restrictions: string[];
-  images: { id: string; url: string; caption: string; detail: string | null; position: number }[];
+  images: { id: string; url: string; caption: string; detail: string | null; position: number; original_url: string | null; crop: PhotoCrop | null }[];
   closures: { id: string; starts_on: string; ends_on: string; reason: string; reopens_label: string }[];
   phone: string;
   email: string;
@@ -212,7 +223,15 @@ function mapLoungeDetailRow(row: AdminLoungeDetailRow): LoungeContentDetail {
     closedWeekdays: row.closed_weekdays,
     weeklyHours: row.weekly_hours,
     bookingRestrictions: row.booking_restrictions,
-    images: row.images.map((i) => ({ id: i.id, url: i.url, caption: i.caption, detail: i.detail ?? null, position: i.position })),
+    images: row.images.map((i) => ({
+      id: i.id,
+      url: i.url,
+      caption: i.caption,
+      detail: i.detail ?? null,
+      position: i.position,
+      originalUrl: i.original_url ?? null,
+      crop: i.crop ?? null,
+    })),
     closures: row.closures.map((c) => ({
       id: c.id,
       startsOn: c.starts_on,
@@ -306,6 +325,8 @@ export interface DraftPhoto {
   url: string;
   caption: string;
   detail: string | null;
+  originalUrl?: string | null;
+  crop?: PhotoCrop | null;
 }
 
 /** El orden es la posición: la primera es la foto principal. */

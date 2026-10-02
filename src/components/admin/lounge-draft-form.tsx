@@ -1,12 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { Check, Plus, X } from "lucide-react";
+import { Check, Crop, Plus, X } from "lucide-react";
 import Link from "next/link";
 
 import { AddressAutocomplete } from "@/components/admin/address-autocomplete";
 import type { LoungeSavedKind } from "@/components/admin/lounge-saved-notice";
 import { PhotoCaptionDialog, type DraftPhotoItem } from "@/components/admin/photo-caption-dialog";
+import { PhotoCropDialog, type PhotoCropChoice, type PhotoSource } from "@/components/admin/photo-crop-dialog";
 import { PartnerPicker } from "@/components/admin/partner-picker";
 import { StatusSelect } from "@/components/admin/status-select";
 import { LoungeScheduleCards, useLoungeSchedule } from "@/components/admin/lounge-schedule";
@@ -23,7 +24,9 @@ import {
   updateLoungeDraft,
   uploadLoungeImage,
   type LoungeContentDetail,
+  type PhotoCrop,
 } from "@/lib/admin-content";
+import { ACCEPTED_TYPES, PHOTO_SIZES, cropImage, isAcceptedImage } from "@/lib/photo-crop";
 import {
   captionFromFileName,
   makeMainPhoto,
@@ -94,8 +97,14 @@ export function LoungeDraftForm({
       caption: image.caption,
       detail: image.detail ?? "",
       fileName: image.caption,
+      originalUrl: image.originalUrl,
+      crop: image.crop,
     })),
   );
+  const [queue, setQueue] = React.useState<File[]>([]);
+  const [recropping, setRecropping] = React.useState<{ key: string; source: PhotoSource } | null>(null);
+  const [invalidFile, setInvalidFile] = React.useState("");
+  const uploading = photos.some((photo) => photo.uploading);
   const [editingKey, setEditingKey] = React.useState<string | null>(null);
   const [photoNotice, setPhotoNotice] = React.useState("");
   const [error, setError] = React.useState("");
@@ -130,27 +139,81 @@ export function LoungeDraftForm({
     partners.find((partner) => partner.id === partnerId)?.status ?? (partnerId === lounge?.partner?.id ? lounge?.partner?.status : null) ?? null;
   const checklist = publishChecklist(draft, partnerStatus);
   const ready = checklist.every((item) => item.done);
-  const canSave = name.trim() !== "" && location !== null && !busy;
+  const canSave = name.trim() !== "" && location !== null && !busy && !uploading;
 
-  async function addPhotos(event: React.ChangeEvent<HTMLInputElement>) {
+  /** Story 10.10 — cada foto pasa por el editor antes de subirse (PhotoCropOpen 23). */
+  function addPhotos(event: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
     event.target.value = "";
-    const room = MAX_PHOTOS - photos.length;
-    setPhotoNotice(files.length > room ? `A lounge has up to 3 photos — ${files.length - room} not added.` : "");
-    const accepted = files.slice(0, Math.max(room, 0));
-    const folder = lounge?.id ?? `new-${crypto.randomUUID()}`;
-    const uploaded = await Promise.all(
-      accepted.map(async (file) => ({
-        key: crypto.randomUUID(),
-        url: await uploadLoungeImage(supabase, folder, file),
-        caption: captionFromFileName(file.name),
-        detail: "",
-        fileName: file.name,
-      })),
-    );
-    setPhotos((current) => [...current, ...uploaded].slice(0, MAX_PHOTOS));
+    const rejected = files.find((file) => !isAcceptedImage(file));
+    setInvalidFile(rejected ? rejected.name : "");
+    const images = files.filter(isAcceptedImage);
+    const room = MAX_PHOTOS - photos.length - queue.length;
+    setPhotoNotice(images.length > room ? `A lounge has up to 3 photos — ${images.length - room} not added.` : "");
+    setQueue((current) => [...current, ...images.slice(0, Math.max(room, 0))]);
   }
 
+  const folder = React.useMemo(() => lounge?.id ?? `new-${crypto.randomUUID()}`, [lounge?.id]);
+
+  async function uploadCrop(source: Blob, fileName: string, choice: PhotoCropChoice) {
+    const size = PHOTO_SIZES.find((option) => option.id === choice.size)!;
+    const cropped = await cropImage(source, choice.area, size.longEdge);
+    const stem = fileName.replace(/\.[^.]+$/, "");
+    return uploadLoungeImage(supabase, folder, new File([cropped], `${stem}-${size.longEdge}.jpg`, { type: "image/jpeg" }));
+  }
+
+  /** Sube el recorte y el original; la miniatura sale "Uploading" mientras tanto (PhotoUploading 25). */
+  function addCroppedPhoto(choice: PhotoCropChoice) {
+    const [file, ...rest] = queue;
+    setQueue(rest);
+    const key = crypto.randomUUID();
+    const crop: PhotoCrop = { ...choice.area, size: choice.size };
+    setPhotos((current) => [
+      ...current,
+      { key, url: "", caption: captionFromFileName(file.name), detail: "", fileName: file.name, crop, uploading: true },
+    ]);
+    void (async () => {
+      try {
+        const [url, originalUrl] = await Promise.all([uploadCrop(file, file.name, choice), uploadLoungeImage(supabase, folder, file)]);
+        setPhotos((current) => current.map((photo) => (photo.key === key ? { ...photo, url, originalUrl, uploading: false } : photo)));
+      } catch (err) {
+        setPhotos((current) => current.filter((photo) => photo.key !== key));
+        setError(err instanceof Error ? err.message : `${file.name} couldn't be uploaded`);
+      }
+    })();
+  }
+
+  /** PhotoRecrop (26) — reabre el editor sobre el original guardado. */
+  async function adjustCrop(photo: DraftPhotoItem) {
+    if (!photo.originalUrl) return;
+    try {
+      const response = await fetch(photo.originalUrl);
+      if (!response.ok) throw new Error("unreadable");
+      const blob = await response.blob();
+      // Storage guarda "<timestamp>-<archivo>": se muestra el nombre que eligió el admin.
+      const fileName = (photo.originalUrl.split("/").pop() ?? photo.caption).replace(/^\d{13}-/, "");
+      setRecropping({ key: photo.key, source: { blob, fileName } });
+    } catch {
+      setError(`The original of ${photo.caption} can't be read`);
+    }
+  }
+
+  async function saveRecrop(choice: PhotoCropChoice) {
+    if (!recropping) return;
+    const { key, source } = recropping;
+    setBusy(true);
+    try {
+      const url = await uploadCrop(source.blob, source.fileName, choice);
+      setPhotos((current) => current.map((photo) => (photo.key === key ? { ...photo, url, crop: { ...choice.area, size: choice.size } } : photo)));
+      setRecropping(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save the new crop");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const recroppingPhoto = photos.find((photo) => photo.key === recropping?.key);
   const editingIndex = photos.findIndex((photo) => photo.key === editingKey);
   const editing = editingIndex >= 0 ? photos[editingIndex] : null;
 
@@ -176,7 +239,13 @@ export function LoungeDraftForm({
     await setDraftLoungePhotos(
       supabase,
       id,
-      photos.map((photo) => ({ url: photo.url, caption: photo.caption, detail: photo.detail || null })),
+      photos.map((photo) => ({
+        url: photo.url,
+        caption: photo.caption,
+        detail: photo.detail || null,
+        originalUrl: photo.originalUrl ?? null,
+        crop: photo.crop ?? null,
+      })),
     );
     return id;
   }
@@ -454,24 +523,44 @@ export function LoungeDraftForm({
             </div>
             <div className="mt-3 grid grid-cols-3 gap-2.5">
               {photos.map((photo, index) => (
-                <button
-                  key={photo.key}
-                  type="button"
-                  aria-label={`Edit photo ${photo.caption}`}
-                  onClick={() => setEditingKey(photo.key)}
-                  className="relative h-[86px] overflow-hidden rounded-xl border border-line bg-panel-black text-left transition-colors duration-150 hover:border-accent"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={photo.url} alt="" className="absolute inset-0 size-full object-cover" />
-                  {index === 0 ? (
-                    <span className="absolute left-2 top-2 rounded-pill bg-accent px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-on-accent">
-                      Main
-                    </span>
-                  ) : null}
-                  <span className="absolute inset-x-2.5 bottom-2 truncate text-[11px] font-bold text-fg-muted">
-                    {photo.caption}
-                  </span>
-                </button>
+                <div key={photo.key} className="relative h-[86px] overflow-hidden rounded-xl border border-line bg-panel-black">
+                  {photo.uploading ? (
+                    <div className="flex size-full flex-col items-center justify-center gap-1 px-2 text-center">
+                      <span className="text-[10px] font-extrabold uppercase tracking-[0.06em] text-accent">Uploading</span>
+                      <span className="w-full truncate text-[11px] font-bold text-fg-muted">{photo.caption}</span>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        aria-label={`Edit photo ${photo.caption}`}
+                        onClick={() => setEditingKey(photo.key)}
+                        className="absolute inset-0 text-left transition-colors duration-150 hover:bg-surface-hover/30"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={photo.url} alt="" className="absolute inset-0 size-full object-cover" />
+                        {index === 0 ? (
+                          <span className="absolute left-2 top-2 rounded-pill bg-accent px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-on-accent">
+                            Main
+                          </span>
+                        ) : null}
+                        <span className="absolute inset-x-2.5 bottom-2 truncate text-[11px] font-bold text-fg-muted">
+                          {photo.caption}
+                        </span>
+                      </button>
+                      {photo.originalUrl ? (
+                        <button
+                          type="button"
+                          aria-label={`Adjust crop ${photo.caption}`}
+                          onClick={() => void adjustCrop(photo)}
+                          className="absolute right-1.5 top-1.5 flex size-7 items-center justify-center rounded-lg bg-panel-black/85 text-accent transition-colors duration-150 hover:bg-panel-black"
+                        >
+                          <Crop size={14} strokeWidth={1.8} aria-hidden />
+                        </button>
+                      ) : null}
+                    </>
+                  )}
+                </div>
               ))}
               {photos.length < MAX_PHOTOS ? (
                 <button
@@ -489,13 +578,28 @@ export function LoungeDraftForm({
               type="file"
               multiple
               aria-label="Add lounge photos"
-              accept="image/png,image/jpeg,image/webp"
+              accept={ACCEPTED_TYPES.join(",")}
               className="hidden"
               onChange={addPhotos}
             />
+            {invalidFile ? (
+              <div role="alert" className="mt-2.5 rounded-xl border border-accent-strong px-3 py-2.5">
+                <p className="m-0 text-[12px] font-bold text-fg">{invalidFile} isn&apos;t an image</p>
+                <p className="m-0 mt-0.5 text-[11.5px] text-fg-subtle">Choose a JPEG, PNG or WebP photo. Nothing was uploaded.</p>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="mt-1.5 text-[11.5px] font-bold text-gold-600 transition-colors duration-150 hover:text-accent"
+                >
+                  Choose another file
+                </button>
+              </div>
+            ) : null}
             <p className="mb-0 mt-2.5 text-[11px] leading-normal text-fg-subtle">
               {photoNotice ||
-                "Select several at once. Click a photo to name it or make it the main one — the main photo opens the lounge profile."}
+                (uploading
+                  ? "Photos upload one at a time. Keep editing the rest of the lounge — saving waits until they finish."
+                  : "Each photo opens in the editor first: frame it, pick a size, then it uploads. Click a photo to name it or make it the main one.")}
             </p>
           </div>
 
@@ -519,6 +623,28 @@ export function LoungeDraftForm({
         }}
         onSave={savePhoto}
         onRemove={removePhoto}
+      />
+
+      <PhotoCropDialog
+        key={queue[0] ? `crop-${queue[0].name}-${queue.length}` : `crop-${recropping?.key ?? "closed"}`}
+        source={queue[0] ? { blob: queue[0], fileName: queue[0].name } : recropping?.source ?? null}
+        mode={queue[0] ? "new" : "recrop"}
+        eyebrow={
+          queue[0]
+            ? `${name.trim() || "New lounge"} · photo ${photos.length + 1} of ${MAX_PHOTOS}`
+            : `${name.trim() || "New lounge"} · ${recroppingPhoto?.caption ?? "photo"}`
+        }
+        initial={
+          !queue[0] && recroppingPhoto?.crop
+            ? {
+                area: { x: recroppingPhoto.crop.x, y: recroppingPhoto.crop.y, width: recroppingPhoto.crop.width, height: recroppingPhoto.crop.height },
+                size: recroppingPhoto.crop.size,
+              }
+            : null
+        }
+        busy={busy}
+        onCancel={() => (queue[0] ? setQueue((current) => current.slice(1)) : setRecropping(null))}
+        onConfirm={(choice) => (queue[0] ? addCroppedPhoto(choice) : void saveRecrop(choice))}
       />
     </AdminShell>
   );

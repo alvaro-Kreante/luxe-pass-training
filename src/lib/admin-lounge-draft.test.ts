@@ -168,6 +168,22 @@ describe("editar un borrador", () => {
     ]);
   });
 
+  it("cada foto recortada guarda su original y su encuadre para reencuadrarla (Story 10.10)", async () => {
+    const id = await create();
+    const crop = { x: 857, y: 572, width: 4286, height: 2857, size: "standard" as const };
+
+    await setDraftLoungePhotos(supabase, id, [
+      { url: "https://example.com/terrace-1600.jpg", caption: "Terrace", detail: null, originalUrl: "https://example.com/terrace-original.jpg", crop },
+      { url: "https://example.com/seeded.jpg", caption: "Seeded", detail: null },
+    ]);
+
+    const detail = await getLoungeContentDetail(supabase, id);
+    expect(detail?.images.map((image) => [image.caption, image.originalUrl, image.crop])).toEqual([
+      ["Terrace", "https://example.com/terrace-original.jpg", crop],
+      ["Seeded", null, null],
+    ]);
+  });
+
   it("un lounge que ya tenía más de 3 fotos se guarda con las que tiene, pero no admite más", async () => {
     const id = await create();
     const six = Array.from({ length: 6 }, (_, index) => ({ lounge_id: id, url: `https://example.com/seed-${index}.jpg`, caption: `Seed ${index}`, position: index }));
