@@ -355,7 +355,7 @@ Debajo, leyenda con muestras de 16px. El sello de frescura (`Updated N min ago �
 | 7 | Epic 6 — Member Experience & Notifications (tema claro) | ✅ Completa — 11 artboards |
 | 8 | Epic 8 — Admin & Support (tema oscuro) | ✅ Completa — 13 artboards |
 | 9 | Epic 9 — Membership & Referrals (tema claro) | ✅ Completa — 9 artboards |
-| 10 | Epic 10 — Partner Organizations (tema oscuro, admin y partner) | ✅ Completa — 16 artboards (10.2–10.6) |
+| 10 | Epic 10 — Partner Organizations (tema oscuro, admin y partner) | ✅ Completa — 22 artboards (10.2–10.6, 10.9) |
 
 Cada fase vive en `design/epic-N-slug/` con sus `.dc.html`, su `canvas.json` y una copia de
 `logo.png`, y se publica como un canvas propio.
@@ -822,6 +822,32 @@ del **On publish** del artboard 23. Los artboards de lounge (9–12) son copias 
 de la Fase 8 donde solo cambia lo que toca al partner; el resto sigue siendo la fuente de la
 Fase 8. Reactivar un lounge suspendido lo devuelve a draft, igual que al reactivar el partner.
 El selector de `/partner` (13–16) parte de `Main` y `Analytics` de la Fase 2: el partner es texto fijo y solo el lounge es botón. Las historias 10.7 (emails) y 10.8 (vista del miembro) ajustan artboards de las Fases 2, 3, 4 y 6 y no tienen artboard propio aquí.
+
+#### 10.9 — Temporadas y cierres especiales
+
+Dos cards nuevas en el formulario admin del lounge, **debajo de Operating hours**. Parten del
+artboard 23 de la Fase 8 (ya con la tarjeta de partner de la 10.5) sobre The Ainsworth, live,
+con el formulario desplazado hasta los horarios. Solo el admin escribe; el partner y el miembro
+leen el resultado.
+
+| Artboard | Qué muestra | Criterios |
+|---|---|---|
+| `SeasonalEmpty` | Seasonal hours y Special closures vacías, cada una con su estado vacío y su "Add"; rail con el orden de precedencia (cierre → temporada → semana habitual) y quién puede escribir | 1, 4, 7 |
+| `SeasonalEdit` | Temporada nueva "Summer hours", Jun 1 – Aug 31, 2026: nombre opcional, desde/hasta y su semana con el mismo editor de Operating hours (switch por día + desde/hasta) | 1, 2 |
+| `SeasonalOverlap` | "Late summer" Aug 20 → Aug 5: error bajo cada fecha (se solapa con Summer hours · termina antes de empezar), la temporada con la que choca marcada y "Add season" deshabilitado | 3 |
+| `ClosureEdit` | Cierre nuevo "Private event", Fri Sep 12 – Sat Sep 13, 2025, reabre Sun Sep 14 a las 10:00 AM, con la vista previa del aviso tal como lo lee el miembro en `Closure` (Fase 4) | 4, 5 |
+| `ClosureBookingsWarning` | Modal antes de guardar: "3 confirmed bookings fall in this closure", lista de las tres reservas, Cancel / Save anyway | 6 |
+| `SeasonalFilled` | Guardado: 2 temporadas y 1 cierre en filas con editar/borrar, "Next 7 days" en el rail y el toast "The Ainsworth is still live" | 1, 4, 8 |
+
+Decisiones: el editor de semana de una temporada es el de `lounge-draft-form.tsx` (filas con
+switch y dos selects), no las siete casillas de solo lectura del artboard 23, que se mantienen
+para la semana habitual ya guardada; en dos columnas los selects bajan a 96px y 34px de alto.
+Las filas guardadas son una caja `--panel-black` de `border-radius: 14px` con icono de 36px,
+título 13.5px/700, fechas en 12px y botones cuadrados de 34px (lápiz y papelera). El estado
+"Upcoming" / "In 3 days" reutiliza los chips existentes; el error reutiliza `#D9826B` / `#E39A85`
+de la Fase 8. El campo **Reopens** propone el siguiente día abierto a su hora de apertura (hint
+del artboard 20); qué pasa con las reservas confirmadas tras "Save anyway" no lo fija la
+historia: el modal solo avisa y enlaza a Bookings.
 
 ## 7. Cómo regenerar y publicar un canvas
 
