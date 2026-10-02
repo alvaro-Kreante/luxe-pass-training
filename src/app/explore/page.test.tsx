@@ -722,6 +722,18 @@ describe("cambiar de ubicación", () => {
     ).toBeInTheDocument();
   });
 
+  it("también desde la vista de lista", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+    await showList(user);
+
+    await user.click(await screen.findByRole("button", { name: "Change location" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Enter your location" }),
+    ).toBeInTheDocument();
+  });
+
   it("ordena desde la nueva ubicación al confirmarla", async () => {
     const user = userEvent.setup({ delay: null });
     render(<ExplorePage />);

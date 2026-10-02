@@ -380,6 +380,7 @@ function ExploreScreen() {
             lounges={lounges}
             unit={unit}
             loading={allLounges === null}
+            onChangeLocation={offline ? undefined : () => setStep("manual")}
             distanceNote={
               filters.maxDistanceMiles === null
                 ? `Searching near ${originNote}`

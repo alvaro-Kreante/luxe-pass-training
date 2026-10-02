@@ -25,13 +25,30 @@ export function LoungeList({
   unit,
   loading = false,
   distanceNote,
+  onChangeLocation,
 }: {
   lounges: LoungeWithDistance[];
   unit: DistanceUnit;
   loading?: boolean;
   /** "Searching within 2 mi of your location" y equivalentes. */
   distanceNote: string;
+  /** Abre ManualLocation.dc.html — mismo enlace "Change" que el panel del mapa. */
+  onChangeLocation?: () => void;
 }) {
+  const change = onChangeLocation ? (
+    <>
+      {" · "}
+      <button
+        type="button"
+        aria-label="Change location"
+        onClick={onChangeLocation}
+        className="cursor-pointer font-bold text-accent-strong transition-colors duration-150 hover:text-fg"
+      >
+        Change
+      </button>
+    </>
+  ) : null;
+
   const { shown, hasMore, sentinel } = usePagedCount(lounges.length);
 
   if (loading) {
@@ -42,7 +59,10 @@ export function LoungeList({
             <Spinner size={16} />
             <Eyebrow>Finding lounges near you</Eyebrow>
           </span>
-          <span className="text-[12.5px] text-fg-subtle">{distanceNote}</span>
+          <span className="text-[12.5px] text-fg-subtle">
+            {distanceNote}
+            {change}
+          </span>
         </div>
 
         <div className="flex flex-col gap-4">
@@ -62,7 +82,10 @@ export function LoungeList({
           you · sorted by distance
         </Eyebrow>
         <span className="text-[12.5px] text-fg-subtle">
-          Showing {shown} of {lounges.length}
+          <span>
+            Showing {shown} of {lounges.length}
+          </span>
+          {change}
         </span>
       </div>
 
