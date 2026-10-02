@@ -175,36 +175,146 @@
       "w": 1440,
       "h": 900,
       "title": "22. Saved on a live lounge · it stays live"
+    },
+    {
+      "file": "PhotoCropOpen.dc.html",
+      "x": 1540,
+      "y": 8030,
+      "w": 1440,
+      "h": 900,
+      "title": "23. Choose a photo · the editor opens first"
+    },
+    {
+      "file": "PhotoCropSize.dc.html",
+      "x": 3080,
+      "y": 8030,
+      "w": 1440,
+      "h": 900,
+      "title": "24. Pick the final size · estimated weight"
+    },
+    {
+      "file": "PhotoUploading.dc.html",
+      "x": 0,
+      "y": 9080,
+      "w": 1440,
+      "h": 900,
+      "title": "25. Uploading, one at a time · progress"
+    },
+    {
+      "file": "PhotoRecrop.dc.html",
+      "x": 1540,
+      "y": 9080,
+      "w": 1440,
+      "h": 900,
+      "title": "26. Adjust the crop of an uploaded photo"
+    },
+    {
+      "file": "PhotoInvalidFile.dc.html",
+      "x": 3080,
+      "y": 9080,
+      "w": 1440,
+      "h": 900,
+      "title": "27. Not an image · nothing uploaded"
+    },
+    {
+      "file": "PartnerBulkSelect.dc.html",
+      "x": 0,
+      "y": 10130,
+      "w": 1440,
+      "h": 900,
+      "title": "28. Select lounges · the search keeps the selection"
+    },
+    {
+      "file": "PartnerBulkStatus.dc.html",
+      "x": 1540,
+      "y": 10130,
+      "w": 1440,
+      "h": 900,
+      "title": "29. Change the status of the selection"
+    },
+    {
+      "file": "PartnerBulkHours.dc.html",
+      "x": 3080,
+      "y": 10130,
+      "w": 1440,
+      "h": 900,
+      "title": "30. Same weekly hours for the selection"
+    },
+    {
+      "file": "PartnerBulkSeason.dc.html",
+      "x": 0,
+      "y": 11180,
+      "w": 1440,
+      "h": 900,
+      "title": "31. Same season · clashes with one lounge"
+    },
+    {
+      "file": "PartnerBulkClosure.dc.html",
+      "x": 1540,
+      "y": 11180,
+      "w": 1440,
+      "h": 900,
+      "title": "32. Same closure · bookings summed by lounge"
+    },
+    {
+      "file": "PartnerBulkConfirm.dc.html",
+      "x": 3080,
+      "y": 11180,
+      "w": 1440,
+      "h": 900,
+      "title": "33. Confirm · what changes and in how many"
+    },
+    {
+      "file": "PartnerBulkResult.dc.html",
+      "x": 0,
+      "y": 12230,
+      "w": 1440,
+      "h": 900,
+      "title": "34. Applied in 2 · not applied in 1, and why"
     }
   ],
   "notes": [
     {
       "id": "partners-model-note",
       "x": 0,
-      "y": 9080,
+      "y": 13280,
       "w": 1400,
       "text": "Partner organizations · A partner is the business behind one or more lounges — a hotel, a spa, a club. It is born as a draft: the admin fills in its details, a central building typed as plain text (no map — the city becomes the partner's main city) and its users. No email goes out while it is a draft. The first user becomes the representative; 'Make representative' hands the role to another user, and the representative can't be deleted while other users remain (4). The pencil edits a user's name and mobile — the email is the sign-in and stays locked. Every partner user is a brand-new account: an email already used by a member, a partner or an admin is refused. Lounges are linked from the lounge form, also while the partner is a draft, and open in the existing lounge view."
     },
     {
       "id": "partners-access-note",
       "x": 0,
-      "y": 9340,
+      "y": 13540,
       "w": 1400,
       "text": "Access and lounges · Activating a partner needs at least one user and sends every user the set-password email (5); publishing a lounge no longer invites anyone. Users added to an active partner are invited at once; suspend, reactivate, delete and resend stay per user (6). Suspending the partner suspends every lounge and blocks every user (7). Reactivating it: lounges that were live come back as drafts, lounges the admin suspended one by one stay suspended, drafts stay drafts (8). The lounge list shows the partner and gains a Suspended filter (9). A lounge shows its partner read only and links to it (10), and can be suspended on its own (11) — reactivating it brings it back as a draft. In a draft the partner is picked from a search that lists draft partners too; if it isn't there, the admin creates it in Partners first. Publishing needs an active partner (12)."
     },
     {
       "id": "partner-switcher-note",
       "x": 0,
-      "y": 9600,
+      "y": 13800,
       "w": 1400,
       "text": "Partner Dashboard · The top bar ends with the partner and the lounge you're on: the partner is fixed text, the lounge is the button (13). The menu lists the partner's lounges and the choice is saved to the account, so it opens on the same lounge on any device (14). Analytics, Guests and Reports add 'All lounges' on top; Today and check-in always work on one lounge (15). A partner without lounges sees an empty state instead of an error (16). The sidebar shows the signed-in user and the partner instead of a hard-coded venue."
     },
     {
       "id": "seasons-closures-note",
       "x": 0,
-      "y": 9860,
+      "y": 14060,
       "w": 1400,
       "text": "Seasons and closures (10.9) · Two cards under Operating hours, admin only — the partner and the member only read them. A season is an optional name, a from/to and its own week, edited with the same switch-and-times rows as Operating hours (18). Two seasons can't share a day and the end can't come before the start; the errors sit under the date and on the season it collides with, and Add season stays disabled (19). A closure is a from/to, a reason and the reopening — exactly what the member reads in the lounge closure notice, previewed in the form (20). Saving a closure over confirmed bookings asks first, naming how many and who (21). On a live lounge the save applies at once and the lounge stays live (22). A day uses its closure first, then its season, then the usual week."
+    },
+    {
+      "id": "photos-crop-note",
+      "x": 0,
+      "y": 14320,
+      "w": 1400,
+      "text": "Lounge photos (10.10) · Choosing a file opens the editor before anything uploads (23). The photo moves under a fixed 3 : 2 frame — drag to reposition, zoom with the slider, the wheel or a pinch; there are no corner handles. The admin picks Large 2400 px, Standard 1600 px (recommended) or Light 1200 px and sees the estimated weight of each, recalculated with the crop (24). Use photo uploads only the cropped, compressed version; Cancel uploads nothing. Back in Photos each upload shows its progress and the next one waits in line (25). An uploaded photo reopens in the editor on its current framing with Adjust crop (26). A file that isn't an image — or can't be read — is refused in the section with a clear message and nothing is uploaded (27)."
+    },
+    {
+      "id": "bulk-actions-note",
+      "x": 0,
+      "y": 14580,
+      "w": 1400,
+      "text": "Bulk actions (10.11) · In a partner's detail every lounge row has a checkbox and the header selects all the rows shown. Searching only filters: a selected lounge stays selected while hidden, and the bar says how many (28). The bar changes the status, sets the same weekly hours, adds the same season or the same closure. Each action opens its editor — the same ones as Operating hours, SeasonalEdit and ClosureEdit — with the lounges as chips on top (29–32). The rules don't change in bulk: publishing needs an active partner and a complete checklist, and a lounge the admin suspended stays suspended. Lounges that can't take the change are named with the reason before anything is written (29, 31, 33): a season that clashes skips that lounge, a closure sums the confirmed bookings of every lounge. Confirming applies the rest (33); the result lists what was applied and what wasn't, and why, and leaves the skipped lounges selected (34)."
     }
   ],
   "launch": {
