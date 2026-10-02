@@ -12,6 +12,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { renderToString } from "react-dom/server";
 import { __resetModuleState } from "@vis.gl/react-google-maps";
 
+import { rememberedLocation } from "@/lib/explore-location";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedAndSignIn } from "@/lib/testing/confirmed-user";
 
@@ -45,17 +46,18 @@ vi.mock("next/navigation", () => ({
  * dependen de qué camino tomó el test. */
 const NY_ORIGIN = { latitude: 40.7595, longitude: -73.97 };
 
+const EMAIL = `explora-${Date.now()}@ensoleil-test.com`;
+const PASSWORD = "EnSoleil!2026";
+
 beforeAll(async () => {
   const supabase = createClient();
-  await signUpConfirmedAndSignIn(
-    supabase,
-    `explora-${Date.now()}@ensoleil-test.com`,
-    "EnSoleil!2026",
-  );
+  await signUpConfirmedAndSignIn(supabase, EMAIL, PASSWORD);
 });
 
-beforeEach(() => {
+beforeEach(async () => {
   replace.mockClear();
+  /** Cada test empieza como si fuera la primera visita de la sesión. */
+  await createClient().auth.updateUser({ data: { explore_location: null } });
   /**
    * Solo se sustituye `navigator.geolocation` (que no existe en jsdom), nunca
    * `navigator` entero: `user-event` simula punteros a partir de otras
@@ -105,6 +107,24 @@ async function allowLocation(user: ReturnType<typeof userEvent.setup>) {
   await waitForDialogReady(button);
   await user.click(button);
   await within(resultsPanel()).findByText("The Ainsworth");
+  await waitForRememberedLocation();
+}
+
+/**
+ * La respuesta al permiso se guarda en Supabase Auth sin bloquear la
+ * pantalla; se espera a que llegue para que no aterrice en el test siguiente.
+ */
+async function waitForRememberedLocation() {
+  await waitFor(async () => {
+    expect(await rememberedLocation(createClient())).not.toBeNull();
+  });
+}
+
+async function chooseNewark(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(screen.getByLabelText("City or address"), "Newark");
+  await user.click(await screen.findByRole("option", { name: /Newark/ }));
+  await user.click(screen.getByRole("button", { name: "Use this location" }));
+  await waitForRememberedLocation();
 }
 
 async function clickEnterManually(user: ReturnType<typeof userEvent.setup>) {
@@ -190,6 +210,58 @@ describe("permiso de ubicación", () => {
   });
 });
 
+describe("el permiso se recuerda durante la sesión", () => {
+  it("no vuelve a pedir la ubicación al volver a Explore", async () => {
+    const user = userEvent.setup({ delay: null });
+    const first = render(<ExplorePage />);
+    await allowLocation(user);
+    first.unmount();
+
+    render(<ExplorePage />);
+
+    expect(
+      await within(await screen.findByRole("region", { name: "Results" })).findByText(
+        "The Ainsworth",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Let LuxePass use your location" }),
+    ).toBeNull();
+  });
+
+  it("recuerda también la ciudad elegida a mano", async () => {
+    const user = userEvent.setup({ delay: null });
+    const first = render(<ExplorePage />);
+    await clickEnterManually(user);
+    await chooseNewark(user);
+    await within(resultsPanel()).findByText("The Ironbound Salon");
+    first.unmount();
+
+    render(<ExplorePage />);
+
+    expect(await screen.findByText(/Sorted by distance · Newark, NJ/)).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Let LuxePass use your location" }),
+    ).toBeNull();
+  });
+
+  it("vuelve a pedirla tras iniciar sesión de nuevo", async () => {
+    const user = userEvent.setup({ delay: null });
+    const first = render(<ExplorePage />);
+    await allowLocation(user);
+    first.unmount();
+
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    await supabase.auth.signInWithPassword({ email: EMAIL, password: PASSWORD });
+    render(<ExplorePage />);
+
+    expect(
+      await screen.findByRole("heading", { name: "Let LuxePass use your location" }),
+    ).toBeInTheDocument();
+  });
+});
+
 describe("entrada manual de ubicación", () => {
   it("ofrece escribir una ubicación en lugar de usar el GPS", async () => {
     const user = userEvent.setup({ delay: null });
@@ -202,19 +274,20 @@ describe("entrada manual de ubicación", () => {
     ).toBeInTheDocument();
   });
 
-  it("lista los lounges de la ciudad elegida a mano", async () => {
+  it("ordena todos los lounges por distancia a la ciudad elegida a mano", async () => {
     const user = userEvent.setup({ delay: null });
     render(<ExplorePage />);
 
     await clickEnterManually(user);
-    await user.type(screen.getByLabelText("City or address"), "Newark");
-    await user.click(await screen.findByRole("option", { name: /Newark/ }));
-    await user.click(screen.getByRole("button", { name: "Use this location" }));
+    await chooseNewark(user);
 
+    await within(resultsPanel()).findByText("The Ironbound Salon");
+    const cards = within(resultsPanel()).getAllByRole("button");
     expect(
-      await within(resultsPanel()).findByText("The Ironbound Salon"),
-    ).toBeInTheDocument();
-    expect(within(resultsPanel()).queryByText("The Ainsworth")).toBeNull();
+      cards.slice(0, 3).map((card) => card.textContent).join(" "),
+    ).toMatch(/(?=.*The Ironbound Salon)(?=.*Aurora Gate Lounge)(?=.*Passaic House)/);
+    /** Los de otras ciudades siguen en la lista, detrás. */
+    expect(cards.length).toBeGreaterThan(3);
   });
 
   it("no deja confirmar mientras no se haya elegido una ciudad", async () => {
@@ -703,7 +776,23 @@ describe("vista de lista", () => {
 
     await showList(user);
 
-    expect(await screen.findByText("Showing 4 of 12")).toBeInTheDocument();
+    expect(await screen.findByText(/^Showing 12 of \d+$/)).toBeInTheDocument();
+  });
+
+  it("incluye los lounges de otras ciudades y países, más abajo", async () => {
+    const observer = observeIntersections();
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+    await showList(user);
+    await screen.findByText(/^Showing 12 of/);
+    await act(async () => observer.scrollToEnd());
+
+    const names = screen
+      .getAllByRole("heading", { level: 3 })
+      .map((heading) => heading.textContent);
+    expect(names[0]).toBe("The Ainsworth");
+    expect(names).toContain("The Ironbound Salon");
+    expect(names.indexOf("The Ironbound Salon")).toBeGreaterThan(0);
   });
 
   it("conserva los filtros al venir del mapa", async () => {
@@ -725,17 +814,36 @@ describe("vista de lista", () => {
 });
 
 describe("scroll infinito", () => {
+  it("el panel del mapa muestra 12 lounges y carga 12 más al bajar", async () => {
+    const observer = observeIntersections();
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+    await allowLocation(user);
+
+    expect(within(resultsPanel()).getAllByRole("button")).toHaveLength(12);
+
+    await act(async () => observer.scrollToEnd());
+
+    expect(
+      within(resultsPanel()).getAllByRole("button").length,
+    ).toBeGreaterThan(12);
+  });
+
   it("carga más lounges al llegar al final de la lista", async () => {
     const observer = observeIntersections();
     const user = userEvent.setup({ delay: null });
     render(<ExplorePage />);
     await showList(user);
 
-    expect(await screen.findByText("Showing 4 of 12")).toBeInTheDocument();
+    const total = Number(
+      (await screen.findByText(/^Showing 12 of \d+$/)).textContent!.split(" of ")[1],
+    );
 
     await act(async () => observer.scrollToEnd());
 
-    expect(screen.getByText("Showing 8 of 12")).toBeInTheDocument();
+    expect(
+      screen.getByText(`Showing ${Math.min(24, total)} of ${total}`),
+    ).toBeInTheDocument();
   });
 
   it("deja de anunciar que quedan más cuando ya están todos", async () => {
@@ -744,11 +852,14 @@ describe("scroll infinito", () => {
     render(<ExplorePage />);
     await showList(user);
 
-    await screen.findByText("Showing 4 of 12");
-    await act(async () => observer.scrollToEnd());
-    await act(async () => observer.scrollToEnd());
+    const total = Number(
+      (await screen.findByText(/^Showing 12 of \d+$/)).textContent!.split(" of ")[1],
+    );
+    for (let shown = 12; shown < total; shown += 12) {
+      await act(async () => observer.scrollToEnd());
+    }
 
-    expect(screen.getByText("Showing 12 of 12")).toBeInTheDocument();
+    expect(screen.getByText(`Showing ${total} of ${total}`)).toBeInTheDocument();
     expect(screen.queryByText("Loading more lounges…")).toBeNull();
   });
 });
@@ -794,9 +905,7 @@ describe("desenfoque de la pantalla de fondo", () => {
     render(<ExplorePage />);
 
     await clickEnterManually(user);
-    await user.type(screen.getByLabelText("City or address"), "Newark");
-    await user.click(await screen.findByRole("option", { name: /Newark/ }));
-    await user.click(screen.getByRole("button", { name: "Use this location" }));
+    await chooseNewark(user);
 
     expect(shell().className).not.toContain("blur");
   });

@@ -23,6 +23,8 @@ import { LoungeCallout } from "@/components/explore/lounge-callout";
 import { LoungeList } from "@/components/explore/lounge-list";
 import { NoResults } from "@/components/explore/no-results";
 import { ResultCard } from "@/components/explore/result-card";
+import { usePagedCount } from "@/components/explore/use-paged-count";
+import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { RemovableChip } from "@/components/ui/chip";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -38,12 +40,18 @@ import {
   type Filters,
 } from "@/lib/filters";
 import { getCurrentPosition, type LocationResult } from "@/lib/geolocation";
+import {
+  rememberLocation,
+  rememberedLocation,
+  type LocationChoice,
+} from "@/lib/explore-location";
 import { useOnlineStatus } from "@/lib/online-status";
 import { DEFAULT_CITY_ID, cityById, cityLabel } from "@/lib/location";
 import {
   fetchLounges,
   withDistance,
   type LoungeRow,
+  type LoungeWithDistance,
 } from "@/lib/lounge-directory";
 import { createClient } from "@/lib/supabase/client";
 
@@ -64,7 +72,8 @@ import { createClient } from "@/lib/supabase/client";
 /** Cuántos lounges quedaron guardados de la última visita (Offline.dc.html). */
 const CACHED_LOUNGE_COUNT = 6;
 
-type LocationStep = "asking" | "manual" | "located";
+/** "checking": se mira si el miembro ya respondió al permiso en esta sesión. */
+type LocationStep = "checking" | "asking" | "manual" | "located";
 
 export default function ExplorePage() {
   return (
@@ -80,9 +89,11 @@ function ExploreScreen() {
 
   /** Un miembro que vuelve sin conexión ya dio su ubicación antes: se salta el permiso. */
   const [step, setStep] = React.useState<LocationStep>(
-    offline ? "located" : "asking",
+    offline ? "located" : "checking",
   );
   const [cityId, setCityId] = React.useState(DEFAULT_CITY_ID);
+  /** Con GPS el origen es el propio miembro, no el centro de una ciudad. */
+  const [usingGps, setUsingGps] = React.useState(false);
   const [origin, setOrigin] = React.useState(() => {
     const city = cityById(DEFAULT_CITY_ID);
     return { lat: city.lat, lng: city.lng };
@@ -95,8 +106,9 @@ function ExploreScreen() {
   const [filtersOpen, setFiltersOpen] = React.useState(false);
   const [filters, setFilters] = React.useState<Filters>(EMPTY_FILTERS);
 
+  const supabase = React.useMemo(() => createClient(), []);
+
   React.useEffect(() => {
-    const supabase = createClient();
     let active = true;
 
     fetchLounges(supabase).then((rows) => {
@@ -106,13 +118,30 @@ function ExploreScreen() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [supabase]);
+
+  /** El permiso se pide una vez por sesión — ver `lib/explore-location.ts`. */
+  React.useEffect(() => {
+    if (step !== "checking") return;
+    let active = true;
+
+    rememberedLocation(supabase).then((choice) => {
+      if (!active) return;
+      if (choice === null) setStep("asking");
+      else if (choice.mode === "gps") locateWithGps();
+      else applyCity(choice.cityId);
+    });
+
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al entrar
+  }, [supabase]);
 
   const city = cityById(cityId);
-  const cityLounges = (allLounges ?? []).filter(
-    (lounge) => lounge.cityId === cityId,
-  );
-  const nearby = withDistance(cityLounges, origin);
+  /** Todo el catálogo, también el de otras ciudades y países, de más cerca a más lejos. */
+  const nearby = withDistance(allLounges ?? [], origin);
+  const originNote = usingGps ? "Your location" : cityLabel(city);
   /** Sin conexión solo existe lo que quedó guardado de la última visita. */
   const available = offline ? nearby.slice(0, CACHED_LOUNGE_COUNT) : nearby;
   const filtered = applyFilters(available, filters);
@@ -125,7 +154,7 @@ function ExploreScreen() {
   const empty = lounges.length === 0 && activeFilterCount > 0;
 
   /** Patrón 4: la pantalla de fondo se difumina mientras hay un diálogo abierto. */
-  const behindDialog = step !== "located";
+  const behindDialog = step === "asking" || step === "manual";
 
   /** Estable (no una arrow inline): evita que el efecto de `useMapEvents` en
    * @vis.gl/react-google-maps, atado a `[map, eventType, handler]`, quite y
@@ -139,12 +168,13 @@ function ExploreScreen() {
    * mapa se muestra ya con la ciudad por defecto como origen provisional;
    * `origin` se corrige en cuanto llega la posición real.
    */
-  function handleAllow() {
+  function locateWithGps() {
     setStep("located");
 
     getCurrentPosition().then((result: LocationResult) => {
       if (result.status === "granted") {
         setOrigin(result.coords);
+        setUsingGps(true);
         return;
       }
 
@@ -153,12 +183,27 @@ function ExploreScreen() {
     });
   }
 
-  const chooseCity = (id: string) => {
+  function remember(choice: LocationChoice) {
+    void rememberLocation(supabase, choice);
+  }
+
+  function handleAllow() {
+    remember({ mode: "gps" });
+    locateWithGps();
+  }
+
+  function applyCity(id: string) {
     const chosen = cityById(id);
     setCityId(id);
     setOrigin({ lat: chosen.lat, lng: chosen.lng });
+    setUsingGps(false);
     setSelectedId(null);
     setStep("located");
+  }
+
+  const chooseCity = (id: string) => {
+    remember({ mode: "city", cityId: id });
+    applyCity(id);
   };
 
   return (
@@ -255,22 +300,17 @@ function ExploreScreen() {
               <p className="m-0 text-[12.5px] text-fg-subtle">
                 {offline
                   ? "Distances from your last known location · Live availability unavailable"
-                  : `Sorted by distance · ${cityLabel(city)}`}
+                  : `Sorted by distance · ${originNote}`}
               </p>
             </div>
 
-            <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-5.5 pb-5.5">
-              {lounges.map((lounge) => (
-                <ResultCard
-                  key={lounge.id}
-                  lounge={lounge}
-                  unit={unit}
-                  selected={lounge.id === selectedId}
-                  onSelect={() => setSelectedId(lounge.id)}
-                  cachedNote={offline ? "Saved 2h ago" : undefined}
-                />
-              ))}
-            </div>
+            <PagedResults
+              lounges={lounges}
+              unit={unit}
+              selectedId={selectedId}
+              onSelect={setSelectedId}
+              cachedNote={offline ? "Saved 2h ago" : undefined}
+            />
           </>
           )
         }
@@ -291,7 +331,7 @@ function ExploreScreen() {
             loading={allLounges === null}
             distanceNote={
               filters.maxDistanceMiles === null
-                ? `Searching near ${cityLabel(city)}`
+                ? `Searching near ${originNote}`
                 : `Searching within ${formatDistanceBand(filters.maxDistanceMiles, unit)} of your location`
             }
           />
@@ -343,6 +383,43 @@ function ExploreScreen() {
         lounges={allLounges ?? []}
       />
     </AppShell>
+  );
+}
+
+function PagedResults({
+  lounges,
+  unit,
+  selectedId,
+  onSelect,
+  cachedNote,
+}: {
+  lounges: LoungeWithDistance[];
+  unit: DistanceUnit;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+  cachedNote?: string;
+}) {
+  const { shown, hasMore, sentinel } = usePagedCount(lounges.length);
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-5.5 pb-5.5">
+      {lounges.slice(0, shown).map((lounge) => (
+        <ResultCard
+          key={lounge.id}
+          lounge={lounge}
+          unit={unit}
+          selected={lounge.id === selectedId}
+          onSelect={() => onSelect(lounge.id)}
+          cachedNote={cachedNote}
+        />
+      ))}
+
+      {hasMore ? (
+        <div ref={sentinel} className="flex justify-center py-3">
+          <Spinner />
+        </div>
+      ) : null}
+    </div>
   );
 }
 

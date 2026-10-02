@@ -8,6 +8,7 @@ import {
   LoungeListItem,
   LoungeListItemSkeleton,
 } from "./lounge-list-item";
+import { usePagedCount } from "./use-paged-count";
 import type { DistanceUnit } from "@/lib/distance";
 import type { LoungeWithDistance } from "@/lib/lounge-directory";
 
@@ -15,9 +16,6 @@ import type { LoungeWithDistance } from "@/lib/lounge-directory";
  * Story 2.3 — List View Alternative.
  * Artboards: ListView.dc.html · ListLoading.dc.html
  */
-
-/** Cuántos lounges trae cada tanda del scroll infinito. */
-const PAGE_SIZE = 4;
 
 /** Filas en hueco mientras se buscan lounges (ListLoading.dc.html). */
 const LOADING_ROWS = 3;
@@ -34,34 +32,7 @@ export function LoungeList({
   /** "Searching within 2 mi of your location" y equivalentes. */
   distanceNote: string;
 }) {
-  const [visible, setVisible] = React.useState(PAGE_SIZE);
-  const sentinel = React.useRef<HTMLDivElement>(null);
-
-  /** Cambiar de filtro es empezar otra lista: se vuelve a la primera tanda. */
-  const [countWhenReset, setCountWhenReset] = React.useState(lounges.length);
-  if (countWhenReset !== lounges.length) {
-    setCountWhenReset(lounges.length);
-    setVisible(PAGE_SIZE);
-  }
-
-  /** El filtro puede dejar menos lounges de los que ya se estaban viendo. */
-  const shown = Math.min(visible, lounges.length);
-  const hasMore = shown < lounges.length;
-
-  React.useEffect(() => {
-    const target = sentinel.current;
-    if (!target || !hasMore) return;
-
-    const observer = new IntersectionObserver((entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) {
-        setVisible((current) => current + PAGE_SIZE);
-      }
-    });
-
-    observer.observe(target);
-
-    return () => observer.disconnect();
-  }, [hasMore]);
+  const { shown, hasMore, sentinel } = usePagedCount(lounges.length);
 
   if (loading) {
     return (
