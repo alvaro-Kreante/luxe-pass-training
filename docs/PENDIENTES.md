@@ -606,7 +606,8 @@ no publicar el lounge; reenviarla vuelve con la Story 10.4.
     temporada porque sale de `lounge_availability_range`.
   - Las bandas (mañana/tarde/noche) son del lounge, no de la temporada.
   - "Save anyway" sobre reservas confirmadas solo avisa: no cancela ni
-    notifica a esos miembros (la historia no lo pide; decidir si hace falta).
+    notifica a esos miembros. **Decidido así** (2 oct 2026): las reservas
+    siguen vigentes y nadie recibe aviso.
 - **10.10 hecha** (editor con `react-easy-crop`, recorte en `<canvas>`,
   original y encuadre guardados en `lounge_images`). Abierto: sin
   porcentaje de subida ni "Retry" (ver desviaciones de COMPONENT-MAP);
@@ -614,9 +615,8 @@ no publicar el lounge; reenviarla vuelve con la Story 10.4.
   limpia `cleanTestData` en local — en remoto no hay limpieza de huérfanos.
 - **10.11 hecha** (selección, cambio de status, horario, temporada y cierre
   masivos con confirmación y resultado parcial). Abierto: sin registro de
-  auditoría de la acción masiva; el cierre masivo hereda la decisión
-  pendiente de "Save anyway" (las reservas confirmadas siguen vigentes y
-  nadie avisa a esos miembros).
+  auditoría de la acción masiva. El cierre masivo sigue la misma decisión
+  que "Save anyway": las reservas confirmadas siguen vigentes, sin aviso.
 - **10.12:** su criterio de selección al buscar ya está cubierto (test de
   `src/app/admin/partners/[id]/bulk.test.tsx`).
 

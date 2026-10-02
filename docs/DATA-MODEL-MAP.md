@@ -317,6 +317,21 @@ el amigo llega por `/join/[code]` → `/signup?ref=` (metadatos de Auth).
   `lounges.suspended_by` (`admin` suelto / `partner` con su partner) para
   saber qué vuelve a draft al reactivar el partner. `partner_members.suspended_at`
   marca a un usuario suspendido uno a uno.
+- Story 10.9: `lounge_seasons` (**dueño**) — periodo con su propio
+  `weekly_hours` y `closed_weekdays` derivado; sin solapes por lounge
+  (trigger). La disponibilidad (`lounge_availability_range`) usa los días
+  cerrados de la temporada vigente (`lounge_closed_weekdays_on`) y la ficha
+  su horario. `lounge_closures` (Epic 3) pasa a escribirse por el admin
+  (RLS `has_role('admin')`); `admin_closure_bookings` lista las reservas
+  confirmadas afectadas. Prioridad de un día: cierre > temporada > habitual.
+- Story 10.10: `lounge_images.original_url` + `crop` (encuadre en píxeles
+  del original y tamaño) para reencuadrar sin perder calidad.
+- Story 10.11: `lounge_checklist_missing(lounge)` es la única regla de
+  "listo para publicar" (la usan `admin_publish_lounge` y el detalle del
+  partner); `admin_set_lounge_hours` cambia la semana habitual en cualquier
+  status.
+- `email_pause` (sin dueño de epic, solo local): mientras corre la suite de
+  Vitest, `brevo.ts` no envía nada en LOCAL.
 
 ## Quién es dueño de qué
 
