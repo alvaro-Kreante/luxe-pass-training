@@ -536,9 +536,13 @@ queda fuera. Con una base limpia (`supabase db reset`) probablemente pasa.
 
 Opciones: que el test filtre por un rango de fechas propio, que el export no
 dependa del límite de PostgREST, o limpiar los datos de prueba entre corridas.
-Relacionado con la nota de recursos compartidos (Stripe): la suite deja
-datos reales en la base local (las reservas de usuarios de test sí se
-borran antes de cada corrida, en `vitest.global-setup.ts`).
+Relacionado con la nota de recursos compartidos (Stripe). **Desde el 2 oct
+2026 la suite ya no deja datos de test en la base local**: `vitest.global-setup.ts`
+llama a `cleanTestData` (`src/lib/testing/clean-test-data.ts`) antes de
+empezar y al terminar, y borra las cuentas de dominios de test (con sus
+reservas, pagos y perfiles en cascada), los lounges `test-…` y los partners
+de test. Las reservas antiguas que hacían fallar este export desaparecen con
+ellas.
 
 ### 4.10 Auth local falla de forma intermitente con la suite completa en paralelo
 
