@@ -51,9 +51,6 @@ export const CITIES: City[] = [
 /** La ubicación por defecto: la del miembro de muestra. */
 export const DEFAULT_CITY_ID = "new-york";
 
-/** El artboard muestra Miami bajo "Recent". */
-export const RECENT_CITY_ID = "miami";
-
 export function cityById(id: string): City {
   return CITIES.find((city) => city.id === id)!;
 }

@@ -41,10 +41,12 @@ import {
 } from "@/lib/filters";
 import { getCurrentPosition, type LocationResult } from "@/lib/geolocation";
 import {
+  recentPlace,
   rememberLocation,
   rememberedLocation,
   type LocationChoice,
 } from "@/lib/explore-location";
+import type { Place } from "@/lib/place-search";
 import { useOnlineStatus } from "@/lib/online-status";
 import { DEFAULT_CITY_ID, cityById, cityLabel } from "@/lib/location";
 import {
@@ -91,13 +93,12 @@ function ExploreScreen() {
   const [step, setStep] = React.useState<LocationStep>(
     offline ? "located" : "checking",
   );
-  const [cityId, setCityId] = React.useState(DEFAULT_CITY_ID);
-  /** Con GPS el origen es el propio miembro, no el centro de una ciudad. */
-  const [usingGps, setUsingGps] = React.useState(false);
-  const [origin, setOrigin] = React.useState(() => {
+  /** Origen provisional hasta que llega el GPS o el miembro elige un lugar. */
+  const [origin, setOrigin] = React.useState<Place>(() => {
     const city = cityById(DEFAULT_CITY_ID);
-    return { lat: city.lat, lng: city.lng };
+    return { label: cityLabel(city), lat: city.lat, lng: city.lng };
   });
+  const [recent, setRecent] = React.useState<Place | null>(null);
   const [allLounges, setAllLounges] = React.useState<LoungeRow[] | null>(null);
   const [unit, setUnit] = React.useState<DistanceUnit>("mi");
   const [view, setView] = React.useState<"map" | "list">("map");
@@ -125,11 +126,15 @@ function ExploreScreen() {
     if (step !== "checking") return;
     let active = true;
 
+    recentPlace(supabase).then((place) => {
+      if (active) setRecent(place);
+    });
+
     rememberedLocation(supabase).then((choice) => {
       if (!active) return;
       if (choice === null) setStep("asking");
       else if (choice.mode === "gps") locateWithGps();
-      else applyCity(choice.cityId);
+      else applyPlace(choice.place);
     });
 
     return () => {
@@ -138,10 +143,9 @@ function ExploreScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- solo al entrar
   }, [supabase]);
 
-  const city = cityById(cityId);
   /** Todo el catálogo, también el de otras ciudades y países, de más cerca a más lejos. */
   const nearby = withDistance(allLounges ?? [], origin);
-  const originNote = usingGps ? "Your location" : cityLabel(city);
+  const originNote = origin.label;
   /** Sin conexión solo existe lo que quedó guardado de la última visita. */
   const available = offline ? nearby.slice(0, CACHED_LOUNGE_COUNT) : nearby;
   const filtered = applyFilters(available, filters);
@@ -173,8 +177,7 @@ function ExploreScreen() {
 
     getCurrentPosition().then((result: LocationResult) => {
       if (result.status === "granted") {
-        setOrigin(result.coords);
-        setUsingGps(true);
+        setOrigin({ label: "Your location", ...result.coords });
         return;
       }
 
@@ -192,18 +195,16 @@ function ExploreScreen() {
     locateWithGps();
   }
 
-  function applyCity(id: string) {
-    const chosen = cityById(id);
-    setCityId(id);
-    setOrigin({ lat: chosen.lat, lng: chosen.lng });
-    setUsingGps(false);
+  function applyPlace(place: Place) {
+    setOrigin(place);
     setSelectedId(null);
     setStep("located");
   }
 
-  const chooseCity = (id: string) => {
-    remember({ mode: "city", cityId: id });
-    applyCity(id);
+  const choosePlace = (place: Place) => {
+    remember({ mode: "place", place });
+    setRecent(place);
+    applyPlace(place);
   };
 
   return (
@@ -378,9 +379,10 @@ function ExploreScreen() {
 
       <ManualLocationDialog
         open={step === "manual"}
-        onConfirm={chooseCity}
+        onConfirm={choosePlace}
         onRetryGps={() => setStep("asking")}
         lounges={allLounges ?? []}
+        recent={recent}
       />
     </AppShell>
   );

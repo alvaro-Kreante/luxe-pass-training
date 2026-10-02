@@ -1,5 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import type { Place } from "./place-search";
+
 /**
  * Story 2.1 — "Current location detection with permission request".
  *
@@ -8,16 +10,25 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * sobrevive a navegar y a recargar, y caduca sola al volver a iniciar sesión
  * (sesión nueva, `session_id` nuevo). Vive en Supabase Auth, no en storage
  * del navegador.
+ *
+ * La última ubicación escrita a mano (`explore_recent_place`) no caduca con
+ * la sesión: es la que ManualLocation.dc.html propone bajo "Recent".
  */
-export type LocationChoice = { mode: "gps" } | { mode: "city"; cityId: string };
+export type LocationChoice = { mode: "gps" } | { mode: "place"; place: Place };
 
 type StoredChoice = LocationChoice & { sessionId: string };
 
-const KEY = "explore_location";
+const CHOICE_KEY = "explore_location";
+const RECENT_KEY = "explore_recent_place";
 
 async function currentSessionId(supabase: SupabaseClient) {
   const { data } = await supabase.auth.getClaims();
   return (data?.claims.session_id as string | undefined) ?? null;
+}
+
+async function metadata(supabase: SupabaseClient) {
+  const { data } = await supabase.auth.getUser();
+  return data.user?.user_metadata ?? {};
 }
 
 export async function rememberedLocation(
@@ -26,13 +37,15 @@ export async function rememberedLocation(
   const sessionId = await currentSessionId(supabase);
   if (!sessionId) return null;
 
-  const { data } = await supabase.auth.getUser();
-  const stored = data.user?.user_metadata?.[KEY] as StoredChoice | null | undefined;
+  const stored = (await metadata(supabase))[CHOICE_KEY] as StoredChoice | null | undefined;
   if (!stored || stored.sessionId !== sessionId) return null;
 
-  return stored.mode === "city"
-    ? { mode: "city", cityId: stored.cityId }
-    : { mode: "gps" };
+  if (stored.mode === "place") return { mode: "place", place: stored.place };
+  return stored.mode === "gps" ? { mode: "gps" } : null;
+}
+
+export async function recentPlace(supabase: SupabaseClient): Promise<Place | null> {
+  return ((await metadata(supabase))[RECENT_KEY] as Place | null | undefined) ?? null;
 }
 
 export async function rememberLocation(
@@ -42,5 +55,10 @@ export async function rememberLocation(
   const sessionId = await currentSessionId(supabase);
   if (!sessionId) return;
 
-  await supabase.auth.updateUser({ data: { [KEY]: { ...choice, sessionId } } });
+  await supabase.auth.updateUser({
+    data: {
+      [CHOICE_KEY]: { ...choice, sessionId },
+      ...(choice.mode === "place" ? { [RECENT_KEY]: choice.place } : {}),
+    },
+  });
 }

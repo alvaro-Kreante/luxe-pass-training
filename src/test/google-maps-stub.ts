@@ -17,6 +17,51 @@ class StubLatLng {
   ) {}
 }
 
+/**
+ * Places (API nueva) para la entrada manual de /explore: un puñado fijo de
+ * lugares, con un país y una región para comprobar que se descartan. Se
+ * filtra por "empieza por" sobre el nombre, como haría el autocompletado.
+ */
+const STUB_PLACES = [
+  { placeId: "stub-newark", main: "Newark", secondary: "NJ, USA", types: ["locality", "political"], lat: 40.7357, lng: -74.1724 },
+  { placeId: "stub-newark-airport", main: "Newark Liberty International Airport", secondary: "Newark, NJ, USA", types: ["airport", "establishment"], lat: 40.6895, lng: -74.1745 },
+  { placeId: "stub-new-jersey", main: "New Jersey", secondary: "USA", types: ["administrative_area_level_1", "political"], lat: 40.0583, lng: -74.4057 },
+  { placeId: "stub-peru", main: "Peru", secondary: "", types: ["country", "political"], lat: -9.19, lng: -75.0152 },
+  { placeId: "stub-tacna", main: "Tacna", secondary: "Peru", types: ["locality", "political"], lat: -18.0066, lng: -70.2463 },
+];
+
+class StubAutocompleteSessionToken {}
+
+const StubAutocompleteSuggestion = {
+  async fetchAutocompleteSuggestions({ input }: { input: string }) {
+    const needle = input.trim().toLowerCase();
+    return {
+      suggestions: STUB_PLACES.filter((place) =>
+        place.main.toLowerCase().startsWith(needle),
+      ).map((place) => ({
+        placePrediction: {
+          placeId: place.placeId,
+          types: place.types,
+          text: { text: `${place.main}, ${place.secondary}` },
+          mainText: { text: place.main },
+          secondaryText: { text: place.secondary },
+          toPlace: () => ({
+            location: null as StubLatLngFn | null,
+            async fetchFields() {
+              this.location = { lat: () => place.lat, lng: () => place.lng };
+            },
+          }),
+        },
+      })),
+    };
+  },
+};
+
+interface StubLatLngFn {
+  lat: () => number;
+  lng: () => number;
+}
+
 class StubMapCanvas {
   zoom: number;
   center: StubLatLng;
@@ -248,6 +293,12 @@ export function installGoogleMapsStub() {
           }
           if (name === "maps") {
             return { Map: StubMapCanvas };
+          }
+          if (name === "places") {
+            return {
+              AutocompleteSessionToken: StubAutocompleteSessionToken,
+              AutocompleteSuggestion: StubAutocompleteSuggestion,
+            };
           }
           return {};
         },

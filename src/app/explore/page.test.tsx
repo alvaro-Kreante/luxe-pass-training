@@ -57,7 +57,9 @@ beforeAll(async () => {
 beforeEach(async () => {
   replace.mockClear();
   /** Cada test empieza como si fuera la primera visita de la sesión. */
-  await createClient().auth.updateUser({ data: { explore_location: null } });
+  await createClient().auth.updateUser({
+    data: { explore_location: null, explore_recent_place: null },
+  });
   /**
    * Solo se sustituye `navigator.geolocation` (que no existe en jsdom), nunca
    * `navigator` entero: `user-event` simula punteros a partir de otras
@@ -122,7 +124,7 @@ async function waitForRememberedLocation() {
 
 async function chooseNewark(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText("City or address"), "Newark");
-  await user.click(await screen.findByRole("option", { name: /Newark/ }));
+  await user.click(await screen.findByRole("option", { name: /^Newark · NJ/ }));
   await user.click(screen.getByRole("button", { name: "Use this location" }));
   await waitForRememberedLocation();
 }
@@ -245,6 +247,23 @@ describe("el permiso se recuerda durante la sesión", () => {
     ).toBeNull();
   });
 
+  it("propone la última ubicación elegida a mano como reciente", async () => {
+    const user = userEvent.setup({ delay: null });
+    const first = render(<ExplorePage />);
+    await clickEnterManually(user);
+    await chooseNewark(user);
+    first.unmount();
+
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    await supabase.auth.signInWithPassword({ email: EMAIL, password: PASSWORD });
+    render(<ExplorePage />);
+    await clickEnterManually(user);
+
+    const recent = screen.getByRole("listbox", { name: "Recent locations" });
+    expect(within(recent).getByRole("option", { name: /Newark/ })).toBeInTheDocument();
+  });
+
   it("vuelve a pedirla tras iniciar sesión de nuevo", async () => {
     const user = userEvent.setup({ delay: null });
     const first = render(<ExplorePage />);
@@ -288,6 +307,35 @@ describe("entrada manual de ubicación", () => {
     ).toMatch(/(?=.*The Ironbound Salon)(?=.*Aurora Gate Lounge)(?=.*Passaic House)/);
     /** Los de otras ciudades siguen en la lista, detrás. */
     expect(cards.length).toBeGreaterThan(3);
+  });
+
+  it("propone ciudades y lugares concretos, pero no países ni regiones", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+    await clickEnterManually(user);
+
+    await user.type(screen.getByLabelText("City or address"), "New");
+    const matches = screen.getByRole("listbox", { name: "Matching locations" });
+    expect(await within(matches).findByRole("option", { name: /^Newark · NJ/ })).toBeInTheDocument();
+    expect(within(matches).getByRole("option", { name: /Airport/ })).toBeInTheDocument();
+    expect(within(matches).queryByRole("option", { name: /New Jersey/ })).toBeNull();
+
+    await user.clear(screen.getByLabelText("City or address"));
+    await user.type(screen.getByLabelText("City or address"), "Peru");
+    expect(await screen.findByText("No location matches that yet.")).toBeInTheDocument();
+  });
+
+  it("ordena desde un lugar de otro país", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+    await clickEnterManually(user);
+
+    await user.type(screen.getByLabelText("City or address"), "Tacna");
+    await user.click(await screen.findByRole("option", { name: /^Tacna/ }));
+    await user.click(screen.getByRole("button", { name: "Use this location" }));
+    await waitForRememberedLocation();
+
+    expect(await screen.findByText(/Sorted by distance · Tacna, Peru/)).toBeInTheDocument();
   });
 
   it("no deja confirmar mientras no se haya elegido una ciudad", async () => {
