@@ -86,6 +86,13 @@ function resultsPanel() {
   return screen.getByRole("region", { name: "Results" });
 }
 
+/** Las tarjetas del panel: todos sus botones menos el enlace "Change". */
+function resultCards() {
+  return within(resultsPanel())
+    .getAllByRole("button")
+    .filter((button) => button.getAttribute("aria-label") !== "Change location");
+}
+
 /**
  * Radix bloquea el `<body>` entero con `pointer-events: none` mientras hay un
  * diálogo abierto (`DismissableLayer`) y solo libera el propio contenido del
@@ -301,7 +308,7 @@ describe("entrada manual de ubicación", () => {
     await chooseNewark(user);
 
     await within(resultsPanel()).findByText("The Ironbound Salon");
-    const cards = within(resultsPanel()).getAllByRole("button");
+    const cards = resultCards();
     expect(
       cards.slice(0, 3).map((card) => card.textContent).join(" "),
     ).toMatch(/(?=.*The Ironbound Salon)(?=.*Aurora Gate Lounge)(?=.*Passaic House)/);
@@ -681,8 +688,49 @@ describe("búsqueda por texto", () => {
 
     await user.type(screen.getByLabelText("Search lounges"), "ainsworth");
 
+    await waitFor(() =>
+      expect(within(resultsPanel()).queryByText("Belmont Terrace")).toBeNull(),
+    );
     expect(within(resultsPanel()).getByText("The Ainsworth")).toBeInTheDocument();
-    expect(within(resultsPanel()).queryByText("Belmont Terrace")).toBeNull();
+  });
+
+  it("busca en todo el catálogo, no solo en los lounges ya cargados en pantalla", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+    await allowLocation(user);
+    /** Desde Nueva York, Miami queda fuera de la primera tanda de 12. */
+    expect(within(resultsPanel()).queryByText("Marbella Sky Lounge")).toBeNull();
+
+    await user.type(screen.getByLabelText("Search lounges"), "Marbella");
+
+    expect(
+      await within(resultsPanel()).findByText("Marbella Sky Lounge"),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("cambiar de ubicación", () => {
+  it("abre la entrada manual desde el enlace Change", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+    await allowLocation(user);
+
+    await user.click(screen.getByRole("button", { name: "Change location" }));
+
+    expect(
+      await screen.findByRole("heading", { name: "Enter your location" }),
+    ).toBeInTheDocument();
+  });
+
+  it("ordena desde la nueva ubicación al confirmarla", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+    await allowLocation(user);
+
+    await user.click(screen.getByRole("button", { name: "Change location" }));
+    await chooseNewark(user);
+
+    expect(await screen.findByText(/Sorted by distance · Newark, NJ/)).toBeInTheDocument();
   });
 });
 
@@ -868,12 +916,12 @@ describe("scroll infinito", () => {
     render(<ExplorePage />);
     await allowLocation(user);
 
-    expect(within(resultsPanel()).getAllByRole("button")).toHaveLength(12);
+    expect(resultCards()).toHaveLength(12);
 
     await act(async () => observer.scrollToEnd());
 
     expect(
-      within(resultsPanel()).getAllByRole("button").length,
+      resultCards().length,
     ).toBeGreaterThan(12);
   });
 

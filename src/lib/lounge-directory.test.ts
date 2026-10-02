@@ -4,7 +4,12 @@ import { describe, expect, it } from "vitest";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedAndSignIn } from "@/lib/testing/confirmed-user";
 
-import { fetchLounges, withDistance, type LoungeRow } from "./lounge-directory";
+import {
+  fetchLounges,
+  searchLounges,
+  withDistance,
+  type LoungeRow,
+} from "./lounge-directory";
 
 /**
  * Story 2.1 — el catálogo de lounges real (Supabase local), reemplaza el
@@ -46,6 +51,51 @@ describe("fetchLounges (Supabase local)", () => {
     await supabase.auth.signOut();
 
     await expect(fetchLounges(supabase)).resolves.toEqual([]);
+  });
+});
+
+describe("searchLounges (Supabase local)", () => {
+  async function signedIn() {
+    const supabase = createClient();
+    await signUpConfirmedAndSignIn(
+      supabase,
+      `busca-${Date.now()}@ensoleil-test.com`,
+      "EnSoleil!2026",
+    );
+    return supabase;
+  }
+
+  function names(lounges: LoungeRow[]) {
+    return lounges.map((lounge) => lounge.name);
+  }
+
+  it("encuentra por nombre, sin distinguir mayúsculas", async () => {
+    const supabase = await signedIn();
+
+    expect(names(await searchLounges(supabase, "ironbound salon"))).toEqual([
+      "The Ironbound Salon",
+    ]);
+  });
+
+  it("encuentra por ciudad y por barrio", async () => {
+    const supabase = await signedIn();
+
+    expect(names(await searchLounges(supabase, "miami"))).toContain("Marbella Sky Lounge");
+    expect(names(await searchLounges(supabase, "Brickell"))).toContain("Marbella Sky Lounge");
+  });
+
+  it("encuentra por el nombre visible de un amenity", async () => {
+    const supabase = await signedIn();
+    const results = await searchLounges(supabase, "day rooms");
+
+    expect(names(results)).toContain("Marbella Sky Lounge");
+    expect(results.every((lounge) => lounge.amenities.includes("day-rooms") || /day rooms/i.test(lounge.name))).toBe(true);
+  });
+
+  it("no se rompe con caracteres que tienen significado en el filtro", async () => {
+    const supabase = await signedIn();
+
+    await expect(searchLounges(supabase, "a,b(c)*%")).resolves.toEqual([]);
   });
 });
 

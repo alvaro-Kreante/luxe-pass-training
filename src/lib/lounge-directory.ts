@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import type { AmenityId } from "./amenities";
+import { AMENITIES, type AmenityId } from "./amenities";
 import type { TimeBand } from "./availability";
 import { haversineMiles, type Coordinates } from "./distance";
 
@@ -90,6 +90,43 @@ export async function fetchLounges(
   // muestra los publicados.
   // Story 10.8 — solo `name` del partner: el miembro no puede leer nada más (privilegio por columna).
   const { data, error } = await supabase.from("lounges").select("*, partners(name)").eq("content_status", "live");
+
+  if (error) throw error;
+
+  return (data as LoungeTableRow[]).map(fromRow);
+}
+
+/**
+ * Story 2.2 — "Search by lounge name, location, or amenities", contra la
+ * tabla y no sobre lo ya cargado: nombre, barrio y ciudad por `ilike`, y
+ * amenities por su nombre visible (`AMENITIES`), que en la tabla se guardan
+ * como id. Los caracteres con significado en el filtro de PostgREST
+ * (`,()*%\`) se quitan: forman parte de la sintaxis, no de lo que se busca.
+ */
+export async function searchLounges(
+  supabase: SupabaseClient,
+  query: string,
+): Promise<LoungeRow[]> {
+  const term = query.replace(/[,()*%\\]/g, " ").trim();
+  if (term === "") return [];
+
+  const pattern = `*${term}*`;
+  const amenityIds = AMENITIES.filter((amenity) =>
+    amenity.label.toLowerCase().includes(term.toLowerCase()),
+  ).map((amenity) => amenity.id);
+
+  const conditions = [
+    `name.ilike.${pattern}`,
+    `neighborhood.ilike.${pattern}`,
+    `city.ilike.${pattern}`,
+    ...(amenityIds.length > 0 ? [`amenities.ov.{${amenityIds.join(",")}}`] : []),
+  ];
+
+  const { data, error } = await supabase
+    .from("lounges")
+    .select("*, partners(name)")
+    .eq("content_status", "live")
+    .or(conditions.join(","));
 
   if (error) throw error;
 

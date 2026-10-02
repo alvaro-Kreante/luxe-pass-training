@@ -51,6 +51,7 @@ import { useOnlineStatus } from "@/lib/online-status";
 import { DEFAULT_CITY_ID, cityById, cityLabel } from "@/lib/location";
 import {
   fetchLounges,
+  searchLounges,
   withDistance,
   type LoungeRow,
   type LoungeWithDistance,
@@ -73,6 +74,8 @@ import { createClient } from "@/lib/supabase/client";
 
 /** Cuántos lounges quedaron guardados de la última visita (Offline.dc.html). */
 const CACHED_LOUNGE_COUNT = 6;
+
+const SEARCH_DEBOUNCE_MS = 250;
 
 /** "checking": se mira si el miembro ya respondió al permiso en esta sesión. */
 type LocationStep = "checking" | "asking" | "manual" | "located";
@@ -121,6 +124,32 @@ function ExploreScreen() {
     };
   }, [supabase]);
 
+  /**
+   * Story 2.2 — la búsqueda por texto va contra la tabla (`searchLounges`).
+   * Mientras llega la respuesta se siguen viendo los resultados anteriores.
+   */
+  const [searched, setSearched] = React.useState<{
+    query: string;
+    rows: LoungeRow[];
+  } | null>(null);
+  const searchQuery = filters.query.trim();
+
+  React.useEffect(() => {
+    /** Sin texto `pool` ya no mira `searched`: no hace falta vaciarlo. */
+    if (searchQuery === "" || offline) return;
+    let active = true;
+    const timer = setTimeout(() => {
+      searchLounges(supabase, searchQuery).then((rows) => {
+        if (active) setSearched({ query: searchQuery, rows });
+      });
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [supabase, searchQuery, offline]);
+
   /** El permiso se pide una vez por sesión — ver `lib/explore-location.ts`. */
   React.useEffect(() => {
     if (step !== "checking") return;
@@ -148,7 +177,16 @@ function ExploreScreen() {
   const originNote = origin.label;
   /** Sin conexión solo existe lo que quedó guardado de la última visita. */
   const available = offline ? nearby.slice(0, CACHED_LOUNGE_COUNT) : nearby;
-  const filtered = applyFilters(available, filters);
+  const query = filters.query.trim();
+  /** Con texto, el conjunto lo decide la búsqueda en Supabase, no lo ya cargado. */
+  const pool =
+    query === "" || offline
+      ? available
+      : withDistance(searched?.rows ?? allLounges ?? [], origin);
+  const filtered = applyFilters(
+    pool,
+    query === "" || offline ? filters : { ...filters, query: "" },
+  );
   const lounges = filtered;
   const selected = lounges.find((lounge) => lounge.id === selectedId) ?? null;
 
@@ -299,9 +337,21 @@ function ExploreScreen() {
                   : `${lounges.length} lounges near you`}
               </Eyebrow>
               <p className="m-0 text-[12.5px] text-fg-subtle">
-                {offline
-                  ? "Distances from your last known location · Live availability unavailable"
-                  : `Sorted by distance · ${originNote}`}
+                {offline ? (
+                  "Distances from your last known location · Live availability unavailable"
+                ) : (
+                  <>
+                    Sorted by distance · {originNote} ·{" "}
+                    <button
+                      type="button"
+                      aria-label="Change location"
+                      onClick={() => setStep("manual")}
+                      className="cursor-pointer font-bold text-accent-strong transition-colors duration-150 hover:text-fg"
+                    >
+                      Change
+                    </button>
+                  </>
+                )}
               </p>
             </div>
 
