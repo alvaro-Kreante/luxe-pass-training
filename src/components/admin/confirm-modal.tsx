@@ -56,8 +56,8 @@ export function ConfirmModal({
       }
     >
       <p className="m-0 text-[13.5px] leading-[1.6] text-fg-muted">{intro}</p>
-      {points.map((point) => (
-        <div key={point.title} className="mt-3 flex gap-3 border-t border-line/60 pt-3">
+      {points.map((point, index) => (
+        <div key={`${point.title}-${index}`} className="mt-3 flex gap-3 border-t border-line/60 pt-3">
           <span className="mt-[7px] size-1.5 shrink-0 rounded-full bg-accent" />
           <div className="min-w-0 flex-1">
             <p className="m-0 text-[13px] font-bold text-fg">{point.title}</p>

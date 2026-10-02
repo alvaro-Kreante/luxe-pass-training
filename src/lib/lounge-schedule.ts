@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { TODAY } from "@/lib/availability";
+import { TODAY, addDays } from "@/lib/availability";
 
 /**
  * Story 10.9 — temporadas (`lounge_seasons`) y cierres especiales
@@ -116,9 +116,80 @@ export async function deleteLoungeClosure(supabase: SupabaseClient, closureId: s
   if (error) throw failure(error);
 }
 
+export interface ClosureBooking {
+  memberName: string;
+  date: string;
+  slotTime: string;
+}
+
 /** Reservas confirmadas que caerían en el cierre, para avisar antes de guardarlo. */
-export async function closureBookingCount(supabase: SupabaseClient, loungeId: string, from: string, to: string): Promise<number> {
-  const { data, error } = await supabase.rpc("admin_closure_booking_count", { p_lounge_id: loungeId, p_from: from, p_to: to });
+export async function closureBookings(supabase: SupabaseClient, loungeId: string, from: string, to: string): Promise<ClosureBooking[]> {
+  const { data, error } = await supabase.rpc("admin_closure_bookings", { p_lounge_id: loungeId, p_from: from, p_to: to });
   if (error) throw failure(error);
-  return data as number;
+  return (data as { member_name: string; date: string; slot_time: string }[]).map((row) => ({
+    memberName: row.member_name,
+    date: row.date,
+    slotTime: row.slot_time,
+  }));
+}
+
+/* Cálculos de pantalla (SeasonalFilled "Next 7 days", ClosureEdit "Reopens"). */
+
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+/** Lunes primero, como la ve el admin. */
+const MONDAY_FIRST = [1, 2, 3, 4, 5, 6, 0];
+
+function weekdayOf(dateIso: string): number {
+  return new Date(`${dateIso}T12:00:00Z`).getUTCDay();
+}
+
+function isClosedHours(hours: string | undefined): boolean {
+  return !hours || hours.trim() === "" || hours.trim().toLowerCase() === "closed";
+}
+
+export type DayHours =
+  | { hours: string; source: "regular" }
+  | { hours: string; source: "season"; season: string }
+  | { hours: "Closed"; source: "closure"; reason: string };
+
+/** Primero el cierre especial, luego la temporada y por último el horario habitual. */
+export function dayHours(dateIso: string, regularWeek: string[], schedule: LoungeSchedule): DayHours {
+  const closure = schedule.closures.find((c) => dateIso >= c.startsOn && dateIso <= c.endsOn);
+  if (closure) return { hours: "Closed", source: "closure", reason: closure.reason };
+  const weekday = weekdayOf(dateIso);
+  const season = schedule.seasons.find((s) => dateIso >= s.startsOn && dateIso <= s.endsOn);
+  if (season) {
+    const hours = season.weeklyHours[weekday];
+    return { hours: isClosedHours(hours) ? "Closed" : hours, source: "season", season: season.name };
+  }
+  const hours = regularWeek[weekday];
+  return { hours: isClosedHours(hours) ? "Closed" : hours, source: "regular" };
+}
+
+/** El siguiente día abierto tras un cierre que acaba en `endsOn`, a su hora de apertura. */
+export function defaultReopening(endsOn: string, regularWeek: string[], schedule: LoungeSchedule): { date: string; time: string } | null {
+  for (let offset = 1; offset <= 366; offset++) {
+    const date = addDays(endsOn, offset);
+    const day = dayHours(date, regularWeek, schedule);
+    if (day.hours !== "Closed") return { date, time: day.hours.split(/\s*[–-]\s*/)[0].trim() };
+  }
+  return null;
+}
+
+/** "Mon–Fri 7 AM – 11 PM · Sat–Sun 9 AM – 11 PM", o "Every day …" si todos coinciden. */
+export function weekSummary(weeklyHours: string[]): string {
+  // "7:00 AM" y "7 AM" son la misma hora: el resumen usa la forma corta.
+  const hoursOf = (weekday: number) =>
+    isClosedHours(weeklyHours[weekday]) ? "Closed" : weeklyHours[weekday].trim().replace(/:00(?=\s*[AP]M)/gi, "");
+  if (MONDAY_FIRST.every((weekday) => hoursOf(weekday) === hoursOf(1))) return `Every day ${hoursOf(1)}`;
+  const parts: string[] = [];
+  let i = 0;
+  while (i < MONDAY_FIRST.length) {
+    let j = i;
+    while (j + 1 < MONDAY_FIRST.length && hoursOf(MONDAY_FIRST[j + 1]) === hoursOf(MONDAY_FIRST[i])) j++;
+    const label = j > i ? `${DAY_NAMES[MONDAY_FIRST[i]]}–${DAY_NAMES[MONDAY_FIRST[j]]}` : DAY_NAMES[MONDAY_FIRST[i]];
+    parts.push(`${label} ${hoursOf(MONDAY_FIRST[i])}`);
+    i = j + 1;
+  }
+  return parts.join(" · ");
 }

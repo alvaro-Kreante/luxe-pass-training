@@ -119,7 +119,16 @@ export async function fetchLoungeProfile(
   if (error) throw error;
   if (!data) return null;
 
-  return fromProfileRow(data as LoungeProfileTableRow);
+  // Story 10.9 — si hoy cae en una temporada, la ficha muestra su horario.
+  const { data: season } = await supabase
+    .from("lounge_seasons")
+    .select("weekly_hours, closed_weekdays")
+    .eq("lounge_id", id)
+    .lte("starts_on", TODAY)
+    .gte("ends_on", TODAY)
+    .maybeSingle();
+  const row = data as LoungeProfileTableRow;
+  return fromProfileRow(season ? { ...row, weekly_hours: season.weekly_hours, closed_weekdays: season.closed_weekdays } : row);
 }
 
 /* ------------------------------------------------------------------ */

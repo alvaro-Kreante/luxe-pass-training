@@ -9,12 +9,12 @@ import type { LoungeSavedKind } from "@/components/admin/lounge-saved-notice";
 import { PhotoCaptionDialog, type DraftPhotoItem } from "@/components/admin/photo-caption-dialog";
 import { PartnerPicker } from "@/components/admin/partner-picker";
 import { StatusSelect } from "@/components/admin/status-select";
+import { LoungeScheduleCards, useLoungeSchedule } from "@/components/admin/lounge-schedule";
+import { WeeklyHoursEditor } from "@/components/admin/weekly-hours-editor";
 import { AdminShell } from "@/components/patterns/admin-shell";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { AMENITIES } from "@/lib/amenities";
 import {
   createLoungeDraft,
@@ -25,13 +25,8 @@ import {
   type LoungeContentDetail,
 } from "@/lib/admin-content";
 import {
-  CLOSED,
   captionFromFileName,
-  formatDayHours,
   makeMainPhoto,
-  parseDayHours,
-  TIME_OPTIONS,
-  type DayHours,
   publishChecklist,
   type LoungeDraftInput,
   type LoungeLocation,
@@ -40,9 +35,6 @@ import { listAdminPartners, type AdminPartnerRow } from "@/lib/admin-partners";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
-const WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-// `weekly_hours` va domingo primero; la pantalla empieza el lunes.
-const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const MAX_PHOTOS = 3;
 const MONDAY = 1;
 
@@ -329,64 +321,10 @@ export function LoungeDraftForm({
                 Copy Monday to every day
               </button>
             </div>
-            <div className="mt-3 grid gap-2">
-              {WEEK_ORDER.map((index) => {
-                const day = WEEKDAY_NAMES[index];
-                const hours = parseDayHours(weeklyHours[index]);
-                const update = (next: DayHours) =>
-                  setWeeklyHours((current) => current.map((value, i) => (i === index ? formatDayHours(next) : value)));
-                return (
-                  <div
-                    key={day}
-                    className={cn(
-                      "flex flex-wrap items-center gap-3 rounded-xl border px-3.5 py-2",
-                      hours.open ? "border-line" : "border-dashed border-fg-subtle",
-                    )}
-                  >
-                    <span className="w-10 text-[11px] font-bold uppercase tracking-[0.08em] text-fg-subtle">{day}</span>
-                    <Switch
-                      checked={hours.open}
-                      onCheckedChange={(open) => update({ ...hours, open })}
-                      label={`${day} open`}
-                    />
-                    {hours.open ? (
-                      <div className="flex items-center gap-2">
-                        <Select
-                          aria-label={`${day} opens at`}
-                          inputSize="compact"
-                          value={hours.from}
-                          onChange={(event) => update({ ...hours, from: event.target.value })}
-                          className="w-[128px]"
-                        >
-                          {TIME_OPTIONS.map((time) => (
-                            <option key={time} value={time}>
-                              {time}
-                            </option>
-                          ))}
-                        </Select>
-                        <span className="text-fg-subtle">–</span>
-                        <Select
-                          aria-label={`${day} closes at`}
-                          inputSize="compact"
-                          value={hours.to}
-                          onChange={(event) => update({ ...hours, to: event.target.value })}
-                          className="w-[128px]"
-                        >
-                          {TIME_OPTIONS.map((time) => (
-                            <option key={time} value={time}>
-                              {time}
-                            </option>
-                          ))}
-                        </Select>
-                      </div>
-                    ) : (
-                      <span className="text-xs font-bold text-fg-subtle">{CLOSED}</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            <WeeklyHoursEditor value={weeklyHours} onChange={setWeeklyHours} className="mt-3" />
           </div>
+
+          {lounge ? <DraftSchedule loungeId={lounge.id} loungeName={lounge.name} regularWeek={weeklyHours} /> : null}
 
           <div className="grid grid-cols-2 gap-3.5">
             <div className={CARD}>
@@ -584,6 +522,12 @@ export function LoungeDraftForm({
       />
     </AdminShell>
   );
+}
+
+/** Story 10.9 — en un borrador ya guardado; un lounge nuevo las tiene al guardarse por primera vez. */
+function DraftSchedule({ loungeId, loungeName, regularWeek }: { loungeId: string; loungeName: string; regularWeek: string[] }) {
+  const state = useLoungeSchedule(loungeId);
+  return <LoungeScheduleCards loungeId={loungeId} loungeName={loungeName} regularWeek={regularWeek} state={state} />;
 }
 
 function LocationChip({ children, muted = false }: { children: React.ReactNode; muted?: boolean }) {

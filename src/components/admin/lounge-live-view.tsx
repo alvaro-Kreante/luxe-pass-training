@@ -6,6 +6,7 @@ import Link from "next/link";
 
 import { LoungeLocationPreview } from "@/components/admin/address-autocomplete";
 import { ConfirmModal } from "@/components/admin/confirm-modal";
+import { LoungeScheduleCards, NextDaysCard, ScheduleOrderCard, useLoungeSchedule } from "@/components/admin/lounge-schedule";
 import { StatusSelect } from "@/components/admin/status-select";
 import { LoungePartnerCard } from "@/components/admin/lounge-partner-card";
 import { ModalPoint } from "@/components/admin/lounge-saved-notice";
@@ -79,6 +80,7 @@ export function LoungeLiveView({
   const [viewing, setViewing] = React.useState<number | null>(null);
   const [suspending, setSuspending] = React.useState(false);
   const suspended = lounge.contentStatus === "suspended";
+  const schedule = useLoungeSchedule(lounge.id);
 
   async function changeStatus(action: () => Promise<void>) {
     setBusy(true);
@@ -243,6 +245,8 @@ export function LoungeLiveView({
             </div>
           </div>
 
+          <LoungeScheduleCards loungeId={lounge.id} loungeName={lounge.name} regularWeek={lounge.weeklyHours} state={schedule} />
+
           <div className={cn(CARD, "flex flex-wrap items-start gap-x-6 gap-y-4")}>
             <div className="min-w-0 flex-1">
               <p className={EYEBROW}>Amenities</p>
@@ -274,11 +278,17 @@ export function LoungeLiveView({
 
         <div className="flex h-fit w-[344px] shrink-0 flex-col gap-3">
           <LoungePartnerCard partner={lounge.partner} />
+          <NextDaysCard schedule={schedule.schedule} regularWeek={lounge.weeklyHours} />
+          <ScheduleOrderCard />
           <div className="rounded-2xl border border-dashed border-gold-600 bg-panel-black px-4 py-3.5">
             <p className="m-0 text-[11.5px] leading-[1.55] text-fg-muted">
               Everything members read is locked while the lounge is live. The partner and its users are managed in{" "}
               <strong className="text-fg">Partners</strong>. <strong className="text-fg">Edit lounge</strong> moves it
               back to draft; publish it again when you finish.
+            </p>
+            <p className="m-0 mt-2 text-[11.5px] leading-[1.55] text-fg-muted">
+              <strong className="text-fg">Stays live.</strong> Seasons and closures save straight onto the live lounge — it
+              stays live and nothing goes back to draft.
             </p>
           </div>
         </div>

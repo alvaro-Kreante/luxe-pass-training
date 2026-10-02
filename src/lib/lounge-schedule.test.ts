@@ -5,7 +5,10 @@ import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedAdminAndSignIn, signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
 
 import {
-  closureBookingCount,
+  closureBookings,
+  dayHours,
+  defaultReopening,
+  weekSummary,
   deleteLoungeClosure,
   deleteLoungeSeason,
   listLoungeSchedule,
@@ -163,10 +166,10 @@ describe("cierres especiales", () => {
     expect((await listLoungeSchedule(admin, loungeId)).closures).toEqual([]);
   });
 
-  it("cuenta las reservas confirmadas que caen en el periodo antes de guardarlo", async () => {
+  it("lista las reservas confirmadas que caen en el periodo antes de guardarlo", async () => {
     const loungeId = await lounge();
     const member = memberClient();
-    const { id: memberId } = await signUpConfirmedMemberAndSignIn(member, `schedule-member-${stamp}@ensoleil-test.com`, "LoungeTime!24");
+    const { id: memberId } = await signUpConfirmedMemberAndSignIn(member, `schedule-member-${stamp}@ensoleil-test.com`, "LoungeTime!24", { fullName: "Alexandra Rivas" });
     const booking = { member_id: memberId, lounge_id: loungeId, band: "morning", slot_time: "8:00 AM" };
     const { error } = await service.from("bookings").insert([
       { ...booking, date: "2025-09-16", status: "confirmed" },
@@ -176,7 +179,10 @@ describe("cierres especiales", () => {
     ]);
     if (error) throw error;
 
-    expect(await closureBookingCount(admin, loungeId, "2025-09-16", "2025-09-17")).toBe(2);
+    expect(await closureBookings(admin, loungeId, "2025-09-16", "2025-09-17")).toEqual([
+      { memberName: "Alexandra Rivas", date: "2025-09-16", slotTime: "8:00 AM" },
+      { memberName: "Alexandra Rivas", date: "2025-09-17", slotTime: "8:00 AM" },
+    ]);
   });
 });
 
@@ -194,10 +200,43 @@ describe("quién puede escribir", () => {
     await expect(
       saveLoungeClosure(member, loungeId, { startsOn: "2025-12-01", endsOn: "2025-12-01", reason: "Mine", reopensLabel: "" }),
     ).rejects.toThrow();
-    await expect(closureBookingCount(member, loungeId, "2025-09-01", "2025-09-30")).rejects.toThrow();
+    await expect(closureBookings(member, loungeId, "2025-09-01", "2025-09-30")).rejects.toThrow();
   });
 });
 
 afterAll(async () => {
   await service.from("lounges").delete().like("id", `test-lounge-schedule-${stamp}-%`);
+});
+
+/** Cálculos puros de la pantalla: sin base. */
+describe("qué horario usa un día", () => {
+  const schedule = {
+    seasons: [{ id: "s1", name: "Summer hours", startsOn: "2025-09-14", endsOn: "2025-09-20", weeklyHours: SUMMER }],
+    closures: [{ id: "c1", startsOn: "2025-09-16", endsOn: "2025-09-17", reason: "Private event", reopensLabel: "Reopens Thu Sep 18" }],
+  };
+
+  it("primero el cierre, luego la temporada y por último el horario habitual", () => {
+    expect(dayHours("2025-09-13", REGULAR, schedule)).toEqual({ hours: "9 AM – 6 PM", source: "regular" });
+    expect(dayHours("2025-09-14", REGULAR, schedule)).toEqual({ hours: "10 AM – 4 PM", source: "season", season: "Summer hours" });
+    expect(dayHours("2025-09-16", REGULAR, schedule)).toEqual({ hours: "Closed", source: "closure", reason: "Private event" });
+    expect(dayHours("2025-09-15", REGULAR, schedule)).toEqual({ hours: "Closed", source: "season", season: "Summer hours" });
+  });
+
+  it("la reapertura por defecto es el siguiente día abierto, a su hora de apertura", () => {
+    // Cierre jue 18 – vie 19: el sábado 20 la temporada abre a las 9 AM.
+    expect(defaultReopening("2025-09-19", REGULAR, schedule)).toEqual({ date: "2025-09-20", time: "9 AM" });
+    // Tras el sábado 13 el domingo 14 ya es temporada: abre a las 10 AM.
+    expect(defaultReopening("2025-09-13", REGULAR, schedule)).toEqual({ date: "2025-09-14", time: "10 AM" });
+  });
+
+  it("resume el horario de una temporada agrupando los días iguales", () => {
+    const week = ["9 AM – 11 PM", "7 AM – 11 PM", "7 AM – 11 PM", "7 AM – 11 PM", "7 AM – 11 PM", "7 AM – 11 PM", "9 AM – 11 PM"];
+    expect(weekSummary(week)).toBe("Mon–Fri 7 AM – 11 PM · Sat–Sun 9 AM – 11 PM");
+    expect(weekSummary(Array(7).fill("10 AM – 6 PM"))).toBe("Every day 10 AM – 6 PM");
+    // El editor guarda "7:00 AM"; el resumen lo junta con los días en forma corta.
+    expect(weekSummary(["8 AM – 10 PM", "7:00 AM – 10:00 PM", "8 AM – 10 PM", "8 AM – 10 PM", "8 AM – 10 PM", "8 AM – 10 PM", "8:30 AM – 10 PM"])).toBe(
+      "Mon 7 AM – 10 PM · Tue–Fri 8 AM – 10 PM · Sat 8:30 AM – 10 PM · Sun 8 AM – 10 PM",
+    );
+    expect(weekSummary(SUMMER)).toBe("Mon–Tue Closed · Wed–Fri 8 AM – 9 PM · Sat 9 AM – 6 PM · Sun 10 AM – 4 PM");
+  });
 });
