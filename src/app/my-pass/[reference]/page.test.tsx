@@ -2,7 +2,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { bookingReferenceFromId, confirmBooking } from "@/lib/booking";
-import { TODAY } from "@/lib/availability";
+import { today } from "@/lib/availability";
 import { LOUNGES } from "@/lib/lounges";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
@@ -44,7 +44,7 @@ beforeAll(async () => {
 
   const booking = await confirmBooking(supabase, {
     loungeId: ainsworth.id,
-    dateIso: TODAY,
+    dateIso: today(),
     band: "morning",
     time: "10:30 AM",
     specialRequests: "",

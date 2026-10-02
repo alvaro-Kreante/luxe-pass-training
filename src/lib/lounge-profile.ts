@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { amenityLabel } from "./amenities";
-import { TODAY, addDays, isPast, parseDate, weekdayOf } from "./availability";
+import { addDays, isPast, minutesNow, parseDate, today, weekdayOf } from "./availability";
 import type { LoungeRow } from "./lounge-directory";
 import type { Lounge } from "./lounges";
 
@@ -124,8 +124,8 @@ export async function fetchLoungeProfile(
     .from("lounge_seasons")
     .select("weekly_hours, closed_weekdays")
     .eq("lounge_id", id)
-    .lte("starts_on", TODAY)
-    .gte("ends_on", TODAY)
+    .lte("starts_on", today())
+    .gte("ends_on", today())
     .maybeSingle();
   const row = data as LoungeProfileTableRow;
   return fromProfileRow(season ? { ...row, weekly_hours: season.weekly_hours, closed_weekdays: season.closed_weekdays } : row);
@@ -188,7 +188,7 @@ export interface HoursRow {
  * (domingo primero, igual que `WEEKDAY_NAMES`).
  */
 export function operatingHoursFor(weeklyHours: string[]): HoursRow[] {
-  const todayIndex = weekdayOf(TODAY);
+  const todayIndex = weekdayOf(today());
   const order = Array.from({ length: 7 }, (_, i) => (todayIndex + i) % 7);
   const rows: HoursRow[] = [];
 
@@ -389,8 +389,16 @@ export function mondayOf(dateIso: string): string {
   return addDays(dateIso, -backToMonday);
 }
 
-/** La franja "actual" del mock: no hay hora real, así que la mañana de hoy ya pasó. */
-const CURRENT_BAND_INDEX = 1;
+/** Hora (0–24) a la que termina cada franja de `WEEK_BANDS`, en el mismo orden. */
+const BAND_END_HOURS = [12, 17, 21, 23];
+
+/**
+ * Cuántas franjas de hoy ya terminaron, con la hora real: las de índice
+ * menor que este número están "past".
+ */
+export function currentBandIndex(minutes: number = minutesNow()): number {
+  return BAND_END_HOURS.filter((hour) => hour * 60 <= minutes).length;
+}
 
 export type CellStatus = "available" | "full" | "closed" | "past";
 
@@ -491,7 +499,7 @@ export async function fetchAvailability(
 
       if (
         isPast(dateIso) ||
-        (dateIso === TODAY && bandIndex < CURRENT_BAND_INDEX)
+        (dateIso === today() && bandIndex < currentBandIndex())
       ) {
         cells.push({ dateIso, band: band.id, seatsLeft: null, status: "past" });
         continue;
@@ -551,15 +559,15 @@ export async function fetchNextAvailableSlot(
   lounge: LoungeAvailabilitySource,
 ): Promise<{ dateIso: string; band: WeekBandId; seatsLeft: number } | undefined> {
   for (let week = 0; week < 3; week++) {
-    const weekStart = addDays(mondayOf(TODAY), week * 7);
+    const weekStart = addDays(mondayOf(today()), week * 7);
     const cells = await fetchWeeklyAvailability(supabase, lounge, weekStart);
     const found = cells.find(
       (cell) =>
         cell.status === "available" &&
-        (cell.dateIso > TODAY ||
-          (cell.dateIso === TODAY &&
+        (cell.dateIso > today() ||
+          (cell.dateIso === today() &&
             WEEK_BANDS.findIndex((b) => b.id === cell.band) >=
-              CURRENT_BAND_INDEX)),
+              currentBandIndex())),
     );
 
     if (found) {
@@ -653,7 +661,7 @@ export function weeklyAvailability(
 
       if (
         isPast(dateIso) ||
-        (dateIso === TODAY && bandIndex < CURRENT_BAND_INDEX)
+        (dateIso === today() && bandIndex < currentBandIndex())
       ) {
         cells.push({ dateIso, band: band.id, seatsLeft: null, status: "past" });
         continue;

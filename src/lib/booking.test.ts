@@ -21,7 +21,7 @@ import {
   slotsFor,
   type BookingRequest,
 } from "./booking";
-import { TODAY, addDays } from "./availability";
+import { today, addDays } from "./availability";
 import { LOUNGES } from "./lounges";
 import {
   fetchAvailability,
@@ -65,25 +65,25 @@ describe("admisión y peticiones especiales", () => {
 
 describe("monthDayStatus — a partir de celdas reales", () => {
   it("marca como pasados los días anteriores a hoy, sin mirar las celdas", () => {
-    const yesterday = addDays(TODAY, -1);
+    const yesterday = addDays(today(), -1);
 
     expect(monthDayStatus(yesterday, [])).toBe("past");
   });
 
   it("marca hoy con su propio estado, aunque todas sus celdas estén 'past'", () => {
-    const cells = [cell(TODAY, "morning", "past", null)];
+    const cells = [cell(today(), "morning", "past", null)];
 
-    expect(monthDayStatus(TODAY, cells)).toBe("today");
+    expect(monthDayStatus(today(), cells)).toBe("today");
   });
 
   it("cierra los días fuera de la ventana de reserva de 60 días", () => {
-    const farDate = addDays(TODAY, BOOKING_WINDOW_DAYS + 5);
+    const farDate = addDays(today(), BOOKING_WINDOW_DAYS + 5);
 
     expect(monthDayStatus(farDate, [])).toBe("closed");
   });
 
   it("cierra un día sin ninguna celda abierta", () => {
-    const date = addDays(TODAY, 5);
+    const date = addDays(today(), 5);
     const cells = [
       cell(date, "morning", "closed", null),
       cell(date, "afternoon", "closed", null),
@@ -93,7 +93,7 @@ describe("monthDayStatus — a partir de celdas reales", () => {
   });
 
   it("abre un día con al menos una celda disponible", () => {
-    const date = addDays(TODAY, 5);
+    const date = addDays(today(), 5);
     const cells = [
       cell(date, "morning", "full", 0),
       cell(date, "afternoon", "available", 4),
@@ -103,7 +103,7 @@ describe("monthDayStatus — a partir de celdas reales", () => {
   });
 
   it("marca 'full' un día con celdas abiertas pero ninguna disponible", () => {
-    const date = addDays(TODAY, 5);
+    const date = addDays(today(), 5);
     const cells = [cell(date, "morning", "full", 0)];
 
     expect(monthDayStatus(date, cells)).toBe("full");
@@ -112,8 +112,8 @@ describe("monthDayStatus — a partir de celdas reales", () => {
 
 describe("monthCalendar — date picker mensual", () => {
   it("agrega el estado de cada día a partir de sus celdas", () => {
-    const monthIso = TODAY.slice(0, 7) + "-01";
-    const futureOpenDate = addDays(TODAY, 3);
+    const monthIso = today().slice(0, 7) + "-01";
+    const futureOpenDate = addDays(today(), 3);
     const cells = [cell(futureOpenDate, "morning", "available", 5)];
 
     const days = monthCalendar(monthIso, cells);
@@ -123,16 +123,16 @@ describe("monthCalendar — date picker mensual", () => {
   });
 
   it("un día sin celdas (fuera del rango consultado) cierra", () => {
-    const monthIso = TODAY.slice(0, 7) + "-01";
+    const monthIso = today().slice(0, 7) + "-01";
     const days = monthCalendar(monthIso, []);
-    const futureDay = days.find((day) => day.dateIso > TODAY);
+    const futureDay = days.find((day) => day.dateIso > today());
 
     expect(futureDay?.status).toBe("closed");
   });
 });
 
 describe("slotsFor — slots de llegada", () => {
-  const dateIso = addDays(TODAY, 5);
+  const dateIso = addDays(today(), 5);
 
   it("devuelve los cinco horarios fijos del artboard", () => {
     const cells = [

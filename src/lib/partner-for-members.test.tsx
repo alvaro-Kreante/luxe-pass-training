@@ -4,7 +4,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import LoungeProfilePage from "@/app/lounges/[id]/page";
 
-import { TODAY } from "@/lib/availability";
+import { today } from "@/lib/availability";
 import { fetchLounges } from "@/lib/lounge-directory";
 import { fetchLoungeProfile } from "@/lib/lounge-profile";
 import { fetchDigitalPass, fetchUpcomingBookings } from "@/lib/passes";
@@ -57,7 +57,7 @@ beforeAll(async () => {
   memberId = user.id;
   const { data: booking, error } = await service
     .from("bookings")
-    .insert({ member_id: user.id, lounge_id: LOUNGE, date: TODAY, band: "morning", slot_time: "10:30 AM", status: "confirmed", special_requests: "" })
+    .insert({ member_id: user.id, lounge_id: LOUNGE, date: today(), band: "morning", slot_time: "10:30 AM", status: "confirmed", special_requests: "" })
     .select("confirmation_code")
     .single();
   if (error) throw error;

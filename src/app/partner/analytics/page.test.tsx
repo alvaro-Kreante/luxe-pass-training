@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TODAY } from "@/lib/availability";
+import { today } from "@/lib/availability";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedMemberAndSignIn, signUpConfirmedPartnerAndSignIn } from "@/lib/testing/confirmed-user";
 
@@ -89,7 +89,7 @@ beforeAll(async () => {
   ].map((row) => ({
     member_id: memberUser!.id,
     lounge_id: loungeId,
-    date: TODAY,
+    date: today(),
     special_requests: "",
     ...row,
   }));

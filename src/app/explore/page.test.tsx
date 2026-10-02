@@ -12,6 +12,8 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { renderToString } from "react-dom/server";
 import { __resetModuleState } from "@vis.gl/react-google-maps";
 
+import { addDays, today } from "@/lib/availability";
+import { mondayOf } from "@/lib/lounge-profile";
 import { rememberedLocation } from "@/lib/explore-location";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedAndSignIn } from "@/lib/testing/confirmed-user";
@@ -746,6 +748,13 @@ describe("cambiar de ubicación", () => {
   });
 });
 
+/**
+ * El domingo de la semana que viene, como número de día del calendario de
+ * filtros (que empieza el lunes de esta semana): siempre futuro y siempre a
+ * la vista, con el reloj real.
+ */
+const NEXT_WEEK_SUNDAY = String(Number(addDays(mondayOf(today()), 13).slice(8)));
+
 describe("sin resultados", () => {
   /**
    * Los cuatro filtros del artboard `NoResults.dc.html`. Con el catálogo real
@@ -758,7 +767,7 @@ describe("sin resultados", () => {
     await user.click(screen.getByRole("button", { name: "WiFi" }));
     await user.click(screen.getByRole("button", { name: "Co-working" }));
     await user.click(screen.getByRole("button", { name: "< 1 mi" }));
-    await user.click(screen.getByRole("button", { name: "14" }));
+    await user.click(screen.getByRole("button", { name: NEXT_WEEK_SUNDAY }));
     await user.click(screen.getByRole("button", { name: "2–6 PM" }));
     await user.click(screen.getByRole("button", { name: /^Show/ }));
   }

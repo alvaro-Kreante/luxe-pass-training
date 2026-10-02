@@ -10,7 +10,7 @@ import { MetricTile } from "@/components/ui/metric-tile";
 import { usePartnerContext } from "@/components/partner/partner-context";
 import { analyticsLoungeId } from "@/lib/partner-lounges";
 import { createClient } from "@/lib/supabase/client";
-import { TODAY, addDays } from "@/lib/availability";
+import { today, addDays } from "@/lib/availability";
 import {
   type AnalyticsRange,
   type PartnerAnalyticsSummary,
@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils";
 
 /** 90 días termina en hoy — suficiente para que "When they come" tenga las 7 columnas pobladas. */
 const RANGE_DAYS = 90;
-const RANGE_FROM = addDays(TODAY, -(RANGE_DAYS - 1));
+const RANGE_FROM = addDays(today(), -(RANGE_DAYS - 1));
 
 const EMPTY_SUMMARY: PartnerAnalyticsSummary = {
   bookings: 0,
@@ -56,8 +56,8 @@ function AnalyticsContent() {
   React.useEffect(() => {
     let active = true;
     Promise.all([
-      supabase.rpc("partner_analytics_summary", { p_from: RANGE_FROM, p_to: TODAY, p_lounge_id: loungeId }),
-      supabase.rpc("partner_bookings_by_day", { p_from: RANGE_FROM, p_to: TODAY, p_lounge_id: loungeId }),
+      supabase.rpc("partner_analytics_summary", { p_from: RANGE_FROM, p_to: today(), p_lounge_id: loungeId }),
+      supabase.rpc("partner_bookings_by_day", { p_from: RANGE_FROM, p_to: today(), p_lounge_id: loungeId }),
     ]).then(([summaryResult, dailyResult]) => {
       if (!active) return;
       if (summaryResult.data?.[0]) setSummary(summaryResult.data[0]);
@@ -139,7 +139,7 @@ function AnalyticsContent() {
             </p>
             <div className="mt-5 flex h-[140px] items-end gap-2">
               {seriesForRange.map((point) => {
-                const isToday = point.day === TODAY;
+                const isToday = point.day === today();
                 const dayNumber = new Date(`${point.day}T00:00:00Z`).getUTCDate();
                 return (
                   <div key={point.day} className="flex flex-1 flex-col items-center gap-1.5">

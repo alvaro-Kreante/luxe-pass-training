@@ -2,7 +2,7 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
 
 import { createClient } from "@/lib/supabase/client";
-import { TODAY } from "@/lib/availability";
+import { today } from "@/lib/availability";
 import { signUpConfirmedAndSignIn } from "@/lib/testing/confirmed-user";
 
 import {
@@ -64,8 +64,8 @@ describe("fetchLounges (Supabase local)", () => {
     for (const id of ["the-ainsworth", "the-ironbound-salon"]) {
       const { data: cells } = await supabase.rpc("lounge_availability_range", {
         p_lounge_id: id,
-        p_from: TODAY,
-        p_to: TODAY,
+        p_from: today(),
+        p_to: today(),
       });
       const free = (cells as { seats_left: number }[]).reduce(
         (sum, cell) => sum + cell.seats_left,

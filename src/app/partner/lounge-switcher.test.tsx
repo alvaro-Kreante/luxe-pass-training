@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { TODAY } from "@/lib/availability";
+import { today } from "@/lib/availability";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedAndSignIn, signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
 
@@ -44,7 +44,7 @@ async function guestAt(loungeId: string, name: string) {
   const user = await signUpConfirmedMemberAndSignIn(client, email, "EnSoleil!2026", { fullName: name });
   userIds.push(user.id);
   await client.auth.signOut();
-  await service.from("bookings").insert({ member_id: user.id, lounge_id: loungeId, date: TODAY, band: "morning", slot_time: "10:30 AM", status: "confirmed", special_requests: "" });
+  await service.from("bookings").insert({ member_id: user.id, lounge_id: loungeId, date: today(), band: "morning", slot_time: "10:30 AM", status: "confirmed", special_requests: "" });
 }
 
 /** Un usuario partner con sesión en el cliente de la app. */

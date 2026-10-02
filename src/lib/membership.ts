@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { TODAY } from "./availability";
+import { today } from "./availability";
 import { ensureReferralCode, fetchReferralOverview } from "./referrals";
 import { listSavedPaymentMethods, type SavedPaymentMethod } from "./stripe-payments";
 
@@ -237,7 +237,7 @@ export async function cancelMembershipPlanChange(supabase: SupabaseClient): Prom
 /** "Visits this month" — reservas del mes de `todayIso` (el "hoy" de mockup) sin day pass pagado detrás. */
 export async function fetchVisitsThisMonth(
   supabase: SupabaseClient,
-  todayIso: string = TODAY,
+  todayIso: string = today(),
 ): Promise<{ used: number; included: number }> {
   const { data, error } = await supabase.rpc("membership_visits_in_month", { p_month: todayIso });
   if (error) throw error;
@@ -312,7 +312,7 @@ export function initialsOf(fullName: string): string {
 }
 
 /** "Resets on October 1" — el primer día del mes siguiente al "hoy" de mockup. */
-export function visitsResetLabel(todayIso: string = TODAY): string {
+export function visitsResetLabel(todayIso: string = today()): string {
   const today = new Date(`${todayIso}T00:00:00Z`);
   const next = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, 1));
   return `Resets on ${formatMonthDay(next.toISOString())}`;

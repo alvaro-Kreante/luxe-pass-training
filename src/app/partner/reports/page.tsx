@@ -11,7 +11,7 @@ import { Segmented } from "@/components/ui/segmented";
 import { usePartnerContext } from "@/components/partner/partner-context";
 import { analyticsLoungeId, type PartnerContext } from "@/lib/partner-lounges";
 import { createClient } from "@/lib/supabase/client";
-import { TODAY, addDays } from "@/lib/availability";
+import { today, addDays } from "@/lib/availability";
 import {
   DEFAULT_REPORT_ID,
   PARTNER_REPORTS,
@@ -40,7 +40,7 @@ const MONTHLY_COLUMNS = [
 const OPTIONAL_COLUMN = "Attributed revenue";
 
 /** 90 días, mismo rango que Analytics — para "revenue-attribution". */
-const RANGE_FROM = addDays(TODAY, -89);
+const RANGE_FROM = addDays(today(), -89);
 
 /**
  * Backend real (22 sept 2026): a diferencia de Analytics/Guests (que
@@ -64,7 +64,7 @@ async function reportToCsv(
     if (!loungeId) return guestListToCsv([]);
     const { data: guestRows } = await supabase.rpc("partner_guest_list", {
       p_lounge_id: loungeId,
-      p_date: TODAY,
+      p_date: today(),
     });
     return guestListToCsv(((guestRows as PartnerGuestRow[] | null) ?? []).map((row) => mapGuestRow(row)));
   }
@@ -75,7 +75,7 @@ async function reportToCsv(
   }
 
   if (reportId === "revenue-attribution") {
-    const { data } = await supabase.rpc("partner_analytics_summary", { p_from: RANGE_FROM, p_to: TODAY, p_lounge_id: scope });
+    const { data } = await supabase.rpc("partner_analytics_summary", { p_from: RANGE_FROM, p_to: today(), p_lounge_id: scope });
     const summary = (data as PartnerAnalyticsSummary[] | null)?.[0] ?? {
       bookings: 0,
       day_pass_visits: 0,

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { bookingReferenceFromId, confirmBooking } from "@/lib/booking";
-import { TODAY } from "@/lib/availability";
+import { today } from "@/lib/availability";
 import type { WeekBandId } from "@/lib/lounge-profile";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -53,7 +53,7 @@ async function createTestGuest(name: string, band: WeekBandId, slotTime: string)
 
   const booking = await confirmBooking(member, {
     loungeId: "the-ainsworth",
-    dateIso: TODAY,
+    dateIso: today(),
     band,
     time: slotTime,
     specialRequests: "",

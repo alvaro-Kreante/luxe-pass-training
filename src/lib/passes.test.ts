@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { bookingReferenceFromId, confirmBooking, type BookingRequest } from "./booking";
-import { TODAY, addDays } from "./availability";
+import { today, addDays } from "./availability";
 import { LOUNGES } from "./lounges";
 import {
   AINSWORTH_PASS,
@@ -84,7 +84,7 @@ async function bookAndSignIn(label: string, dateIso: string, band: BookingReques
 
 describe("fetchDigitalPass", () => {
   it("AC 'Information displays: member name, lounge name, date/time, duration' — trae el pase real por LP#", async () => {
-    const { supabase, reference } = await bookAndSignIn("digital-1", TODAY, "morning", "8:00 AM");
+    const { supabase, reference } = await bookAndSignIn("digital-1", today(), "morning", "8:00 AM");
 
     const pass = await fetchDigitalPass(supabase, reference);
 
@@ -97,7 +97,7 @@ describe("fetchDigitalPass", () => {
   });
 
   it("devuelve null para un LP# que no existe o no es del miembro con sesión", async () => {
-    const { supabase } = await bookAndSignIn("digital-2", TODAY, "afternoon", "1:00 PM");
+    const { supabase } = await bookAndSignIn("digital-2", today(), "afternoon", "1:00 PM");
 
     const pass = await fetchDigitalPass(supabase, "LP-000000");
 
@@ -105,7 +105,7 @@ describe("fetchDigitalPass", () => {
   });
 
   it("no encuentra el pase de otro miembro (RLS)", async () => {
-    const { reference } = await bookAndSignIn("digital-3", TODAY, "late", "6:00 PM");
+    const { reference } = await bookAndSignIn("digital-3", today(), "late", "6:00 PM");
     const otherMember = createClient();
     await signUpConfirmedMemberAndSignIn(
       otherMember,
@@ -122,7 +122,7 @@ describe("fetchDigitalPass", () => {
 
 describe("fetchUpcomingBookings", () => {
   it("lista una reserva recién confirmada como 'confirmed'", async () => {
-    const futureDate = addDays(TODAY, 3);
+    const futureDate = addDays(today(), 3);
     const { supabase, reference } = await bookAndSignIn("upcoming-1", futureDate, "afternoon", "3:30 PM");
 
     const upcoming = await fetchUpcomingBookings(supabase);
@@ -134,9 +134,9 @@ describe("fetchUpcomingBookings", () => {
   });
 
   it("una reserva de hoy con check-in aparece como 'in-progress'", async () => {
-    const { supabase, reference } = await bookAndSignIn("upcoming-2", TODAY, "afternoon", "3:30 PM");
+    const { supabase, reference } = await bookAndSignIn("upcoming-2", today(), "afternoon", "3:30 PM");
     const kiosk = createClient();
-    await checkInReceptionBooking(kiosk, ainsworth.id, TODAY, reference);
+    await checkInReceptionBooking(kiosk, ainsworth.id, today(), reference);
 
     const upcoming = await fetchUpcomingBookings(supabase);
 
@@ -147,9 +147,9 @@ describe("fetchUpcomingBookings", () => {
 
 describe("fetchPastBookings", () => {
   it("AC 'No-show tracking for booking history' — un no-show aparece como outcome 'no-show'", async () => {
-    const { supabase, reference } = await bookAndSignIn("past-1", TODAY, "afternoon", "1:00 PM");
+    const { supabase, reference } = await bookAndSignIn("past-1", today(), "afternoon", "1:00 PM");
     const kiosk = createClient();
-    await reportReceptionNoShow(kiosk, ainsworth.id, TODAY, reference);
+    await reportReceptionNoShow(kiosk, ainsworth.id, today(), reference);
 
     const past = await fetchPastBookings(supabase);
 
@@ -161,28 +161,28 @@ describe("fetchPastBookings", () => {
 
 describe("cancelBooking (Story 6.1)", () => {
   it("AC '24-hour advance notice requirement for cancellation' — cancela sin fee con más de 24h de antelación", async () => {
-    const futureDate = addDays(TODAY, 3);
+    const futureDate = addDays(today(), 3);
     const { supabase, booking } = await bookAndSignIn("cancel-1", futureDate, "afternoon", "3:30 PM");
 
-    const cancelled = await cancelBooking(supabase, booking.id, TODAY);
+    const cancelled = await cancelBooking(supabase, booking.id, today());
 
     expect(cancelled.status).toBe("cancelled");
     expect(cancelled.cancellationFeeCents).toBeNull();
   });
 
   it("AC 'No show policy enforcement - flat fee' — cobra el fee plano si quedan menos de 24h", async () => {
-    const { supabase, booking } = await bookAndSignIn("cancel-2", TODAY, "morning", "8:00 AM");
+    const { supabase, booking } = await bookAndSignIn("cancel-2", today(), "morning", "8:00 AM");
 
-    const cancelled = await cancelBooking(supabase, booking.id, TODAY);
+    const cancelled = await cancelBooking(supabase, booking.id, today());
 
     expect(cancelled.cancellationFeeCents).toBe(LATE_CANCELLATION_FEE_CENTS);
   });
 
   it("una reserva cancelada desaparece de fetchUpcomingBookings y aparece en fetchPastBookings", async () => {
-    const futureDate = addDays(TODAY, 3);
+    const futureDate = addDays(today(), 3);
     const { supabase, booking, reference } = await bookAndSignIn("cancel-3", futureDate, "afternoon", "3:30 PM");
 
-    await cancelBooking(supabase, booking.id, TODAY);
+    await cancelBooking(supabase, booking.id, today());
 
     const upcoming = await fetchUpcomingBookings(supabase);
     const past = await fetchPastBookings(supabase);
@@ -194,7 +194,7 @@ describe("cancelBooking (Story 6.1)", () => {
   });
 
   it("no permite cancelar la reserva de otro miembro (RLS)", async () => {
-    const futureDate = addDays(TODAY, 3);
+    const futureDate = addDays(today(), 3);
     const { booking } = await bookAndSignIn("cancel-4", futureDate, "afternoon", "3:30 PM");
     const otherMember = createClient();
     await signUpConfirmedMemberAndSignIn(
@@ -204,6 +204,6 @@ describe("cancelBooking (Story 6.1)", () => {
       { membership: "annual" },
     );
 
-    await expect(cancelBooking(otherMember, booking.id, TODAY)).rejects.toThrow();
+    await expect(cancelBooking(otherMember, booking.id, today())).rejects.toThrow();
   });
 });

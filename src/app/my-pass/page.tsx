@@ -12,7 +12,7 @@ import { StatusChip } from "@/components/ui/status-chip";
 import { Notice } from "@/components/ui/notice";
 import { AppShell } from "@/components/patterns/app-shell";
 import { buttonVariants } from "@/components/ui/button";
-import { TODAY } from "@/lib/availability";
+import { today } from "@/lib/availability";
 import {
   BOOKING_RECORD_SUMMARY,
   cancelBooking,
@@ -91,7 +91,7 @@ function MyPassScreen() {
   async function cancelAndRefresh(booking: UpcomingBooking) {
     setCancelError(null);
     try {
-      await cancelBooking(supabase, booking.id, TODAY);
+      await cancelBooking(supabase, booking.id, today());
       removeUpcoming(booking.id);
       setPast(await fetchPastBookings(supabase));
     } catch {

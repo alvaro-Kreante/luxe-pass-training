@@ -35,7 +35,7 @@ import {
   type LoungeProfile,
   type WeekBandId,
 } from "@/lib/lounge-profile";
-import { TODAY } from "@/lib/availability";
+import { today } from "@/lib/availability";
 import { addFavoriteLounge, isFavoriteLounge, removeFavoriteLounge } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -77,9 +77,10 @@ async function fetchTodayAvailability(
   supabase: ReturnType<typeof createClient>,
   lounge: LoungeProfile,
 ): Promise<TodayAvailability> {
-  const cells = await fetchWeeklyAvailability(supabase, lounge, mondayOf(TODAY));
-  const today = cells.filter((cell) => cell.dateIso === TODAY);
-  const seatsLeft = today
+  const todayIso = today();
+  const cells = await fetchWeeklyAvailability(supabase, lounge, mondayOf(todayIso));
+  const todayCells = cells.filter((cell) => cell.dateIso === todayIso);
+  const seatsLeft = todayCells
     .filter((cell) => cell.status === "available")
     .reduce((sum, cell) => sum + (cell.seatsLeft ?? 0), 0);
   const available = seatsLeft > 0;

@@ -12,7 +12,7 @@ import {
   unreadNotificationCount,
   type NotificationCategory,
 } from "./notifications";
-import { TODAY } from "./availability";
+import { today } from "./availability";
 import { createClient } from "./supabase/client";
 import { signUpConfirmedMemberAndSignIn } from "./testing/confirmed-user";
 
@@ -72,7 +72,7 @@ describe("fetchNotifications", () => {
 
     const booking = await confirmBooking(supabase, {
       loungeId: ainsworth.id,
-      dateIso: TODAY,
+      dateIso: today(),
       band: "morning",
       time: "8:00 AM",
       specialRequests: "",

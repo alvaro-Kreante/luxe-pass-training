@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { TODAY, addDays } from "./availability";
+import { today, addDays } from "./availability";
 import { confirmBooking } from "./booking";
 import { fetchPastBookings, fetchUpcomingBookings } from "./passes";
 import {
@@ -196,7 +196,7 @@ describe("requestAccountDeletion / reactivateAccountIfDeleted", () => {
     const { supabase, user } = await signUpFreshMember("delete");
     // Desde Epic 9 una reserva sin pago exige un plan activo real.
     await grantTestMembership(user.id, "annual");
-    const futureDate = addDays(TODAY, 3);
+    const futureDate = addDays(today(), 3);
     const booking = await confirmBooking(supabase, {
       loungeId: "the-cordelia",
       dateIso: futureDate,

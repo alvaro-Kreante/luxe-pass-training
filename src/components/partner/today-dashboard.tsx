@@ -14,7 +14,7 @@ import { usePartnerContext } from "@/components/partner/partner-context";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Toast } from "@/components/ui/toast";
 import { createClient } from "@/lib/supabase/client";
-import { TODAY } from "@/lib/availability";
+import { today } from "@/lib/availability";
 import {
   findPartnerGuest,
   formatLongWeekdayDate,
@@ -71,7 +71,7 @@ export function TodayDashboard() {
 
   const fetchGuestList = React.useCallback(
     async (lounge: string): Promise<PartnerGuestRow[]> => {
-      const { data } = await supabase.rpc("partner_guest_list", { p_lounge_id: lounge, p_date: TODAY });
+      const { data } = await supabase.rpc("partner_guest_list", { p_lounge_id: lounge, p_date: today() });
       const nextRows = (data as PartnerGuestRow[] | null) ?? [];
       setRows(nextRows);
       return nextRows;
@@ -82,7 +82,7 @@ export function TodayDashboard() {
   React.useEffect(() => {
     if (!loungeId) return;
     let active = true;
-    supabase.rpc("partner_guest_list", { p_lounge_id: loungeId, p_date: TODAY }).then(({ data }) => {
+    supabase.rpc("partner_guest_list", { p_lounge_id: loungeId, p_date: today() }).then(({ data }) => {
       if (active) setRows((data as PartnerGuestRow[] | null) ?? []);
     });
     return () => {
@@ -112,7 +112,7 @@ export function TodayDashboard() {
             slot_time: string;
             confirmation_code: string;
           };
-          if (booking.date !== TODAY || booking.status !== "confirmed") return;
+          if (booking.date !== today() || booking.status !== "confirmed") return;
 
           const nextRows = await fetchGuestList(loungeId);
           const guestRow = nextRows.find((row) => row.id === booking.id);
@@ -157,7 +157,7 @@ export function TodayDashboard() {
             confirmation_code: string;
           };
           const previous = payload.old as { status?: string };
-          if (updated.date !== TODAY) return;
+          if (updated.date !== today()) return;
 
           const nextRows = await fetchGuestList(loungeId);
 
@@ -249,7 +249,7 @@ export function TodayDashboard() {
 
   if (partner?.context && partner.context.lounges.length === 0) {
     return (
-      <PartnerShell topbarLabel="Today" topbarMeta={`· ${formatLongWeekdayDate(TODAY)}`}>
+      <PartnerShell topbarLabel="Today" topbarMeta={`· ${formatLongWeekdayDate(today())}`}>
         <div className="flex min-h-[60vh] items-center justify-center">
           <EmptyState
             icon={Building2}
@@ -267,7 +267,7 @@ export function TodayDashboard() {
       <PartnerShell
         blurred={blurred}
         topbarLabel="Today"
-        topbarMeta={`· ${formatLongWeekdayDate(TODAY)}`}
+        topbarMeta={`· ${formatLongWeekdayDate(today())}`}
         topbarRight={
           <div className="flex items-center gap-2.5">
             <LiveStatusChip label="Live" />
@@ -285,7 +285,7 @@ export function TodayDashboard() {
         <div className="flex items-center gap-6">
           <div className="min-w-0 flex-1">
             <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">
-              {formatLongWeekdayDate(TODAY)} ·{" "}
+              {formatLongWeekdayDate(today())} ·{" "}
               <Link href="/partner/emails/digest" className="normal-case text-accent-strong">
                 view this morning&apos;s digest
               </Link>

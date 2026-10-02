@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { AMENITIES, type AmenityId } from "./amenities";
-import { TODAY, type TimeBand } from "./availability";
+import { today, type TimeBand } from "./availability";
 import { haversineMiles, type Coordinates } from "./distance";
 
 /**
@@ -21,7 +21,7 @@ export interface LoungeRow {
   rating: number;
   /** Instantánea sembrada por migración, no en vivo — ver COMPONENT-MAP.md. */
   openNow: boolean;
-  /** Plazas libres hoy (TODAY), sumando sus franjas abiertas — `lounge_seats_on`. */
+  /** Plazas libres hoy (today()), sumando sus franjas abiertas — `lounge_seats_on`. */
   slotsToday: number;
   hours: string;
   bands: TimeBand[];
@@ -105,7 +105,7 @@ export async function fetchLounges(
  * mock con la que un lounge nuevo nacía "Full").
  */
 async function seatsToday(supabase: SupabaseClient): Promise<Map<string, number>> {
-  const { data, error } = await supabase.rpc("lounge_seats_on", { p_date: TODAY });
+  const { data, error } = await supabase.rpc("lounge_seats_on", { p_date: today() });
 
   if (error) throw error;
 

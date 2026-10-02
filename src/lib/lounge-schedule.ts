@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { TODAY, addDays } from "@/lib/availability";
+import { today, addDays } from "@/lib/availability";
 
 /**
  * Story 10.9 — temporadas (`lounge_seasons`) y cierres especiales
@@ -105,7 +105,7 @@ export async function saveLoungeClosure(supabase: SupabaseClient, loungeId: stri
   };
   const query = input.id
     ? supabase.from("lounge_closures").update(row).eq("id", input.id).select("id").single()
-    : supabase.from("lounge_closures").insert({ ...row, posted_on: TODAY }).select("id").single();
+    : supabase.from("lounge_closures").insert({ ...row, posted_on: today() }).select("id").single();
   const { data, error } = await query;
   if (error) throw failure(error);
   return data.id;

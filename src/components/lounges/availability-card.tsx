@@ -7,7 +7,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { StatusChip } from "@/components/ui/status-chip";
-import { TODAY } from "@/lib/availability";
+import { today } from "@/lib/availability";
 import {
   WEEK_BANDS,
   formatWeekdayDate,
@@ -48,7 +48,7 @@ export function AvailabilityCard(props: AvailabilityCardProps) {
       className="h-fit w-[344px] shrink-0 border border-line p-5.5"
     >
       <div className="flex items-center justify-between">
-        <Eyebrow>Today · {formatWeekdayDate(TODAY)}</Eyebrow>
+        <Eyebrow>Today · {formatWeekdayDate(today())}</Eyebrow>
         <StatusChip available={available}>
           {available ? "Available" : "Not available"}
         </StatusChip>

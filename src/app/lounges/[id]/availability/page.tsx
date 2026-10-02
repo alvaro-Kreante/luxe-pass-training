@@ -18,7 +18,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { StatusChip } from "@/components/ui/status-chip";
-import { TODAY, addDays, parseDate } from "@/lib/availability";
+import { today, addDays, parseDate } from "@/lib/availability";
 import {
   fetchClosuresForWeek,
   fetchLoungeProfile,
@@ -87,7 +87,7 @@ function AvailabilityScreen() {
   const loungeRef = React.useRef<LoungeProfile | null>(null);
 
   const [weekStart, setWeekStart] = React.useState(() =>
-    mondayOf(searchParams.get("week") ?? TODAY),
+    mondayOf(searchParams.get("week") ?? today()),
   );
   /** `weekStart` de arriba es la semana *pedida*; esta es la última semana
    * *cargada* — la vista se pinta siempre desde esta, para no mostrar nunca
@@ -210,7 +210,7 @@ function AvailabilityScreen() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setWeekStart(mondayOf(TODAY))}
+                    onClick={() => setWeekStart(mondayOf(today()))}
                     className="flex h-10 items-center rounded-[11px] border-[1.5px] border-line px-4 text-[12.5px] font-bold text-fg-muted"
                   >
                     This week

@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { TODAY, addDays } from "@/lib/availability";
+import { today, addDays } from "@/lib/availability";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedAndSignIn } from "@/lib/testing/confirmed-user";
 
@@ -256,8 +256,8 @@ describe("horario de temporada en la ficha", () => {
       hours: "Open until 9 PM", bands: ["morning"], closed_weekdays: [0], weekly_hours: regular, content_status: "live",
     });
     await service.from("lounge_seasons").insert([
-      { lounge_id: id, name: "Summer", starts_on: addDays(TODAY, -3), ends_on: addDays(TODAY, 3), weekly_hours: summer },
-      { lounge_id: id, name: "Later", starts_on: addDays(TODAY, 30), ends_on: addDays(TODAY, 40), weekly_hours: Array(7).fill("Closed") },
+      { lounge_id: id, name: "Summer", starts_on: addDays(today(), -3), ends_on: addDays(today(), 3), weekly_hours: summer },
+      { lounge_id: id, name: "Later", starts_on: addDays(today(), 30), ends_on: addDays(today(), 40), weekly_hours: Array(7).fill("Closed") },
     ]);
 
     const profile = (await fetchLoungeProfile(supabase, id))!;

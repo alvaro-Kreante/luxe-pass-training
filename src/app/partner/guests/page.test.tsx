@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TODAY, addDays } from "@/lib/availability";
+import { today, addDays } from "@/lib/availability";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedMemberAndSignIn, signUpConfirmedPartnerAndSignIn } from "@/lib/testing/confirmed-user";
 
@@ -87,7 +87,7 @@ beforeAll(async () => {
     const rows = Array.from({ length: visitCount }, (_, i) => ({
       member_id: user!.id,
       lounge_id: loungeId,
-      date: addDays(TODAY, -i),
+      date: addDays(today(), -i),
       band: "morning",
       slot_time: "8:00 AM",
       status: "confirmed",

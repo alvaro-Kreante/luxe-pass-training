@@ -8,7 +8,7 @@ import { WeeklyHoursEditor } from "@/components/admin/weekly-hours-editor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import { TODAY, addDays } from "@/lib/availability";
+import { today, addDays } from "@/lib/availability";
 import { TIME_OPTIONS, parseDayHours } from "@/lib/lounge-draft";
 import {
   closureBookings,
@@ -74,9 +74,9 @@ function daysBetween(from: string, to: string) {
 }
 
 function timingLabel(startsOn: string, endsOn: string): { label: string; soon: boolean } {
-  if (endsOn < TODAY) return { label: "Ended", soon: false };
-  if (startsOn <= TODAY) return { label: "Now", soon: true };
-  const days = daysBetween(TODAY, startsOn);
+  if (endsOn < today()) return { label: "Ended", soon: false };
+  if (startsOn <= today()) return { label: "Now", soon: true };
+  const days = daysBetween(today(), startsOn);
   if (days <= 7) return { label: days === 1 ? "Tomorrow" : `In ${days} days`, soon: true };
   return { label: "Upcoming", soon: false };
 }
@@ -623,7 +623,7 @@ function ClosuresCard({
 /** SeasonalFilled (22) — qué horario usa cada uno de los próximos 7 días. */
 export function NextDaysCard({ schedule, regularWeek }: { schedule: LoungeSchedule; regularWeek: string[] }) {
   const headingId = React.useId();
-  const days = Array.from({ length: 7 }, (_, offset) => addDays(TODAY, offset));
+  const days = Array.from({ length: 7 }, (_, offset) => addDays(today(), offset));
   return (
     <div className={cn(CARD, "pb-2.5")}>
       <div className="flex items-center">
@@ -631,7 +631,7 @@ export function NextDaysCard({ schedule, regularWeek }: { schedule: LoungeSchedu
           Next 7 days
         </p>
         <div className="flex-1" />
-        <p className="m-0 text-[11.5px] text-fg-subtle">from {WEEKDAY_MONTH.format(utc(TODAY)).replace(",", "")}</p>
+        <p className="m-0 text-[11.5px] text-fg-subtle">from {WEEKDAY_MONTH.format(utc(today())).replace(",", "")}</p>
       </div>
       <ul aria-labelledby={headingId} className="m-0 mt-2 list-none p-0">
         {days.map((date, index) => {

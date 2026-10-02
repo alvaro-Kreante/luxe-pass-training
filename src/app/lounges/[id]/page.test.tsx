@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createClient } from "@/lib/supabase/client";
-import { TODAY } from "@/lib/availability";
+import { today } from "@/lib/availability";
 import { signUpConfirmedAndSignIn } from "@/lib/testing/confirmed-user";
 import { fillSlot } from "@/lib/testing/lounge-fixture";
 
@@ -218,7 +218,7 @@ describe("disponibilidad en tiempo real", () => {
 
   it("muestra Not available y una sugerencia cuando el lounge está completo hoy", async () => {
     for (const band of ["morning", "afternoon", "evening", "late"] as const) {
-      await fillSlot("celeste-rooftop", TODAY, band);
+      await fillSlot("celeste-rooftop", today(), band);
     }
     params.mockReturnValue({ id: "celeste-rooftop" });
     render(<LoungeProfilePage />);

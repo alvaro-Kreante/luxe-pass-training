@@ -4,7 +4,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 import { BookingProvider, useBooking } from "./booking-context";
 import { VisitDetailsForm } from "./visit-details-form";
-import { TODAY, addDays } from "@/lib/availability";
+import { today, addDays } from "@/lib/availability";
 import { mondayOf, weeklyAvailability, type LoungeProfile } from "@/lib/lounge-profile";
 import { LOUNGES } from "@/lib/lounges";
 import { createClient } from "@/lib/supabase/client";
@@ -23,7 +23,7 @@ import { signUpConfirmedAndSignIn } from "@/lib/testing/confirmed-user";
 const ainsworthMock = LOUNGES.find((lounge) => lounge.id === "the-ainsworth")!;
 
 /** Día futuro abierto de verdad (predicho con la misma fórmula que la semilla). */
-const futureDate = Array.from({ length: 30 }, (_, i) => addDays(TODAY, i + 1))
+const futureDate = Array.from({ length: 30 }, (_, i) => addDays(today(), i + 1))
   .map((dateIso) => ({
     dateIso,
     cells: weeklyAvailability(ainsworthMock, mondayOf(dateIso)).filter(
@@ -74,11 +74,11 @@ describe("date picker — arranca en hoy", () => {
     renderForm();
 
     const todayButton = await screen.findByRole("button", {
-      name: String(Number(TODAY.slice(-2))),
+      name: String(Number(today().slice(-2))),
     });
     await user.click(todayButton);
 
-    expect(screen.getByTestId("draft").textContent).toContain(TODAY);
+    expect(screen.getByTestId("draft").textContent).toContain(today());
   });
 });
 

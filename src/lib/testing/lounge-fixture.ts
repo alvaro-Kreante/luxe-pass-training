@@ -1,6 +1,6 @@
 import { createClient as createAdminClient, type SupabaseClient } from "@supabase/supabase-js";
 
-import { TODAY, addDays } from "@/lib/availability";
+import { today, addDays } from "@/lib/availability";
 import {
   fetchLoungeProfile,
   mondayOf,
@@ -54,7 +54,7 @@ export function findPredictedSlot(
   let seen = 0;
 
   for (let offset = 0; offset < withinDays; offset++) {
-    const dateIso = addDays(TODAY, offset);
+    const dateIso = addDays(today(), offset);
     const cells = weeklyAvailability(mockLounge, mondayOf(dateIso)).filter(
       (cellCandidate) => cellCandidate.dateIso === dateIso && cellCandidate.band !== "late",
     );

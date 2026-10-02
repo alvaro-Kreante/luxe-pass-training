@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { addDays, today, weekdayOf } from "@/lib/availability";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedAdminAndSignIn } from "@/lib/testing/confirmed-user";
 
@@ -229,16 +230,26 @@ describe("cierres especiales", () => {
   });
 });
 
+/** El horario semanal de `openLounge`, domingo primero. */
+const HOURS = ["10 AM – 10 PM", "8 AM – 10 PM", "8 AM – 10 PM", "8 AM – 10 PM", "8 AM – 10 PM", "8 AM – 10 PM", "10 AM – 10 PM"];
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+/** "Fri 12", como nombra cada fila de "Next 7 days". */
+const dayName = (iso: string) => new RegExp(`${WEEKDAYS[weekdayOf(iso)]} ${Number(iso.slice(8))}(?!\\d)`);
+
 describe("los próximos días", () => {
   it("muestra qué horario usa cada día: cierre, temporada o el habitual", async () => {
     const id = await openLounge();
-    await service.from("lounge_closures").insert({ lounge_id: id, starts_on: "2025-09-12", ends_on: "2025-09-13", reason: "Private event", reopens_label: "", posted_on: "2025-09-09" });
+    /** Cierre de dos días a partir de pasado mañana, con el reloj real. */
+    const todayIso = today();
+    const closedFrom = addDays(todayIso, 3);
+    const reopensOn = addDays(todayIso, 5);
+    await service.from("lounge_closures").insert({ lounge_id: id, starts_on: closedFrom, ends_on: addDays(todayIso, 4), reason: "Private event", reopens_label: "", posted_on: todayIso });
     await renderLounge();
 
     const week = screen.getByRole("list", { name: "Next 7 days" });
-    await waitFor(() => expect(within(week).getByRole("listitem", { name: /Fri 12/ })).toHaveTextContent(/Closed.*Private event/));
-    expect(within(week).getByRole("listitem", { name: /Tue 9/ })).toHaveTextContent("8 AM – 10 PM");
-    expect(within(week).getByRole("listitem", { name: /Sun 14/ })).toHaveTextContent(/10 AM – 10 PM.*Reopens/);
+    await waitFor(() => expect(within(week).getByRole("listitem", { name: dayName(closedFrom) })).toHaveTextContent(/Closed.*Private event/));
+    expect(within(week).getByRole("listitem", { name: dayName(todayIso) })).toHaveTextContent(HOURS[weekdayOf(todayIso)]);
+    expect(within(week).getByRole("listitem", { name: dayName(reopensOn) })).toHaveTextContent(new RegExp(`${HOURS[weekdayOf(reopensOn)]}.*Reopens`));
   });
 });
 

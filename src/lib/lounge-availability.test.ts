@@ -4,7 +4,12 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
 
-import { fetchAvailability } from "./lounge-profile";
+import { addDays, today } from "./availability";
+import { fetchAvailability, mondayOf } from "./lounge-profile";
+
+
+/** Lunes de la semana que viene: fechas futuras con el día de la semana fijo. */
+const BASE = mondayOf(addDays(today(), 7));
 
 /**
  * Disponibilidad en vivo: plazas libres = `lounges.capacity` (por franja) −
@@ -21,8 +26,8 @@ const supabase = createClient();
 const stamp = Date.now();
 const loungeId = `test-lounge-live-${stamp}`;
 // Jueves. Domingo (0) queda cerrado por `closed_weekdays`.
-const openDate = "2026-10-01";
-const sunday = "2026-10-04";
+const openDate = addDays(BASE, 3);
+const sunday = addDays(BASE, 6);
 
 const otherMemberIds: string[] = [];
 
@@ -98,19 +103,19 @@ describe("disponibilidad de un lounge recién dado de alta", () => {
 describe("plazas calculadas desde las reservas reales", () => {
   it("las reservas en waitlist o canceladas no ocupan plaza", async () => {
     const other = await createOtherMember("ignored");
-    await insertBooking(other, "2026-10-02", "morning", "waitlisted");
-    await insertBooking(other, "2026-10-02", "morning", "cancelled");
+    await insertBooking(other, addDays(BASE, 4), "morning", "waitlisted");
+    await insertBooking(other, addDays(BASE, 4), "morning", "cancelled");
 
-    expect(await cell("2026-10-02", "morning")).toMatchObject({ status: "available", seatsLeft: 2 });
+    expect(await cell(addDays(BASE, 4), "morning")).toMatchObject({ status: "available", seatsLeft: 2 });
   });
 
   it("una franja con tantas reservas como capacidad sale llena", async () => {
     const a = await createOtherMember("full-a");
     const b = await createOtherMember("full-b");
-    await insertBooking(a, "2026-10-03", "afternoon", "confirmed");
-    await insertBooking(b, "2026-10-03", "afternoon", "confirmed");
+    await insertBooking(a, addDays(BASE, 5), "afternoon", "confirmed");
+    await insertBooking(b, addDays(BASE, 5), "afternoon", "confirmed");
 
-    expect(await cell("2026-10-03", "afternoon")).toMatchObject({ status: "full", seatsLeft: 0 });
+    expect(await cell(addDays(BASE, 5), "afternoon")).toMatchObject({ status: "full", seatsLeft: 0 });
   });
 });
 
@@ -118,25 +123,25 @@ describe("confirm_booking contra la disponibilidad en vivo", () => {
   it("confirma en un lounge nuevo y descuenta la plaza", async () => {
     const { data, error } = await supabase.rpc("confirm_booking", {
       p_lounge_id: loungeId,
-      p_date: "2026-10-06",
+      p_date: addDays(BASE, 8),
       p_band: "morning",
       p_slot_time: "8:00 AM",
     });
 
     expect(error).toBeNull();
     expect(data).toHaveLength(1);
-    expect(await cell("2026-10-06", "morning")).toMatchObject({ seatsLeft: 1 });
+    expect(await cell(addDays(BASE, 8), "morning")).toMatchObject({ seatsLeft: 1 });
   });
 
   it("no confirma en una franja llena (devuelve cero filas para ofrecer la waitlist)", async () => {
     const a = await createOtherMember("rpc-full-a");
     const b = await createOtherMember("rpc-full-b");
-    await insertBooking(a, "2026-10-07", "morning", "confirmed");
-    await insertBooking(b, "2026-10-07", "morning", "confirmed");
+    await insertBooking(a, addDays(BASE, 9), "morning", "confirmed");
+    await insertBooking(b, addDays(BASE, 9), "morning", "confirmed");
 
     const { data, error } = await supabase.rpc("confirm_booking", {
       p_lounge_id: loungeId,
-      p_date: "2026-10-07",
+      p_date: addDays(BASE, 9),
       p_band: "morning",
       p_slot_time: "8:00 AM",
     });
@@ -159,19 +164,19 @@ describe("confirm_booking contra la disponibilidad en vivo", () => {
   it("cancelar una reserva libera su plaza", async () => {
     const { data } = await supabase.rpc("confirm_booking", {
       p_lounge_id: loungeId,
-      p_date: "2026-10-08",
+      p_date: addDays(BASE, 10),
       p_band: "afternoon",
       p_slot_time: "3:30 PM",
     });
-    expect(await cell("2026-10-08", "afternoon")).toMatchObject({ seatsLeft: 1 });
+    expect(await cell(addDays(BASE, 10), "afternoon")).toMatchObject({ seatsLeft: 1 });
 
     const { error } = await supabase.rpc("cancel_booking", {
       p_booking_id: data![0].id,
-      p_today: "2026-09-09",
+      p_today: addDays(BASE, -19),
     });
 
     expect(error).toBeNull();
-    expect(await cell("2026-10-08", "afternoon")).toMatchObject({ seatsLeft: 2 });
+    expect(await cell(addDays(BASE, 10), "afternoon")).toMatchObject({ seatsLeft: 2 });
   });
 });
 

@@ -4,7 +4,7 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { chargeSavedPaymentMethod, listSavedPaymentMethods } from "@/lib/stripe-payments";
-import { TODAY } from "@/lib/availability";
+import { today } from "@/lib/availability";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedAdminAndSignIn, signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
 import { attachTestCard } from "@/lib/testing/stripe-fixture";
@@ -65,7 +65,7 @@ beforeAll(async () => {
   const paymentMethodId = await attachTestCard(profile!.stripe_customer_id as string);
   const charge = await chargeSavedPaymentMethod(memberClient, {
     loungeId,
-    dateIso: TODAY,
+    dateIso: today(),
     band: "morning",
     slotTime: "8:00 AM",
     specialRequests: "",
@@ -79,7 +79,7 @@ beforeAll(async () => {
     .insert({
       member_id: user!.id,
       lounge_id: loungeId,
-      date: TODAY,
+      date: today(),
       band: "morning",
       slot_time: "8:00 AM",
       status: "completed",

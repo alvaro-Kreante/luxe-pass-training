@@ -16,7 +16,7 @@ import {
 } from "@/lib/admin-analytics";
 
 describe("dateRangeForPeriod", () => {
-  it("cubre los últimos 14 días terminando en TODAY", () => {
+  it("cubre los últimos 14 días terminando en today()", () => {
     expect(dateRangeForPeriod("14d", "2025-09-14")).toEqual({ from: "2025-09-01", to: "2025-09-14" });
   });
 
@@ -30,7 +30,7 @@ describe("dateRangeForPeriod", () => {
 });
 
 describe("dateRangeForPreset", () => {
-  it("cubre exactamente N días terminando en TODAY", () => {
+  it("cubre exactamente N días terminando en today()", () => {
     expect(dateRangeForPreset(7, "2025-09-14")).toEqual({ from: "2025-09-08", to: "2025-09-14" });
   });
 });

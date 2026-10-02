@@ -1,7 +1,7 @@
 import { createClient as createSupabaseClient, type SupabaseClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { TODAY } from "@/lib/availability";
+import { today } from "@/lib/availability";
 import { loadPartnerContext, selectPartnerLounge } from "@/lib/partner-lounges";
 import { signUpConfirmedAndSignIn } from "@/lib/testing/confirmed-user";
 
@@ -58,7 +58,7 @@ async function booking(loungeId: string, memberId: string) {
   const { error } = await service.from("bookings").insert({
     member_id: memberId,
     lounge_id: loungeId,
-    date: TODAY,
+    date: today(),
     band: "morning",
     slot_time: "10:30 AM",
     status: "confirmed",
@@ -152,8 +152,8 @@ describe("elegir lounge", () => {
 
 describe("la analítica por lounge o de todos", () => {
   it("un lounge cuenta solo sus reservas; sin lounge, las de todos", async () => {
-    const { data: one } = await session.rpc("partner_analytics_summary", { p_from: TODAY, p_to: TODAY, p_lounge_id: towerA });
-    const { data: all } = await session.rpc("partner_analytics_summary", { p_from: TODAY, p_to: TODAY, p_lounge_id: null });
+    const { data: one } = await session.rpc("partner_analytics_summary", { p_from: today(), p_to: today(), p_lounge_id: towerA });
+    const { data: all } = await session.rpc("partner_analytics_summary", { p_from: today(), p_to: today(), p_lounge_id: null });
 
     expect(one[0].bookings).toBe(2);
     expect(all[0].bookings).toBe(3);

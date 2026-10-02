@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { ADMISSION_COUNT, addMinutesToTime } from "./booking";
-import { TODAY, addDays, formatDateLabel, parseDate } from "./availability";
+import { today, addDays, formatDateLabel, parseDate } from "./availability";
 
 /**
  * Story 5.1 (Digital Pass Generation), 5.3 (Booking Reminder) — backend real
@@ -276,8 +276,8 @@ function upcomingStatusOf(row: BookingRow): UpcomingBookingStatus {
 }
 
 function relativeDateLabel(dateIso: string): string {
-  if (dateIso === TODAY) return "Today";
-  if (dateIso === addDays(TODAY, 1)) return "Tomorrow";
+  if (dateIso === today()) return "Today";
+  if (dateIso === addDays(today(), 1)) return "Tomorrow";
 
   return formatFullDate(dateIso);
 }
@@ -323,7 +323,7 @@ function fromUpcomingRow(row: BookingRow): UpcomingBooking {
   }
 
   const daysAhead = Math.round(
-    (parseDate(row.date).getTime() - parseDate(TODAY).getTime()) / (24 * 60 * 60 * 1000),
+    (parseDate(row.date).getTime() - parseDate(today()).getTime()) / (24 * 60 * 60 * 1000),
   );
   const hoursUntilArrival = Math.max(daysAhead, 0) * 24;
 
