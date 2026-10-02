@@ -22,7 +22,9 @@ import {
   weekSummary,
   type ClosureBooking,
   type LoungeClosure,
+  type LoungeClosureInput,
   type LoungeSchedule,
+  type LoungeSeasonInput,
   type LoungeSeason,
 } from "@/lib/lounge-schedule";
 import { createClient } from "@/lib/supabase/client";
@@ -208,15 +210,14 @@ function SeasonsCard({
   regularWeek,
   busy,
   run,
-  loungeId,
+  api,
 }: {
   seasons: LoungeSeason[];
   regularWeek: string[];
   busy: boolean;
   run: (action: () => Promise<void>) => Promise<boolean>;
-  loungeId: string;
+  api: ScheduleApi;
 }) {
-  const supabase = React.useMemo(() => createClient(), []);
   const [draft, setDraft] = React.useState<SeasonDraft | null>(null);
   const headingId = React.useId();
   const others = seasons.filter((season) => season.id !== draft?.id);
@@ -285,7 +286,7 @@ function SeasonsCard({
                   aria-label={`Delete ${name}`}
                   disabled={busy}
                   className={ICON_BUTTON}
-                  onClick={() => run(() => deleteLoungeSeason(supabase, season.id))}
+                  onClick={() => run(() => api.deleteSeason(season.id))}
                 >
                   <Trash2 size={15} strokeWidth={1.8} className="text-fg-muted" aria-hidden />
                 </button>
@@ -303,7 +304,7 @@ function SeasonsCard({
           onChange={setDraft}
           onCancel={() => setDraft(null)}
           onSave={async () => {
-            if (await run(() => saveLoungeSeason(supabase, loungeId, draft).then(() => undefined))) setDraft(null);
+            if (await run(() => api.saveSeason(draft))) setDraft(null);
           }}
         />
       ) : null}
@@ -455,7 +456,7 @@ function ClosuresCard({
   regularWeek,
   busy,
   run,
-  loungeId,
+  api,
 }: {
   loungeName: string;
   closures: LoungeClosure[];
@@ -463,9 +464,8 @@ function ClosuresCard({
   regularWeek: string[];
   busy: boolean;
   run: (action: () => Promise<void>) => Promise<boolean>;
-  loungeId: string;
+  api: ScheduleApi;
 }) {
-  const supabase = React.useMemo(() => createClient(), []);
   const [draft, setDraft] = React.useState<ClosureDraft | null>(null);
   const [affected, setAffected] = React.useState<ClosureBooking[] | null>(null);
   const headingId = React.useId();
@@ -486,13 +486,13 @@ function ClosuresCard({
 
   async function save(current: ClosureDraft) {
     const ok = await run(() =>
-      saveLoungeClosure(supabase, loungeId, {
+      api.saveClosure({
         id: current.id,
         startsOn: current.startsOn,
         endsOn: current.endsOn,
         reason: current.reason,
         reopensLabel: reopensLabel(current),
-      }).then(() => undefined),
+      }),
     );
     if (ok) {
       setDraft(null);
@@ -504,7 +504,7 @@ function ClosuresCard({
     if (!draft) return;
     let bookings: ClosureBooking[] = [];
     const ok = await run(async () => {
-      bookings = await closureBookings(supabase, loungeId, draft.startsOn, draft.endsOn);
+      bookings = await api.bookings(draft.startsOn, draft.endsOn);
     });
     if (!ok) return;
     if (bookings.length > 0) setAffected(bookings);
@@ -585,7 +585,7 @@ function ClosuresCard({
                 aria-label={`Delete ${closure.reason}`}
                 disabled={busy}
                 className={ICON_BUTTON}
-                onClick={() => run(() => deleteLoungeClosure(supabase, closure.id))}
+                onClick={() => run(() => api.deleteClosure(closure.id))}
               >
                 <Trash2 size={15} strokeWidth={1.8} className="text-fg-muted" aria-hidden />
               </button>
@@ -699,23 +699,65 @@ export function ScheduleOrderCard() {
 /* Estado compartido                                                      */
 /* -------------------------------------------------------------------- */
 
-export function useLoungeSchedule(loungeId: string) {
+/** Lo que las tarjetas escriben: en la base, o en el formulario de un lounge nuevo. */
+export interface ScheduleApi {
+  saveSeason: (input: LoungeSeasonInput) => Promise<void>;
+  deleteSeason: (id: string) => Promise<void>;
+  saveClosure: (input: LoungeClosureInput) => Promise<void>;
+  deleteClosure: (id: string) => Promise<void>;
+  bookings: (from: string, to: string) => Promise<ClosureBooking[]>;
+}
+
+/**
+ * Con `loungeId` lee y escribe en la base al momento. Con `null` (un lounge
+ * nuevo, sin id todavía) lo guarda en memoria; el formulario lo escribe con
+ * `persistLoungeSchedule` al guardarlo por primera vez.
+ */
+export function useLoungeSchedule(loungeId: string | null) {
   const supabase = React.useMemo(() => createClient(), []);
   const [schedule, setSchedule] = React.useState<LoungeSchedule>({ seasons: [], closures: [] });
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState("");
 
   const reload = React.useCallback(async () => {
-    setSchedule(await listLoungeSchedule(supabase, loungeId));
+    if (loungeId) setSchedule(await listLoungeSchedule(supabase, loungeId));
   }, [supabase, loungeId]);
 
   React.useEffect(() => {
+    if (!loungeId) return;
     let active = true;
     listLoungeSchedule(supabase, loungeId).then((next) => {
       if (active) setSchedule(next);
     });
     return () => {
       active = false;
+    };
+  }, [supabase, loungeId]);
+
+  const api = React.useMemo<ScheduleApi>(() => {
+    if (loungeId) {
+      return {
+        saveSeason: (input) => saveLoungeSeason(supabase, loungeId, input).then(() => undefined),
+        deleteSeason: (id) => deleteLoungeSeason(supabase, id),
+        saveClosure: (input) => saveLoungeClosure(supabase, loungeId, input).then(() => undefined),
+        deleteClosure: (id) => deleteLoungeClosure(supabase, id),
+        bookings: (from, to) => closureBookings(supabase, loungeId, from, to),
+      };
+    }
+    const byStart = <T extends { startsOn: string }>(items: T[]) => [...items].sort((a, b) => a.startsOn.localeCompare(b.startsOn));
+    return {
+      saveSeason: async (input) => {
+        const season = { ...input, name: input.name.trim(), id: input.id ?? `local-${crypto.randomUUID()}` };
+        setSchedule((current) => ({ ...current, seasons: byStart([...current.seasons.filter((other) => other.id !== season.id), season]) }));
+      },
+      deleteSeason: async (id) => setSchedule((current) => ({ ...current, seasons: current.seasons.filter((season) => season.id !== id) })),
+      saveClosure: async (input) => {
+        const closure = { ...input, reason: input.reason.trim(), id: input.id ?? `local-${crypto.randomUUID()}` };
+        setSchedule((current) => ({ ...current, closures: byStart([...current.closures.filter((other) => other.id !== closure.id), closure]) }));
+      },
+      deleteClosure: async (id) => setSchedule((current) => ({ ...current, closures: current.closures.filter((closure) => closure.id !== id) })),
+      // Un lounge nuevo no tiene reservas.
+      bookings: async () => [],
     };
   }, [supabase, loungeId]);
 
@@ -737,25 +779,23 @@ export function useLoungeSchedule(loungeId: string) {
     [reload],
   );
 
-  return { schedule, busy, error, run };
+  return { schedule, busy, error, run, api };
 }
 
 /** Las dos secciones, debajo de "Operating hours". */
 export function LoungeScheduleCards({
-  loungeId,
   loungeName,
   regularWeek,
   state,
 }: {
-  loungeId: string;
   loungeName: string;
   regularWeek: string[];
   state: ReturnType<typeof useLoungeSchedule>;
 }) {
-  const { schedule, busy, error, run } = state;
+  const { schedule, busy, error, run, api } = state;
   return (
     <>
-      <SeasonsCard seasons={schedule.seasons} regularWeek={regularWeek} busy={busy} run={run} loungeId={loungeId} />
+      <SeasonsCard seasons={schedule.seasons} regularWeek={regularWeek} busy={busy} run={run} api={api} />
       <ClosuresCard
         loungeName={loungeName}
         closures={schedule.closures}
@@ -763,7 +803,7 @@ export function LoungeScheduleCards({
         regularWeek={regularWeek}
         busy={busy}
         run={run}
-        loungeId={loungeId}
+        api={api}
       />
       {error ? (
         <p role="alert" className="m-0 text-[13px] font-bold text-accent-strong">

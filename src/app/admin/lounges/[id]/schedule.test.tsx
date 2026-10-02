@@ -208,6 +208,8 @@ describe("cierres especiales", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect((await service.from("lounge_closures").select("id").eq("lounge_id", id)).data).toEqual([]);
 
+    // Radix devuelve los eventos de puntero a la página un instante después de cerrar.
+    await waitFor(() => expect(document.body.style.pointerEvents).not.toBe("none"));
     const again = await waitFor(() => within(closures()).getByRole("button", { name: "Add closure" }));
     await user.click(again);
     await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Save anyway" }));

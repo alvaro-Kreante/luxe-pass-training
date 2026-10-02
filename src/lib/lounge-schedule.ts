@@ -193,3 +193,13 @@ export function weekSummary(weeklyHours: string[]): string {
   }
   return parts.join(" · ");
 }
+
+/** Story 10.9 — lo que se añadió a un lounge nuevo antes de su primer guardado. */
+export async function persistLoungeSchedule(supabase: SupabaseClient, loungeId: string, schedule: LoungeSchedule): Promise<void> {
+  for (const { name, startsOn, endsOn, weeklyHours } of schedule.seasons) {
+    await saveLoungeSeason(supabase, loungeId, { name, startsOn, endsOn, weeklyHours });
+  }
+  for (const { startsOn, endsOn, reason, reopensLabel } of schedule.closures) {
+    await saveLoungeClosure(supabase, loungeId, { startsOn, endsOn, reason, reopensLabel });
+  }
+}

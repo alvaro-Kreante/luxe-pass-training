@@ -12,6 +12,7 @@ import {
   deleteLoungeClosure,
   deleteLoungeSeason,
   listLoungeSchedule,
+  persistLoungeSchedule,
   saveLoungeClosure,
   saveLoungeSeason,
 } from "./lounge-schedule";
@@ -183,6 +184,20 @@ describe("cierres especiales", () => {
       { memberName: "Alexandra Rivas", date: "2025-09-16", slotTime: "8:00 AM" },
       { memberName: "Alexandra Rivas", date: "2025-09-17", slotTime: "8:00 AM" },
     ]);
+  });
+});
+
+describe("un lounge nuevo", () => {
+  it("las temporadas y cierres añadidos antes de guardarlo se escriben con él", async () => {
+    const loungeId = await lounge();
+    await persistLoungeSchedule(admin, loungeId, {
+      seasons: [{ id: "local-1", name: "Summer", startsOn: "2026-06-01", endsOn: "2026-08-31", weeklyHours: SUMMER }],
+      closures: [{ id: "local-2", startsOn: "2026-12-24", endsOn: "2026-12-25", reason: "Holidays", reopensLabel: "Reopens Sat Dec 26" }],
+    });
+
+    const schedule = await listLoungeSchedule(admin, loungeId);
+    expect(schedule.seasons).toEqual([expect.objectContaining({ name: "Summer", startsOn: "2026-06-01" })]);
+    expect(schedule.closures).toEqual([expect.objectContaining({ reason: "Holidays", reopensLabel: "Reopens Sat Dec 26" })]);
   });
 });
 

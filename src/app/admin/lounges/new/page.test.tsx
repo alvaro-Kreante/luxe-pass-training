@@ -191,3 +191,29 @@ describe("horario de apertura", () => {
     expect(screen.getByLabelText("Sat opens at")).toHaveValue("9:00 AM");
   });
 });
+
+/** Story 10.9 — también al crear el lounge; se guardan con él la primera vez. */
+describe("temporadas y cierres del lounge nuevo", () => {
+  it("se añaden antes de guardar y quedan en la lista", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<NewLoungePage />);
+
+    const seasons = await screen.findByRole("region", { name: "Seasonal hours" });
+    await user.click(within(seasons).getByRole("button", { name: "Add season" }));
+    const season = within(seasons).getByRole("group", { name: "New season" });
+    await user.type(within(season).getByLabelText("Name · optional"), "Summer hours");
+    await user.type(within(season).getByLabelText("From"), "2026-06-01");
+    await user.type(within(season).getByLabelText("To"), "2026-08-31");
+    await user.click(within(season).getByRole("button", { name: "Add season" }));
+    expect(await within(seasons).findByRole("listitem", { name: /Summer hours/ })).toBeInTheDocument();
+
+    const closures = screen.getByRole("region", { name: "Special closures" });
+    await user.click(within(closures).getByRole("button", { name: "Add closure" }));
+    const closure = within(closures).getByRole("group", { name: "New closure" });
+    await user.type(within(closure).getByLabelText("From"), "2026-12-24");
+    await user.type(within(closure).getByLabelText("To"), "2026-12-25");
+    await user.type(within(closure).getByLabelText("Reason · members see it"), "Holidays");
+    await user.click(within(closure).getByRole("button", { name: "Add closure" }));
+    expect(await within(closures).findByRole("listitem", { name: /Holidays/ })).toBeInTheDocument();
+  });
+});

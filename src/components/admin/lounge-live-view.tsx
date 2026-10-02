@@ -245,7 +245,7 @@ export function LoungeLiveView({
             </div>
           </div>
 
-          <LoungeScheduleCards loungeId={lounge.id} loungeName={lounge.name} regularWeek={lounge.weeklyHours} state={schedule} />
+          <LoungeScheduleCards loungeName={lounge.name} regularWeek={lounge.weeklyHours} state={schedule} />
 
           <div className={cn(CARD, "flex flex-wrap items-start gap-x-6 gap-y-4")}>
             <div className="min-w-0 flex-1">

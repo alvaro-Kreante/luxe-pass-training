@@ -11,6 +11,7 @@ import { PhotoCropDialog, type PhotoCropChoice, type PhotoSource } from "@/compo
 import { PartnerPicker } from "@/components/admin/partner-picker";
 import { StatusSelect } from "@/components/admin/status-select";
 import { LoungeScheduleCards, useLoungeSchedule } from "@/components/admin/lounge-schedule";
+import { persistLoungeSchedule } from "@/lib/lounge-schedule";
 import { WeeklyHoursEditor } from "@/components/admin/weekly-hours-editor";
 import { AdminShell } from "@/components/patterns/admin-shell";
 import { Button } from "@/components/ui/button";
@@ -105,6 +106,9 @@ export function LoungeDraftForm({
   const [recropping, setRecropping] = React.useState<{ key: string; source: PhotoSource } | null>(null);
   const [invalidFile, setInvalidFile] = React.useState("");
   const uploading = photos.some((photo) => photo.uploading);
+  // Story 10.9 — en un borrador ya guardado se escribe al momento; en uno
+  // nuevo se guarda en memoria y se escribe con el primer guardado.
+  const schedule = useLoungeSchedule(lounge?.id ?? null);
   const [editingKey, setEditingKey] = React.useState<string | null>(null);
   const [photoNotice, setPhotoNotice] = React.useState("");
   const [error, setError] = React.useState("");
@@ -183,15 +187,19 @@ export function LoungeDraftForm({
     })();
   }
 
-  /** PhotoRecrop (26) — reabre el editor sobre el original guardado. */
+  /**
+   * PhotoRecrop (26) — reabre el editor sobre el original guardado. Una
+   * foto subida antes del editor (o sembrada) no lo tiene: se reencuadra
+   * sobre ella misma, que pasa a ser su original.
+   */
   async function adjustCrop(photo: DraftPhotoItem) {
-    if (!photo.originalUrl) return;
+    const sourceUrl = photo.originalUrl ?? photo.url;
     try {
-      const response = await fetch(photo.originalUrl);
+      const response = await fetch(sourceUrl);
       if (!response.ok) throw new Error("unreadable");
       const blob = await response.blob();
       // Storage guarda "<timestamp>-<archivo>": se muestra el nombre que eligió el admin.
-      const fileName = (photo.originalUrl.split("/").pop() ?? photo.caption).replace(/^\d{13}-/, "");
+      const fileName = (sourceUrl.split("/").pop() ?? photo.caption).replace(/^\d{13}-/, "");
       setRecropping({ key: photo.key, source: { blob, fileName } });
     } catch {
       setError(`The original of ${photo.caption} can't be read`);
@@ -204,7 +212,11 @@ export function LoungeDraftForm({
     setBusy(true);
     try {
       const url = await uploadCrop(source.blob, source.fileName, choice);
-      setPhotos((current) => current.map((photo) => (photo.key === key ? { ...photo, url, crop: { ...choice.area, size: choice.size } } : photo)));
+      setPhotos((current) =>
+        current.map((photo) =>
+          photo.key === key ? { ...photo, url, originalUrl: photo.originalUrl ?? photo.url, crop: { ...choice.area, size: choice.size } } : photo,
+        ),
+      );
       setRecropping(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not save the new crop");
@@ -235,6 +247,7 @@ export function LoungeDraftForm({
 
   async function save(): Promise<string> {
     const id = lounge ? lounge.id : await createLoungeDraft(supabase, draft);
+    if (!lounge) await persistLoungeSchedule(supabase, id, schedule.schedule);
     if (lounge) await updateLoungeDraft(supabase, id, draft);
     await setDraftLoungePhotos(
       supabase,
@@ -393,7 +406,7 @@ export function LoungeDraftForm({
             <WeeklyHoursEditor value={weeklyHours} onChange={setWeeklyHours} className="mt-3" />
           </div>
 
-          {lounge ? <DraftSchedule loungeId={lounge.id} loungeName={lounge.name} regularWeek={weeklyHours} /> : null}
+          <LoungeScheduleCards loungeName={name.trim() || "New lounge"} regularWeek={weeklyHours} state={schedule} />
 
           <div className="grid grid-cols-2 gap-3.5">
             <div className={CARD}>
@@ -548,7 +561,7 @@ export function LoungeDraftForm({
                           {photo.caption}
                         </span>
                       </button>
-                      {photo.originalUrl ? (
+                      {photo.url ? (
                         <button
                           type="button"
                           aria-label={`Adjust crop ${photo.caption}`}
@@ -648,12 +661,6 @@ export function LoungeDraftForm({
       />
     </AdminShell>
   );
-}
-
-/** Story 10.9 — en un borrador ya guardado; un lounge nuevo las tiene al guardarse por primera vez. */
-function DraftSchedule({ loungeId, loungeName, regularWeek }: { loungeId: string; loungeName: string; regularWeek: string[] }) {
-  const state = useLoungeSchedule(loungeId);
-  return <LoungeScheduleCards loungeId={loungeId} loungeName={loungeName} regularWeek={regularWeek} state={state} />;
 }
 
 function LocationChip({ children, muted = false }: { children: React.ReactNode; muted?: boolean }) {

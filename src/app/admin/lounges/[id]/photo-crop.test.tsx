@@ -175,12 +175,25 @@ describe("reencuadrar una foto ya subida", () => {
     expect(image.crop).toMatchObject({ size: "large" });
   });
 
-  it("una foto sembrada sin original no ofrece reencuadrar", async () => {
+  it("una foto subida antes del editor también se reencuadra: la propia foto pasa a ser su original", async () => {
+    const user = userEvent.setup({ delay: null });
     const id = await draftLounge();
-    await service.from("lounge_images").insert({ lounge_id: id, url: "https://example.com/seeded.jpg", caption: "Seeded", position: 0 });
+    const path = `${id}/seeded-terrace.jpg`;
+    await service.storage.from("lounge-images").upload(path, new Uint8Array([1, 2, 3]), { contentType: "image/jpeg" });
+    const seededUrl = service.storage.from("lounge-images").getPublicUrl(path).data.publicUrl;
+    await service.from("lounge_images").insert({ lounge_id: id, url: seededUrl, caption: "Terrace", position: 0 });
     await renderDraft();
 
-    expect(await screen.findByRole("button", { name: "Edit photo Seeded" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Adjust crop Seeded" })).toBeNull();
+    await user.click(await screen.findByRole("button", { name: "Adjust crop Terrace" }));
+    const editor = await screen.findByRole("dialog", { name: "Adjust the crop" });
+    await user.click(within(editor).getByRole("button", { name: "Save crop" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull(), { timeout: 8000 });
+
+    await user.click(screen.getByRole("button", { name: "Save draft" }));
+    await screen.findByRole("dialog", { name: "Draft saved" }, { timeout: 8000 });
+    const [image] = await storedImages(id);
+    expect(image.original_url).toBe(seededUrl);
+    expect(image.url).not.toBe(seededUrl);
+    expect(image.crop).toMatchObject({ size: "standard" });
   });
 });
