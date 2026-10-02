@@ -81,6 +81,9 @@ export interface AdminPartnerLounge {
   id: string;
   name: string;
   area: string;
+  /** Story 10.12 — para buscar por dirección y ciudad. */
+  address: string;
+  city: string;
   contentStatus: "live" | "draft" | "archived" | "suspended";
   /** Solo si está suspendido: suelto ('admin') o con su partner ('partner'). */
   suspendedBy: "admin" | "partner" | null;
@@ -137,7 +140,7 @@ export async function getAdminPartner(supabase: SupabaseClient, partnerId: strin
     activated_at: string | null;
     suspended_at: string | null;
     users: { id: string; first_name: string; last_name: string; email: string; mobile: string; status: PartnerMemberStatus; is_representative: boolean }[];
-    lounges: { id: string; name: string; area: string; content_status: AdminPartnerLounge["contentStatus"]; suspended_by: AdminPartnerLounge["suspendedBy"]; capacity: number }[];
+    lounges: { id: string; name: string; area: string; address: string; city: string; content_status: AdminPartnerLounge["contentStatus"]; suspended_by: AdminPartnerLounge["suspendedBy"]; capacity: number }[];
   };
   const raw = await rpc<Raw | null>(supabase, "admin_partner_detail", { p_partner_id: partnerId });
   if (!raw) return null;
@@ -168,6 +171,8 @@ export async function getAdminPartner(supabase: SupabaseClient, partnerId: strin
       id: l.id,
       name: l.name,
       area: l.area,
+      address: l.address,
+      city: l.city,
       contentStatus: l.content_status,
       suspendedBy: l.suspended_by,
       capacity: l.capacity,

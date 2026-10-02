@@ -596,6 +596,16 @@ no publicar el lounge; reenviarla vuelve con la Story 10.4.
   en jsdom. Lo cubren el test del detalle (`[id]/page.test.tsx`, mismo
   formulario y mismo aviso) y la verificación de Playwright.
 
+### 4.14 Epic 10: historias 10.9–10.12
+
+- **10.12 (búsqueda en el detalle del partner):** hecha. Falta su criterio
+  "la selección de las acciones masivas se mantiene al buscar", que depende
+  de la 10.11 y se prueba con ella.
+- **10.9, 10.10 y 10.11 esperan artboards** (`/design`, carpeta
+  `docs/design/epic-10-partner-organizations/`): sección de temporadas y
+  cierres del formulario del lounge, editor de fotos con `react-easy-crop`
+  y selección múltiple + modales masivos en el detalle del partner.
+
 ### 4.13 Epic 10: el modelo de partners cambió y los remotos no lo tienen
 
 Paso a paso para `staging` y `main`: `docs/ci-cd/EPIC-10-DESPLIEGUE.md`.

@@ -110,6 +110,8 @@ begin
         'id', l.id,
         'name', l.name,
         'area', l.neighborhood || ', ' || l.city,
+        'address', coalesce(l.address, ''),
+        'city', coalesce(l.city, ''),
         'content_status', l.content_status,
         'suspended_by', l.suspended_by,
         'capacity', l.capacity

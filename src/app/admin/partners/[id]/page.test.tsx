@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
@@ -204,6 +204,55 @@ describe("sus lounges", () => {
     const item = within(lounges).getByRole("listitem", { name: new RegExp(`Tower A ${stamp}`) });
     expect(within(item).getByText("Draft")).toBeInTheDocument();
     expect(within(item).getByRole("link", { name: /Open lounge/ })).toHaveAttribute("href", `/admin/lounges/${loungeId}`);
+  });
+});
+
+/* Story 10.12 — buscar entre los lounges del partner. */
+describe("buscar un lounge del partner", () => {
+  async function partnerWithLounges() {
+    const { id } = await draftPartner();
+    const extra = [
+      { id: `test-lounge-search-${stamp}-${count}-1`, name: `Café Lumière ${stamp}`, address: "12 Rue Oberkampf", neighborhood: "Le Marais", city: "Paris", city_id: "paris" },
+      { id: `test-lounge-search-${stamp}-${count}-2`, name: `Rooftop ${stamp}`, address: "445 Park Avenue", neighborhood: "Midtown", city: "New York", city_id: "new-york" },
+    ];
+    await service.from("lounges").insert(extra.map((lounge) => ({ ...lounge, lat: 0, lng: 0, hours: "Open", content_status: "draft", partner_id: id })));
+    loungeIds.push(...extra.map((lounge) => lounge.id));
+    cleanup();
+    render(<PartnerDetailPage />);
+    await screen.findByRole("listitem", { name: new RegExp(`Rooftop ${stamp}`) });
+    return userEvent.setup({ delay: null });
+  }
+
+  function visibleLounges() {
+    return within(screen.getByRole("list", { name: "Lounges" }))
+      .queryAllByRole("listitem")
+      .map((item) => item.getAttribute("aria-label"));
+  }
+
+  it("filtra por nombre sin distinguir mayúsculas ni tildes", async () => {
+    const user = await partnerWithLounges();
+    await user.type(screen.getByRole("searchbox", { name: "Search this partner's lounges" }), "cafe lumiere");
+    expect(visibleLounges()).toEqual([`Café Lumière ${stamp}`]);
+  });
+
+  it("filtra por dirección y por ciudad", async () => {
+    const user = await partnerWithLounges();
+    const search = screen.getByRole("searchbox", { name: "Search this partner's lounges" });
+    await user.type(search, "park avenue");
+    expect(visibleLounges()).toEqual([`Rooftop ${stamp}`]);
+    await user.clear(search);
+    await user.type(search, "PARIS");
+    expect(visibleLounges()).toEqual([`Café Lumière ${stamp}`]);
+  });
+
+  it("sin resultados lo dice y permite limpiar la búsqueda", async () => {
+    const user = await partnerWithLounges();
+    const search = screen.getByRole("searchbox", { name: "Search this partner's lounges" });
+    await user.type(search, "zzz no existe");
+    expect(screen.getByText(/No lounges match/)).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Clear search" }));
+    expect(search).toHaveValue("");
+    expect(visibleLounges()).toHaveLength(3);
   });
 });
 

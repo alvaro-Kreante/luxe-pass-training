@@ -330,7 +330,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `admin/partner-details-card.tsx` | Story 10.3 — "Partner details" (2, 3): nombre, contacto y edificio central en texto, sin mapa. Exporta `ADMIN_CARD`/`ADMIN_EYEBROW` |
 | `admin/partner-user-fields.tsx` | Story 10.3 — los cuatro campos de un usuario partner en fila (lógica de 23); `emailLocked` para el lápiz (4) |
 | `admin/partner-users-card.tsx` | Story 10.3 — tabla de usuarios (3, 4): lápiz en la fila, "Make representative", borrar con el aviso del representante, "Add user". Story 10.4 (6): suspender/reactivar, "Resend invitation", y confirmación al suspender o borrar a alguien con cuenta |
-| `admin/partner-lounges-card.tsx` | Story 10.3 — los lounges del partner con su status y "Open lounge" a `/admin/lounges/[id]` |
+| `admin/partner-lounges-card.tsx` | Story 10.3 — los lounges del partner con su status y "Open lounge" a `/admin/lounges/[id]`. Story 10.12 — buscador por nombre, dirección y ciudad (sin mayúsculas ni tildes) con el patrón de input de las listas de admin (`Lounges.dc.html`); sin artboard propio, desviación consciente |
 | `admin/partner-activation-checklist.tsx` | Story 10.3 — "Ready to activate" y la nota del rail (2, 3), con el botón de activar como `children`; Story 10.4 la reutiliza para "When you reactivate" (8) |
 | `admin/partner-picker.tsx` | Story 10.5 — `PartnerPicker` (Fase 10 · 12): busca y elige el partner del borrador (también los draft; no los suspendidos), con el aviso "Not listed? Create the partner first" |
 | `admin/lounge-partner-card.tsx` | Story 10.5 — `LoungePartnerCard` (Fase 10 · 10): el partner del lounge en solo lectura, con representante y "Open partner" |
