@@ -80,6 +80,12 @@ async function liveLounge() {
   return id;
 }
 
+/** Ajuste del 2 oct 2026 — el status se cambia con el selector de la cabecera. */
+async function chooseStatus(user: ReturnType<typeof userEvent.setup>, status: string) {
+  await user.click(await screen.findByRole("button", { name: /^Status:/ }));
+  await user.click(await screen.findByRole("menuitemradio", { name: new RegExp(`^${status}`) }));
+}
+
 /** Con un popup abierto, Radix oculta el resto de la pantalla a la accesibilidad. */
 async function dialogClosed() {
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -147,14 +153,35 @@ describe("suspender un lounge suelto (Story 10.4)", () => {
     const user = userEvent.setup({ delay: null });
     const id = await liveLounge();
 
-    await user.click(screen.getByRole("button", { name: "Suspend lounge" }));
+    await chooseStatus(user, "Suspended");
     const dialog = await screen.findByRole("dialog", { name: "Suspend this lounge?" });
     await user.click(within(dialog).getByRole("button", { name: "Suspend lounge" }));
 
-    expect(await screen.findByText(/Suspended · hidden from members/)).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Status: Suspended" })).toBeInTheDocument();
     expect(await contentStatus(id)).toBe("suspended");
-    expect(screen.getByRole("button", { name: "Reactivate lounge" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Edit lounge" })).toBeNull();
+  });
+
+  it("desde el selector, Draft en un lounge live pide la misma confirmación que editar", async () => {
+    const user = userEvent.setup({ delay: null });
+    await liveLounge();
+
+    await chooseStatus(user, "Draft");
+
+    expect(await screen.findByRole("dialog", { name: "Move to draft to edit?" })).toBeInTheDocument();
+  });
+
+  it("en un borrador, Live del selector lo publica", async () => {
+    const user = userEvent.setup({ delay: null });
+    const { data: partner } = await admin.from("partners").insert({ name: `Selector Owner ${stamp}`, status: "active" }).select("id").single();
+    partnerIds.push(partner!.id);
+    const id = await createLounge(`Draft Lounge ${Date.now()}`, { content_status: "draft", partner_id: partner!.id });
+    render(<LoungeEditPage />);
+
+    await chooseStatus(user, "Live");
+
+    await screen.findByRole("dialog", { name: "The lounge is live" }, { timeout: 8000 });
+    expect(await contentStatus(id)).toBe("live");
   });
 
   it("reactivarlo lo devuelve a borrador para publicarlo de nuevo", async () => {
@@ -162,9 +189,9 @@ describe("suspender un lounge suelto (Story 10.4)", () => {
     const id = await createLounge(`Live Lounge ${Date.now()}`, { content_status: "suspended", suspended_by: "admin" });
     render(<LoungeEditPage />);
 
-    await user.click(await screen.findByRole("button", { name: "Reactivate lounge" }));
+    await chooseStatus(user, "Draft");
 
-    expect(await screen.findByText(/Draft · not visible to members/)).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Status: Draft" })).toBeInTheDocument();
     expect(await contentStatus(id)).toBe("draft");
   });
 });
@@ -174,7 +201,7 @@ describe("un lounge en borrador", () => {
     await createLounge(`Draft Lounge ${Date.now()}`, { content_status: "draft" });
     render(<LoungeEditPage />);
 
-    expect(await screen.findByText(/Draft · not visible to members/)).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Status: Draft" })).toBeInTheDocument();
     expect(screen.getByLabelText("Address")).toHaveValue("27 Bond Street");
     expect(screen.getByRole("button", { name: "Publish lounge" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Submit for review" })).toBeNull();

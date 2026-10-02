@@ -6,6 +6,7 @@ import Link from "next/link";
 
 import { LoungeLocationPreview } from "@/components/admin/address-autocomplete";
 import { ConfirmModal } from "@/components/admin/confirm-modal";
+import { StatusSelect } from "@/components/admin/status-select";
 import { LoungePartnerCard } from "@/components/admin/lounge-partner-card";
 import { ModalPoint } from "@/components/admin/lounge-saved-notice";
 import { PhotoViewer } from "@/components/admin/photo-viewer";
@@ -57,9 +58,10 @@ function Value({ label, value }: { label: string; value: string }) {
  * bloqueado, ubicación incluida. "Edit lounge" pide confirmación
  * (LoungeEditConfirm.dc.html, 18) y lo devuelve a borrador. Los usuarios
  * partner se gestionan en el partner (Epic 10), no en el lounge. Story 10.4
- * (LoungeSuspend.dc.html, Fase 10 · 11): "Suspend lounge" lo saca del
- * catálogo; suspendido se ve igual de bloqueado y solo ofrece reactivarlo,
- * que lo devuelve a borrador.
+ * (LoungeSuspend.dc.html, Fase 10 · 11): suspender lo saca del catálogo;
+ * suspendido se ve igual de bloqueado y solo ofrece reactivarlo, que lo
+ * devuelve a borrador. Desde el 2 oct 2026 el status (Live / Draft /
+ * Suspended) se cambia con `StatusSelect` en la cabecera.
  */
 export function LoungeLiveView({
   lounge,
@@ -130,36 +132,40 @@ export function LoungeLiveView({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2.5">
             <h1 className="m-0 font-display text-[22px] text-fg">{lounge.name}</h1>
-            {suspended ? (
-              <span className="inline-flex items-center rounded-pill border border-line px-3 py-1.5 text-[11.5px] font-bold text-fg-subtle">
-                Suspended · hidden from members
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 rounded-pill border border-gold-600 bg-accent/16 px-3 py-1.5 text-[11.5px] font-bold text-fg-muted">
-                <span className="size-1.5 rounded-full bg-accent" />
-                Live · visible to members
-              </span>
-            )}
+            <StatusSelect
+              current={suspended ? "suspended" : "live"}
+              busy={busy}
+              options={[
+                {
+                  value: "live",
+                  label: "Live",
+                  detail: suspended ? "Reactivate it as a draft first, then publish" : "Visible to members",
+                  disabled: suspended,
+                },
+                {
+                  value: "draft",
+                  label: "Draft",
+                  detail: suspended ? "Reactivate it as a draft to review and publish again" : "Move it to draft to edit — hidden until you publish again",
+                },
+                { value: "suspended", label: "Suspended", detail: "Hidden from members, no new bookings" },
+              ]}
+              onSelect={(value) => {
+                if (value === "suspended") setSuspending(true);
+                else if (value === "draft" && suspended) void changeStatus(() => reactivateLounge(supabase, lounge.id));
+                else if (value === "draft") setConfirming(true);
+              }}
+            />
           </div>
           <p className="mt-1.5 text-[12.5px] text-fg-subtle">
             {[lounge.area, lounge.partner?.name].filter(Boolean).join(" · ")}
           </p>
         </div>
         <div className="flex items-center gap-2.5">
-          {suspended ? (
-            <Button size="md" disabled={busy} onClick={() => changeStatus(() => reactivateLounge(supabase, lounge.id))}>
-              Reactivate lounge
+          {suspended ? null : (
+            <Button size="md" onClick={() => setConfirming(true)}>
+              <Pencil size={15} strokeWidth={2} />
+              Edit lounge
             </Button>
-          ) : (
-            <>
-              <Button variant="ghost" size="md" onClick={() => setSuspending(true)}>
-                Suspend lounge
-              </Button>
-              <Button size="md" onClick={() => setConfirming(true)}>
-                <Pencil size={15} strokeWidth={2} />
-                Edit lounge
-              </Button>
-            </>
           )}
         </div>
       </div>

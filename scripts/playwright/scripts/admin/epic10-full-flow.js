@@ -32,6 +32,11 @@ async function shot(page, name) {
   console.log('shot', file);
 }
 
+async function chooseStatus(page, status) {
+  await page.getByRole('button', { name: /^Status:/ }).click();
+  await page.getByRole('menuitemradio', { name: new RegExp(`^${status}`) }).click();
+}
+
 async function login(page, url, email, password) {
   await page.goto(BASE + url, { waitUntil: 'networkidle' });
   await page.getByLabel(/email/i).first().fill(email);
@@ -110,11 +115,13 @@ async function publishOrFallback(page, label) {
     await admin.waitForTimeout(800);
 
     // 3. Activar
-    await admin.getByRole('button', { name: 'Activate partner' }).click();
+    await admin.getByRole('button', { name: 'Status: Draft' }).click();
+    await shot(admin, 'selector-status-draft');
+    await admin.getByRole('menuitemradio', { name: /^Active/ }).click();
     await admin.getByRole('dialog', { name: 'Activate this partner?' }).waitFor();
     await shot(admin, 'activar-modal');
     await admin.getByRole('button', { name: 'Activate and invite' }).click();
-    await admin.getByRole('button', { name: 'Suspend partner' }).waitFor({ timeout: 30000 });
+    await admin.getByRole('button', { name: 'Status: Active' }).waitFor({ timeout: 30000 });
     await shot(admin, 'partner-activo');
 
     // 4. Asignar el lounge: pasarlo a draft, elegir partner, publicar
@@ -158,15 +165,15 @@ async function publishOrFallback(page, label) {
 
     // 7. Suspender y reactivar el partner
     await admin.goto(BASE + '/admin/partners/' + partnerId, { waitUntil: 'networkidle' });
-    await admin.getByRole('button', { name: 'Suspend partner' }).click();
+    await chooseStatus(admin, 'Suspended');
     await admin.getByRole('dialog', { name: 'Suspend this partner?' }).getByRole('button', { name: 'Suspend partner' }).click();
-    await admin.getByRole('button', { name: 'Reactivate partner' }).waitFor({ timeout: 30000 });
+    await admin.getByRole('button', { name: 'Status: Suspended' }).waitFor({ timeout: 30000 });
     await shot(admin, 'partner-suspendido');
     await partner.reload({ waitUntil: 'networkidle' });
     await partner.waitForTimeout(1500);
     await shot(partner, 'partner-tras-suspension');
-    await admin.getByRole('button', { name: 'Reactivate partner' }).click();
-    await admin.getByRole('button', { name: 'Suspend partner' }).waitFor({ timeout: 30000 });
+    await chooseStatus(admin, 'Active');
+    await admin.getByRole('button', { name: 'Status: Active' }).waitFor({ timeout: 30000 });
     await shot(admin, 'partner-reactivado');
 
     // El lounge vuelve en draft: se publica otra vez para la vista de miembro

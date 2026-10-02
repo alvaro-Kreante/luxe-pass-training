@@ -8,6 +8,7 @@ import { AddressAutocomplete } from "@/components/admin/address-autocomplete";
 import type { LoungeSavedKind } from "@/components/admin/lounge-saved-notice";
 import { PhotoCaptionDialog, type DraftPhotoItem } from "@/components/admin/photo-caption-dialog";
 import { PartnerPicker } from "@/components/admin/partner-picker";
+import { StatusSelect } from "@/components/admin/status-select";
 import { AdminShell } from "@/components/patterns/admin-shell";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
@@ -231,9 +232,29 @@ export function LoungeDraftForm({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2.5">
             <h1 className="m-0 font-display text-[22px] text-fg">{name.trim() || "New lounge"}</h1>
-            <span className="inline-flex items-center rounded-pill border border-dashed border-fg-subtle px-3 py-1.5 text-[11.5px] font-bold text-fg-muted">
-              Draft · not visible to members
-            </span>
+            {lounge ? (
+              <StatusSelect
+                current="draft"
+                busy={busy}
+                options={[
+                  {
+                    value: "live",
+                    label: "Live",
+                    detail: canSave && ready ? "Publish it — members can book it right away" : "Complete the checklist before publishing",
+                    disabled: !canSave || !ready,
+                  },
+                  { value: "draft", label: "Draft", detail: "Draft · not visible to members" },
+                  { value: "suspended", label: "Suspended", detail: "Only a live lounge can be suspended", disabled: true },
+                ]}
+                onSelect={(value) => {
+                  if (value === "live") void publish();
+                }}
+              />
+            ) : (
+              <span className="inline-flex items-center rounded-pill border border-dashed border-fg-subtle px-3 py-1.5 text-[11.5px] font-bold text-fg-muted">
+                Draft · not visible to members
+              </span>
+            )}
           </div>
           <p className="mt-1.5 text-[12.5px] text-fg-subtle">{lounge ? "Draft lounge" : "New lounge"}</p>
         </div>
@@ -255,6 +276,9 @@ export function LoungeDraftForm({
 
       <div className="mt-4.5 flex min-h-0 gap-4">
         <div className="flex min-w-0 flex-1 flex-col gap-3.5">
+          {/* Arriba de todo: quién opera el lounge, antes que su nombre (ajuste del 2 oct 2026). */}
+          <PartnerPicker partners={partners} value={partnerId} onChange={setPartnerId} />
+
           <div className={CARD}>
             <p className={EYEBROW}>Name and contact</p>
             <div className="mt-3 grid grid-cols-4 gap-3">
@@ -452,7 +476,6 @@ export function LoungeDraftForm({
             </div>
           </div>
 
-          <PartnerPicker partners={partners} value={partnerId} onChange={setPartnerId} />
         </div>
 
         <div className="flex h-fit w-[344px] shrink-0 flex-col gap-3.5">

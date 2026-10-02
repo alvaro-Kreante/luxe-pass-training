@@ -23,19 +23,22 @@ const OUT_DIR = path.resolve(__dirname, '../../screenshots/admin');
   await page.waitForURL(/\/admin(?!\/login)/, { timeout: 15000 });
 
   await page.goto(BASE + '/admin/partners/' + DRAFT, { waitUntil: 'networkidle' });
-  await page.getByRole('button', { name: 'Activate partner' }).click();
+  await page.getByRole('button', { name: /^Status:/ }).click();
+  await page.getByRole('menuitemradio', { name: /^Active/ }).click();
   await page.getByRole('dialog').waitFor();
   await shot('partner-activate.png');
 
   await page.goto(BASE + '/admin/partners/' + ACTIVE, { waitUntil: 'networkidle' });
   await page.getByRole('table', { name: 'Partner users' }).waitFor();
   await shot('partner-active.png');
-  await page.getByRole('button', { name: 'Suspend partner' }).click();
+  await page.getByRole('button', { name: /^Status:/ }).click();
+  await page.getByRole('menuitemradio', { name: /^Suspended/ }).click();
   await page.getByRole('dialog').waitFor();
   await shot('partner-suspend.png');
 
   await page.goto(BASE + '/admin/lounges/' + LOUNGE, { waitUntil: 'domcontentloaded' });
-  await page.getByRole('button', { name: 'Suspend lounge' }).click();
+  await page.getByRole('button', { name: /^Status:/ }).click();
+  await page.getByRole('menuitemradio', { name: /^Suspended/ }).click();
   await page.getByRole('dialog').waitFor();
   await shot('lounge-suspend.png');
 

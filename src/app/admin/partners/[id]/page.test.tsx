@@ -60,6 +60,12 @@ async function draftPartner() {
   return { id: partner.id as string, loungeId };
 }
 
+/** Ajuste del 2 oct 2026 — el status se cambia con el selector de la cabecera. */
+async function chooseStatus(user: ReturnType<typeof userEvent.setup>, status: string) {
+  await user.click(await screen.findByRole("button", { name: /^Status:/ }));
+  await user.click(await screen.findByRole("menuitemradio", { name: new RegExp(`^${status}`) }));
+}
+
 function usersTable() {
   return screen.getByRole("table", { name: "Partner users" });
 }
@@ -81,7 +87,8 @@ describe("el detalle de un partner en draft", () => {
   it("muestra sus datos editables y que sus usuarios aún no están invitados", async () => {
     await draftPartner();
 
-    expect(screen.getByText(/Draft · users not invited yet/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Status: Draft" })).toBeInTheDocument();
+    expect(screen.getByText("No email goes out until you activate the partner")).toBeInTheDocument();
     expect(screen.getByLabelText("Partner name")).toHaveValue(`Halcyon ${stamp} ${count}`);
     expect(screen.getByLabelText("Street address")).toHaveValue("445 Park Avenue");
   });
@@ -205,9 +212,9 @@ describe("sus lounges", () => {
 async function activePartner() {
   const { id, loungeId } = await draftPartner();
   const user = userEvent.setup({ delay: null });
-  await user.click(screen.getByRole("button", { name: "Activate partner" }));
+  await chooseStatus(user, "Active");
   await user.click(within(await screen.findByRole("dialog", { name: "Activate this partner?" })).getByRole("button", { name: "Activate and invite" }));
-  await screen.findByRole("button", { name: "Suspend partner" }, { timeout: 30000 });
+  await screen.findByRole("button", { name: "Status: Active" }, { timeout: 30000 });
   return { id, loungeId, user };
 }
 
@@ -226,7 +233,7 @@ describe("activar el partner", () => {
     const user = userEvent.setup({ delay: null });
     await draftPartner();
 
-    await user.click(screen.getByRole("button", { name: "Activate partner" }));
+    await chooseStatus(user, "Active");
 
     const dialog = await screen.findByRole("dialog", { name: "Activate this partner?" });
     expect(within(dialog).getByText(`camille-${stamp}-${count}@halcyon-test.com`)).toBeInTheDocument();
@@ -250,7 +257,8 @@ describe("activar el partner", () => {
     await user.click(within(userRow("Camille Duarte")).getByRole("button", { name: "Delete Camille Duarte" }));
     await waitFor(() => expect(within(usersTable()).queryByRole("row", { name: /Camille/ })).toBeNull());
 
-    expect(screen.getByRole("button", { name: "Activate partner" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Status: Draft" }));
+    expect(await screen.findByRole("menuitemradio", { name: /^Active/ })).toHaveAttribute("aria-disabled", "true");
   }, 90_000);
 });
 
@@ -293,11 +301,11 @@ describe("suspender y reactivar el partner", () => {
     await service.from("lounges").insert({ id: liveId, name: `Live ${stamp}`, neighborhood: "NoHo", city: "New York", city_id: "new-york", lat: 0, lng: 0, hours: "Open", content_status: "live", partner_id: id });
     loungeIds.push(liveId);
 
-    await user.click(screen.getByRole("button", { name: "Suspend partner" }));
+    await chooseStatus(user, "Suspended");
     const dialog = await screen.findByRole("dialog", { name: "Suspend this partner?" });
     await user.click(within(dialog).getByRole("button", { name: "Suspend partner" }));
 
-    expect(await screen.findByRole("button", { name: "Reactivate partner" }, { timeout: 30000 })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Status: Suspended" }, { timeout: 30000 })).toBeInTheDocument();
     const { data } = await service.from("lounges").select("content_status").eq("id", liveId).single();
     expect(data?.content_status).toBe("suspended");
     expect(screen.getByRole("list", { name: "When you reactivate" })).toBeInTheDocument();
@@ -305,12 +313,13 @@ describe("suspender y reactivar el partner", () => {
 
   it("reactivarlo lo deja activo otra vez", async () => {
     const { id, user } = await activePartner();
-    await user.click(screen.getByRole("button", { name: "Suspend partner" }));
+    await chooseStatus(user, "Suspended");
     await user.click(within(await screen.findByRole("dialog", { name: "Suspend this partner?" })).getByRole("button", { name: "Suspend partner" }));
+    await screen.findByRole("button", { name: "Status: Suspended" }, { timeout: 30000 });
 
-    await user.click(await screen.findByRole("button", { name: "Reactivate partner" }, { timeout: 30000 }));
+    await chooseStatus(user, "Active");
 
-    await screen.findByRole("button", { name: "Suspend partner" }, { timeout: 30000 });
+    await screen.findByRole("button", { name: "Status: Active" }, { timeout: 30000 });
     const { data } = await service.from("partners").select("status").eq("id", id).single();
     expect(data?.status).toBe("active");
   }, 90_000);

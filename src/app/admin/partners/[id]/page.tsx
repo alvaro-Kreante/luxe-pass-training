@@ -5,11 +5,11 @@ import { notFound, useParams } from "next/navigation";
 
 import { AdminShell } from "@/components/patterns/admin-shell";
 import { ConfirmModal } from "@/components/admin/confirm-modal";
+import { StatusSelect } from "@/components/admin/status-select";
 import { ActivationNote, PartnerActivationChecklist } from "@/components/admin/partner-activation-checklist";
 import { PartnerDetailsCard } from "@/components/admin/partner-details-card";
-import { DraftStatusPill, PartnerBreadcrumb, PartnerHeader } from "@/components/admin/partner-header";
+import { PartnerBreadcrumb, PartnerHeader } from "@/components/admin/partner-header";
 import { PartnerLoungesCard } from "@/components/admin/partner-lounges-card";
-import { PartnerStatusChip } from "@/components/admin/partner-status-chip";
 import { PartnerUsersCard } from "@/components/admin/partner-users-card";
 import { RequireAdminSession } from "@/components/admin/require-admin-session";
 import { Button } from "@/components/ui/button";
@@ -37,7 +37,8 @@ import { createClient } from "@/lib/supabase/client";
  * PartnerUserEdit.dc.html (4). Datos editables, usuarios (lápiz,
  * representante, borrar) y sus lounges, que abren la vista de lounge. Story
  * 10.4: activar (PartnerActivate 5), activo (PartnerActive 6), suspender
- * (PartnerSuspend 7) y suspendido (PartnerSuspended 8).
+ * (PartnerSuspend 7) y suspendido (PartnerSuspended 8). Desde el 2 oct 2026
+ * el status se cambia con `StatusSelect` en la cabecera.
  */
 export default function PartnerDetailPage() {
   return (
@@ -121,19 +122,48 @@ function PartnerDetailScreen() {
     }
   }
 
-  const statusPill = draft ? (
-    <DraftStatusPill>Draft · users not invited yet</DraftStatusPill>
-  ) : suspended ? (
-    <DraftStatusPill>Suspended · hidden from members</DraftStatusPill>
-  ) : (
-    <PartnerStatusChip status={partner.status} />
+  // Ajuste del 2 oct 2026 — un solo selector de status en la cabecera.
+  const statusSelect = (
+    <StatusSelect
+      current={partner.status}
+      busy={acting}
+      options={[
+        {
+          value: "draft",
+          label: "Draft",
+          detail: draft ? "Users not invited yet" : "An activated partner can't go back to draft",
+          disabled: !draft,
+        },
+        {
+          value: "active",
+          label: "Active",
+          detail: suspended
+            ? "Reactivate — its users can sign in again"
+            : partner.users.length > 0 || !draft
+              ? "Users can sign in · activating sends each one an email to set a password"
+              : "Add at least one user before activating",
+          disabled: draft && partner.users.length === 0,
+        },
+        {
+          value: "suspended",
+          label: "Suspended",
+          detail: draft ? "Activate it first" : "Its lounges leave the member app and its users can't sign in",
+          disabled: draft,
+        },
+      ]}
+      onSelect={(value) => {
+        if (value === "active" && draft) setConfirming("activate");
+        else if (value === "active" && suspended) void runAction(() => reactivatePartner(supabase, id));
+        else if (value === "suspended") setConfirming("suspend");
+      }}
+    />
   );
 
   return (
     <AdminShell topbarLabel={<PartnerBreadcrumb name={partner.name} />}>
       <PartnerHeader
         name={partner.name}
-        status={statusPill}
+        status={statusSelect}
         meta={[
           suspended ? `Suspended ${since(partner.suspendedAt)}` : !draft ? `Active since ${since(partner.activatedAt)}` : "",
           plural(partner.users.length, "user"),
@@ -144,16 +174,6 @@ function PartnerDetailScreen() {
           .join(" · ")}
         actions={
           <>
-            {partner.status === "active" ? (
-              <Button variant="ghost" size="md" onClick={() => setConfirming("suspend")}>
-                Suspend partner
-              </Button>
-            ) : null}
-            {suspended ? (
-              <Button size="md" disabled={acting} onClick={() => runAction(() => reactivatePartner(supabase, id))}>
-                Reactivate partner
-              </Button>
-            ) : null}
             <Button variant="ghost" size="md" disabled={saving || details.name.trim() === ""} onClick={saveDetails}>
               Save changes
             </Button>
@@ -241,11 +261,7 @@ function PartnerDetailScreen() {
                     done: Boolean(representative),
                   },
                 ]}
-              >
-                <Button block size="md" className="mb-3 mt-1" disabled={partner.users.length === 0} onClick={() => setConfirming("activate")}>
-                  Activate partner
-                </Button>
-              </PartnerActivationChecklist>
+              />
               <ActivationNote />
             </>
           ) : suspended ? (
