@@ -114,7 +114,9 @@ begin
         'city', coalesce(l.city, ''),
         'content_status', l.content_status,
         'suspended_by', l.suspended_by,
-        'capacity', l.capacity
+        'capacity', l.capacity,
+        'checklist_missing', to_jsonb(public.lounge_checklist_missing(l)),
+        'weekly_hours', l.weekly_hours
       ) order by l.name)
       from public.lounges l
       where l.partner_id = p.id and l.content_status <> 'archived'

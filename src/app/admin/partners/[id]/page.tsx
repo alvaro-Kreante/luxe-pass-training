@@ -232,6 +232,8 @@ function PartnerDetailScreen() {
           />
           <PartnerLoungesCard
             lounges={partner.lounges}
+            partnerStatus={partner.status}
+            onChanged={reload}
             hint={
               draft
                 ? "Linked while draft · they publish once the partner is active"

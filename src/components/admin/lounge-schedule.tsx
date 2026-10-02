@@ -63,7 +63,7 @@ function rangeLabel(from: string, to: string, format = MONTH) {
   return `${clean(from)}, ${year(from)} – ${clean(to)}, ${year(to)}`;
 }
 
-function shortDay(iso: string) {
+export function shortDay(iso: string) {
   return WEEKDAY_MONTH.format(utc(iso)).replace(",", "");
 }
 
@@ -94,11 +94,11 @@ function TimingChip({ startsOn, endsOn }: { startsOn: string; endsOn: string }) 
   );
 }
 
-function overlaps(a: { startsOn: string; endsOn: string }, b: { startsOn: string; endsOn: string }) {
+export function overlaps(a: { startsOn: string; endsOn: string }, b: { startsOn: string; endsOn: string }) {
   return a.startsOn <= b.endsOn && b.startsOn <= a.endsOn;
 }
 
-function DateField({
+export function DateField({
   label,
   value,
   onChange,
@@ -370,19 +370,21 @@ function ClosureEditor({
           onChange={(endsOn) => onChange({ ...draft, endsOn })}
           error={backwards ? "Ends before it starts" : undefined}
         />
-        <div className="min-w-[220px] flex-[1.3]">
+        <div className="basis-full">
           <p className="m-0 mb-1.5 text-[12px] font-semibold text-fg-muted">Reopens</p>
           <div className="flex gap-2">
             <label htmlFor={reopensOnId} className="sr-only">
               Reopens on
             </label>
-            <Input
-              id={reopensOnId}
-              type="date"
-              inputSize="compact"
-              value={draft.reopensOn}
-              onChange={(event) => onChange({ ...draft, reopensOn: event.target.value })}
-            />
+            <div className="w-[200px]">
+              <Input
+                id={reopensOnId}
+                type="date"
+                inputSize="compact"
+                value={draft.reopensOn}
+                onChange={(event) => onChange({ ...draft, reopensOn: event.target.value })}
+              />
+            </div>
             <label htmlFor={reopensAtId} className="sr-only">
               Reopens at
             </label>
@@ -391,7 +393,7 @@ function ClosureEditor({
               inputSize="compact"
               value={draft.reopensAt}
               onChange={(event) => onChange({ ...draft, reopensAt: event.target.value })}
-              className="w-[118px]"
+              className="w-[134px] shrink-0"
             >
               {TIME_OPTIONS.map((time) => (
                 <option key={time} value={time}>

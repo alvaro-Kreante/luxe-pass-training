@@ -88,6 +88,10 @@ export interface AdminPartnerLounge {
   /** Solo si está suspendido: suelto ('admin') o con su partner ('partner'). */
   suspendedBy: "admin" | "partner" | null;
   capacity: number;
+  /** Story 10.11 — lo que le falta para publicarse (sin contar el partner). */
+  checklistMissing: string[];
+  /** Story 10.11 — "Start from a lounge" del horario masivo. */
+  weeklyHours: string[];
 }
 
 export interface AdminPartnerDetail extends PartnerDetailsInput {
@@ -140,7 +144,7 @@ export async function getAdminPartner(supabase: SupabaseClient, partnerId: strin
     activated_at: string | null;
     suspended_at: string | null;
     users: { id: string; first_name: string; last_name: string; email: string; mobile: string; status: PartnerMemberStatus; is_representative: boolean }[];
-    lounges: { id: string; name: string; area: string; address: string; city: string; content_status: AdminPartnerLounge["contentStatus"]; suspended_by: AdminPartnerLounge["suspendedBy"]; capacity: number }[];
+    lounges: { id: string; name: string; area: string; address: string; city: string; content_status: AdminPartnerLounge["contentStatus"]; suspended_by: AdminPartnerLounge["suspendedBy"]; capacity: number; checklist_missing: string[] | null; weekly_hours: string[] | null }[];
   };
   const raw = await rpc<Raw | null>(supabase, "admin_partner_detail", { p_partner_id: partnerId });
   if (!raw) return null;
@@ -176,6 +180,8 @@ export async function getAdminPartner(supabase: SupabaseClient, partnerId: strin
       contentStatus: l.content_status,
       suspendedBy: l.suspended_by,
       capacity: l.capacity,
+      checklistMissing: l.checklist_missing ?? [],
+      weeklyHours: l.weekly_hours ?? [],
     })),
   };
 }

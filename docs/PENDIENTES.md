@@ -598,9 +598,7 @@ no publicar el lounge; reenviarla vuelve con la Story 10.4.
 
 ### 4.14 Epic 10: historias 10.9–10.12
 
-- **10.12 (búsqueda en el detalle del partner):** hecha. Falta su criterio
-  "la selección de las acciones masivas se mantiene al buscar", que depende
-  de la 10.11 y se prueba con ella.
+- **10.12 (búsqueda en el detalle del partner):** hecha.
 - **10.9 hecha** (datos, UI de admin en vista live y borrador, ficha del
   miembro con el horario de la temporada vigente). Queda abierto:
   - Las tarjetas y el filtro de fecha de `/explore` siguen con
@@ -614,7 +612,13 @@ no publicar el lounge; reenviarla vuelve con la Story 10.4.
   porcentaje de subida ni "Retry" (ver desviaciones de COMPONENT-MAP);
   los originales ocupan Storage aunque el lounge cambie de foto, solo los
   limpia `cleanTestData` en local — en remoto no hay limpieza de huérfanos.
-- **10.11 tiene artboards (28–34)**, falta implementarla.
+- **10.11 hecha** (selección, cambio de status, horario, temporada y cierre
+  masivos con confirmación y resultado parcial). Abierto: sin registro de
+  auditoría de la acción masiva; el cierre masivo hereda la decisión
+  pendiente de "Save anyway" (las reservas confirmadas siguen vigentes y
+  nadie avisa a esos miembros).
+- **10.12:** su criterio de selección al buscar ya está cubierto (test de
+  `src/app/admin/partners/[id]/bulk.test.tsx`).
 
 ### 4.13 Epic 10: el modelo de partners cambió y los remotos no lo tienen
 

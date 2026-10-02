@@ -461,6 +461,26 @@ grant execute on function public.admin_set_draft_lounge_photos(text, jsonb) to a
 -- Mismos requisitos que la lista "Before it can be published" del
 -- artboard (`publishChecklist`, src/lib/lounge-draft.ts) — el servidor los
 -- vuelve a comprobar, el cliente solo los muestra.
+-- Lo que le falta a un lounge para publicarse, con los nombres de la lista
+-- "Before it can be published" (`publishChecklist`, src/lib/lounge-draft.ts).
+-- El partner activo se comprueba aparte. Story 10.11 lo enseña por lounge en
+-- el detalle del partner.
+create or replace function public.lounge_checklist_missing(p_lounge public.lounges)
+returns text[]
+language sql
+stable
+set search_path = ''
+as $$
+  select array_remove(array[
+    case when trim(p_lounge.name) = '' or trim(p_lounge.phone) = '' or trim(p_lounge.email) = '' then 'Name and contact' end,
+    case when trim(p_lounge.address) = '' then 'Address on the map' end,
+    case when not exists (
+      select 1 from jsonb_array_elements_text(p_lounge.weekly_hours) h where lower(trim(h)) not in ('', 'closed')
+    ) then 'Operating hours' end,
+    case when p_lounge.capacity <= 0 then 'Seats per time slot' end
+  ], null);
+$$;
+
 create or replace function public.admin_publish_lounge(p_lounge_id text)
 returns void
 language plpgsql
@@ -479,13 +499,7 @@ begin
     raise exception 'Only drafts can be published';
   end if;
 
-  if trim(v_lounge.name) = '' or trim(v_lounge.phone) = '' or trim(v_lounge.email) = ''
-     or trim(v_lounge.address) = ''
-     or v_lounge.capacity <= 0
-     or not exists (
-       select 1 from jsonb_array_elements_text(v_lounge.weekly_hours) h
-       where lower(trim(h)) not in ('', 'closed')
-     ) then
+  if cardinality(public.lounge_checklist_missing(v_lounge)) > 0 then
     raise exception 'This lounge is incomplete and cannot be published yet';
   end if;
 
@@ -571,3 +585,40 @@ on storage.objects for all
 to authenticated
 using ( bucket_id = 'lounge-images' and public.has_role('admin') )
 with check ( bucket_id = 'lounge-images' and public.has_role('admin') );
+
+-- Story 10.11 — el mismo horario semanal para varios lounges de un partner
+-- (PartnerBulkHours.dc.html). Sustituye la semana habitual en cualquier
+-- status, sin pasar el lounge a borrador; temporadas y cierres no se tocan.
+-- `p_hours` es el resumen corto del catálogo (`hoursSummary`).
+create or replace function public.admin_set_lounge_hours(p_lounge_id text, p_weekly_hours jsonb, p_hours text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.has_role('admin') then
+    raise exception 'Not authorized';
+  end if;
+  if jsonb_typeof(p_weekly_hours) <> 'array' or jsonb_array_length(p_weekly_hours) <> 7 then
+    raise exception 'A week has 7 days';
+  end if;
+
+  update public.lounges
+  set weekly_hours = p_weekly_hours,
+      closed_weekdays = (
+        select coalesce(array_agg((d.ord - 1)::smallint order by d.ord), '{}')
+        from jsonb_array_elements_text(p_weekly_hours) with ordinality as d(hours, ord)
+        where lower(trim(d.hours)) in ('', 'closed')
+      ),
+      hours = p_hours,
+      updated_at = now()
+  where id = p_lounge_id and content_status <> 'archived';
+  if not found then
+    raise exception 'Lounge not found';
+  end if;
+end;
+$$;
+
+revoke execute on function public.admin_set_lounge_hours(text, jsonb, text) from public, anon;
+grant execute on function public.admin_set_lounge_hours(text, jsonb, text) to authenticated;
