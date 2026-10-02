@@ -114,7 +114,32 @@ begin
 end;
 $$;
 
+-- Story 2.1 — plazas libres de un día en todo el catálogo publicado, para
+-- el chip "N slots today" / "Full" de /explore (sustituye a la instantánea
+-- `lounges.slots_today`). Suma las franjas abiertas de
+-- `lounge_availability_range`, así que respeta temporadas, cierres y
+-- reservas. Solo lounges `live` (lo que el catálogo ya muestra) y solo
+-- conteos agregados. `p_date` lo pasa el cliente (TODAY de la app).
+create or replace function public.lounge_seats_on(p_date date)
+returns table (lounge_id text, seats_left integer)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  return query
+    select l.id, coalesce(sum(r.seats_left), 0)::integer
+    from public.lounges l
+    left join lateral public.lounge_availability_range(l.id, p_date, p_date) r on true
+    where l.content_status = 'live'
+    group by l.id;
+end;
+$$;
+
 revoke execute on function public.lounge_band_is_open(text, date, text) from public, anon, authenticated;
 revoke execute on function public.lounge_seats_left(text, date, text) from public, anon, authenticated;
 revoke execute on function public.lounge_availability_range(text, date, date) from public, anon;
 grant execute on function public.lounge_availability_range(text, date, date) to authenticated;
+revoke execute on function public.lounge_seats_on(date) from public, anon;
+grant execute on function public.lounge_seats_on(date) to authenticated;

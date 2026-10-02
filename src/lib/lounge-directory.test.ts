@@ -2,6 +2,7 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
 
 import { createClient } from "@/lib/supabase/client";
+import { TODAY } from "@/lib/availability";
 import { signUpConfirmedAndSignIn } from "@/lib/testing/confirmed-user";
 
 import {
@@ -43,6 +44,36 @@ describe("fetchLounges (Supabase local)", () => {
     });
     expect(typeof ainsworth?.lat).toBe("number");
     expect(typeof ainsworth?.lng).toBe("number");
+  });
+
+  /**
+   * Regresión: `slotsToday` salía de la columna `slots_today`, una instantánea
+   * sembrada del mock. Un lounge creado desde el admin nacía con 0 y Explore
+   * lo marcaba "Full" aunque tuviera todo el aforo libre.
+   */
+  it("las plazas de hoy son las libres de verdad, sumando las franjas abiertas", async () => {
+    const supabase = createClient();
+    await signUpConfirmedAndSignIn(
+      supabase,
+      `plazas-${Date.now()}@ensoleil-test.com`,
+      "EnSoleil!2026",
+    );
+
+    const lounges = await fetchLounges(supabase);
+
+    for (const id of ["the-ainsworth", "the-ironbound-salon"]) {
+      const { data: cells } = await supabase.rpc("lounge_availability_range", {
+        p_lounge_id: id,
+        p_from: TODAY,
+        p_to: TODAY,
+      });
+      const free = (cells as { seats_left: number }[]).reduce(
+        (sum, cell) => sum + cell.seats_left,
+        0,
+      );
+
+      expect(lounges.find((lounge) => lounge.id === id)?.slotsToday).toBe(free);
+    }
   });
 
   it("RLS bloquea a un cliente sin sesión", async () => {

@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { AMENITIES, type AmenityId } from "./amenities";
-import type { TimeBand } from "./availability";
+import { TODAY, type TimeBand } from "./availability";
 import { haversineMiles, type Coordinates } from "./distance";
 
 /**
@@ -21,6 +21,7 @@ export interface LoungeRow {
   rating: number;
   /** Instantánea sembrada por migración, no en vivo — ver COMPONENT-MAP.md. */
   openNow: boolean;
+  /** Plazas libres hoy (TODAY), sumando sus franjas abiertas — `lounge_seats_on`. */
   slotsToday: number;
   hours: string;
   bands: TimeBand[];
@@ -89,11 +90,35 @@ export async function fetchLounges(
   // tiene reserva allí (Epic 8, editar un lounge live) — el catálogo solo
   // muestra los publicados.
   // Story 10.8 — solo `name` del partner: el miembro no puede leer nada más (privilegio por columna).
-  const { data, error } = await supabase.from("lounges").select("*, partners(name)").eq("content_status", "live");
+  const [{ data, error }, seats] = await Promise.all([
+    supabase.from("lounges").select("*, partners(name)").eq("content_status", "live"),
+    seatsToday(supabase),
+  ]);
 
   if (error) throw error;
 
-  return (data as LoungeTableRow[]).map(fromRow);
+  return withSeats((data as LoungeTableRow[]).map(fromRow), seats);
+}
+
+/**
+ * La disponibilidad real de hoy, no la columna `slots_today` (instantánea del
+ * mock con la que un lounge nuevo nacía "Full").
+ */
+async function seatsToday(supabase: SupabaseClient): Promise<Map<string, number>> {
+  const { data, error } = await supabase.rpc("lounge_seats_on", { p_date: TODAY });
+
+  if (error) throw error;
+
+  return new Map(
+    ((data ?? []) as { lounge_id: string; seats_left: number }[]).map((row) => [
+      row.lounge_id,
+      row.seats_left,
+    ]),
+  );
+}
+
+function withSeats(lounges: LoungeRow[], seats: Map<string, number>): LoungeRow[] {
+  return lounges.map((lounge) => ({ ...lounge, slotsToday: seats.get(lounge.id) ?? 0 }));
 }
 
 /**
@@ -122,15 +147,18 @@ export async function searchLounges(
     ...(amenityIds.length > 0 ? [`amenities.ov.{${amenityIds.join(",")}}`] : []),
   ];
 
-  const { data, error } = await supabase
-    .from("lounges")
-    .select("*, partners(name)")
-    .eq("content_status", "live")
-    .or(conditions.join(","));
+  const [{ data, error }, seats] = await Promise.all([
+    supabase
+      .from("lounges")
+      .select("*, partners(name)")
+      .eq("content_status", "live")
+      .or(conditions.join(",")),
+    seatsToday(supabase),
+  ]);
 
   if (error) throw error;
 
-  return (data as LoungeTableRow[]).map(fromRow);
+  return withSeats((data as LoungeTableRow[]).map(fromRow), seats);
 }
 
 /** Añade la distancia real desde `origin` y ordena de más cerca a más lejos. */
