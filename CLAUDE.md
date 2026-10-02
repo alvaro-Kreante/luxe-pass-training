@@ -210,6 +210,18 @@ específico de este proyecto:
   implementación real. Rellenar una API del navegador que jsdom no trae
   (`vitest.setup.ts` define un `IntersectionObserver` inerte) no cuenta como
   mock: no sustituye código del proyecto, lo hace ejecutable.
+- **Ningún registro de test sobrevive a la corrida.** La suite corre contra
+  el Supabase local real; `vitest.global-setup.ts` llama a `cleanTestData`
+  (`src/lib/testing/clean-test-data.ts`) antes y después de la suite y borra
+  cuentas de test con todo lo que cuelga de ellas, los partners/lounges que
+  crearon (`created_by`), lounges `test-…`, partners de test y los archivos
+  de Storage huérfanos. Un test nuevo debe crear sus datos de forma que esa
+  limpieza los reconozca: emails de los dominios de test (`…-test.com`,
+  `example.com`), ids `test-…`, nombres con sello `Date.now()`. Si crea un
+  tipo de registro nuevo, se amplía `cleanTestData` en el mismo cambio. Los
+  datos del seed y la cuenta admin real nunca se tocan. Para depurar un
+  fallo, `KEEP_TEST_DATA=1 npm test` conserva los datos hasta la próxima
+  corrida.
 - Punto de partida para una pantalla nueva: `src/app/login/page.test.tsx` y
   `src/app/signup/page.test.tsx` (este último incluye el patrón para un modal
   de Radix). Los `describe` agrupan por comportamiento, no por componente.

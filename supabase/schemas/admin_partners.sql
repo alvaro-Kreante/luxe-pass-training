@@ -178,7 +178,9 @@ begin
     raise exception 'A partner needs a name';
   end if;
 
-  insert into public.partners (name, status) values (trim(p_partner->>'name'), 'draft') returning id into v_id;
+  insert into public.partners (name, status, created_by)
+  values (trim(p_partner->>'name'), 'draft', auth.uid())
+  returning id into v_id;
   perform public.admin_apply_partner_details(v_id, p_partner);
   for v_user in select * from jsonb_array_elements(coalesce(p_partner->'users', '[]'::jsonb)) loop
     perform public.admin_add_partner_member(v_id, v_user);

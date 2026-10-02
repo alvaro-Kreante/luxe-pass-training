@@ -379,8 +379,8 @@ begin
 
   -- Las tres franjas abiertas: la disponibilidad en vivo
   -- (`lounge_availability.sql`) las ofrece con `capacity` plazas cada una.
-  insert into public.lounges (id, name, neighborhood, city, city_id, lat, lng, hours, bands, content_status)
-  values (v_id, '', '', '', '', 0, 0, '', array['morning', 'afternoon', 'evening'], 'draft');
+  insert into public.lounges (id, name, neighborhood, city, city_id, lat, lng, hours, bands, content_status, created_by)
+  values (v_id, '', '', '', '', 0, 0, '', array['morning', 'afternoon', 'evening'], 'draft', auth.uid());
 
   perform public.admin_apply_lounge_draft(v_id, p_lounge);
 

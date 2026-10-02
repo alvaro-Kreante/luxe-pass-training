@@ -29,6 +29,9 @@ create table if not exists public.partners (
   representative_id uuid,
   activated_at      timestamptz,
   suspended_at      timestamptz,
+  -- Quién lo dio de alta (admin). Sin cascada: borrar la cuenta no borra el
+  -- partner. Sirve también para que la suite borre lo que crean sus cuentas.
+  created_by        uuid references auth.users (id) on delete set null,
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now()
 );

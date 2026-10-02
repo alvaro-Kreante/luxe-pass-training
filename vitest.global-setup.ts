@@ -29,9 +29,15 @@ export default async function setup() {
   await cleanTestData(admin);
 
   return async function teardown() {
+    // `KEEP_TEST_DATA=1 npm test` conserva lo que dejó la corrida para
+    // depurar un fallo; la siguiente corrida lo borra igual al empezar.
+    if (process.env.KEEP_TEST_DATA === "1") {
+      console.log("\nKEEP_TEST_DATA=1: los datos de test se conservan hasta la próxima corrida.");
+      return;
+    }
     const removed = await cleanTestData(admin);
     console.log(
-      `\nDatos de test borrados: ${removed.users} cuentas, ${removed.partners} partners, ${removed.lounges} lounges.`,
+      `\nDatos de test borrados: ${removed.users} cuentas, ${removed.partners} partners, ${removed.lounges} lounges, ${removed.files} archivos.`,
     );
   };
 }

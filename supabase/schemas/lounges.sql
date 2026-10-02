@@ -48,6 +48,9 @@ create table if not exists public.lounges (
   -- Story 10.1 — el partner (organización) que opera el lounge. Null solo
   -- mientras es borrador: publicar exige un partner activo.
   partner_id           uuid references public.partners (id) on delete restrict,
+  -- Quién lo dio de alta (admin). Sin cascada: borrar la cuenta no borra el
+  -- lounge. Sirve también para que la suite borre lo que crean sus cuentas.
+  created_by           uuid references auth.users (id) on delete set null,
   created_at           timestamptz not null default now(),
   updated_at           timestamptz not null default now()
 );
