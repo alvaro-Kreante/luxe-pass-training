@@ -5,7 +5,8 @@
 -- plaza en ella. Una franja solo "existe" (devuelve fila) cuando el lounge
 -- la abre: banda en `lounges.bands` ('late' cuelga de 'evening', igual que
 -- `SUPPORTING_BAND` en src/lib/lounge-profile.ts), día fuera de
--- `closed_weekdays` y sin un `lounge_closures` que lo cubra. El cliente
+-- `closed_weekdays` (o los de su temporada, `lounge_seasons`, Story 10.9) y
+-- sin un `lounge_closures` que lo cubra. El cliente
 -- sigue derivando "closed" de la ausencia de fila, como antes.
 --
 -- SECURITY DEFINER porque un miembro no puede leer (RLS) las reservas de
@@ -36,7 +37,7 @@ begin
     from public.lounges l
     where l.id = p_lounge_id
       and (case when p_band = 'late' then 'evening' else p_band end) = any (l.bands)
-      and not (extract(dow from p_date)::smallint = any (l.closed_weekdays))
+      and not (extract(dow from p_date)::smallint = any (public.lounge_closed_weekdays_on(p_lounge_id, p_date)))
   )
   and not exists (
     select 1
@@ -104,7 +105,7 @@ begin
     join public.lounges l on l.id = p_lounge_id
     left join taken t on t.day = c.day and t.band = c.band
     where (case when c.band = 'late' then 'evening' else c.band end) = any (l.bands)
-      and not (extract(dow from c.day)::smallint = any (l.closed_weekdays))
+      and not (extract(dow from c.day)::smallint = any (public.lounge_closed_weekdays_on(p_lounge_id, c.day)))
       and not exists (
         select 1 from public.lounge_closures lc
         where lc.lounge_id = p_lounge_id and c.day between lc.starts_on and lc.ends_on

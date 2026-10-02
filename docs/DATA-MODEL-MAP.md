@@ -326,7 +326,8 @@ el amigo llega por `/join/[code]` → `/signup?ref=` (metadatos de Auth).
 | `lounges` | 2 (nace) / 3 (detalle) | 4, 5, 6, 7, 8 |
 | disponibilidad en vivo (`lounge_availability_range`, sin tabla) | 3 | 2, 4, 8 |
 | `lounge_images` | 3 | 8 (gestión) |
-| `lounge_closures` | 3 | 4 (booking, sin conectar) |
+| `lounge_closures` | 3 | 4 (disponibilidad), 10 (escritura del admin, Story 10.9) |
+| `lounge_seasons` | 10 (Story 10.9) | 2, 3, 4 (vía disponibilidad: `lounge_closed_weekdays_on`) |
 | `bookings` | 4 | 5, 6, 7, 8, 9 |
 | `payments` | 4 | 8 (refunds) |
 | `notifications` | 6 | 5, 7, 9 |

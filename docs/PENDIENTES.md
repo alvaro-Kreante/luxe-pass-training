@@ -601,6 +601,13 @@ no publicar el lounge; reenviarla vuelve con la Story 10.4.
 - **10.12 (búsqueda en el detalle del partner):** hecha. Falta su criterio
   "la selección de las acciones masivas se mantiene al buscar", que depende
   de la 10.11 y se prueba con ella.
+- **10.9 — capa de datos hecha** (`lounge_seasons`, escritura de admin en
+  `lounge_closures`, `admin_closure_booking_count`, disponibilidad por
+  temporada; `src/lib/lounge-schedule.ts`). Falta la UI del formulario
+  (espera artboards) y que la ficha del lounge y `/explore` muestren el
+  horario de la temporada vigente: hoy solo la disponibilidad lo aplica.
+  Las bandas (mañana/tarde/noche) siguen siendo del lounge, no de la
+  temporada.
 - **10.9, 10.10 y 10.11 esperan artboards** (`/design`, carpeta
   `docs/design/epic-10-partner-organizations/`): sección de temporadas y
   cierres del formulario del lounge, editor de fotos con `react-easy-crop`
