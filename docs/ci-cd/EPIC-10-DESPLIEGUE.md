@@ -91,7 +91,7 @@ cuenta nueva (un email que ya existe se rechaza con "already in use").
 
 1. PR de la rama `refactor/partners-lounges-structure` → `staging`, con el CI
    en verde.
-2. Al hacer merge, `deploy.yml` aplica las migraciones del Epic 10 a
+2. Al hacer merge, `deploy.yml` aplica las 13 migraciones del Epic 10 a
    `luxepass-dev`:
 
    ```
@@ -105,7 +105,8 @@ cuenta nueva (un email que ya existe se rechaza con "already in use").
    20261001205214_lounge_partner_admin.sql
    20261001211323_partner_lounge_switcher.sql
    20261001212707_partner_notification_recipients.sql
-   …
+   20261001221331_partner_context_access.sql
+   20261001222131_draft_keeps_existing_photos.sql
    20261002161224_created_by_admin.sql
    ```
 
