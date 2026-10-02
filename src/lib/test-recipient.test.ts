@@ -37,6 +37,15 @@ describe("emailSkipReason", () => {
     expect(emailSkipReason("LOCAL", "dev02@kreante.co")).toBeNull();
   });
 
+  it("en local, mientras corre la suite no sale ningún email, tampoco a buzones reales", () => {
+    expect(emailSkipReason("LOCAL", "dana.okafor@theainsworth.com", { testsRunning: true })).toBe("tests-running");
+    expect(emailSkipReason("LOCAL", "dana.okafor@theainsworth.com", { testsRunning: false })).toBeNull();
+  });
+
+  it("la pausa de la suite local no afecta a staging ni a producción", () => {
+    expect(emailSkipReason("STAGING", "dev02@kreante.co", { testsRunning: true })).toBeNull();
+  });
+
   it("en staging y producción se envía siempre", () => {
     expect(emailSkipReason("STAGING", "camille@thelarkspur-test.com")).toBeNull();
     expect(emailSkipReason("PROD", "dev02@kreante.co")).toBeNull();

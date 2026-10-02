@@ -9,9 +9,29 @@ const senderEmail = Deno.env.get("BREVO_SENDER_EMAIL") as string;
 const senderName = Deno.env.get("BREVO_SENDER_NAME") ?? "LuxePass";
 const envLabel = Deno.env.get("APP_ENV");
 
-/** Ver `emailSkipReason`: sin APP_ENV (CI) nada sale; en LOCAL, los destinatarios de test tampoco. */
-function skipSending(to: string, subject: string): boolean {
-  const reason = emailSkipReason(envLabel, to);
+/**
+ * La suite local marca `public.email_pause` mientras corre
+ * (`vitest.global-setup.ts`). Solo se consulta en LOCAL; si la consulta
+ * falla, se asume que hay tests corriendo y no se envía.
+ */
+async function testsRunning(): Promise<boolean> {
+  if (envLabel !== "LOCAL") return false;
+  try {
+    const url = Deno.env.get("SUPABASE_URL");
+    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") as string;
+    const response = await fetch(`${url}/rest/v1/email_pause?select=id&until=gt.${new Date().toISOString()}`, {
+      headers: { apikey: key, Authorization: `Bearer ${key}` },
+    });
+    if (!response.ok) return true;
+    return ((await response.json()) as unknown[]).length > 0;
+  } catch {
+    return true;
+  }
+}
+
+/** Ver `emailSkipReason`: sin APP_ENV (CI) nada sale; en LOCAL, ni durante la suite ni a destinatarios de test. */
+async function skipSending(to: string, subject: string): Promise<boolean> {
+  const reason = emailSkipReason(envLabel, to, { testsRunning: await testsRunning() });
   if (!reason) return false;
   console.log(`brevo: skipped ${to} (${reason}) — ${subject}`);
   return true;
@@ -27,7 +47,7 @@ export async function sendBrevoEmail(
   subject: string,
   htmlContent: string,
 ): Promise<void> {
-  if (skipSending(to, subject)) return;
+  if (await skipSending(to, subject)) return;
   const response = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
     headers: {
@@ -59,7 +79,7 @@ export async function sendBrevoEmailWithAttachment(
   htmlContent: string,
   attachments: { name: string; content: string }[],
 ): Promise<void> {
-  if (skipSending(to, subject)) return;
+  if (await skipSending(to, subject)) return;
   const response = await fetch("https://api.brevo.com/v3/smtp/email", {
     method: "POST",
     headers: {

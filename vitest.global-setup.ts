@@ -24,11 +24,29 @@ function adminClient() {
   return createClient(url, env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 
+/**
+ * Mientras corre la suite no sale ningún email por Brevo (ver
+ * `public.email_pause` y `_shared/brevo.ts`): los tests reservan en lounges
+ * sembrados y avisarían a sus partners reales, gastando la cuota diaria.
+ * `until` acota la pausa si la suite se corta sin llegar al teardown.
+ */
+async function pauseEmails(admin: ReturnType<typeof adminClient>) {
+  const until = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+  const { error } = await admin.from("email_pause").upsert({ id: "vitest", until });
+  if (error) throw error;
+}
+
+async function resumeEmails(admin: ReturnType<typeof adminClient>) {
+  await admin.from("email_pause").delete().eq("id", "vitest");
+}
+
 export default async function setup() {
   const admin = adminClient();
+  await pauseEmails(admin);
   await cleanTestData(admin);
 
   return async function teardown() {
+    await resumeEmails(admin);
     // `KEEP_TEST_DATA=1 npm test` conserva lo que dejó la corrida para
     // depurar un fallo; la siguiente corrida lo borra igual al empezar.
     if (process.env.KEEP_TEST_DATA === "1") {
