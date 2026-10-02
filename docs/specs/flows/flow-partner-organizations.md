@@ -50,7 +50,29 @@ flowchart TD
         MemberViews["Explore, ficha, reserva, pase, emails"] --> PartnerName["Nombre del partner como contexto"]
     end
 
+    subgraph Story109["Story 10.9 - Temporadas y cierres"]
+        LoungeForm["Formulario del lounge"] --> Seasons["Temporadas: periodo + horario semanal"]
+        LoungeForm --> Closures["Cierres especiales: periodo + motivo"]
+        Seasons --> Availability["Disponibilidad del día"]
+        Closures --> Availability
+    end
+
+    subgraph Story1010["Story 10.10 - Fotos optimizadas"]
+        PickPhoto["Elegir foto"] --> Optimize["Redimensionar y comprimir en el navegador"] --> Upload["Subir a Storage"]
+    end
+
+    subgraph Story1011["Story 10.11 - Acciones masivas"]
+        SelectLounges["Seleccionar lounges del partner"] --> BulkAction{"Status / horario / temporada / cierre"}
+        BulkAction --> BulkConfirm["Confirmar: qué y en cuántos"] --> BulkResult["Aplicados + los que no, con motivo"]
+    end
+
+    subgraph Story1012["Story 10.12 - Buscar lounge"]
+        PartnerLoungeSearch["Buscar en los lounges del partner"] --> SelectLounges
+    end
+
     SearchFilter --> NewPartner
+    PartnerLounges --> PartnerLoungeSearch
+    Availability --> MemberViews
     PartnerLounges --> Activate
     CreateFirst --> NewPartner
     Active --> Publish
@@ -71,8 +93,13 @@ flowchart TD
 | [Story 10.6 - Selector de lounge](../epic-10-partner-organizations/story-10.6-selector-de-lounge-partner.md) | Subgraph "Story 10.6": `Login partner` → `Analytics…` |
 | [Story 10.7 - Notificaciones](../epic-10-partner-organizations/story-10.7-notificaciones-al-partner.md) | Subgraph "Story 10.7" |
 | [Story 10.8 - Vista del miembro](../epic-10-partner-organizations/story-10.8-partner-en-la-vista-del-miembro.md) | Subgraph "Story 10.8" |
+| [Story 10.9 - Temporadas y cierres](../epic-10-partner-organizations/story-10.9-temporadas-y-cierres-del-lounge.md) | Subgraph "Story 10.9": `Formulario del lounge` → `Disponibilidad del día` |
+| [Story 10.10 - Fotos optimizadas](../epic-10-partner-organizations/story-10.10-fotos-optimizadas.md) | Subgraph "Story 10.10" |
+| [Story 10.11 - Acciones masivas](../epic-10-partner-organizations/story-10.11-acciones-masivas-en-lounges-del-partner.md) | Subgraph "Story 10.11": `Seleccionar lounges` → `Aplicados + los que no` |
+| [Story 10.12 - Buscar lounge](../epic-10-partner-organizations/story-10.12-buscar-lounge-del-partner.md) | Subgraph "Story 10.12" |
 
 ## Notes
 
 - Orden de implementación: 10.1 primero; luego 10.2 → 10.3 → 10.4 → 10.5; 10.6, 10.7 y 10.8 dependen solo de 10.1.
 - Sin artboard previo para 10.2, 10.3, 10.4 y 10.6: se diseñan con `/design` en `docs/design/epic-10-partner-organizations/` antes de implementar.
+- 10.10 y 10.12 no necesitan artboard nuevo: 10.10 no cambia la pantalla salvo el progreso de subida y 10.12 reutiliza el buscador de las listas de admin. 10.9 y 10.11 se diseñan con `/design` antes de implementar; 10.11 depende de 10.9 para temporadas y cierres.
