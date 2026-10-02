@@ -232,7 +232,7 @@ describe("sus lounges", () => {
     await service.from("lounges").delete().eq("id", loungeId);
 
     expect(partner?.lounges).toEqual([
-      { id: loungeId, name: `Partner CRUD Lounge ${stamp}`, area: "South Beach, Miami", contentStatus: "draft", suspendedBy: null, capacity: 40 },
+      { id: loungeId, name: `Partner CRUD Lounge ${stamp}`, area: "South Beach, Miami", address: "", city: "Miami", contentStatus: "draft", suspendedBy: null, capacity: 40 },
     ]);
   });
 });
