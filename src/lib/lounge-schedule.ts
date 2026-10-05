@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { today, addDays } from "@/lib/availability";
+import type { HoursRow } from "@/lib/lounge-profile";
 
 /**
  * Story 10.9 — temporadas (`lounge_seasons`) y cierres especiales
@@ -202,4 +203,91 @@ export async function persistLoungeSchedule(supabase: SupabaseClient, loungeId: 
   for (const { startsOn, endsOn, reason, reopensLabel } of schedule.closures) {
     await saveLoungeClosure(supabase, loungeId, { startsOn, endsOn, reason, reopensLabel });
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Vista del miembro (SeasonalHours / NoSchedule / ClosedToday.dc.html) */
+/* ------------------------------------------------------------------ */
+
+export interface MemberSeason extends LoungeSeason {
+  inEffect: boolean;
+}
+
+export interface MemberSchedule {
+  /** En curso o futuras; las pasadas no se muestran. */
+  seasons: MemberSeason[];
+  /** Cierres que aún no han empezado (el de hoy va aparte, en `closedToday`). */
+  closures: LoungeClosure[];
+  inEffect: LoungeSeason | null;
+  closedToday: LoungeClosure | null;
+}
+
+export function memberSchedule(schedule: LoungeSchedule, todayIso: string): MemberSchedule {
+  const byStart = <T extends { startsOn: string }>(a: T, b: T) => a.startsOn.localeCompare(b.startsOn);
+  const covers = (item: { startsOn: string; endsOn: string }) => item.startsOn <= todayIso && todayIso <= item.endsOn;
+
+  const seasons = schedule.seasons
+    .filter((season) => season.endsOn >= todayIso)
+    .sort(byStart)
+    .map((season) => ({ ...season, inEffect: covers(season) }));
+  const closedToday = schedule.closures.find(covers) ?? null;
+
+  return {
+    seasons,
+    closures: schedule.closures.filter((closure) => closure.startsOn > todayIso).sort(byStart),
+    inEffect: seasons.find((season) => season.inEffect) ?? null,
+    closedToday,
+  };
+}
+
+const WEEKDAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+/**
+ * Los próximos 7 días desde hoy, cada uno con lo que manda (cierre →
+ * temporada → semana habitual), agrupando los consecutivos iguales. Hoy va
+ * siempre solo y primero, como `operatingHoursFor`.
+ */
+export function weekHoursFrom(todayIso: string, regularWeek: string[], schedule: LoungeSchedule): HoursRow[] {
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const dateIso = addDays(todayIso, i);
+    const day = dayHours(dateIso, regularWeek, schedule);
+    return {
+      name: WEEKDAY_NAMES[weekdayOf(dateIso)],
+      hours: day.source === "closure" ? `Closed · ${day.reason}` : day.hours,
+    };
+  });
+
+  const rows: HoursRow[] = [{ label: `${days[0].name} · Today`, hours: days[0].hours, isToday: true }];
+  let i = 1;
+  while (i < days.length) {
+    let j = i;
+    while (j + 1 < days.length && days[j + 1].hours === days[i].hours) j++;
+    rows.push({ label: j > i ? `${days[i].name} – ${days[j].name}` : days[i].name, hours: days[i].hours });
+    i = j + 1;
+  }
+  return rows;
+}
+
+function monthDay(dateIso: string, withYear: boolean): string {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    ...(withYear ? { year: "numeric" } : {}),
+    timeZone: "UTC",
+  }).format(new Date(`${dateIso}T12:00:00Z`));
+}
+
+/** "Sep 1 – Sep 30, 2025", o "Dec 20, 2025 – Jan 4, 2026" si cruza de año. */
+export function formatDateRange(startsOn: string, endsOn: string): string {
+  const sameYear = startsOn.slice(0, 4) === endsOn.slice(0, 4);
+  return `${monthDay(startsOn, !sameYear)} – ${monthDay(endsOn, true)}`;
+}
+
+/** "Season hours until Sep 30 · usual hours from Oct 1". */
+export function seasonNote(season: LoungeSeason): string {
+  return `Season hours until ${monthDay(season.endsOn, false)} · usual hours from ${monthDay(addDays(season.endsOn, 1), false)}`;
+}
+
+export function seasonTitle(season: LoungeSeason): string {
+  return season.name.trim() || "Seasonal hours";
 }
