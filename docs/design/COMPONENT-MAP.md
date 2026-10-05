@@ -244,7 +244,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `lib/lounges.ts` | Catálogo de muestra de lounges y los destacados del Home |
 | `lib/member.ts` | El miembro de muestra que pinta el App shell |
 | `lounges/featured-lounge-card.tsx` | Card de lounge destacado del Home |
-| `lounges/lounge-thumb.tsx` | Miniatura de lounge; el tono sale del id, igual en todas las vistas |
+| `lounges/lounge-thumb.tsx` | Miniatura de lounge: su foto principal (`mainImageUrl`, la `lounge_images` de menor `position`) en la lista, el callout del mapa y las tarjetas de Explore. Sin foto (datos de muestra del mock) queda el radial de marca, con el tono sacado del id. `HeroPhotoSurface` (carrusel y galería de la ficha) pinta igual la `url` real de cada foto |
 | `explore/city-map.tsx` · `sun-mark.tsx` · `use-map-load-status.ts` | Story 2.1 — Google Maps real (`@vis.gl/react-google-maps`), sus markers, zoom/pan y el timeout de carga |
 | `explore/location-dialogs.tsx` | Story 2.1 — permiso de ubicación y entrada manual |
 | `explore/result-card.tsx` · `lounge-callout.tsx` · `amenity-icon.tsx` | Story 2.1 — la lista del panel y el detalle sobre el mapa |

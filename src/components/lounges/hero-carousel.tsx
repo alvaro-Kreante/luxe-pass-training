@@ -30,7 +30,7 @@ export function HeroCarousel({
   return (
     <div className="grid h-[268px] shrink-0 grid-cols-[1fr_348px] gap-3 px-8 pt-5.5">
       <div className="relative overflow-hidden rounded-[18px]">
-        <HeroPhotoSurface loungeId={loungeId} photoIndex={index} caption={photo.caption} />
+        <HeroPhotoSurface loungeId={loungeId} photoIndex={index} src={photo.url} caption={photo.caption} />
 
         <button
           type="button"
@@ -72,6 +72,7 @@ export function HeroCarousel({
           <HeroPhotoSurface
             loungeId={loungeId}
             photoIndex={1}
+            src={images[1].url}
             caption={images[1].caption}
           />
         </div>
@@ -81,7 +82,7 @@ export function HeroCarousel({
           onClick={() => onOpenGallery(2)}
           className="relative flex-1 overflow-hidden rounded-[18px] text-left"
         >
-          <HeroPhotoSurface loungeId={loungeId} photoIndex={2} />
+          <HeroPhotoSurface loungeId={loungeId} photoIndex={2} src={images[2].url} />
           <span className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-panel-black/55">
             <GalleryHorizontal size={20} strokeWidth={1.7} className="text-gold-100" />
             <span className="text-[13px] font-bold text-gold-100">
