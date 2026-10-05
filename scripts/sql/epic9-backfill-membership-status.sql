@@ -15,6 +15,20 @@
 -- visita se paga como day pass, igual que una cuenta nueva.
 --
 -- Idempotente: volver a ejecutarlo no cambia nada.
+--
+-- Orden: dev en cuanto `staging` tenga Epic 9 desplegado; prod solo después
+-- de promocionar `staging` → `main`. Si el proyecto aún no tiene las
+-- migraciones de Epic 9 (tabla `memberships`) — p. ej. prod antes de esa
+-- promoción —, el bloque de abajo corta con un mensaje claro en vez del
+-- críptico "column p.membership_status does not exist".
+do $$
+begin
+  if to_regclass('public.memberships') is null then
+    raise exception 'Este proyecto todavía no tiene las migraciones de Epic 9 (falta public.memberships). Ejecuta este script después del deploy de Epic 9 en este entorno.';
+  end if;
+end;
+$$;
+
 update public.profiles p
 set membership_status = 'inactive', updated_at = now()
 where p.membership_status = 'active'
