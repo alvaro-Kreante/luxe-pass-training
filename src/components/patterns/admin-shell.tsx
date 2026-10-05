@@ -76,9 +76,13 @@ export function AdminShell({
   const [adminEmail, setAdminEmail] = React.useState("");
 
   React.useEffect(() => {
+    let active = true;
     supabase.auth.getUser().then(({ data }) => {
-      if (data.user?.email) setAdminEmail(data.user.email);
+      if (active && data.user?.email) setAdminEmail(data.user.email);
     });
+    return () => {
+      active = false;
+    };
   }, [supabase]);
 
   const adminName = adminEmail ? displayNameFromEmail(adminEmail) : "Admin";

@@ -118,7 +118,8 @@ describe("Lounges (/admin/lounges)", () => {
     const user = userEvent.setup({ delay: null });
     render(<LoungesPage />);
 
-    await user.type(await screen.findByRole("searchbox", { name: "Search lounges or partners" }), partnerName);
+    await waitFor(() => expect(screen.getByText(loungeAName)).toBeInTheDocument());
+    await user.type(screen.getByRole("searchbox", { name: "Search lounges or partners" }), partnerName);
 
     await waitFor(() => expect(screen.queryByText(loungeAName)).toBeNull());
     expect(screen.getByText(loungeBName)).toBeInTheDocument();
