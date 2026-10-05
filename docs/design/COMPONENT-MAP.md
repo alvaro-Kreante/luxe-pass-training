@@ -244,7 +244,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `lib/lounges.ts` | Catálogo de muestra de lounges y los destacados del Home |
 | `lib/member.ts` | El miembro de muestra que pinta el App shell |
 | `lounges/featured-lounge-card.tsx` | Card de lounge destacado del Home |
-| `lounges/lounge-thumb.tsx` | Miniatura de lounge; el tono sale del id, igual en todas las vistas |
+| `lounges/lounge-thumb.tsx` | Miniatura de lounge: su foto principal (`mainImageUrl`, la `lounge_images` de menor `position`) en la lista, el callout del mapa y las tarjetas de Explore. Sin foto (datos de muestra del mock) queda el radial de marca, con el tono sacado del id. `HeroPhotoSurface` (carrusel y galería de la ficha) pinta igual la `url` real de cada foto |
 | `explore/city-map.tsx` · `sun-mark.tsx` · `use-map-load-status.ts` | Story 2.1 — Google Maps real (`@vis.gl/react-google-maps`), sus markers, zoom/pan y el timeout de carga |
 | `explore/location-dialogs.tsx` | Story 2.1 — permiso de ubicación y entrada manual |
 | `explore/result-card.tsx` · `lounge-callout.tsx` · `amenity-icon.tsx` | Story 2.1 — la lista del panel y el detalle sobre el mapa |
@@ -267,6 +267,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `lounges/profile-skeleton.tsx` | Estado de carga del perfil (`Loading.dc.html`), solo alcanzable por `?loading=1` |
 | `lounges/lounge-subview-header.tsx` | Story 3.1 / 3.2 — cabecera de la sub-vista de lounge (patrón 8) |
 | `lounges/weekly-calendar.tsx` · `closure-banner.tsx` | Story 3.2 — el calendario semanal de franjas (recibe `cells` ya resueltas) y el aviso de cierre por festivo |
+| `lounges/lounge-schedule-sections.tsx` | Story 10.9 — "Seasonal hours" (tarjeta por temporada con In effect / Upcoming y `weekSummary`) y "Special closures" (un `ClosureBanner` por cierre) en la ficha del miembro (SeasonalHours.dc.html). Sin temporadas ni cierres no se pinta nada (NoSchedule.dc.html). El cierre que cubre hoy sube encima de las fotos y la `AvailabilityCard` pasa a "Closed today" (ClosedToday.dc.html). `OperatingHours` recibe las filas ya resueltas por `weekHoursFrom` (cierre → temporada → semana habitual) y, con temporada en curso, su nombre y la nota de vuelta al horario habitual |
 | `lounges/rating-summary.tsx` · `review-card.tsx` | Story 3.1 — el resumen de valoración (rating/recuento reales, desglose y reseñas de muestra) |
 | `lib/booking.ts` | Story 4.1 / 4.2 — date picker mensual, slots de llegada, precio (day pass vs. cubierto por membresía), wrappers de `confirmBooking`/`joinWaitlist` (RPC reales) y referencias de reserva reales (`bookingReferenceFromId`) |
 | `lib/calendar-export.ts` | Story 4.3 — `.ics` real y URL real de Google Calendar, con dirección y referencia de reserva reales (`LoungeProfile` + `bookingReferenceFromId`) — capacidades del navegador, sin tocar Supabase |

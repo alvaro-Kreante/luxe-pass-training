@@ -1,22 +1,154 @@
 {
   "artboards": [
-    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "1. Lounge profile" },
-    { "file": "Gallery.dc.html", "x": 1540, "y": 0, "w": 1440, "h": 900, "title": "2. Photo gallery" },
-    { "file": "Share.dc.html", "x": 3080, "y": 0, "w": 1440, "h": 900, "title": "3. Share lounge" },
-    { "file": "Availability.dc.html", "x": 0, "y": 1050, "w": 1440, "h": 900, "title": "4. Weekly availability" },
-    { "file": "NotAvailable.dc.html", "x": 1540, "y": 1050, "w": 1440, "h": 900, "title": "5. Not available today" },
-    { "file": "Closure.dc.html", "x": 3080, "y": 1050, "w": 1440, "h": 900, "title": "6. Holiday closure" },
-    { "file": "Reviews.dc.html", "x": 0, "y": 2100, "w": 1440, "h": 900, "title": "7. Ratings and reviews" },
-    { "file": "NoRatings.dc.html", "x": 1540, "y": 2100, "w": 1440, "h": 900, "title": "8. No ratings yet" },
-    { "file": "Loading.dc.html", "x": 3080, "y": 2100, "w": 1440, "h": 900, "title": "9. Profile — loading" }
+    {
+      "file": "Main.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "1. Lounge profile"
+    },
+    {
+      "file": "Gallery.dc.html",
+      "x": 1540,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "2. Photo gallery"
+    },
+    {
+      "file": "Share.dc.html",
+      "x": 3080,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "3. Share lounge"
+    },
+    {
+      "file": "Availability.dc.html",
+      "x": 0,
+      "y": 1050,
+      "w": 1440,
+      "h": 900,
+      "title": "4. Weekly availability"
+    },
+    {
+      "file": "NotAvailable.dc.html",
+      "x": 1540,
+      "y": 1050,
+      "w": 1440,
+      "h": 900,
+      "title": "5. Not available today"
+    },
+    {
+      "file": "Closure.dc.html",
+      "x": 3080,
+      "y": 1050,
+      "w": 1440,
+      "h": 900,
+      "title": "6. Holiday closure"
+    },
+    {
+      "file": "Reviews.dc.html",
+      "x": 0,
+      "y": 2100,
+      "w": 1440,
+      "h": 900,
+      "title": "7. Ratings and reviews"
+    },
+    {
+      "file": "NoRatings.dc.html",
+      "x": 1540,
+      "y": 2100,
+      "w": 1440,
+      "h": 900,
+      "title": "8. No ratings yet"
+    },
+    {
+      "file": "Loading.dc.html",
+      "x": 3080,
+      "y": 2100,
+      "w": 1440,
+      "h": 900,
+      "title": "9. Profile — loading"
+    },
+    {
+      "file": "SeasonalHours.dc.html",
+      "x": 0,
+      "y": 3150,
+      "w": 1440,
+      "h": 900,
+      "title": "10. Seasonal hours & closures"
+    },
+    {
+      "file": "NoSchedule.dc.html",
+      "x": 1540,
+      "y": 3150,
+      "w": 1440,
+      "h": 900,
+      "title": "11. No seasons or closures"
+    },
+    {
+      "file": "ClosedToday.dc.html",
+      "x": 3080,
+      "y": 3150,
+      "w": 1440,
+      "h": 900,
+      "title": "12. Closed today"
+    }
   ],
   "annotations": [
-    { "id": "phase-note", "x": 0, "y": -150, "w": 820, "text": "LuxePass — Epic 3: Lounge Profiles & Details\nSame light design system and app shell as Phases 1 and 3 (Explore section of the member area). UI copy in English.\nProfile → photos and quick actions → availability → ratings → edge states." },
-    { "id": "profile-note", "x": 0, "y": 955, "w": 470, "text": "Story 3.1 · Profile: hero carousel with 6 images, name, address and contact, today's hours highlighted, amenity icons with descriptions, rating and review count, and Call / Directions / Share as persistent quick actions." },
-    { "id": "share-note", "x": 3080, "y": 955, "w": 470, "text": "Story 3.1 · Share sheet over the blurred profile: messaging and social targets plus a copy link. Directions opens a Google Maps URL for the address; Call dials the lounge number." },
-    { "id": "avail-note", "x": 0, "y": 2005, "w": 470, "text": "Story 3.2 · Weekly calendar by time band, booking restrictions (member tier, advance notice, admission for one) and the last updated timestamp with the 5-minute auto-refresh." },
-    { "id": "states-note", "x": 1540, "y": 2005, "w": 900, "text": "Story 3.2 · Not available today with the next openings and a way back to search, and a holiday closure notice with the affected days marked closed in the calendar." },
-    { "id": "reviews-note", "x": 0, "y": 3055, "w": 900, "text": "Story 3.1 · Ratings and reviews when they exist, the empty state for a lounge with no ratings yet, and the loading skeleton of the profile while live availability is fetched." }
+    {
+      "id": "phase-note",
+      "x": 0,
+      "y": -150,
+      "w": 820,
+      "text": "LuxePass — Epic 3: Lounge Profiles & Details\nSame light design system and app shell as Phases 1 and 3 (Explore section of the member area). UI copy in English.\nProfile → photos and quick actions → availability → ratings → edge states."
+    },
+    {
+      "id": "profile-note",
+      "x": 0,
+      "y": 955,
+      "w": 470,
+      "text": "Story 3.1 · Profile: hero carousel with 6 images, name, address and contact, today's hours highlighted, amenity icons with descriptions, rating and review count, and Call / Directions / Share as persistent quick actions."
+    },
+    {
+      "id": "share-note",
+      "x": 3080,
+      "y": 955,
+      "w": 470,
+      "text": "Story 3.1 · Share sheet over the blurred profile: messaging and social targets plus a copy link. Directions opens a Google Maps URL for the address; Call dials the lounge number."
+    },
+    {
+      "id": "avail-note",
+      "x": 0,
+      "y": 2005,
+      "w": 470,
+      "text": "Story 3.2 · Weekly calendar by time band, booking restrictions (member tier, advance notice, admission for one) and the last updated timestamp with the 5-minute auto-refresh."
+    },
+    {
+      "id": "states-note",
+      "x": 1540,
+      "y": 2005,
+      "w": 900,
+      "text": "Story 3.2 · Not available today with the next openings and a way back to search, and a holiday closure notice with the affected days marked closed in the calendar."
+    },
+    {
+      "id": "reviews-note",
+      "x": 0,
+      "y": 3055,
+      "w": 900,
+      "text": "Story 3.1 · Ratings and reviews when they exist, the empty state for a lounge with no ratings yet, and the loading skeleton of the profile while live availability is fetched."
+    },
+    {
+      "id": "schedule-note",
+      "x": 0,
+      "y": 4105,
+      "w": 900,
+      "text": "Story 10.9 / 3.2 · Seasonal hours and special closures as the member reads them: the season in effect replaces the usual week in Operating hours, upcoming seasons are listed below, and each closure reuses the holiday closure notice. With no seasons or closures both sections are hidden. When today falls inside a closure the notice moves to the top and the card shows the reopening."
+    }
   ],
-  "launch": { "view": "canvas" }
+  "launch": {
+    "view": "canvas"
+  }
 }

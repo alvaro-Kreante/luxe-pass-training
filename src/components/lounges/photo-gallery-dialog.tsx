@@ -78,6 +78,7 @@ export function PhotoGalleryDialog({
             <HeroPhotoSurface
               loungeId={loungeId}
               photoIndex={index}
+              src={images[index].url}
               caption={images[index].caption}
               detail={images[index].detail}
             />
@@ -112,7 +113,7 @@ export function PhotoGalleryDialog({
                   thumbIndex === index ? "border-2 border-gold-500" : "opacity-60",
                 )}
               >
-                <HeroPhotoSurface loungeId={loungeId} photoIndex={thumbIndex} />
+                <HeroPhotoSurface loungeId={loungeId} photoIndex={thumbIndex} src={thumb.url} />
               </button>
             ))}
           </div>

@@ -468,13 +468,14 @@ son datos de muestra.
 
 Canvas: https://claude.ai/code/artifact/f1d95df8-0c67-43a4-9c06-b6f1266496a8
 
-9 artboards en 3 filas, entrando desde "View details" de la lista/mapa de la Fase 3:
+12 artboards en 4 filas, entrando desde "View details" de la lista/mapa de la Fase 3:
 
 | Fila | Artboards | Historia |
 |---|---|---|
 | 1 | `Main` (perfil) → `Gallery` → `Share` | 3.1 |
 | 2 | `Availability` → `NotAvailable` → `Closure` | 3.2 |
 | 3 | `Reviews` → `NoRatings` → `Loading` | 3.1 / 3.2 |
+| 4 | `SeasonalHours` → `NoSchedule` → `ClosedToday` | 3.2 / 10.9 |
 
 Cobertura de criterios: carousel de 6 imágenes con flechas, contador y dots más lightbox con tira
 de miniaturas; nombre, dirección y contacto (teléfono, email, web); horarios con el día de hoy
@@ -485,6 +486,19 @@ estado en tiempo real Available / Not available; calendario semanal por franjas 
 (tier de membresía, antelación mínima, admisión para uno); aviso de cierre por festivo con los días
 marcados y aviso de reapertura; sello "Updated N min ago · refreshes every 5 min" en toda vista de
 disponibilidad; estado sin ratings y skeleton de carga del perfil.
+
+Fila 4 (temporadas y cierres de `lounge_seasons`/`lounge_closures`, tal como los define el admin en
+`SeasonalFilled`/`ClosureEdit` de la Fase 10): `SeasonalHours` es la ficha desplazada bajo la topbar
+con hoy = Tue Sep 9 dentro de "Late summer hours" (Sep 1–30). La semana de la temporada reemplaza a
+la habitual en `Operating hours`, con un chip con su nombre y la fecha de vuelta al horario
+habitual; debajo, `Seasonal hours` lista cada temporada en curso o futura (chip `In effect` /
+`Upcoming`) y `Special closures` pinta cada cierre próximo con el mismo aviso de `Closure` (motivo +
+reapertura, idéntico a la vista previa de `ClosureEdit`). Una temporada sin nombre se titula
+"Seasonal hours". `NoSchedule`: sin temporadas ni cierres próximos las dos secciones no se pintan
+(sin estado vacío). `ClosedToday`: hoy = Fri Sep 12 dentro del cierre "Private event"; el aviso sube
+encima del hero, `Operating hours` marca los días cerrados con el motivo y la card de disponibilidad
+reutiliza la de `NotAvailable` con la reapertura como siguiente hueco. Temporadas y cierres ya
+pasados no se muestran.
 
 Pendientes conocidos: las fotos son bloques de marca (degradado oscuro + patrón de puntos dorados)
 a sustituir por fotografía real; nombres, direcciones, teléfonos (rango 555) y textos de reviews

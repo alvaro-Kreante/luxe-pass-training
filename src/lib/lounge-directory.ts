@@ -32,6 +32,11 @@ export interface LoungeRow {
    * nombre. null si no tiene; opcional para los datos de muestra del mock.
    */
   partnerName?: string | null;
+  /**
+   * Story 3.1 / 10.10 — la foto principal (`lounge_images` de menor
+   * `position`). Opcional para los datos de muestra del mock.
+   */
+  mainImageUrl?: string | null;
 }
 
 export interface LoungeWithDistance extends LoungeRow {
@@ -55,6 +60,14 @@ interface LoungeTableRow {
   closed_weekdays: number[];
   featured: boolean;
   partners: { name: string } | null;
+  lounge_images: { url: string; position: number }[] | null;
+}
+
+const LOUNGE_COLUMNS = "*, partners(name), lounge_images(url, position)";
+
+function mainImageOf(images: LoungeTableRow["lounge_images"]): string | null {
+  if (!images || images.length === 0) return null;
+  return images.reduce((first, image) => (image.position < first.position ? image : first)).url;
 }
 
 function fromRow(row: LoungeTableRow): LoungeRow {
@@ -75,6 +88,7 @@ function fromRow(row: LoungeTableRow): LoungeRow {
     closedWeekdays: row.closed_weekdays,
     featured: row.featured,
     partnerName: row.partners?.name ?? null,
+    mainImageUrl: mainImageOf(row.lounge_images),
   };
 }
 
@@ -91,7 +105,7 @@ export async function fetchLounges(
   // muestra los publicados.
   // Story 10.8 — solo `name` del partner: el miembro no puede leer nada más (privilegio por columna).
   const [{ data, error }, seats] = await Promise.all([
-    supabase.from("lounges").select("*, partners(name)").eq("content_status", "live"),
+    supabase.from("lounges").select(LOUNGE_COLUMNS).eq("content_status", "live"),
     seatsToday(supabase),
   ]);
 
@@ -150,7 +164,7 @@ export async function searchLounges(
   const [{ data, error }, seats] = await Promise.all([
     supabase
       .from("lounges")
-      .select("*, partners(name)")
+      .select(LOUNGE_COLUMNS)
       .eq("content_status", "live")
       .or(conditions.join(",")),
     seatsToday(supabase),

@@ -1,9 +1,9 @@
 import { cn } from "@/lib/utils";
 
 /**
- * Placeholder de imagen de lounge. No hay fotografía del cliente: los artboards
- * resuelven la miniatura con el radial de marca y los puntos dorados.
- * El tono sale del id para que un mismo lounge se vea igual en todas las vistas.
+ * Miniatura de lounge: su foto principal (`lounge_images`). Sin `src` (datos
+ * de muestra del mock) queda el radial de marca de los artboards; el tono
+ * sale del id para que un mismo lounge se vea igual en todas las vistas.
  */
 export function toneOf(id: string): 1 | 2 | 3 {
   const sum = [...id].reduce((total, char) => total + char.charCodeAt(0), 0);
@@ -13,11 +13,22 @@ export function toneOf(id: string): 1 | 2 | 3 {
 
 export function LoungeThumb({
   loungeId,
+  src,
+  alt = "",
   className,
 }: {
   loungeId: string;
+  src?: string | null;
+  alt?: string;
   className?: string;
 }) {
+  if (src) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- URL de Storage, ya recortada y comprimida (Story 10.10)
+      <img src={src} alt={alt} className={cn("shrink-0 object-cover", className)} />
+    );
+  }
+
   return (
     <div
       aria-hidden

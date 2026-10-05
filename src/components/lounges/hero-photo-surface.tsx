@@ -5,20 +5,21 @@ import { cn } from "@/lib/utils";
 
 /**
  * Story 3.1 — bloque de foto compartido por el carousel del perfil y la
- * galería. No hay fotografía real del lounge (docs/PENDIENTES.md), así que
- * se usa el logo de En Soleil sobre el radial de marca en vez de un bloque
- * vacío — y, si lleva leyenda, un degradado detrás para que el texto se lea
- * sobre cualquier tono.
+ * galería: la foto real de `lounge_images` (`src`) sobre el radial de marca,
+ * que queda de fondo mientras carga. Sin `src`, el logo de En Soleil en su
+ * lugar. Si lleva leyenda, un degradado detrás para que el texto se lea.
  */
 export function HeroPhotoSurface({
   loungeId,
   photoIndex,
+  src,
   caption,
   detail,
   className,
 }: {
   loungeId: string;
   photoIndex: number;
+  src?: string;
   caption?: string;
   detail?: string;
   className?: string;
@@ -28,14 +29,19 @@ export function HeroPhotoSurface({
   return (
     <div className={cn("absolute inset-0", className)}>
       <div aria-hidden data-tone={tone} className="lounge-hero absolute inset-0" />
-      <Image
-        src="/logo.png"
-        alt=""
-        aria-hidden
-        fill
-        sizes="400px"
-        className="object-contain p-[16%] opacity-80"
-      />
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element -- URL de Storage, ya recortada y comprimida (Story 10.10)
+        <img src={src} alt={caption ?? ""} className="absolute inset-0 size-full object-cover" />
+      ) : (
+        <Image
+          src="/logo.png"
+          alt=""
+          aria-hidden
+          fill
+          sizes="400px"
+          className="object-contain p-[16%] opacity-80"
+        />
+      )}
 
       {caption ? (
         <>

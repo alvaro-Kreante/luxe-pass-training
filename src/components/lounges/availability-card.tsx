@@ -14,6 +14,7 @@ import {
   type HoursRow,
   type WeekBandId,
 } from "@/lib/lounge-profile";
+import type { LoungeClosure } from "@/lib/lounge-schedule";
 import { cn } from "@/lib/utils";
 
 /**
@@ -37,10 +38,12 @@ export interface AvailabilityCardProps {
   todaySeatsLeft: number;
   nextAvailable?: { dateIso: string; band: WeekBandId; seatsLeft: number };
   lastUpdatedAt: string;
+  /** Story 10.9 — hoy cae en un cierre especial (ClosedToday.dc.html). */
+  closedToday?: LoungeClosure | null;
 }
 
 export function AvailabilityCard(props: AvailabilityCardProps) {
-  const { available } = props;
+  const { available, closedToday } = props;
 
   return (
     <Card
@@ -49,12 +52,26 @@ export function AvailabilityCard(props: AvailabilityCardProps) {
     >
       <div className="flex items-center justify-between">
         <Eyebrow>Today · {formatWeekdayDate(today())}</Eyebrow>
-        <StatusChip available={available}>
-          {available ? "Available" : "Not available"}
+        <StatusChip available={available && !closedToday}>
+          {closedToday ? "Closed" : available ? "Available" : "Not available"}
         </StatusChip>
       </div>
 
-      {available ? <AvailableBody {...props} /> : <NotAvailableBody {...props} />}
+      {closedToday ? (
+        <NotAvailableBody
+          {...props}
+          title="Closed today"
+          detail={`${closedToday.reason} · bookings reopen ${closedToday.reopensLabel}.`}
+        />
+      ) : available ? (
+        <AvailableBody {...props} />
+      ) : (
+        <NotAvailableBody
+          {...props}
+          title="Fully booked today"
+          detail="All time bands are at capacity for the rest of today."
+        />
+      )}
     </Card>
   );
 }
@@ -126,13 +143,13 @@ function NotAvailableBody({
   loungeId,
   nextAvailable,
   lastUpdatedAt,
-}: AvailabilityCardProps) {
+  title,
+  detail,
+}: AvailabilityCardProps & { title: string; detail: string }) {
   return (
     <>
-      <h2 className="mb-1 mt-3 text-[22px] text-fg">Fully booked today</h2>
-      <p className="m-0 text-[12.5px] leading-[1.5] text-fg-subtle">
-        All time bands are at capacity for the rest of today.
-      </p>
+      <h2 className="mb-1 mt-3 text-[22px] text-fg">{title}</h2>
+      <p className="m-0 text-[12.5px] leading-[1.5] text-fg-subtle">{detail}</p>
 
       <div className="my-4.5 h-px bg-line" />
 

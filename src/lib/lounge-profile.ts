@@ -43,6 +43,8 @@ export interface LoungeProfile extends LoungeRow {
   receptionNote: string;
   /** 7 entradas, domingo primero — ver `operatingHoursFor`. */
   weeklyHours: string[];
+  /** Story 10.9 — la semana habitual, sin la temporada de hoy aplicada. */
+  usualWeeklyHours: string[];
   reviewCount: number;
   capacity: number;
   bookingRestrictions: string[];
@@ -99,6 +101,7 @@ function fromProfileRow(row: LoungeProfileTableRow): LoungeProfile {
     website: row.website,
     receptionNote: row.reception_note,
     weeklyHours: row.weekly_hours,
+    usualWeeklyHours: row.weekly_hours,
     reviewCount: row.review_count,
     capacity: row.capacity,
     bookingRestrictions: row.booking_restrictions,
@@ -128,7 +131,8 @@ export async function fetchLoungeProfile(
     .gte("ends_on", today())
     .maybeSingle();
   const row = data as LoungeProfileTableRow;
-  return fromProfileRow(season ? { ...row, weekly_hours: season.weekly_hours, closed_weekdays: season.closed_weekdays } : row);
+  const profile = fromProfileRow(season ? { ...row, weekly_hours: season.weekly_hours, closed_weekdays: season.closed_weekdays } : row);
+  return { ...profile, usualWeeklyHours: row.weekly_hours };
 }
 
 /* ------------------------------------------------------------------ */
