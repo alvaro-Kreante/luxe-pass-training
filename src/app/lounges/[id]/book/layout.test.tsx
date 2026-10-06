@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import { useBooking } from "@/components/booking/booking-context";
+import { today } from "@/lib/availability";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
 import { grantTestMembership } from "@/lib/testing/membership-fixture";
@@ -94,7 +95,8 @@ describe("quién paga la visita — decidido por el servidor", () => {
       Array.from({ length: 8 }, (_, index) => ({
         member_id: user.id,
         lounge_id: "the-ainsworth",
-        date: `2025-09-0${index + 1}`,
+        /** Este mes (el de hoy): la cobertura se mide sobre el mes de la reserva. */
+        date: `${today().slice(0, 7)}-0${index + 1}`,
         band: "late",
         slot_time: "6:00 PM",
         status: "completed",

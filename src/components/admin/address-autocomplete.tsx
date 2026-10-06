@@ -136,7 +136,7 @@ function AddressAutocompleteInner({
 
   return (
     <div>
-      <div className="flex flex-col gap-3.5 lg:flex-row lg:items-start">
+      <div className="flex flex-col gap-3.5">
         <div className="relative min-w-0 flex-1">
           <Input
             aria-label="Address"
@@ -184,7 +184,7 @@ function AddressAutocompleteInner({
           ) : null}
         </div>
 
-        <div className="relative aspect-[600/304] w-full overflow-hidden lg:w-[430px] lg:shrink-0 rounded-2xl border border-line bg-panel-black">
+        <div className="relative h-[280px] w-full overflow-hidden rounded-2xl border border-line bg-panel-black">
           {value ? (
             <>
               <Map
@@ -227,4 +227,36 @@ function RecentreOn({ lat, lng }: { lat: number; lng: number }) {
     map?.panTo({ lat, lng });
   }, [map, lat, lng]);
   return null;
+}
+
+/**
+ * Epic 8 · LoungeLive.dc.html (17) — la ubicación de un lounge live: la
+ * misma dirección y el mismo mapa, sin búsqueda ni pin arrastrable (solo se
+ * edita en borrador).
+ */
+export function LoungeLocationPreview({ value }: { value: LoungeLocation }) {
+  return (
+    <div className="flex flex-col gap-3.5">
+      <div className="flex min-w-0 flex-1 items-center gap-2.5 py-3">
+        <MapPin size={17} strokeWidth={1.8} className="shrink-0 text-accent" />
+        <span className="text-[13.5px] text-fg">
+          {[value.address, value.neighborhood, value.city].filter(Boolean).join(", ")}
+        </span>
+      </div>
+      <div className="relative h-[280px] w-full overflow-hidden rounded-2xl border border-line bg-panel-black">
+        <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+          <Map
+            mapId={GOOGLE_MAPS_MAP_ID}
+            defaultCenter={{ lat: value.lat, lng: value.lng }}
+            defaultZoom={16}
+            disableDefaultUI
+            gestureHandling="cooperative"
+            className="size-full"
+          >
+            <AdvancedMarker position={{ lat: value.lat, lng: value.lng }} />
+          </Map>
+        </APIProvider>
+      </div>
+    </div>
+  );
 }

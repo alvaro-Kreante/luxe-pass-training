@@ -1,21 +1,28 @@
 "use client";
 
 import * as React from "react";
-import { ChevronRight, Plus, Search, SlidersHorizontal } from "lucide-react";
+import { ChevronRight, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { AdminShell } from "@/components/patterns/admin-shell";
 import { RequireAdminSession } from "@/components/admin/require-admin-session";
+import { CityFilterPopover } from "@/components/admin/city-filter-popover";
 import { LoungeStatusChip } from "@/components/admin/lounge-status-chip";
+import { StatusFilter } from "@/components/admin/status-filter";
 import { BulkActionBar, BulkActionButton } from "@/components/ui/bulk-action-bar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/lib/supabase/client";
 import { getTicketCounts, type TicketCounts } from "@/lib/admin";
-import { archiveLounges, listAdminLounges, type AdminLoungeRow } from "@/lib/admin-content";
+import {
+  archiveLounges,
+  listAdminLounges,
+  type AdminLoungeRow,
+  type LoungeContentStatus,
+} from "@/lib/admin-content";
 import { cn } from "@/lib/utils";
 
-const GRID = "grid-cols-[32px_1fr_158px_92px_106px_128px_30px]";
+const GRID = "grid-cols-[32px_1fr_210px_150px_76px_92px_92px_30px]";
 
 /**
  * Story 8.3 — "Add/edit/remove lounge profiles" (la lista) y "Bulk update
@@ -28,6 +35,12 @@ const GRID = "grid-cols-[32px_1fr_158px_92px_106px_128px_30px]";
  * catálogo de miembro de inmediato, sin pasar por revisión. El resto
  * ("Update hours", "Add an amenity", "Set closure dates") sigue inerte:
  * ningún artboard dibuja su modal.
+ *
+ * Orden por fecha de alta, el más nuevo arriba (el RPC ya lo devuelve así).
+ * Filtros rápidos Live/Draft y de ciudad: LoungeFilterCity.dc.html (27) y
+ * LoungeFilterApplied.dc.html (28). Story 10.5 (LoungesWithPartner.dc.html,
+ * Fase 10 · 9): columna Partner, búsqueda también por partner y filtro
+ * Suspended.
  */
 export default function LoungesPage() {
   return (
@@ -43,6 +56,8 @@ function LoungesScreen() {
   const [lounges, setLounges] = React.useState<AdminLoungeRow[] | null>(null);
   const [selected, setSelected] = React.useState<string[]>([]);
   const [query, setQuery] = React.useState("");
+  const [status, setStatus] = React.useState<Exclude<LoungeContentStatus, "archived"> | null>(null);
+  const [city, setCity] = React.useState<string | null>(null);
   const [counts, setCounts] = React.useState<TicketCounts | null>(null);
   const [reloadToken, setReloadToken] = React.useState(0);
   const reload = React.useCallback(() => setReloadToken((t) => t + 1), []);
@@ -61,12 +76,31 @@ function LoungesScreen() {
   }, [supabase, reloadToken]);
 
   const visible = (lounges ?? []).filter((l) => l.contentStatus !== "archived");
-  const filtered = query.trim()
-    ? visible.filter((l) => l.name.toLowerCase().includes(query.trim().toLowerCase()))
-    : visible;
-  const pendingApprovalCount = visible.filter((l) => l.pendingCount > 0).length;
+  const needle = query.trim().toLowerCase();
+  const filtered = visible.filter(
+    (l) =>
+      (!needle || l.name.toLowerCase().includes(needle) || (l.partnerName ?? "").toLowerCase().includes(needle)) &&
+      (!status || l.contentStatus === status) &&
+      (!city || l.city === city),
+  );
   const draftCount = visible.filter((l) => l.contentStatus === "draft").length;
-  const liveCount = visible.filter((l) => l.contentStatus === "live" && l.pendingCount === 0).length;
+  const liveCount = visible.filter((l) => l.contentStatus === "live").length;
+  const suspendedCount = visible.filter((l) => l.contentStatus === "suspended").length;
+  const cityCounts = new Map<string, number>();
+  for (const l of visible) cityCounts.set(l.city, (cityCounts.get(l.city) ?? 0) + 1);
+  const cities = [...cityCounts]
+    .map(([name, count]) => ({ city: name, count }))
+    .sort((a, b) => a.city.localeCompare(b.city));
+  const filtering = status !== null || city !== null;
+
+  function toggleStatus(next: Exclude<LoungeContentStatus, "archived">) {
+    setStatus((current) => (current === next ? null : next));
+  }
+
+  function clearFilters() {
+    setStatus(null);
+    setCity(null);
+  }
 
   function toggle(id: string, checked: boolean) {
     setSelected((current) => (checked ? [...current, id] : current.filter((i) => i !== id)));
@@ -81,14 +115,13 @@ function LoungesScreen() {
   return (
     <AdminShell
       topbarLabel={<span className="text-[13.5px] font-bold text-fg">Lounges</span>}
-      topbarMeta="· All cities"
+      topbarMeta={`· ${city ?? "All cities"}`}
       supportBadge={counts?.open}
-      loungesBadge={pendingApprovalCount}
     >
       <div className="flex items-center gap-6">
         <div className="min-w-0 flex-1">
           <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">
-            {liveCount} live · {draftCount} draft · {pendingApprovalCount} changes waiting for approval
+            {liveCount} live · {draftCount} draft
           </p>
           <h1 className="mt-2 font-display text-[34px] text-fg">Lounges</h1>
         </div>
@@ -97,20 +130,14 @@ function LoungesScreen() {
             <Search size={17} strokeWidth={1.8} className="text-fg-subtle" aria-hidden />
             <input
               type="search"
-              aria-label="Search lounges"
-              placeholder="Search lounges"
+              aria-label="Search lounges or partners"
+              placeholder="Search lounges or partners"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               className="w-full bg-transparent text-[13.5px] text-fg placeholder:text-fg-subtle focus:outline-none"
             />
           </label>
-          <button
-            type="button"
-            className="flex h-11 items-center justify-center gap-2 rounded-[11px] border-[1.5px] border-line px-4"
-          >
-            <SlidersHorizontal size={16} strokeWidth={1.8} className="text-accent" aria-hidden />
-            <span className="text-[13.5px] font-semibold text-fg">All cities</span>
-          </button>
+          <CityFilterPopover cities={cities} total={visible.length} value={city} onChange={setCity} />
           <Link
             href="/admin/lounges/new"
             className="flex h-11 items-center justify-center gap-2 rounded-[11px] bg-accent px-5 transition-colors duration-150 hover:bg-accent-strong"
@@ -119,6 +146,34 @@ function LoungesScreen() {
             <span className="text-[12.5px] font-bold uppercase tracking-[0.1em] text-on-accent">Add lounge</span>
           </Link>
         </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <StatusFilter label="Live" count={liveCount} pressed={status === "live"} onToggle={() => toggleStatus("live")} />
+        <StatusFilter
+          label="Draft"
+          count={draftCount}
+          pressed={status === "draft"}
+          onToggle={() => toggleStatus("draft")}
+        />
+        <StatusFilter
+          label="Suspended"
+          count={suspendedCount}
+          pressed={status === "suspended"}
+          onToggle={() => toggleStatus("suspended")}
+        />
+        {filtering ? (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="ml-1.5 text-xs font-bold text-accent-strong transition-colors duration-150 hover:text-accent"
+          >
+            Clear filters
+          </button>
+        ) : null}
+        <span className="ml-auto text-[11.5px] font-semibold text-fg-subtle">
+          {filtering || needle ? `${filtered.length} of ${visible.length} lounges · newest first` : "Newest first"}
+        </span>
       </div>
 
       {selected.length > 0 ? (
@@ -138,6 +193,7 @@ function LoungesScreen() {
         <div className={cn("grid items-center gap-3.5 border-b border-line px-5.5", GRID)} style={{ height: 42 }}>
           <span />
           <Th>Lounge</Th>
+          <Th>Partner</Th>
           <Th>Status</Th>
           <Th>Photos</Th>
           <Th>Amenities</Th>
@@ -151,7 +207,6 @@ function LoungesScreen() {
             className={cn(
               "grid items-center gap-3.5 border-b border-[rgba(58,50,42,0.6)] px-5.5 last:border-b-0",
               GRID,
-              lounge.pendingCount > 0 && "shadow-[inset_3px_0_0_var(--gold-500)]",
             )}
             style={{ height: 54 }}
           >
@@ -174,6 +229,16 @@ function LoungesScreen() {
                 </span>
               </span>
             </button>
+            {lounge.partnerName ? (
+              <Link
+                href={`/admin/partners/${lounge.partnerId}`}
+                className="truncate text-[12.5px] font-bold text-fg-muted transition-colors duration-150 hover:text-accent"
+              >
+                {lounge.partnerName}
+              </Link>
+            ) : (
+              <p className="m-0 text-[12.5px] italic text-fg-subtle">No partner yet</p>
+            )}
             <div>
               <LoungeStatusChip lounge={lounge} />
             </div>
@@ -192,7 +257,9 @@ function LoungesScreen() {
         ))}
 
         {lounges && filtered.length === 0 ? (
-          <p className="px-5.5 py-6 text-[13px] text-fg-subtle">No lounges match this search.</p>
+          <p className="px-5.5 py-6 text-[13px] text-fg-subtle">
+            {filtering ? "No lounges match these filters." : "No lounges match this search."}
+          </p>
         ) : null}
       </div>
 

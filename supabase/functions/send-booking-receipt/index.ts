@@ -170,7 +170,7 @@ Deno.serve(async (req) => {
       // un fixture de test que crea el usuario de Auth sin perfil completo)
       // no debe hacer fallar el recibo — cae al email como nombre.
       service.from("profiles").select("full_name").eq("id", booking.member_id).maybeSingle(),
-      service.from("lounges").select("name, address").eq("id", booking.lounge_id).single(),
+      service.from("lounges").select("name, address, partners(name)").eq("id", booking.lounge_id).single(),
     ]);
 
   if (authError || !authUser.user?.email || loungeError) {
@@ -195,7 +195,8 @@ Deno.serve(async (req) => {
       `Your visit at ${lounge.name} is confirmed — ${reference}`,
       renderReceiptHtml({
         memberFirstName,
-        loungeName: lounge.name,
+        // Story 10.8 — el partner (hotel, spa…) como contexto: "Tower A at Halcyon Hotels".
+        loungeName: lounge.partners?.name ? `${lounge.name} at ${lounge.partners.name}` : lounge.name,
         loungeAddress: lounge.address,
         dateIso: booking.date,
         time: booking.slot_time,

@@ -6,7 +6,7 @@ import { UserRound } from "lucide-react";
 import { useBooking } from "./booking-context";
 import { MonthCalendar } from "@/components/ui/date-picker";
 import { TimeSlotGrid } from "@/components/ui/time-slot";
-import { TODAY, addDays } from "@/lib/availability";
+import { today, addDays } from "@/lib/availability";
 import {
   ADMISSION_COUNT,
   SPECIAL_REQUEST_MAX_LENGTH,
@@ -40,7 +40,7 @@ const MONTH_LABEL_FORMAT = new Intl.DateTimeFormat("en-US", {
  */
 export function VisitDetailsForm() {
   const { lounge, draft, update } = useBooking();
-  const [monthIso, setMonthIso] = React.useState(() => startOfMonth(TODAY));
+  const [monthIso, setMonthIso] = React.useState(() => startOfMonth(today()));
   const [cells, setCells] = React.useState<AvailabilityCell[]>([]);
 
   React.useEffect(() => {
@@ -89,7 +89,7 @@ export function VisitDetailsForm() {
         onSelectDate={selectDate}
         onPrevMonth={() => setMonthIso((m) => addMonths(m, -1))}
         onNextMonth={() => setMonthIso((m) => addMonths(m, 1))}
-        canGoPrev={monthIso !== startOfMonth(TODAY)}
+        canGoPrev={monthIso !== startOfMonth(today())}
       />
 
       {draft.dateIso ? (

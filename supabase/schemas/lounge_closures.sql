@@ -11,7 +11,10 @@ create table if not exists public.lounge_closures (
   reason        text not null,
   reopens_label text not null,
   posted_on     date not null,
-  created_at    timestamptz not null default now()
+  created_at    timestamptz not null default now(),
+  -- Story 10.9 — el admin los escribe desde el formulario del lounge.
+  constraint lounge_closures_dates check (ends_on >= starts_on),
+  constraint lounge_closures_reason check (trim(reason) <> '')
 );
 
 alter table public.lounge_closures enable row level security;
@@ -20,3 +23,48 @@ create policy "select lounge closures"
 on public.lounge_closures for select
 to authenticated
 using ( true );
+
+-- Story 10.9 — solo el admin escribe cierres (desde el formulario del lounge).
+create policy "admins insert lounge closures"
+on public.lounge_closures for insert
+to authenticated
+with check ( public.has_role('admin') );
+
+create policy "admins update lounge closures"
+on public.lounge_closures for update
+to authenticated
+using ( public.has_role('admin') )
+with check ( public.has_role('admin') );
+
+create policy "admins delete lounge closures"
+on public.lounge_closures for delete
+to authenticated
+using ( public.has_role('admin') );
+
+-- Story 10.9 — reservas confirmadas que caerían en un cierre, para avisar
+-- al admin antes de guardarlo (ClosureBookingsWarning.dc.html): nombre del
+-- miembro, día y hora. Solo admin.
+create or replace function public.admin_closure_bookings(p_lounge_id text, p_from date, p_to date)
+returns table (member_name text, date date, slot_time text)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.has_role('admin') then
+    raise exception 'Not authorized';
+  end if;
+  return query
+    select coalesce(nullif(p.full_name, ''), 'Member'), b.date, b.slot_time
+    from public.bookings b
+    left join public.profiles p on p.id = b.member_id
+    where b.lounge_id = p_lounge_id
+      and b.date between p_from and p_to
+      and b.status = 'confirmed'
+    order by b.date, b.slot_time, p.full_name;
+end;
+$$;
+
+revoke execute on function public.admin_closure_bookings(text, date, date) from public, anon;
+grant execute on function public.admin_closure_bookings(text, date, date) to authenticated;

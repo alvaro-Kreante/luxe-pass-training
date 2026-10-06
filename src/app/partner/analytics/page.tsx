@@ -7,8 +7,10 @@ import { RequirePartnerSession } from "@/components/partner/require-partner-sess
 import { PartnerShell } from "@/components/patterns/partner-shell";
 import { Segmented } from "@/components/ui/segmented";
 import { MetricTile } from "@/components/ui/metric-tile";
+import { usePartnerContext } from "@/components/partner/partner-context";
+import { analyticsLoungeId } from "@/lib/partner-lounges";
 import { createClient } from "@/lib/supabase/client";
-import { TODAY, addDays } from "@/lib/availability";
+import { today, addDays } from "@/lib/availability";
 import {
   type AnalyticsRange,
   type PartnerAnalyticsSummary,
@@ -23,7 +25,7 @@ import { cn } from "@/lib/utils";
 
 /** 90 días termina en hoy — suficiente para que "When they come" tenga las 7 columnas pobladas. */
 const RANGE_DAYS = 90;
-const RANGE_FROM = addDays(TODAY, -(RANGE_DAYS - 1));
+const RANGE_FROM = addDays(today(), -(RANGE_DAYS - 1));
 
 const EMPTY_SUMMARY: PartnerAnalyticsSummary = {
   bookings: 0,
@@ -39,8 +41,8 @@ const EMPTY_SUMMARY: PartnerAnalyticsSummary = {
  *
  * Backend real (22 sept 2026): `partner_analytics_summary`/
  * `partner_bookings_by_day` (`supabase/schemas/partner_analytics.sql`)
- * agregan sobre los lounges reales del partner autenticado — sin selector de
- * venue (ver ese archivo, decisión consciente). "When they come" ya no es
+ * agregan sobre los lounges reales del partner autenticado: el elegido en la
+ * cabecera o todos con "All lounges" (Story 10.6, PartnerAnalyticsAll 15). "When they come" ya no es
  * un dato de muestra: se deriva sumando la misma serie diaria por día de la
  * semana (`bookingsByWeekday`).
  */
@@ -49,12 +51,13 @@ function AnalyticsContent() {
   const [range, setRange] = React.useState<AnalyticsRange>("month");
   const [summary, setSummary] = React.useState<PartnerAnalyticsSummary>(EMPTY_SUMMARY);
   const [dailySeries, setDailySeries] = React.useState<{ day: string; bookings: number }[]>([]);
+  const loungeId = analyticsLoungeId(usePartnerContext()?.context ?? null);
 
   React.useEffect(() => {
     let active = true;
     Promise.all([
-      supabase.rpc("partner_analytics_summary", { p_from: RANGE_FROM, p_to: TODAY }),
-      supabase.rpc("partner_bookings_by_day", { p_from: RANGE_FROM, p_to: TODAY }),
+      supabase.rpc("partner_analytics_summary", { p_from: RANGE_FROM, p_to: today(), p_lounge_id: loungeId }),
+      supabase.rpc("partner_bookings_by_day", { p_from: RANGE_FROM, p_to: today(), p_lounge_id: loungeId }),
     ]).then(([summaryResult, dailyResult]) => {
       if (!active) return;
       if (summaryResult.data?.[0]) setSummary(summaryResult.data[0]);
@@ -63,7 +66,7 @@ function AnalyticsContent() {
     return () => {
       active = false;
     };
-  }, [supabase]);
+  }, [supabase, loungeId]);
 
   const seriesForRange = range === "week" ? dailySeries.slice(-7) : dailySeries;
   const arrivalsByWeekday = bookingsByWeekday(dailySeries);
@@ -77,6 +80,7 @@ function AnalyticsContent() {
 
   return (
     <PartnerShell
+      allowAllLounges
       topbarLabel="Analytics"
       topbarMeta={`· Last ${RANGE_DAYS} days`}
       topbarRight={
@@ -135,7 +139,7 @@ function AnalyticsContent() {
             </p>
             <div className="mt-5 flex h-[140px] items-end gap-2">
               {seriesForRange.map((point) => {
-                const isToday = point.day === TODAY;
+                const isToday = point.day === today();
                 const dayNumber = new Date(`${point.day}T00:00:00Z`).getUTCDate();
                 return (
                   <div key={point.day} className="flex flex-1 flex-col items-center gap-1.5">

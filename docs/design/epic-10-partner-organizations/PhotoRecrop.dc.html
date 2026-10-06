@@ -1,0 +1,223 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,500&family=Manrope:wght@400;500;600;700;800&display=swap">
+  <style>
+    :root {
+      --bg-blush-1: #F8EAE1; --bg-blush-2: #FCF4EE;
+      --ink-900: #221A14; --ink-700: #55483D; --ink-400: #9C8D80;
+      --gold-500: #C9A876; --gold-600: #AD8A5C; --gold-100: #F1E3D0;
+      --border: #E7D9C9; --white: #FFFFFF; --panel-black: #15110D;
+      --dark-ink-100: #F1E3D0; --dark-ink-300: #C9BDAF; --dark-ink-500: #8A7C6C;
+      --dark-border: #3A322A; --dark-card: #1E1813; --dark-hover: #241D17;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Manrope', 'Segoe UI', sans-serif; color: var(--dark-ink-100); }
+    h1, h2, h3 { font-family: 'Bodoni Moda', Georgia, 'Times New Roman', serif; margin: 0; font-weight: 500; }
+    a { color: var(--gold-600); text-decoration: none; }
+    a:hover { color: var(--gold-500); }
+    .dk-nav { transition: background .15s ease; cursor: pointer; }
+    .dk-nav:hover { background: var(--dark-hover); }
+    .dk-gold { transition: background .15s ease; }
+    .dk-gold:hover { background: var(--gold-600) !important; }
+    .dk-ghost { transition: background .15s ease, border-color .15s ease; cursor: pointer; }
+    .dk-ghost:hover { background: var(--dark-hover); border-color: var(--gold-500); }
+    .dk-link { transition: color .15s ease; cursor: pointer; }
+    .dk-link:hover { color: var(--gold-500); }
+    .dk-input { transition: border-color .15s ease; }
+    .dk-input:hover { border-color: var(--gold-600); }
+    .dk-sugg { transition: background .15s ease; cursor: pointer; }
+    .dk-sugg:hover { background: var(--dark-hover); }
+      .dk-icon { transition: background .15s ease, border-color .15s ease; cursor: pointer; }
+    .dk-icon:hover { background: var(--dark-hover); border-color: var(--gold-500); }
+  </style>
+</helmet>
+
+<div style="position:relative; display:flex; width:1440px; height:900px; background:var(--panel-black); overflow:hidden; font-family:'Manrope',sans-serif;">
+
+  <!-- Admin sidebar -->
+  <div style="width:248px; min-width:248px; height:900px; background:var(--panel-black); border-right:1px solid var(--dark-border); display:flex; flex-direction:column; padding:30px 18px;">
+
+    <img src="logo.png" alt="En Soleil" style="width:46px; height:auto; margin:0 0 14px 12px;">
+    <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0 0 24px 12px;">Admin console</p>
+
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 14.5v-2.5a7.5 7.5 0 0 1 15 0v2.5"/><rect x="2.8" y="13.2" width="4.2" height="6.4" rx="1.8"/><rect x="17" y="13.2" width="4.2" height="6.4" rx="1.8"/><path d="M19.1 19.6v.4a2.6 2.6 0 0 1-2.6 2.6H13"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--dark-ink-300);">Support</span>
+      <div style="flex:1;"></div>
+      <span style="min-width:22px; height:20px; padding:0 7px; border-radius:10px; background:rgba(201,168,118,0.18); border:1px solid var(--gold-600); color:var(--dark-ink-300); font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center;">22</span>
+    </div>
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.6" r="3.2"/><path d="M3.2 19.6a5.8 5.8 0 0 1 11.6 0"/><path d="M16.2 6.4a3.2 3.2 0 0 1 0 6.4"/><path d="M17.6 14.4a5.8 5.8 0 0 1 3.2 5.2"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--dark-ink-300);">Members</span>
+    </div>
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--dark-ink-300);">Bookings</span>
+    </div>
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="7.5" width="17" height="12.5" rx="2.5"/><path d="M9 7.5V5.5a1.5 1.5 0 0 1 1.5-1.5h3A1.5 1.5 0 0 1 15 5.5v2"/><path d="M3.5 13h17"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--dark-ink-300);">Partners</span>
+    </div>
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:rgba(201,168,118,0.16); margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 20.5h17"/><path d="M5.5 20.5V9.5l6.5-4.5 6.5 4.5v11"/><path d="M10 20.5v-5h4v5"/></svg>
+      <span style="font-size:14px; font-weight:700; color:var(--dark-ink-100);">Lounges</span>
+      <div style="flex:1;"></div>
+      <span style="min-width:22px; height:20px; padding:0 7px; border-radius:10px; background:var(--gold-500); color:var(--panel-black); font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center;">3</span>
+    </div>
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M6.5 20v-5.5M12 20V6M17.5 20v-8.5"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--dark-ink-300);">Analytics</span>
+    </div>
+    <div class="dk-nav" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:transparent; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h7l5 5v12H6z"/><path d="M13 3.5v5h5"/><path d="M9 13h6M9 16.5h4"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--dark-ink-300);">Reports</span>
+    </div>
+
+    <div style="flex:1;"></div>
+
+    <div class="dk-nav" style="display:flex; align-items:center; gap:11px; padding-top:18px; border-top:1px solid var(--dark-border);">
+      <div style="width:36px; height:36px; min-width:36px; border-radius:10px; background:rgba(201,168,118,0.14); border:1px solid var(--gold-600); display:flex; align-items:center; justify-content:center; font-family:'Bodoni Moda',serif; font-size:16px; color:var(--gold-500);">P</div>
+      <div style="flex:1; overflow:hidden;">
+        <p style="font-size:13px; font-weight:700; color:var(--dark-ink-100); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Priya Raghunathan</p>
+        <p style="font-size:11.5px; color:var(--dark-ink-500); margin:2px 0 0;">Support lead · En Soleil</p>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m8 10 4 4 4-4"/></svg>
+    </div>
+
+  </div>
+
+  <!-- Content -->
+  <div style="position:relative; flex:1; height:900px; display:flex; flex-direction:column; background:radial-gradient(circle at 30% 0%, #2c241c, #15110d 62%); overflow:hidden;">
+    <div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.10) 1px, transparent 1.5px); background-size:18px 18px;"></div>
+    <!-- Top bar -->
+    <div style="position:relative; height:64px; min-height:64px; display:flex; align-items:center; gap:12px; padding:0 40px; background:rgba(21,17,13,0.72); border-bottom:1px solid var(--dark-border);">
+      <span class="dk-link" style="font-size:13.5px; font-weight:700; color:var(--dark-ink-500);">Lounges</span>
+      <span style="font-size:13.5px; color:var(--dark-ink-500);">›</span>
+      <span style="font-size:13.5px; font-weight:700; color:var(--dark-ink-100);">The Ainsworth</span>
+      <div style="flex:1;"></div>
+      <span style="display:inline-flex; align-items:center; gap:9px; padding:8px 15px; border-radius:20px; border:1px solid var(--dark-border);">
+        <span style="width:6px; height:6px; border-radius:50%; background:var(--gold-500); box-shadow:0 0 0 3px rgba(201,168,118,0.28);"></span>
+        <span style="font-size:11.5px; font-weight:700; color:var(--dark-ink-300); white-space:nowrap;">Every action logged</span>
+      </span>
+    </div>
+
+    <!-- Lounge header -->
+    <div style="position:relative; display:flex; align-items:center; gap:16px; height:84px; min-height:84px; padding:0 40px; border-bottom:1px solid var(--dark-border);">
+      <div style="width:52px; height:52px; min-width:52px; border-radius:14px; background:radial-gradient(circle at 70% 35%, #d9b88c 0 7%, transparent 22%), linear-gradient(200deg, #7a5a3a 0%, #3a2c1f 55%, #15110d 100%); border:1px solid var(--dark-border);"></div>
+      <div style="flex:1; min-width:0;">
+        <div style="display:flex; align-items:center; gap:11px;">
+          <h1 style="font-size:22px; color:var(--dark-ink-100); margin:0;">The Ainsworth</h1>
+          <span style="display:inline-flex; align-items:center; gap:7px; padding:6px 13px; border-radius:20px; background:rgba(201,168,118,0.16); border:1px solid var(--gold-600);"><span style="width:6px; height:6px; border-radius:50%; background:var(--gold-500);"></span><span style="font-size:11.5px; font-weight:700; color:var(--dark-ink-300);">Live · visible to members</span></span>
+        </div>
+        <p style="font-size:12.5px; color:var(--dark-ink-500); margin:6px 0 0;">Editing · Midtown East, 122 E 45th St · <span class="dk-link" style="color:var(--dark-ink-300); font-weight:700;">Ainsworth Collection</span></p>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px;"><div class="dk-ghost" style="display:flex; align-items:center; justify-content:center; gap:9px; padding:0 16px; height:44px; min-height:44px; border:1.5px solid var(--dark-border); border-radius:11px;"><span style="font-size:12.5px; font-weight:700; letter-spacing:0.06em; color:var(--dark-ink-300); white-space:nowrap;">Cancel</span></div><div class="dk-gold" style="display:flex; align-items:center; justify-content:center; gap:9px; padding:0 20px; height:44px; min-height:44px; background:var(--gold-500); border-radius:11px; cursor:pointer;"><span style="font-size:12.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:#FFFFFF; white-space:nowrap;">Save changes</span></div></div>
+    </div>
+
+    <!-- Body -->
+    <div style="position:relative; flex:1; min-height:0; display:flex; gap:16px; padding:14px 40px 14px;">
+      <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:12px;">
+        <div style="position:relative; background:var(--dark-card); border:1px solid var(--dark-border); border-radius:20px; padding:18px 20px;">
+          <div style="display:flex; align-items:center; gap:12px;"><p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Photos · up to 3</p><div style="flex:1;"></div><p style="font-size:11.5px; color:var(--dark-ink-500); margin:0;">3 of 3</p></div>
+          <div style="display:grid; grid-template-columns:repeat(3, minmax(0, 1fr)); gap:12px; margin-top:12px;"><div style="position:relative; aspect-ratio:3 / 2; border-radius:14px; background:radial-gradient(circle at 30% 25%, #5a4632 0 6%, #3a2f25 30%, #15110d 78%); border:1.5px solid var(--gold-500); overflow:hidden;"><div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.14) 1px, transparent 1.5px); background-size:18px 18px;"></div><span style="position:absolute; left:10px; top:10px; padding:4px 9px; border-radius:20px; background:var(--gold-500);"><span style="font-size:10px; font-weight:800; letter-spacing:0.06em; color:#FFFFFF;">MAIN</span></span><div style="position:absolute; inset:0; background:rgba(21,17,13,0.55);"></div><div style="position:absolute; left:0; right:0; top:34%; display:flex; justify-content:center; gap:8px;"><span style="display:inline-flex; align-items:center; gap:7px; height:32px; padding:0 12px; border-radius:10px; background:var(--gold-500); box-shadow:0 0 0 3px rgba(201,168,118,0.28);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5V18h15.5"/><path d="M2.5 6H18v15.5"/></svg><span style="font-size:11.5px; font-weight:700; color:#FFFFFF; white-space:nowrap;">Adjust crop</span></span><span style="display:inline-flex; align-items:center; gap:7px; height:32px; padding:0 12px; border-radius:10px; background:rgba(21,17,13,0.85); border:1px solid var(--dark-border);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-300)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg><span style="font-size:11.5px; font-weight:700; color:var(--dark-ink-300); white-space:nowrap;">Details</span></span></div><p style="position:absolute; left:12px; bottom:10px; font-size:11.5px; font-weight:700; color:var(--dark-ink-100); margin:0;">Main room</p></div><div style="position:relative; aspect-ratio:3 / 2; border-radius:14px; background:radial-gradient(circle at 70% 35%, #5a4632 0 6%, #3a2f25 30%, #15110d 78%); border:1px solid var(--dark-border); overflow:hidden;"><div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.14) 1px, transparent 1.5px); background-size:18px 18px;"></div><div style="position:absolute; right:10px; top:10px; display:flex; gap:6px;"><div class="dk-icon" style="width:30px; height:30px; min-width:30px; border-radius:9px; background:rgba(21,17,13,0.85); border:1px solid var(--dark-border); display:flex; align-items:center; justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5V18h15.5"/><path d="M2.5 6H18v15.5"/></svg></div><div class="dk-icon" style="width:30px; height:30px; min-width:30px; border-radius:9px; background:rgba(21,17,13,0.85); border:1px solid var(--dark-border); display:flex; align-items:center; justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-300)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></div></div><p style="position:absolute; left:12px; bottom:10px; font-size:11.5px; font-weight:700; color:var(--dark-ink-100); margin:0;">Reading corner</p></div><div style="position:relative; aspect-ratio:3 / 2; border-radius:14px; background:radial-gradient(circle at 55% 45%, #5a4632 0 6%, #3a2f25 30%, #15110d 78%); border:1px solid var(--dark-border); overflow:hidden;"><div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.14) 1px, transparent 1.5px); background-size:18px 18px;"></div><div style="position:absolute; right:10px; top:10px; display:flex; gap:6px;"><div class="dk-icon" style="width:30px; height:30px; min-width:30px; border-radius:9px; background:rgba(21,17,13,0.85); border:1px solid var(--dark-border); display:flex; align-items:center; justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2.5V18h15.5"/><path d="M2.5 6H18v15.5"/></svg></div><div class="dk-icon" style="width:30px; height:30px; min-width:30px; border-radius:9px; background:rgba(21,17,13,0.85); border:1px solid var(--dark-border); display:flex; align-items:center; justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-300)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg></div></div><p style="position:absolute; left:12px; bottom:10px; font-size:11.5px; font-weight:700; color:var(--dark-ink-100); margin:0;">Terrace</p></div></div>
+          <p style="font-size:11px; color:var(--dark-ink-500); margin:12px 0 0; line-height:1.5;">Adjust crop reopens the editor on the photo's current framing. Details names the photo or makes it the main one.</p>
+        </div>
+        <div style="position:relative; background:var(--dark-card); border:1px solid var(--dark-border); border-radius:20px; padding:18px 20px;"><p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Amenities</p><div style="display:flex; flex-wrap:wrap; gap:9px; margin-top:12px;"><span style="display:inline-flex; align-items:center; padding:8px 16px; border-radius:20px; background:var(--gold-500);"><span style="font-size:12px; font-weight:700; color:#FFFFFF;">High-speed WiFi</span></span><span style="display:inline-flex; align-items:center; padding:8px 16px; border-radius:20px; background:var(--gold-500);"><span style="font-size:12px; font-weight:700; color:#FFFFFF;">Co-working</span></span><span style="display:inline-flex; align-items:center; padding:8px 16px; border-radius:20px; background:var(--gold-500);"><span style="font-size:12px; font-weight:700; color:#FFFFFF;">Lounge and bar</span></span><span style="display:inline-flex; align-items:center; padding:8px 16px; border-radius:20px; background:var(--gold-500);"><span style="font-size:12px; font-weight:700; color:#FFFFFF;">Showers</span></span><span style="display:inline-flex; align-items:center; padding:8px 16px; border-radius:20px; background:var(--gold-500);"><span style="font-size:12px; font-weight:700; color:#FFFFFF;">Luggage storage</span></span><span style="display:inline-flex; align-items:center; padding:8px 16px; border-radius:20px; border:1.5px solid var(--dark-border);"><span style="font-size:12px; font-weight:700; color:var(--dark-ink-300);">Day rooms</span></span><span style="display:inline-flex; align-items:center; padding:8px 16px; border-radius:20px; border:1.5px solid var(--dark-border);"><span style="font-size:12px; font-weight:700; color:var(--dark-ink-300);">Spa</span></span></div></div>
+        <div style="position:relative; background:var(--dark-card); border:1px solid var(--dark-border); border-radius:20px; padding:18px 20px;"><p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Operating hours</p><div style="display:grid; grid-template-columns:repeat(7, minmax(0, 1fr)); gap:8px; margin-top:12px;"><div style="padding:11px 8px; border-radius:12px; border:1px solid var(--dark-border); text-align:center;"><p style="font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Mon</p><p style="font-size:12px; font-weight:700; color:var(--dark-ink-100); margin:7px 0 0;">7 AM – 10 PM</p></div><div style="padding:11px 8px; border-radius:12px; border:1px solid var(--dark-border); text-align:center;"><p style="font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Tue</p><p style="font-size:12px; font-weight:700; color:var(--dark-ink-100); margin:7px 0 0;">7 AM – 10 PM</p></div><div style="padding:11px 8px; border-radius:12px; border:1px solid var(--dark-border); text-align:center;"><p style="font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Wed</p><p style="font-size:12px; font-weight:700; color:var(--dark-ink-100); margin:7px 0 0;">7 AM – 10 PM</p></div><div style="padding:11px 8px; border-radius:12px; border:1px solid var(--dark-border); text-align:center;"><p style="font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Thu</p><p style="font-size:12px; font-weight:700; color:var(--dark-ink-100); margin:7px 0 0;">7 AM – 10 PM</p></div><div style="padding:11px 8px; border-radius:12px; border:1px solid var(--dark-border); text-align:center;"><p style="font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Fri</p><p style="font-size:12px; font-weight:700; color:var(--dark-ink-100); margin:7px 0 0;">7 AM – 10 PM</p></div><div style="padding:11px 8px; border-radius:12px; border:1px solid var(--dark-border); text-align:center;"><p style="font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Sat</p><p style="font-size:12px; font-weight:700; color:var(--dark-ink-100); margin:7px 0 0;">9 AM – 10 PM</p></div><div style="padding:11px 8px; border-radius:12px; border:1px solid var(--dark-border); text-align:center;"><p style="font-size:11px; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Sun</p><p style="font-size:12px; font-weight:700; color:var(--dark-ink-100); margin:7px 0 0;">9 AM – 8 PM</p></div></div></div>
+      </div>
+      <div style="width:300px; min-width:300px; display:flex; flex-direction:column; gap:12px;"><div style="position:relative; background:var(--dark-card); border:1px solid var(--dark-border); border-radius:20px; padding:16px 20px 10px;"><p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">How a photo goes up</p><div style="display:flex; flex-direction:column; gap:2px; margin-top:10px;"><div style="display:flex; gap:11px; padding:8px 0;"><span style="width:20px; height:20px; min-width:20px; border-radius:50%; border:1px solid var(--dark-border); color:var(--dark-ink-300); font-size:10.5px; font-weight:800; display:flex; align-items:center; justify-content:center;">1</span><div><p style="font-size:12.5px; font-weight:700; color:var(--dark-ink-100); margin:0;">Choose a file</p><p style="font-size:11.5px; color:var(--dark-ink-500); margin:2px 0 0; line-height:1.5;">JPEG, PNG or WebP, straight from the camera — no need to prepare it.</p></div></div><div style="display:flex; gap:11px; padding:8px 0; border-top:1px solid rgba(58,50,42,0.6);"><span style="width:20px; height:20px; min-width:20px; border-radius:50%; background:var(--gold-500); color:#FFFFFF; font-size:10.5px; font-weight:800; display:flex; align-items:center; justify-content:center;">2</span><div><p style="font-size:12.5px; font-weight:700; color:var(--dark-ink-100); margin:0;">Frame it</p><p style="font-size:11.5px; color:var(--dark-ink-500); margin:2px 0 0; line-height:1.5;">Drag and zoom inside a fixed 3 : 2 frame, the shape of the lounge photos.</p></div></div><div style="display:flex; gap:11px; padding:8px 0; border-top:1px solid rgba(58,50,42,0.6);"><span style="width:20px; height:20px; min-width:20px; border-radius:50%; border:1px solid var(--dark-border); color:var(--dark-ink-300); font-size:10.5px; font-weight:800; display:flex; align-items:center; justify-content:center;">3</span><div><p style="font-size:12.5px; font-weight:700; color:var(--dark-ink-100); margin:0;">Pick a size</p><p style="font-size:11.5px; color:var(--dark-ink-500); margin:2px 0 0; line-height:1.5;">Large, Standard or Light, with the weight each will have.</p></div></div><div style="display:flex; gap:11px; padding:8px 0; border-top:1px solid rgba(58,50,42,0.6);"><span style="width:20px; height:20px; min-width:20px; border-radius:50%; border:1px solid var(--dark-border); color:var(--dark-ink-300); font-size:10.5px; font-weight:800; display:flex; align-items:center; justify-content:center;">4</span><div><p style="font-size:12.5px; font-weight:700; color:var(--dark-ink-100); margin:0;">Upload</p><p style="font-size:11.5px; color:var(--dark-ink-500); margin:2px 0 0; line-height:1.5;">Only the cropped, compressed photo leaves the browser.</p></div></div></div></div><div style="background:var(--panel-black); border:1px dashed var(--gold-600); border-radius:16px; padding:13px 16px;"><p style="font-size:11.5px; color:var(--dark-ink-300); margin:0; line-height:1.55;">Saving a new crop replaces the photo on the lounge; its area, detail and order stay the same.</p></div></div>
+    </div>
+
+  </div>
+
+  <!-- Scrim -->
+  <div style="position:absolute; inset:0; background:rgba(10,8,6,0.6);"></div>
+
+  <!-- Photo editor · react-easy-crop, aspect 3 : 2 -->
+  <div style="position:absolute; left:476px; top:38px; width:940px; background:var(--dark-card); border:1px solid var(--dark-border); border-radius:24px; box-shadow:0 40px 80px -30px rgba(0,0,0,0.75); overflow:hidden;">
+
+    <div style="display:flex; align-items:flex-start; gap:16px; padding:24px 28px 18px; border-bottom:1px solid var(--dark-border);">
+      <div style="flex:1; min-width:0;">
+        <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">The Ainsworth · Main room</p>
+        <h2 style="font-size:27px; color:var(--dark-ink-100); margin:9px 0 0;">Adjust the crop</h2>
+      </div>
+      <div class="dk-ghost" style="width:40px; height:40px; min-width:40px; border-radius:11px; border:1.5px solid var(--dark-border); display:flex; align-items:center; justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6 6 18"/></svg></div>
+    </div>
+
+    <div style="display:flex; gap:22px; padding:20px 28px 20px;">
+
+      <!-- Crop stage -->
+      <div style="width:540px; min-width:540px;">
+        <div style="position:relative; width:540px; height:400px; border-radius:16px; background:#0c0a08; overflow:hidden; cursor:grab;">
+          <div style="position:absolute; left:-190px; top:-120px; width:864px; height:576px; background:radial-gradient(circle at 30% 25%, #5a4632 0 6%, #3a2f25 30%, #15110d 78%);"><div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.14) 1px, transparent 1.5px); background-size:18px 18px;"></div><div style="position:absolute; left:18%; top:58%; width:34%; height:22%; border-radius:10px; background:linear-gradient(180deg, rgba(201,168,118,0.22), rgba(201,168,118,0.05));"></div><div style="position:absolute; left:60%; top:30%; width:12%; height:46%; border-radius:6px; background:linear-gradient(180deg, rgba(241,227,208,0.16), rgba(241,227,208,0.03));"></div></div>
+          <!-- Frame 3 : 2 · 480 × 320 -->
+          <div style="position:absolute; left:30px; top:40px; width:480px; height:320px; border:1.5px solid rgba(241,227,208,0.9); box-shadow:0 0 0 999px rgba(10,8,6,0.62);">
+            <div style="position:absolute; left:33.33%; top:0; bottom:0; border-left:1px solid rgba(241,227,208,0.28);"></div>
+            <div style="position:absolute; left:66.66%; top:0; bottom:0; border-left:1px solid rgba(241,227,208,0.28);"></div>
+            <div style="position:absolute; top:33.33%; left:0; right:0; border-top:1px solid rgba(241,227,208,0.28);"></div>
+            <div style="position:absolute; top:66.66%; left:0; right:0; border-top:1px solid rgba(241,227,208,0.28);"></div>
+          </div>
+          <span style="position:absolute; left:42px; top:52px; padding:4px 9px; border-radius:8px; background:rgba(21,17,13,0.85); font-size:10.5px; font-weight:800; letter-spacing:0.08em; color:var(--dark-ink-300);">3 : 2</span>
+          <span style="position:absolute; left:50%; bottom:14px; transform:translateX(-50%); display:inline-flex; align-items:center; gap:8px; padding:7px 13px; border-radius:20px; background:rgba(21,17,13,0.88); border:1px solid var(--dark-border);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18"/><path d="m9 6 3-3 3 3M9 18l3 3 3-3M6 9l-3 3 3 3M18 9l3 3-3 3"/></svg><span style="font-size:11.5px; font-weight:700; color:var(--dark-ink-100); white-space:nowrap;">Drag to reposition</span></span>
+        </div>
+        <!-- Zoom -->
+        <div style="display:flex; align-items:center; gap:12px; margin-top:16px;">
+          <span style="font-size:12.5px; font-weight:700; color:var(--dark-ink-500); width:42px;">Zoom</span>
+          <div class="dk-icon" style="width:32px; height:32px; min-width:32px; border-radius:9px; border:1.5px solid var(--dark-border); display:flex; align-items:center; justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-300)" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg></div>
+          <div role="slider" style="position:relative; flex:1; height:20px;"><div style="position:absolute; left:0; right:0; top:8px; height:4px; border-radius:2px; background:var(--dark-border);"></div><div style="position:absolute; left:0; width:40%; top:8px; height:4px; border-radius:2px; background:var(--gold-500);"></div><div style="position:absolute; left:calc(40% - 10px); top:0; width:20px; height:20px; border-radius:50%; background:var(--gold-500); border:3px solid var(--dark-card); box-shadow:0 0 0 1.5px var(--gold-500);"></div></div>
+          <div class="dk-icon" style="width:32px; height:32px; min-width:32px; border-radius:9px; border:1.5px solid var(--dark-border); display:flex; align-items:center; justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-300)" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+          <span style="font-size:12.5px; font-weight:700; color:var(--dark-ink-100); width:38px; text-align:right;">1.8×</span>
+        </div>
+        <p style="font-size:11px; color:var(--dark-ink-500); margin:8px 0 0 54px;">Scroll or pinch on the photo to zoom too. The frame keeps the 3 : 2 shape of the lounge photos.</p>
+      </div>
+
+      <!-- Side -->
+      <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:14px;">
+        <div style="padding:13px 15px; border-radius:14px; border:1px solid var(--dark-border);">
+          <p style="font-size:10.5px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Original · kept</p>
+          <div style="display:flex; align-items:center; gap:11px; margin-top:9px;">
+            <div style="width:40px; height:40px; min-width:40px; border-radius:10px; border:1px solid var(--dark-border); display:flex; align-items:center; justify-content:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="14" rx="2.5"/><circle cx="9" cy="10" r="1.6"/><path d="m4 17 5-4.5 4 3.5 2.5-2 4.5 3.5"/></svg></div>
+            <div style="min-width:0;"><p style="font-size:13px; font-weight:700; color:var(--dark-ink-100); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">ainsworth-main-room.jpg</p><p style="font-size:11.5px; color:var(--dark-ink-500); margin:3px 0 0;">6000 × 4000 · 9.2 MB · JPEG</p></div>
+          </div><div style="display:flex; align-items:center; gap:8px; margin-top:11px; padding-top:11px; border-top:1px solid var(--dark-border);"><span style="font-size:11.5px; color:var(--dark-ink-500);">Live now</span><div style="flex:1;"></div><span style="font-size:11.5px; font-weight:700; color:var(--dark-ink-300);">Standard · 1600 px · 310 KB</span></div>
+        </div>
+        <div>
+          <div style="display:flex; align-items:center;"><span style="font-size:12.5px; font-weight:700; color:var(--dark-ink-500);">Final size</span><div style="flex:1;"></div><span style="font-size:11px; color:var(--dark-ink-500);">Estimated weight</span></div>
+          <div role="radiogroup" style="display:flex; flex-direction:column; gap:8px; margin-top:9px;">
+          <div class="dk-sugg" role="radio" aria-checked="false" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:14px; background:var(--panel-black); border:1px solid var(--dark-border);">
+            <span style="width:18px; height:18px; min-width:18px; border-radius:50%; border:1.5px solid var(--dark-ink-500); display:flex; align-items:center; justify-content:center;"></span>
+            <div style="flex:1; min-width:0;"><div style="display:flex; align-items:center; gap:8px;"><p style="font-size:13px; font-weight:700; color:var(--dark-ink-100); margin:0; white-space:nowrap;">Large · 2400 px</p></div><div style="display:flex; align-items:center; gap:8px; margin-top:4px;"><p style="font-size:11px; color:var(--dark-ink-500); margin:0; white-space:nowrap;">2400 × 1600</p></div><p style="font-size:11px; color:var(--dark-ink-500); margin:3px 0 0;">Sharpest on large screens</p></div>
+            <span style="font-size:12.5px; font-weight:700; color:var(--dark-ink-300); white-space:nowrap;">≈ 620 KB</span>
+          </div>
+          <div class="dk-sugg" role="radio" aria-checked="true" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:14px; background:rgba(201,168,118,0.10); border:1.5px solid var(--gold-500);">
+            <span style="width:18px; height:18px; min-width:18px; border-radius:50%; border:1.5px solid var(--gold-500); display:flex; align-items:center; justify-content:center;"><span style="width:8px; height:8px; border-radius:50%; background:var(--gold-500);"></span></span>
+            <div style="flex:1; min-width:0;"><div style="display:flex; align-items:center; gap:8px;"><p style="font-size:13px; font-weight:700; color:var(--dark-ink-100); margin:0; white-space:nowrap;">Standard · 1600 px</p></div><div style="display:flex; align-items:center; gap:8px; margin-top:4px;"><p style="font-size:11px; color:var(--dark-ink-500); margin:0; white-space:nowrap;">1600 × 1067</p><span style="padding:2px 8px; border-radius:20px; background:rgba(201,168,118,0.16); border:1px solid var(--gold-600);"><span style="font-size:9.5px; font-weight:800; letter-spacing:0.08em; color:var(--gold-500);">RECOMMENDED</span></span></div><p style="font-size:11px; color:var(--dark-ink-500); margin:3px 0 0;">Sharp on every phone and laptop</p></div>
+            <span style="font-size:12.5px; font-weight:700; color:var(--gold-500); white-space:nowrap;">≈ 310 KB</span>
+          </div>
+          <div class="dk-sugg" role="radio" aria-checked="false" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:14px; background:var(--panel-black); border:1px solid var(--dark-border);">
+            <span style="width:18px; height:18px; min-width:18px; border-radius:50%; border:1.5px solid var(--dark-ink-500); display:flex; align-items:center; justify-content:center;"></span>
+            <div style="flex:1; min-width:0;"><div style="display:flex; align-items:center; gap:8px;"><p style="font-size:13px; font-weight:700; color:var(--dark-ink-100); margin:0; white-space:nowrap;">Light · 1200 px</p></div><div style="display:flex; align-items:center; gap:8px; margin-top:4px;"><p style="font-size:11px; color:var(--dark-ink-500); margin:0; white-space:nowrap;">1200 × 800</p></div><p style="font-size:11px; color:var(--dark-ink-500); margin:3px 0 0;">Fastest on a slow connection</p></div>
+            <span style="font-size:12.5px; font-weight:700; color:var(--dark-ink-300); white-space:nowrap;">≈ 190 KB</span>
+          </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:14px; padding:18px 28px 22px; border-top:1px solid var(--dark-border);">
+      <div class="dk-ghost" style="display:flex; align-items:center; justify-content:center; height:52px; min-height:52px; padding:0 24px; border:1.5px solid var(--dark-border); border-radius:12px;"><span style="font-size:12.5px; font-weight:700; letter-spacing:0.06em; color:var(--dark-ink-300); white-space:nowrap;">Cancel</span></div>
+      <p style="flex:1; font-size:11.5px; color:var(--dark-ink-500); margin:0; line-height:1.5;">Opens on the current framing. Saving uploads the new crop and replaces the old one.</p>
+      <div class="dk-gold" style="display:flex; align-items:center; justify-content:center; gap:10px; height:52px; min-height:52px; padding:0 26px; background:var(--gold-500); border-radius:12px; cursor:pointer;"><span style="font-size:13px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#FFFFFF; white-space:nowrap;">Save crop</span></div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

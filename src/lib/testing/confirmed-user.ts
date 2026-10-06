@@ -79,11 +79,12 @@ export async function signUpConfirmedMemberAndSignIn(
 }
 
 /**
- * Epic 7 — como `signUpConfirmedAndSignIn`, más el alta operativa de un
- * partner (`user_roles` + `partners` + `partner_lounges`, ver
- * `supabase/schemas/partners.sql` "Alta de un partner") — nunca un
- * self-service, así que los tests la replican aquí con el service role en
- * vez de una RPC pública.
+ * Epic 7 / Story 10.1 — un usuario partner con sesión: rol `partner` y fila
+ * en `partner_members` del partner que opera esos lounges. Un lounge tiene
+ * un solo partner, así que si ya lo opera uno (el de muestra de
+ * `scripts/seed-partners.mjs`, o el de otro test en paralelo) el usuario se
+ * une a ese; si no, se crea uno activo con `businessName`. Nunca es
+ * self-service: el service role replica aquí el alta del admin.
  */
 export async function signUpConfirmedPartnerAndSignIn(
   supabase: SupabaseClient,
@@ -91,6 +92,35 @@ export async function signUpConfirmedPartnerAndSignIn(
   password: string,
   options: { businessName: string; loungeIds: string[] },
 ) {
+  const admin = createAdminClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  );
+
+  const partnerOf = async () => {
+    const { data, error } = await admin.from("lounges").select("partner_id").eq("id", options.loungeIds[0]).single();
+    if (error) throw error;
+    return data.partner_id as string | null;
+  };
+
+  let partnerId = await partnerOf();
+  if (!partnerId) {
+    const { data: partner, error: partnerError } = await admin
+      .from("partners")
+      .insert({ name: options.businessName, contact_email: email, status: "active" })
+      .select("id")
+      .single();
+    if (partnerError) throw partnerError;
+    await admin.from("lounges").update({ partner_id: partner.id }).in("id", options.loungeIds).is("partner_id", null);
+    partnerId = await partnerOf();
+  }
+
+  // Antes de la cuenta: un usuario partner es siempre una cuenta nueva.
+  const { error: memberError } = await admin
+    .from("partner_members")
+    .insert({ partner_id: partnerId, first_name: "Test", last_name: "Partner", email });
+  if (memberError) throw memberError;
+
   await signUpConfirmedAndSignIn(supabase, email, password);
 
   const {
@@ -98,26 +128,12 @@ export async function signUpConfirmedPartnerAndSignIn(
   } = await supabase.auth.getUser();
   if (!user) throw new Error("signUpConfirmedAndSignIn did not leave a session");
 
-  const admin = createAdminClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  );
-
   const { error: roleError } = await admin
     .from("user_roles")
     .insert({ user_id: user.id, role: "partner" });
   if (roleError) throw roleError;
 
-  const { data: partner, error: partnerError } = await admin
-    .from("partners")
-    .insert({ user_id: user.id, business_name: options.businessName, contact_email: email })
-    .select("id")
-    .single();
-  if (partnerError) throw partnerError;
-
-  const { error: linkError } = await admin
-    .from("partner_lounges")
-    .insert(options.loungeIds.map((lounge_id) => ({ partner_id: partner.id, lounge_id })));
+  const { error: linkError } = await admin.from("partner_members").update({ user_id: user.id }).eq("email", email.toLowerCase());
   if (linkError) throw linkError;
 
   return user;

@@ -28,7 +28,7 @@ export function ConfirmedVisitCard() {
         <div className="flex-1">
           <h2 className="m-0 text-[22px] text-fg">{lounge.name}</h2>
           <p className="m-0 mt-0.5 text-[12.5px] text-fg-subtle">
-            {lounge.address} · {lounge.receptionNote}
+            {[lounge.partnerName, lounge.address, lounge.receptionNote].filter(Boolean).join(" · ")}
           </p>
         </div>
         <StatusChip available>Confirmed</StatusChip>

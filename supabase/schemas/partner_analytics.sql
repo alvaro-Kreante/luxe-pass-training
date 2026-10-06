@@ -1,13 +1,10 @@
--- Story 7.3 — Partner Analytics. Las tres RPC agregan sobre TODOS los
--- lounges que gestiona el partner autenticado (`partner_lounge_ids()`,
--- `partners.sql`), no sobre un lounge elegido: ningún artboard de esta fase
--- (`Analytics.dc.html`, `RepeatGuests.dc.html`, `Reports.dc.html`) diseña un
--- selector de venue — la decisión de 1 partner : N lounges (22 sept 2026) no
--- necesita uno mientras un partner solo gestione uno, y ya generaliza sola
--- el día que gestione varios. SECURITY DEFINER hace falta de verdad (lee
--- `profiles`/`auth.users` de otros miembros para `partner_repeat_guests`),
--- pero cada función autoriza explícitamente contra `partner_lounge_ids()` en
--- vez de delegarlo solo a RLS.
+-- Story 7.3 — Partner Analytics. Las tres RPC agregan sobre los lounges
+-- que gestiona el partner autenticado (`partner_lounge_ids()`,
+-- `partners.sql`): todos con `p_lounge_id` null ("All lounges") o solo el
+-- elegido en el selector de la cabecera (Story 10.6). SECURITY DEFINER hace
+-- falta de verdad (lee `profiles`/`auth.users` de otros miembros para
+-- `partner_repeat_guests`), pero cada función autoriza explícitamente contra
+-- `partner_lounge_ids()` en vez de delegarlo solo a RLS.
 --
 -- "day pass" vs "visita de membresía": no hay un campo de tipo de visita en
 -- `profiles`/`bookings` (Epic 9, planes de membresía, sigue sin conectar) —
@@ -23,7 +20,7 @@
 -- `bookings` cuenta TODAS las reservas del rango (cualquier estado): igual
 -- que `ANALYTICS_SUMMARY` en `src/lib/partner.ts`, day_pass_visits +
 -- membership_visits + no_shows + cancellations debe sumar `bookings`.
-create or replace function public.partner_analytics_summary(p_from date, p_to date)
+create or replace function public.partner_analytics_summary(p_from date, p_to date, p_lounge_id text default null)
 returns table (
   bookings int,
   day_pass_visits int,
@@ -51,15 +48,16 @@ begin
       count(*) filter (where b.status = 'cancelled')::int
     from public.bookings b
     where b.lounge_id in (select public.partner_lounge_ids())
+      and (p_lounge_id is null or b.lounge_id = p_lounge_id)
       and b.date between p_from and p_to;
 end;
 $$;
 
-grant execute on function public.partner_analytics_summary(date, date) to authenticated;
+grant execute on function public.partner_analytics_summary(date, date, text) to authenticated;
 
 -- "Bookings a day" — una fila por fecha del rango, incluidas las fechas sin
 -- ninguna reserva (0), para que el gráfico de barras no salte huecos.
-create or replace function public.partner_bookings_by_day(p_from date, p_to date)
+create or replace function public.partner_bookings_by_day(p_from date, p_to date, p_lounge_id text default null)
 returns table (day date, bookings int)
 language plpgsql
 security definer
@@ -71,12 +69,13 @@ begin
     from generate_series(p_from, p_to, interval '1 day') as d(day)
     left join public.bookings b
       on b.date = d.day::date and b.lounge_id in (select public.partner_lounge_ids())
+        and (p_lounge_id is null or b.lounge_id = p_lounge_id)
     group by d.day
     order by d.day;
 end;
 $$;
 
-grant execute on function public.partner_bookings_by_day(date, date) to authenticated;
+grant execute on function public.partner_bookings_by_day(date, date, text) to authenticated;
 
 /* -------------------------------------------------------------------- */
 /* "Repeat guest identification"                                        */
@@ -89,7 +88,7 @@ grant execute on function public.partner_bookings_by_day(date, date) to authenti
 -- `DAY_PASS_PARTNER_RATE`/`MEMBERSHIP_VISIT_PARTNER_RATE` de
 -- `src/lib/partner.ts` — **deben coincidir** (mismo criterio que
 -- `booking_reference`, duplicado a propósito entre SQL/TS).
-create or replace function public.partner_repeat_guests()
+create or replace function public.partner_repeat_guests(p_lounge_id text default null)
 returns table (
   member_id uuid,
   member_name text,
@@ -123,6 +122,7 @@ begin
     join auth.users u on u.id = b.member_id
     left join public.profiles p on p.id = b.member_id
     where b.lounge_id in (select public.partner_lounge_ids())
+      and (p_lounge_id is null or b.lounge_id = p_lounge_id)
       and b.status <> 'cancelled'
       and b.no_show = false
     group by b.member_id, p.full_name, u.email
@@ -130,4 +130,4 @@ begin
 end;
 $$;
 
-grant execute on function public.partner_repeat_guests() to authenticated;
+grant execute on function public.partner_repeat_guests(text) to authenticated;

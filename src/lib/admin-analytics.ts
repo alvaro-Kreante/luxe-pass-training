@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { amenityLabel, type AmenityId } from "@/lib/amenities";
-import { TODAY, parseDate } from "@/lib/availability";
+import { today, parseDate } from "@/lib/availability";
 import { formatCurrency } from "@/lib/admin";
 
 /**
@@ -34,12 +34,12 @@ export interface DateRange {
   to: string;
 }
 
-export function dateRangeForPeriod(period: AnalyticsPeriod, today: string = TODAY): DateRange {
+export function dateRangeForPeriod(period: AnalyticsPeriod, todayIso: string = today()): DateRange {
   const days = PERIOD_DAYS[period];
-  const to = parseDate(today);
+  const to = parseDate(todayIso);
   const from = new Date(to);
   from.setUTCDate(from.getUTCDate() - (days - 1));
-  return { from: from.toISOString().slice(0, 10), to: today };
+  return { from: from.toISOString().slice(0, 10), to: todayIso };
 }
 
 function formatShortDate(iso: string): string {
@@ -57,11 +57,11 @@ export const DATE_RANGE_PRESETS: { label: string; days: number }[] = [
   { label: "Quarter to date", days: 90 },
 ];
 
-export function dateRangeForPreset(days: number, today: string = TODAY): DateRange {
-  const to = parseDate(today);
+export function dateRangeForPreset(days: number, todayIso: string = today()): DateRange {
+  const to = parseDate(todayIso);
   const from = new Date(to);
   from.setUTCDate(from.getUTCDate() - (days - 1));
-  return { from: from.toISOString().slice(0, 10), to: today };
+  return { from: from.toISOString().slice(0, 10), to: todayIso };
 }
 
 export function noShowRatePct(noShows: number, bookings: number): number {

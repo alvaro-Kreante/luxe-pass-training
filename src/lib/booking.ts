@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { TODAY, addDays, isPast } from "./availability";
+import { today, addDays, isPast } from "./availability";
 import type { AvailabilityCell, WeekBandId } from "./lounge-profile";
 
 /**
@@ -63,8 +63,8 @@ export function monthDayStatus(
   cellsForDate: AvailabilityCell[],
 ): DayStatus {
   if (isPast(dateIso)) return "past";
-  if (dateIso === TODAY) return "today";
-  if (dateIso > addDays(TODAY, BOOKING_WINDOW_DAYS)) return "closed";
+  if (dateIso === today()) return "today";
+  if (dateIso > addDays(today(), BOOKING_WINDOW_DAYS)) return "closed";
   if (cellsForDate.length === 0 || cellsForDate.every((cell) => cell.status === "closed")) {
     return "closed";
   }

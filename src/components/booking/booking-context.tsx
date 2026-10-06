@@ -2,7 +2,7 @@
 
 import * as React from "react";
 
-import { TODAY } from "@/lib/availability";
+import { today } from "@/lib/availability";
 import {
   MEMBERSHIP_COVERAGE_FIXTURE,
   NOT_COVERED,
@@ -144,7 +144,7 @@ export function BookingProvider({
   const [liveCoverage, setLiveCoverage] = React.useState<BookingCoverage | null>(null);
   const [coverageRequest, setCoverageRequest] = React.useState(0);
   const refreshCoverage = React.useCallback(() => setCoverageRequest((count) => count + 1), []);
-  const coverageDate = draft.dateIso ?? TODAY;
+  const coverageDate = draft.dateIso ?? today();
   const bookingExists = draft.bookingId !== null;
 
   React.useEffect(() => {

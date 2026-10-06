@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { bookingReferenceFromId, confirmBooking, joinWaitlist } from "@/lib/booking";
-import { TODAY, addDays } from "@/lib/availability";
+import { today, addDays } from "@/lib/availability";
 import { fetchVisitsThisMonth } from "@/lib/membership";
 import { LATE_CANCELLATION_FEE_LABEL } from "@/lib/passes";
 import { checkInReceptionBooking, reportReceptionNoShow } from "@/lib/reception";
@@ -44,18 +44,18 @@ beforeAll(async () => {
   // In progress: check-in ya hecho hoy.
   const inProgress = await confirmBooking(supabase, {
     loungeId: "the-ainsworth",
-    dateIso: TODAY,
+    dateIso: today(),
     band: "morning",
     time: "8:00 AM",
     specialRequests: "",
   });
   if (!inProgress) throw new Error("No se pudo confirmar la reserva in-progress de prueba");
-  await checkInReceptionBooking(kiosk, "the-ainsworth", TODAY, bookingReferenceFromId(inProgress.id));
+  await checkInReceptionBooking(kiosk, "the-ainsworth", today(), bookingReferenceFromId(inProgress.id));
 
   // Confirmada, dentro de las 24 horas (hoy mismo) — tarifa de cancelación.
   const withinWindow = await confirmBooking(supabase, {
     loungeId: "belmont-terrace",
-    dateIso: TODAY,
+    dateIso: today(),
     band: "afternoon",
     time: "1:00 PM",
     specialRequests: "",
@@ -65,7 +65,7 @@ beforeAll(async () => {
   // Confirmada, más de 24 horas por delante — cancelación gratuita.
   const free = await confirmBooking(supabase, {
     loungeId: "aurelia-house",
-    dateIso: addDays(TODAY, 3),
+    dateIso: addDays(today(), 3),
     band: "morning",
     time: "8:00 AM",
     specialRequests: "",
@@ -75,7 +75,7 @@ beforeAll(async () => {
   // En lista de espera.
   await joinWaitlist(supabase, {
     loungeId: "the-winslow-club",
-    dateIso: addDays(TODAY, 5),
+    dateIso: addDays(today(), 5),
     band: "evening",
     time: "6:00 PM",
     specialRequests: "",
@@ -84,13 +84,13 @@ beforeAll(async () => {
   // Pasada, no-show.
   const noShowBooking = await confirmBooking(supabase, {
     loungeId: "the-meridian-salon",
-    dateIso: TODAY,
+    dateIso: today(),
     band: "afternoon",
     time: "3:30 PM",
     specialRequests: "",
   });
   if (!noShowBooking) throw new Error("No se pudo confirmar la reserva de no-show de prueba");
-  await reportReceptionNoShow(kiosk, "the-meridian-salon", TODAY, bookingReferenceFromId(noShowBooking.id));
+  await reportReceptionNoShow(kiosk, "the-meridian-salon", today(), bookingReferenceFromId(noShowBooking.id));
 });
 
 describe("campana de notificaciones", () => {
@@ -167,7 +167,7 @@ describe("cancelar una reserva dentro de las 24 horas", () => {
     const supabase = createClient();
     const paid = await confirmBooking(supabase, {
       loungeId: "rue-lafayette-club",
-      dateIso: TODAY,
+      dateIso: today(),
       band: "morning",
       time: "10:30 AM",
       specialRequests: "",

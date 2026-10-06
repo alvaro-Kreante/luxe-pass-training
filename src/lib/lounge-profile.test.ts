@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { today, addDays } from "@/lib/availability";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedAndSignIn } from "@/lib/testing/confirmed-user";
 
@@ -239,5 +240,32 @@ describe("fetchNextAvailableSlot", () => {
     expect(next).toBeDefined();
     expect(next!.dateIso >= "2025-09-09").toBe(true);
     expect(next!.seatsLeft).toBeGreaterThan(0);
+  });
+});
+
+/** Story 10.9 — durante una temporada, la ficha muestra su horario, no el habitual. */
+describe("horario de temporada en la ficha", () => {
+  it("si hoy cae en una temporada, la ficha usa su horario y sus días cerrados", async () => {
+    const { createClient: createServiceClient } = await import("@supabase/supabase-js");
+    const service = createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const id = `test-lounge-profile-season-${Date.now()}`;
+    const regular = ["Closed", "8 AM – 9 PM", "8 AM – 9 PM", "8 AM – 9 PM", "8 AM – 9 PM", "8 AM – 9 PM", "9 AM – 6 PM"];
+    const summer = ["10 AM – 4 PM", "Closed", "7 AM – 11 PM", "7 AM – 11 PM", "7 AM – 11 PM", "7 AM – 11 PM", "9 AM – 6 PM"];
+    await service.from("lounges").insert({
+      id, name: "Season profile", neighborhood: "Midtown", city: "New York", city_id: "new-york", lat: 0, lng: 0,
+      hours: "Open until 9 PM", bands: ["morning"], closed_weekdays: [0], weekly_hours: regular, content_status: "live",
+    });
+    await service.from("lounge_seasons").insert([
+      { lounge_id: id, name: "Summer", starts_on: addDays(today(), -3), ends_on: addDays(today(), 3), weekly_hours: summer },
+      { lounge_id: id, name: "Later", starts_on: addDays(today(), 30), ends_on: addDays(today(), 40), weekly_hours: Array(7).fill("Closed") },
+    ]);
+
+    const profile = (await fetchLoungeProfile(supabase, id))!;
+    expect(profile.weeklyHours).toEqual(summer);
+    expect(profile.closedWeekdays).toEqual([1]);
+
+    await service.from("lounge_seasons").delete().eq("lounge_id", id);
+    expect((await fetchLoungeProfile(supabase, id))!.weeklyHours).toEqual(regular);
+    await service.from("lounges").delete().eq("id", id);
   });
 });

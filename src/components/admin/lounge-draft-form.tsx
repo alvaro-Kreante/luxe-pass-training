@@ -1,18 +1,22 @@
 "use client";
 
 import * as React from "react";
-import { Check, Plus } from "lucide-react";
+import { Check, Crop, Plus, X } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 import { AddressAutocomplete } from "@/components/admin/address-autocomplete";
+import type { LoungeSavedKind } from "@/components/admin/lounge-saved-notice";
 import { PhotoCaptionDialog, type DraftPhotoItem } from "@/components/admin/photo-caption-dialog";
+import { PhotoCropDialog, type PhotoCropChoice, type PhotoSource } from "@/components/admin/photo-crop-dialog";
+import { PartnerPicker } from "@/components/admin/partner-picker";
+import { StatusSelect } from "@/components/admin/status-select";
+import { LoungeScheduleCards, useLoungeSchedule } from "@/components/admin/lounge-schedule";
+import { persistLoungeSchedule } from "@/lib/lounge-schedule";
+import { WeeklyHoursEditor } from "@/components/admin/weekly-hours-editor";
 import { AdminShell } from "@/components/patterns/admin-shell";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { AMENITIES } from "@/lib/amenities";
 import {
   createLoungeDraft,
@@ -21,23 +25,20 @@ import {
   updateLoungeDraft,
   uploadLoungeImage,
   type LoungeContentDetail,
+  type PhotoCrop,
 } from "@/lib/admin-content";
+import { ACCEPTED_TYPES, PHOTO_SIZES, cropImage, isAcceptedImage } from "@/lib/photo-crop";
 import {
-  CLOSED,
   captionFromFileName,
-  formatDayHours,
   makeMainPhoto,
-  parseDayHours,
-  TIME_OPTIONS,
-  type DayHours,
   publishChecklist,
   type LoungeDraftInput,
   type LoungeLocation,
 } from "@/lib/lounge-draft";
+import { listAdminPartners, type AdminPartnerRow } from "@/lib/admin-partners";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
-const WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MAX_PHOTOS = 3;
 const MONDAY = 1;
 
@@ -55,9 +56,25 @@ function locationOf(lounge: LoungeContentDetail): LoungeLocation | null {
  * docs/design/epic-8-admin-support/LoungeNew.dc.html (14), con el popup de
  * PhotoCaption.dc.html (15). Un borrador no aparece a los miembros; se
  * publica directo, sin cola de aprobación (decisión 25 sept 2026).
+ *
+ * Con LoungeDraftPartners.dc.html (19): el formulario lleva también las
+ * restricciones de reserva. Es también la vista de edición de un lounge que
+ * estuvo live y volvió a borrador (LoungeEditConfirm.dc.html, 18). Story
+ * 10.1: los usuarios partner ya no viven en el lounge sino en su partner, y
+ * publicar no invita a nadie (exige un partner activo). Story 10.5
+ * (LoungeDraftPartner.dc.html, Fase 10 · 12): el partner se elige aquí,
+ * opcional mientras es borrador.
+ *
+ * Guardar o publicar no saca al admin del lounge: `onSaved` decide qué
+ * mostrar después (LoungeDraftSaved.dc.html, 24 · LoungePublished.dc.html, 25).
  */
-export function LoungeDraftForm({ lounge }: { lounge?: LoungeContentDetail }) {
-  const router = useRouter();
+export function LoungeDraftForm({
+  lounge,
+  onSaved,
+}: {
+  lounge?: LoungeContentDetail;
+  onSaved: (loungeId: string, kind: LoungeSavedKind, loungeName: string) => void | Promise<void>;
+}) {
   const supabase = React.useMemo(() => createClient(), []);
 
   const [name, setName] = React.useState(lounge?.name ?? "");
@@ -70,6 +87,10 @@ export function LoungeDraftForm({ lounge }: { lounge?: LoungeContentDetail }) {
   );
   const [amenities, setAmenities] = React.useState<string[]>(lounge?.amenities ?? []);
   const [capacity, setCapacity] = React.useState(lounge?.capacity ?? 0);
+  const [restrictions, setRestrictions] = React.useState<string[]>(lounge?.bookingRestrictions ?? []);
+  const [partnerId, setPartnerId] = React.useState<string | null>(lounge?.partner?.id ?? null);
+  const [partners, setPartners] = React.useState<AdminPartnerRow[]>([]);
+  const [newRestriction, setNewRestriction] = React.useState("");
   const [photos, setPhotos] = React.useState<DraftPhotoItem[]>(
     (lounge?.images ?? []).map((image) => ({
       key: image.id,
@@ -77,38 +98,134 @@ export function LoungeDraftForm({ lounge }: { lounge?: LoungeContentDetail }) {
       caption: image.caption,
       detail: image.detail ?? "",
       fileName: image.caption,
+      originalUrl: image.originalUrl,
+      crop: image.crop,
     })),
   );
+  const [queue, setQueue] = React.useState<File[]>([]);
+  const [recropping, setRecropping] = React.useState<{ key: string; source: PhotoSource } | null>(null);
+  const [invalidFile, setInvalidFile] = React.useState("");
+  const uploading = photos.some((photo) => photo.uploading);
+  // Story 10.9 — en un borrador ya guardado se escribe al momento; en uno
+  // nuevo se guarda en memoria y se escribe con el primer guardado.
+  const schedule = useLoungeSchedule(lounge?.id ?? null);
   const [editingKey, setEditingKey] = React.useState<string | null>(null);
   const [photoNotice, setPhotoNotice] = React.useState("");
   const [error, setError] = React.useState("");
   const [busy, setBusy] = React.useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
-  const draft: LoungeDraftInput = { name, phone, email, website, location, weeklyHours, amenities, capacity };
-  const checklist = publishChecklist(draft);
-  const ready = checklist.every((item) => item.done);
-  const canSave = name.trim() !== "" && location !== null && !busy;
+  React.useEffect(() => {
+    let active = true;
+    listAdminPartners(supabase)
+      .then((rows) => {
+        if (active) setPartners(rows);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [supabase]);
 
-  async function addPhotos(event: React.ChangeEvent<HTMLInputElement>) {
+  const draft: LoungeDraftInput = {
+    name,
+    phone,
+    email,
+    website,
+    location,
+    weeklyHours,
+    amenities,
+    capacity,
+    bookingRestrictions: restrictions,
+    partnerId,
+  };
+  const partnerStatus =
+    partners.find((partner) => partner.id === partnerId)?.status ?? (partnerId === lounge?.partner?.id ? lounge?.partner?.status : null) ?? null;
+  const checklist = publishChecklist(draft, partnerStatus);
+  const ready = checklist.every((item) => item.done);
+  const canSave = name.trim() !== "" && location !== null && !busy && !uploading;
+
+  /** Story 10.10 — cada foto pasa por el editor antes de subirse (PhotoCropOpen 23). */
+  function addPhotos(event: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files ?? []);
     event.target.value = "";
-    const room = MAX_PHOTOS - photos.length;
-    setPhotoNotice(files.length > room ? `A lounge has up to 3 photos — ${files.length - room} not added.` : "");
-    const accepted = files.slice(0, Math.max(room, 0));
-    const folder = lounge?.id ?? `new-${crypto.randomUUID()}`;
-    const uploaded = await Promise.all(
-      accepted.map(async (file) => ({
-        key: crypto.randomUUID(),
-        url: await uploadLoungeImage(supabase, folder, file),
-        caption: captionFromFileName(file.name),
-        detail: "",
-        fileName: file.name,
-      })),
-    );
-    setPhotos((current) => [...current, ...uploaded].slice(0, MAX_PHOTOS));
+    const rejected = files.find((file) => !isAcceptedImage(file));
+    setInvalidFile(rejected ? rejected.name : "");
+    const images = files.filter(isAcceptedImage);
+    const room = MAX_PHOTOS - photos.length - queue.length;
+    setPhotoNotice(images.length > room ? `A lounge has up to 3 photos — ${images.length - room} not added.` : "");
+    setQueue((current) => [...current, ...images.slice(0, Math.max(room, 0))]);
   }
 
+  const folder = React.useMemo(() => lounge?.id ?? `new-${crypto.randomUUID()}`, [lounge?.id]);
+
+  async function uploadCrop(source: Blob, fileName: string, choice: PhotoCropChoice) {
+    const size = PHOTO_SIZES.find((option) => option.id === choice.size)!;
+    const cropped = await cropImage(source, choice.area, size.longEdge);
+    const stem = fileName.replace(/\.[^.]+$/, "");
+    return uploadLoungeImage(supabase, folder, new File([cropped], `${stem}-${size.longEdge}.jpg`, { type: "image/jpeg" }));
+  }
+
+  /** Sube el recorte y el original; la miniatura sale "Uploading" mientras tanto (PhotoUploading 25). */
+  function addCroppedPhoto(choice: PhotoCropChoice) {
+    const [file, ...rest] = queue;
+    setQueue(rest);
+    const key = crypto.randomUUID();
+    const crop: PhotoCrop = { ...choice.area, size: choice.size };
+    setPhotos((current) => [
+      ...current,
+      { key, url: "", caption: captionFromFileName(file.name), detail: "", fileName: file.name, crop, uploading: true },
+    ]);
+    void (async () => {
+      try {
+        const [url, originalUrl] = await Promise.all([uploadCrop(file, file.name, choice), uploadLoungeImage(supabase, folder, file)]);
+        setPhotos((current) => current.map((photo) => (photo.key === key ? { ...photo, url, originalUrl, uploading: false } : photo)));
+      } catch (err) {
+        setPhotos((current) => current.filter((photo) => photo.key !== key));
+        setError(err instanceof Error ? err.message : `${file.name} couldn't be uploaded`);
+      }
+    })();
+  }
+
+  /**
+   * PhotoRecrop (26) — reabre el editor sobre el original guardado. Una
+   * foto subida antes del editor (o sembrada) no lo tiene: se reencuadra
+   * sobre ella misma, que pasa a ser su original.
+   */
+  async function adjustCrop(photo: DraftPhotoItem) {
+    const sourceUrl = photo.originalUrl ?? photo.url;
+    try {
+      const response = await fetch(sourceUrl);
+      if (!response.ok) throw new Error("unreadable");
+      const blob = await response.blob();
+      // Storage guarda "<timestamp>-<archivo>": se muestra el nombre que eligió el admin.
+      const fileName = (sourceUrl.split("/").pop() ?? photo.caption).replace(/^\d{13}-/, "");
+      setRecropping({ key: photo.key, source: { blob, fileName } });
+    } catch {
+      setError(`The original of ${photo.caption} can't be read`);
+    }
+  }
+
+  async function saveRecrop(choice: PhotoCropChoice) {
+    if (!recropping) return;
+    const { key, source } = recropping;
+    setBusy(true);
+    try {
+      const url = await uploadCrop(source.blob, source.fileName, choice);
+      setPhotos((current) =>
+        current.map((photo) =>
+          photo.key === key ? { ...photo, url, originalUrl: photo.originalUrl ?? photo.url, crop: { ...choice.area, size: choice.size } } : photo,
+        ),
+      );
+      setRecropping(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save the new crop");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const recroppingPhoto = photos.find((photo) => photo.key === recropping?.key);
   const editingIndex = photos.findIndex((photo) => photo.key === editingKey);
   const editing = editingIndex >= 0 ? photos[editingIndex] : null;
 
@@ -130,11 +247,18 @@ export function LoungeDraftForm({ lounge }: { lounge?: LoungeContentDetail }) {
 
   async function save(): Promise<string> {
     const id = lounge ? lounge.id : await createLoungeDraft(supabase, draft);
+    if (!lounge) await persistLoungeSchedule(supabase, id, schedule.schedule);
     if (lounge) await updateLoungeDraft(supabase, id, draft);
     await setDraftLoungePhotos(
       supabase,
       id,
-      photos.map((photo) => ({ url: photo.url, caption: photo.caption, detail: photo.detail || null })),
+      photos.map((photo) => ({
+        url: photo.url,
+        caption: photo.caption,
+        detail: photo.detail || null,
+        originalUrl: photo.originalUrl ?? null,
+        crop: photo.crop ?? null,
+      })),
     );
     return id;
   }
@@ -153,15 +277,14 @@ export function LoungeDraftForm({ lounge }: { lounge?: LoungeContentDetail }) {
 
   const saveDraft = () =>
     run(async () => {
-      const id = await save();
-      if (!lounge) router.replace(`/admin/lounges/${id}`);
+      await onSaved(await save(), "draft", name.trim());
     });
 
   const publish = () =>
     run(async () => {
       const id = await save();
       await publishLounge(supabase, id);
-      router.push("/admin/lounges");
+      await onSaved(id, "live", name.trim());
     });
 
   return (
@@ -183,9 +306,29 @@ export function LoungeDraftForm({ lounge }: { lounge?: LoungeContentDetail }) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2.5">
             <h1 className="m-0 font-display text-[22px] text-fg">{name.trim() || "New lounge"}</h1>
-            <span className="inline-flex items-center rounded-pill border border-dashed border-fg-subtle px-3 py-1.5 text-[11.5px] font-bold text-fg-muted">
-              Draft · not visible to members
-            </span>
+            {lounge ? (
+              <StatusSelect
+                current="draft"
+                busy={busy}
+                options={[
+                  {
+                    value: "live",
+                    label: "Live",
+                    detail: canSave && ready ? "Publish it — members can book it right away" : "Complete the checklist before publishing",
+                    disabled: !canSave || !ready,
+                  },
+                  { value: "draft", label: "Draft", detail: "Draft · not visible to members" },
+                  { value: "suspended", label: "Suspended", detail: "Only a live lounge can be suspended", disabled: true },
+                ]}
+                onSelect={(value) => {
+                  if (value === "live") void publish();
+                }}
+              />
+            ) : (
+              <span className="inline-flex items-center rounded-pill border border-dashed border-fg-subtle px-3 py-1.5 text-[11.5px] font-bold text-fg-muted">
+                Draft · not visible to members
+              </span>
+            )}
           </div>
           <p className="mt-1.5 text-[12.5px] text-fg-subtle">{lounge ? "Draft lounge" : "New lounge"}</p>
         </div>
@@ -207,6 +350,9 @@ export function LoungeDraftForm({ lounge }: { lounge?: LoungeContentDetail }) {
 
       <div className="mt-4.5 flex min-h-0 gap-4">
         <div className="flex min-w-0 flex-1 flex-col gap-3.5">
+          {/* Arriba de todo: quién opera el lounge, antes que su nombre (ajuste del 2 oct 2026). */}
+          <PartnerPicker partners={partners} value={partnerId} onChange={setPartnerId} />
+
           <div className={CARD}>
             <p className={EYEBROW}>Name and contact</p>
             <div className="mt-3 grid grid-cols-4 gap-3">
@@ -257,63 +403,10 @@ export function LoungeDraftForm({ lounge }: { lounge?: LoungeContentDetail }) {
                 Copy Monday to every day
               </button>
             </div>
-            <div className="mt-3 grid gap-2">
-              {WEEKDAY_NAMES.map((day, index) => {
-                const hours = parseDayHours(weeklyHours[index]);
-                const update = (next: DayHours) =>
-                  setWeeklyHours((current) => current.map((value, i) => (i === index ? formatDayHours(next) : value)));
-                return (
-                  <div
-                    key={day}
-                    className={cn(
-                      "flex flex-wrap items-center gap-3 rounded-xl border px-3.5 py-2",
-                      hours.open ? "border-line" : "border-dashed border-fg-subtle",
-                    )}
-                  >
-                    <span className="w-10 text-[11px] font-bold uppercase tracking-[0.08em] text-fg-subtle">{day}</span>
-                    <Switch
-                      checked={hours.open}
-                      onCheckedChange={(open) => update({ ...hours, open })}
-                      label={`${day} open`}
-                    />
-                    {hours.open ? (
-                      <div className="flex items-center gap-2">
-                        <Select
-                          aria-label={`${day} opens at`}
-                          inputSize="compact"
-                          value={hours.from}
-                          onChange={(event) => update({ ...hours, from: event.target.value })}
-                          className="w-[128px]"
-                        >
-                          {TIME_OPTIONS.map((time) => (
-                            <option key={time} value={time}>
-                              {time}
-                            </option>
-                          ))}
-                        </Select>
-                        <span className="text-fg-subtle">–</span>
-                        <Select
-                          aria-label={`${day} closes at`}
-                          inputSize="compact"
-                          value={hours.to}
-                          onChange={(event) => update({ ...hours, to: event.target.value })}
-                          className="w-[128px]"
-                        >
-                          {TIME_OPTIONS.map((time) => (
-                            <option key={time} value={time}>
-                              {time}
-                            </option>
-                          ))}
-                        </Select>
-                      </div>
-                    ) : (
-                      <span className="text-xs font-bold text-fg-subtle">{CLOSED}</span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+            <WeeklyHoursEditor value={weeklyHours} onChange={setWeeklyHours} className="mt-3" />
           </div>
+
+          <LoungeScheduleCards loungeName={name.trim() || "New lounge"} regularWeek={weeklyHours} state={schedule} />
 
           <div className="grid grid-cols-2 gap-3.5">
             <div className={CARD}>
@@ -362,6 +455,47 @@ export function LoungeDraftForm({ lounge }: { lounge?: LoungeContentDetail }) {
               </div>
             </div>
           </div>
+
+          <div className={CARD}>
+            <p className={EYEBROW}>Booking restrictions</p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {restrictions.map((restriction) => (
+                <span
+                  key={restriction}
+                  className="inline-flex items-center gap-1.5 rounded-pill border border-line px-3 py-1.5 text-[11.5px] font-bold text-fg-muted"
+                >
+                  {restriction}
+                  <button
+                    type="button"
+                    aria-label={`Remove ${restriction}`}
+                    onClick={() => setRestrictions((current) => current.filter((r) => r !== restriction))}
+                    className="flex text-fg-subtle transition-colors duration-150 hover:text-accent"
+                  >
+                    <X size={12} strokeWidth={2.2} />
+                  </button>
+                </span>
+              ))}
+              <form
+                className="flex items-center gap-2"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const value = newRestriction.trim();
+                  if (value && !restrictions.includes(value)) setRestrictions((current) => [...current, value]);
+                  setNewRestriction("");
+                }}
+              >
+                <Input
+                  aria-label="Add a booking restriction"
+                  inputSize="compact"
+                  placeholder="Add a restriction"
+                  value={newRestriction}
+                  onChange={(event) => setNewRestriction(event.target.value)}
+                  className="w-52"
+                />
+              </form>
+            </div>
+          </div>
+
         </div>
 
         <div className="flex h-fit w-[344px] shrink-0 flex-col gap-3.5">
@@ -402,24 +536,44 @@ export function LoungeDraftForm({ lounge }: { lounge?: LoungeContentDetail }) {
             </div>
             <div className="mt-3 grid grid-cols-3 gap-2.5">
               {photos.map((photo, index) => (
-                <button
-                  key={photo.key}
-                  type="button"
-                  aria-label={`Edit photo ${photo.caption}`}
-                  onClick={() => setEditingKey(photo.key)}
-                  className="relative h-[86px] overflow-hidden rounded-xl border border-line bg-panel-black text-left transition-colors duration-150 hover:border-accent"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={photo.url} alt="" className="absolute inset-0 size-full object-cover" />
-                  {index === 0 ? (
-                    <span className="absolute left-2 top-2 rounded-pill bg-accent px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-on-accent">
-                      Main
-                    </span>
-                  ) : null}
-                  <span className="absolute inset-x-2.5 bottom-2 truncate text-[11px] font-bold text-fg-muted">
-                    {photo.caption}
-                  </span>
-                </button>
+                <div key={photo.key} className="relative h-[86px] overflow-hidden rounded-xl border border-line bg-panel-black">
+                  {photo.uploading ? (
+                    <div className="flex size-full flex-col items-center justify-center gap-1 px-2 text-center">
+                      <span className="text-[10px] font-extrabold uppercase tracking-[0.06em] text-accent">Uploading</span>
+                      <span className="w-full truncate text-[11px] font-bold text-fg-muted">{photo.caption}</span>
+                    </div>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        aria-label={`Edit photo ${photo.caption}`}
+                        onClick={() => setEditingKey(photo.key)}
+                        className="absolute inset-0 text-left transition-colors duration-150 hover:bg-surface-hover/30"
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={photo.url} alt="" className="absolute inset-0 size-full object-cover" />
+                        {index === 0 ? (
+                          <span className="absolute left-2 top-2 rounded-pill bg-accent px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-on-accent">
+                            Main
+                          </span>
+                        ) : null}
+                        <span className="absolute inset-x-2.5 bottom-2 truncate text-[11px] font-bold text-fg-muted">
+                          {photo.caption}
+                        </span>
+                      </button>
+                      {photo.url ? (
+                        <button
+                          type="button"
+                          aria-label={`Adjust crop ${photo.caption}`}
+                          onClick={() => void adjustCrop(photo)}
+                          className="absolute right-1.5 top-1.5 flex size-7 items-center justify-center rounded-lg bg-panel-black/85 text-accent transition-colors duration-150 hover:bg-panel-black"
+                        >
+                          <Crop size={14} strokeWidth={1.8} aria-hidden />
+                        </button>
+                      ) : null}
+                    </>
+                  )}
+                </div>
               ))}
               {photos.length < MAX_PHOTOS ? (
                 <button
@@ -437,20 +591,34 @@ export function LoungeDraftForm({ lounge }: { lounge?: LoungeContentDetail }) {
               type="file"
               multiple
               aria-label="Add lounge photos"
-              accept="image/png,image/jpeg,image/webp"
+              accept={ACCEPTED_TYPES.join(",")}
               className="hidden"
               onChange={addPhotos}
             />
+            {invalidFile ? (
+              <div role="alert" className="mt-2.5 rounded-xl border border-accent-strong px-3 py-2.5">
+                <p className="m-0 text-[12px] font-bold text-fg">{invalidFile} isn&apos;t an image</p>
+                <p className="m-0 mt-0.5 text-[11.5px] text-fg-subtle">Choose a JPEG, PNG or WebP photo. Nothing was uploaded.</p>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="mt-1.5 text-[11.5px] font-bold text-gold-600 transition-colors duration-150 hover:text-accent"
+                >
+                  Choose another file
+                </button>
+              </div>
+            ) : null}
             <p className="mb-0 mt-2.5 text-[11px] leading-normal text-fg-subtle">
               {photoNotice ||
-                "Select several at once. Click a photo to name it or make it the main one — the main photo opens the lounge profile."}
+                (uploading
+                  ? "Photos upload one at a time. Keep editing the rest of the lounge — saving waits until they finish."
+                  : "Each photo opens in the editor first: frame it, pick a size, then it uploads. Click a photo to name it or make it the main one.")}
             </p>
           </div>
 
           <div className="rounded-2xl border border-dashed border-gold-600 bg-panel-black px-4 py-3.5">
             <p className="m-0 text-[11.5px] leading-[1.55] text-fg-muted">
-              Publishing puts the lounge in the member app straight away. Not ready yet? Save a draft and finish it later —
-              drafts stay hidden from members.
+              Publishing no longer invites anyone: the partner&apos;s users get their email when you activate the partner.
             </p>
           </div>
         </div>
@@ -468,6 +636,28 @@ export function LoungeDraftForm({ lounge }: { lounge?: LoungeContentDetail }) {
         }}
         onSave={savePhoto}
         onRemove={removePhoto}
+      />
+
+      <PhotoCropDialog
+        key={queue[0] ? `crop-${queue[0].name}-${queue.length}` : `crop-${recropping?.key ?? "closed"}`}
+        source={queue[0] ? { blob: queue[0], fileName: queue[0].name } : recropping?.source ?? null}
+        mode={queue[0] ? "new" : "recrop"}
+        eyebrow={
+          queue[0]
+            ? `${name.trim() || "New lounge"} · photo ${photos.length + 1} of ${MAX_PHOTOS}`
+            : `${name.trim() || "New lounge"} · ${recroppingPhoto?.caption ?? "photo"}`
+        }
+        initial={
+          !queue[0] && recroppingPhoto?.crop
+            ? {
+                area: { x: recroppingPhoto.crop.x, y: recroppingPhoto.crop.y, width: recroppingPhoto.crop.width, height: recroppingPhoto.crop.height },
+                size: recroppingPhoto.crop.size,
+              }
+            : null
+        }
+        busy={busy}
+        onCancel={() => (queue[0] ? setQueue((current) => current.slice(1)) : setRecropping(null))}
+        onConfirm={(choice) => (queue[0] ? addCroppedPhoto(choice) : void saveRecrop(choice))}
       />
     </AdminShell>
   );

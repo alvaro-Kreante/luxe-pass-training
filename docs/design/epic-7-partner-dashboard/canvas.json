@@ -1,24 +1,171 @@
 {
   "artboards": [
-    { "file": "Login.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "1. Partner sign-in" },
-    { "file": "Main.dc.html", "x": 1540, "y": 0, "w": 1440, "h": 900, "title": "2. Today's guests" },
-    { "file": "GuestDetail.dc.html", "x": 3080, "y": 0, "w": 1440, "h": 900, "title": "3. One guest — details and contact" },
-    { "file": "LiveUpdate.dc.html", "x": 0, "y": 1050, "w": 1440, "h": 900, "title": "4. A booking arrives while you watch" },
-    { "file": "NoShow.dc.html", "x": 1540, "y": 1050, "w": 1440, "h": 900, "title": "5. Report a no-show" },
-    { "file": "Export.dc.html", "x": 3080, "y": 1050, "w": 1440, "h": 900, "title": "6. Search, filter and export" },
-    { "file": "EmailDigest.dc.html", "x": 0, "y": 2100, "w": 1440, "h": 900, "title": "7. Morning digest — 6:30 AM" },
-    { "file": "EmailNewBooking.dc.html", "x": 1540, "y": 2100, "w": 1440, "h": 900, "title": "8. New booking email" },
-    { "file": "EmailCancellation.dc.html", "x": 3080, "y": 2100, "w": 1440, "h": 900, "title": "9. Cancellation and waitlist email" },
-    { "file": "Analytics.dc.html", "x": 0, "y": 3150, "w": 1440, "h": 900, "title": "10. Analytics — volume and revenue" },
-    { "file": "RepeatGuests.dc.html", "x": 1540, "y": 3150, "w": 1440, "h": 900, "title": "11. Guests who came back" },
-    { "file": "Reports.dc.html", "x": 3080, "y": 3150, "w": 1440, "h": 900, "title": "12. Reports and CSV downloads" }
+    {
+      "file": "Login.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "1. Partner sign-in"
+    },
+    {
+      "file": "Main.dc.html",
+      "x": 1540,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "2. Today's guests"
+    },
+    {
+      "file": "GuestDetail.dc.html",
+      "x": 3080,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "3. One guest — details and contact"
+    },
+    {
+      "file": "LiveUpdate.dc.html",
+      "x": 0,
+      "y": 1050,
+      "w": 1440,
+      "h": 900,
+      "title": "4. A booking arrives while you watch"
+    },
+    {
+      "file": "NoShow.dc.html",
+      "x": 1540,
+      "y": 1050,
+      "w": 1440,
+      "h": 900,
+      "title": "5. Report a no-show"
+    },
+    {
+      "file": "Export.dc.html",
+      "x": 3080,
+      "y": 1050,
+      "w": 1440,
+      "h": 900,
+      "title": "6. Search, filter and export"
+    },
+    {
+      "file": "EmailDigest.dc.html",
+      "x": 0,
+      "y": 2100,
+      "w": 1440,
+      "h": 900,
+      "title": "7. Morning digest — 6:30 AM"
+    },
+    {
+      "file": "EmailNewBooking.dc.html",
+      "x": 1540,
+      "y": 2100,
+      "w": 1440,
+      "h": 900,
+      "title": "8. New booking email"
+    },
+    {
+      "file": "EmailCancellation.dc.html",
+      "x": 3080,
+      "y": 2100,
+      "w": 1440,
+      "h": 900,
+      "title": "9. Cancellation and waitlist email"
+    },
+    {
+      "file": "Analytics.dc.html",
+      "x": 0,
+      "y": 3150,
+      "w": 1440,
+      "h": 900,
+      "title": "10. Analytics — volume and revenue"
+    },
+    {
+      "file": "RepeatGuests.dc.html",
+      "x": 1540,
+      "y": 3150,
+      "w": 1440,
+      "h": 900,
+      "title": "11. Guests who came back"
+    },
+    {
+      "file": "Reports.dc.html",
+      "x": 3080,
+      "y": 3150,
+      "w": 1440,
+      "h": 900,
+      "title": "12. Reports and CSV downloads"
+    },
+    {
+      "file": "EmailInvite.dc.html",
+      "x": 0,
+      "y": 4350,
+      "w": 1440,
+      "h": 900,
+      "title": "13. Invitation email"
+    },
+    {
+      "file": "SetPassword.dc.html",
+      "x": 1540,
+      "y": 4350,
+      "w": 1440,
+      "h": 900,
+      "title": "14. Create your password"
+    },
+    {
+      "file": "InviteExpired.dc.html",
+      "x": 3080,
+      "y": 4350,
+      "w": 1440,
+      "h": 900,
+      "title": "15. The link has expired"
+    }
   ],
   "annotations": [
-    { "id": "phase-note", "x": 0, "y": -150, "w": 940, "text": "LuxePass — Epic 7: Partner Dashboard\nThe dark half of the system: same gold, same Bodoni and Manrope, same control heights as the member area — a different ground, not a different language. UI copy in English.\nThe day continues Epic 5: Saturday, September 14 at The Ainsworth, the venue whose reception console already checked Alexandra Rivas in at 3:34 PM." },
-    { "id": "guests-note", "x": 0, "y": 955, "w": 940, "text": "Story 7.1 · One screen holds the day: who is expected, who walked in, who did not. The box on the left is the whole check-in gesture — ticking it reaches the member's app in the same second, and a cross is a reported no-show. Opening a guest gives the contact details the desk actually needs, kept to the length of the booking. New bookings land in the list on their own, so nobody has to refresh anything." },
-    { "id": "email-note", "x": 0, "y": 3005, "w": 940, "text": "Story 7.2 · Three emails, one for each thing a partner must not miss: the day's list at 6:30 AM, every new booking as it happens, and a cancellation with the guest count already corrected — with the waitlist promotion that filled the slot two minutes later in the same message. Nothing here asks the partner to do anything; the dashboard has already changed." },
-    { "id": "analytics-note", "x": 0, "y": 4055, "w": 940, "text": "Story 7.3 · Volume, revenue and loyalty in the partner's own terms. The bar chart adds up to the 187 bookings in the tile above it, and today's bar is drawn open because the day is not finished. Revenue is split the way the agreement pays out — day passes, membership visits at the partner rate, and the shared half of a no-show fee. Everything on these three screens leaves as a CSV." },
-    { "id": "seam-note", "x": 3080, "y": 4055, "w": 760, "text": "Seams declared, not designed here: Settings → Notifications (who on the team receives each email) and the waitlist view both belong to this dashboard but sit outside the three stories; the member's side of a no-show — the flat fee, the history entry, the three-in-twelve-months pause — is Epic 6; the reception console that scans the pass is Epic 5." }
+    {
+      "id": "phase-note",
+      "x": 0,
+      "y": -150,
+      "w": 940,
+      "text": "LuxePass — Epic 7: Partner Dashboard\nThe dark half of the system: same gold, same Bodoni and Manrope, same control heights as the member area — a different ground, not a different language. UI copy in English.\nThe day continues Epic 5: Saturday, September 14 at The Ainsworth, the venue whose reception console already checked Alexandra Rivas in at 3:34 PM."
+    },
+    {
+      "id": "guests-note",
+      "x": 0,
+      "y": 955,
+      "w": 940,
+      "text": "Story 7.1 · One screen holds the day: who is expected, who walked in, who did not. The box on the left is the whole check-in gesture — ticking it reaches the member's app in the same second, and a cross is a reported no-show. Opening a guest gives the contact details the desk actually needs, kept to the length of the booking. New bookings land in the list on their own, so nobody has to refresh anything."
+    },
+    {
+      "id": "email-note",
+      "x": 0,
+      "y": 3005,
+      "w": 940,
+      "text": "Story 7.2 · Three emails, one for each thing a partner must not miss: the day's list at 6:30 AM, every new booking as it happens, and a cancellation with the guest count already corrected — with the waitlist promotion that filled the slot two minutes later in the same message. Nothing here asks the partner to do anything; the dashboard has already changed."
+    },
+    {
+      "id": "analytics-note",
+      "x": 0,
+      "y": 4055,
+      "w": 940,
+      "text": "Story 7.3 · Volume, revenue and loyalty in the partner's own terms. The bar chart adds up to the 187 bookings in the tile above it, and today's bar is drawn open because the day is not finished. Revenue is split the way the agreement pays out — day passes, membership visits at the partner rate, and the shared half of a no-show fee. Everything on these three screens leaves as a CSV."
+    },
+    {
+      "id": "seam-note",
+      "x": 3080,
+      "y": 4055,
+      "w": 760,
+      "text": "Seams declared, not designed here: Settings → Notifications (who on the team receives each email) and the waitlist view both belong to this dashboard but sit outside the three stories; the member's side of a no-show — the flat fee, the history entry, the three-in-twelve-months pause — is Epic 6; the reception console that scans the pass is Epic 5."
+    },
+    {
+      "id": "invite-note",
+      "x": 0,
+      "y": 4205,
+      "w": 940,
+      "text": "Invitation · A partner account is born in the admin console, together with its lounge (Epic 8, screen 16). The email carries a one-time link to /partner/welcome that works for 24 hours; there the partner confirms what the admin typed — name and mobile editable, the work email fixed — adds a photo and sets a password, and lands on today's guest list. A used or late link ends on screen 15."
+    }
   ],
-  "launch": { "view": "canvas" }
+  "launch": {
+    "view": "canvas"
+  }
 }

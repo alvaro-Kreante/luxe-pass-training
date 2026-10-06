@@ -42,7 +42,11 @@ returns table (
   pending_count int,
   photos_count int,
   amenities_count int,
-  updated_at timestamptz
+  updated_at timestamptz,
+  city text,
+  created_at timestamptz,
+  partner_id uuid,
+  partner_name text
 )
 language plpgsql
 security definer
@@ -53,6 +57,7 @@ begin
     raise exception 'Not authorized';
   end if;
 
+  -- Story 10.5 — LoungesWithPartner.dc.html (Fase 10 · 9): el partner de cada lounge.
   return query
     select
       l.id,
@@ -63,11 +68,14 @@ begin
       (select count(*)::int from public.lounge_content_submissions s where s.lounge_id = l.id and s.status = 'pending'),
       (select count(*)::int from public.lounge_images i where i.lounge_id = l.id),
       array_length(l.amenities, 1),
-      l.updated_at
+      l.updated_at,
+      l.city,
+      l.created_at,
+      p.id,
+      p.name
     from public.lounges l
-    order by
-      (select count(*) from public.lounge_content_submissions s where s.lounge_id = l.id and s.status = 'pending') desc,
-      l.name;
+    left join public.partners p on p.id = l.partner_id
+    order by l.created_at desc, l.name;
 end;
 $$;
 
@@ -102,7 +110,8 @@ returns table (
   pending_submission_id uuid,
   pending_proposed jsonb,
   pending_submitted_by text,
-  pending_submitted_at timestamptz
+  pending_submitted_at timestamptz,
+  partner jsonb
 )
 language plpgsql
 security definer
@@ -118,7 +127,7 @@ begin
       l.id, l.name, l.neighborhood || ', ' || l.city, l.capacity, l.content_status,
       l.amenities, l.bands, l.closed_weekdays, l.weekly_hours, l.booking_restrictions,
       coalesce(
-        (select jsonb_agg(jsonb_build_object('id', i.id, 'url', i.url, 'caption', i.caption, 'detail', i.detail, 'position', i.position) order by i.position)
+        (select jsonb_agg(jsonb_build_object('id', i.id, 'url', i.url, 'caption', i.caption, 'detail', i.detail, 'position', i.position, 'original_url', i.original_url, 'crop', i.crop) order by i.position)
          from public.lounge_images i where i.lounge_id = l.id),
         '[]'::jsonb
       ),
@@ -131,7 +140,23 @@ begin
       s.id,
       s.proposed,
       case when a.email is not null then split_part(a.email::text, '@', 1) end,
-      s.created_at
+      s.created_at,
+      -- Story 10.5 — LoungePartner.dc.html (Fase 10 · 10): la tarjeta de partner, en solo lectura.
+      (
+        select jsonb_build_object(
+          'id', p.id,
+          'name', p.name,
+          'status', p.status,
+          'city', p.city,
+          'lounge_count', (select count(*)::int from public.lounges pl where pl.partner_id = p.id and pl.content_status <> 'archived'),
+          'user_count', (select count(*)::int from public.partner_members pm where pm.partner_id = p.id),
+          'representative', (
+            select jsonb_build_object('name', trim(r.first_name || ' ' || r.last_name), 'email', r.email)
+            from public.partner_members r where r.id = p.representative_id
+          )
+        )
+        from public.partners p where p.id = l.partner_id
+      )
     from public.lounges l
     left join public.lounge_content_submissions s on s.lounge_id = l.id and s.status = 'pending'
     left join auth.users a on a.id = s.submitted_by
@@ -272,7 +297,8 @@ grant execute on function public.admin_reject_lounge_submission(uuid, text) to a
 -- `p_lounge` lleva: id_base (slug del nombre, ver `loungeIdFromName`),
 -- name, phone, email, website, address, neighborhood, city, lat, lng,
 -- weekly_hours (7 strings, domingo primero), closed_weekdays (int[]),
--- hours (resumen corto), amenities (text[]), capacity (plazas por franja).
+-- hours (resumen corto), amenities (text[]), capacity (plazas por franja),
+-- partner_id (Story 10.5).
 
 create or replace function public.admin_apply_lounge_draft(p_lounge_id text, p_lounge jsonb)
 returns void
@@ -306,6 +332,26 @@ begin
     capacity = coalesce((p_lounge->>'capacity')::int, 0),
     updated_at = now()
   where l.id = p_lounge_id;
+
+  -- Story 10.5 — `partner_id` (uuid o null): el partner que lo opera, también
+  -- uno en draft. Opcional mientras es borrador; publicar exige uno activo.
+  if p_lounge ? 'partner_id' then
+    if nullif(p_lounge->>'partner_id', '') is not null
+       and not exists (select 1 from public.partners p where p.id = (p_lounge->>'partner_id')::uuid) then
+      raise exception 'That partner does not exist';
+    end if;
+    update public.lounges l set partner_id = nullif(p_lounge->>'partner_id', '')::uuid
+    where l.id = p_lounge_id;
+  end if;
+
+  -- `booking_restrictions` (text[]): el draft las edita desde que el lounge
+  -- live ya no tiene editor propio (LoungeDraftPartners.dc.html).
+  if p_lounge ? 'booking_restrictions' then
+    update public.lounges l set
+      booking_restrictions = (select coalesce(array_agg(x), '{}') from jsonb_array_elements_text(p_lounge->'booking_restrictions') x)
+    where l.id = p_lounge_id;
+  end if;
+
 end;
 $$;
 
@@ -333,8 +379,8 @@ begin
 
   -- Las tres franjas abiertas: la disponibilidad en vivo
   -- (`lounge_availability.sql`) las ofrece con `capacity` plazas cada una.
-  insert into public.lounges (id, name, neighborhood, city, city_id, lat, lng, hours, bands, content_status)
-  values (v_id, '', '', '', '', 0, 0, '', array['morning', 'afternoon', 'evening'], 'draft');
+  insert into public.lounges (id, name, neighborhood, city, city_id, lat, lng, hours, bands, content_status, created_by)
+  values (v_id, '', '', '', '', 0, 0, '', array['morning', 'afternoon', 'evening'], 'draft', auth.uid());
 
   perform public.admin_apply_lounge_draft(v_id, p_lounge);
 
@@ -388,14 +434,23 @@ begin
     raise exception 'Only drafts can be edited this way';
   end if;
 
-  if jsonb_array_length(coalesce(p_photos, '[]'::jsonb)) > 3 then
+  -- Hasta 3 fotos. Un lounge que ya tenía más (los sembrados traen 6) se
+  -- guarda con las que tiene, pero no admite ninguna nueva hasta bajar de 3
+  -- (decisión 1 oct 2026, revisión del Epic 10).
+  if jsonb_array_length(coalesce(p_photos, '[]'::jsonb)) > greatest(
+       3,
+       (select count(*) from public.lounge_images i where i.lounge_id = p_lounge_id)
+     ) then
     raise exception 'A lounge has up to 3 photos';
   end if;
 
   delete from public.lounge_images where lounge_id = p_lounge_id;
   for v_photo in select * from jsonb_array_elements(coalesce(p_photos, '[]'::jsonb)) loop
-    insert into public.lounge_images (lounge_id, url, caption, detail, position)
-    values (p_lounge_id, v_photo->>'url', coalesce(v_photo->>'caption', ''), nullif(v_photo->>'detail', ''), v_position);
+    insert into public.lounge_images (lounge_id, url, caption, detail, position, original_url, crop)
+    values (
+      p_lounge_id, v_photo->>'url', coalesce(v_photo->>'caption', ''), nullif(v_photo->>'detail', ''), v_position,
+      nullif(v_photo->>'originalUrl', ''), case when jsonb_typeof(v_photo->'crop') = 'object' then v_photo->'crop' end
+    );
     v_position := v_position + 1;
   end loop;
 end;
@@ -406,6 +461,26 @@ grant execute on function public.admin_set_draft_lounge_photos(text, jsonb) to a
 -- Mismos requisitos que la lista "Before it can be published" del
 -- artboard (`publishChecklist`, src/lib/lounge-draft.ts) — el servidor los
 -- vuelve a comprobar, el cliente solo los muestra.
+-- Lo que le falta a un lounge para publicarse, con los nombres de la lista
+-- "Before it can be published" (`publishChecklist`, src/lib/lounge-draft.ts).
+-- El partner activo se comprueba aparte. Story 10.11 lo enseña por lounge en
+-- el detalle del partner.
+create or replace function public.lounge_checklist_missing(p_lounge public.lounges)
+returns text[]
+language sql
+stable
+set search_path = ''
+as $$
+  select array_remove(array[
+    case when trim(p_lounge.name) = '' or trim(p_lounge.phone) = '' or trim(p_lounge.email) = '' then 'Name and contact' end,
+    case when trim(p_lounge.address) = '' then 'Address on the map' end,
+    case when not exists (
+      select 1 from jsonb_array_elements_text(p_lounge.weekly_hours) h where lower(trim(h)) not in ('', 'closed')
+    ) then 'Operating hours' end,
+    case when p_lounge.capacity <= 0 then 'Seats per time slot' end
+  ], null);
+$$;
+
 create or replace function public.admin_publish_lounge(p_lounge_id text)
 returns void
 language plpgsql
@@ -424,14 +499,17 @@ begin
     raise exception 'Only drafts can be published';
   end if;
 
-  if trim(v_lounge.name) = '' or trim(v_lounge.phone) = '' or trim(v_lounge.email) = ''
-     or trim(v_lounge.address) = ''
-     or v_lounge.capacity <= 0
-     or not exists (
-       select 1 from jsonb_array_elements_text(v_lounge.weekly_hours) h
-       where lower(trim(h)) not in ('', 'closed')
-     ) then
+  if cardinality(public.lounge_checklist_missing(v_lounge)) > 0 then
     raise exception 'This lounge is incomplete and cannot be published yet';
+  end if;
+
+  -- Story 10.1 — publicar no invita a nadie: exige un partner activo, que
+  -- ya invitó a sus usuarios al activarse (Story 10.4).
+  if not exists (
+    select 1 from public.partners p
+    where p.id = v_lounge.partner_id and p.status = 'active'
+  ) then
+    raise exception 'A lounge needs an active partner before it can be published';
   end if;
 
   update public.lounges set content_status = 'live', updated_at = now() where id = p_lounge_id;
@@ -439,6 +517,31 @@ end;
 $$;
 
 grant execute on function public.admin_publish_lounge(text) to authenticated;
+
+-- Epic 8 · LoungeEditConfirm.dc.html — "Move to draft and edit". El lounge
+-- sale del catálogo de miembro hasta que se vuelva a publicar; sus reservas
+-- siguen valiendo (ver la policy de `lounges`).
+create or replace function public.admin_unpublish_lounge(p_lounge_id text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.has_role('admin') then
+    raise exception 'Not authorized';
+  end if;
+
+  update public.lounges set content_status = 'draft', updated_at = now()
+  where id = p_lounge_id and content_status = 'live';
+  if not found then
+    raise exception 'Only a live lounge can be moved to draft';
+  end if;
+end;
+$$;
+
+grant execute on function public.admin_unpublish_lounge(text) to authenticated;
+
 
 /* -------------------------------------------------------------------- */
 /* "Bulk update capabilities" — el único botón real de la barra masiva:  */
@@ -482,3 +585,40 @@ on storage.objects for all
 to authenticated
 using ( bucket_id = 'lounge-images' and public.has_role('admin') )
 with check ( bucket_id = 'lounge-images' and public.has_role('admin') );
+
+-- Story 10.11 — el mismo horario semanal para varios lounges de un partner
+-- (PartnerBulkHours.dc.html). Sustituye la semana habitual en cualquier
+-- status, sin pasar el lounge a borrador; temporadas y cierres no se tocan.
+-- `p_hours` es el resumen corto del catálogo (`hoursSummary`).
+create or replace function public.admin_set_lounge_hours(p_lounge_id text, p_weekly_hours jsonb, p_hours text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.has_role('admin') then
+    raise exception 'Not authorized';
+  end if;
+  if jsonb_typeof(p_weekly_hours) <> 'array' or jsonb_array_length(p_weekly_hours) <> 7 then
+    raise exception 'A week has 7 days';
+  end if;
+
+  update public.lounges
+  set weekly_hours = p_weekly_hours,
+      closed_weekdays = (
+        select coalesce(array_agg((d.ord - 1)::smallint order by d.ord), '{}')
+        from jsonb_array_elements_text(p_weekly_hours) with ordinality as d(hours, ord)
+        where lower(trim(d.hours)) in ('', 'closed')
+      ),
+      hours = p_hours,
+      updated_at = now()
+  where id = p_lounge_id and content_status <> 'archived';
+  if not found then
+    raise exception 'Lounge not found';
+  end if;
+end;
+$$;
+
+revoke execute on function public.admin_set_lounge_hours(text, jsonb, text) from public, anon;
+grant execute on function public.admin_set_lounge_hours(text, jsonb, text) to authenticated;

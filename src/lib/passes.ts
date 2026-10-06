@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { ADMISSION_COUNT, addMinutesToTime } from "./booking";
-import { TODAY, addDays, formatDateLabel, parseDate } from "./availability";
+import { today, addDays, formatDateLabel, parseDate } from "./availability";
 
 /**
  * Story 5.1 (Digital Pass Generation), 5.3 (Booking Reminder) — backend real
@@ -78,6 +78,8 @@ export interface DigitalPass {
   memberName: string;
   memberEmail: string;
   loungeName: string;
+  /** Story 10.8 — el partner del lounge, junto a la dirección; null si no tiene. */
+  partnerName: string | null;
   address: string;
   receptionNote: string;
   dateLabel: string;
@@ -102,6 +104,7 @@ interface LoungeEmbed {
   name: string;
   address: string;
   reception_note: string;
+  partners: { name: string } | null;
 }
 
 interface PaymentEmbed {
@@ -124,7 +127,7 @@ interface BookingRow {
 }
 
 const BOOKING_SELECT =
-  "id, confirmation_code, date, slot_time, special_requests, status, checked_in_at, no_show, created_at, lounges(name, address, reception_note), payments(amount_cents, status)";
+  "id, confirmation_code, date, slot_time, special_requests, status, checked_in_at, no_show, created_at, lounges(name, address, reception_note, partners(name)), payments(amount_cents, status)";
 
 function amountPaidLabel(payments: PaymentEmbed[] | null): string {
   const succeeded = payments?.find((payment) => payment.status === "succeeded");
@@ -166,6 +169,7 @@ async function fromBookingRow(supabase: SupabaseClient, row: BookingRow): Promis
     memberName,
     memberEmail,
     loungeName: row.lounges?.name ?? "",
+    partnerName: row.lounges?.partners?.name ?? null,
     address: row.lounges?.address ?? "",
     receptionNote: row.lounges?.reception_note ?? "",
     dateLabel: formatFullDate(row.date),
@@ -206,6 +210,7 @@ export const AINSWORTH_PASS: DigitalPass = {
   reference: "LP-842193",
   memberName: "Alexandra Rivas",
   memberEmail: "alexandra.rivas@example.com",
+  partnerName: "The Ainsworth Collection",
   loungeName: "The Ainsworth",
   address: "122 E 45th St, New York, NY 10017",
   receptionNote: "Reception on Level 2",
@@ -246,6 +251,8 @@ export interface UpcomingBooking {
   id: string;
   reference: string | null;
   loungeName: string;
+  /** Story 10.8 — el partner del lounge; null si no tiene. */
+  partnerName: string | null;
   statusLabel: string;
   status: UpcomingBookingStatus;
   dateTimeLabel: string;
@@ -269,8 +276,8 @@ function upcomingStatusOf(row: BookingRow): UpcomingBookingStatus {
 }
 
 function relativeDateLabel(dateIso: string): string {
-  if (dateIso === TODAY) return "Today";
-  if (dateIso === addDays(TODAY, 1)) return "Tomorrow";
+  if (dateIso === today()) return "Today";
+  if (dateIso === addDays(today(), 1)) return "Tomorrow";
 
   return formatFullDate(dateIso);
 }
@@ -278,6 +285,7 @@ function relativeDateLabel(dateIso: string): string {
 function fromUpcomingRow(row: BookingRow): UpcomingBooking {
   const status = upcomingStatusOf(row);
   const loungeName = row.lounges?.name ?? "";
+  const partnerName = row.lounges?.partners?.name ?? null;
   const reference = row.confirmation_code;
 
   if (status === "in-progress") {
@@ -285,6 +293,7 @@ function fromUpcomingRow(row: BookingRow): UpcomingBooking {
       id: row.id,
       reference,
       loungeName,
+      partnerName,
       statusLabel: "In progress",
       status,
       dateTimeLabel: `Today · checked in at ${row.checked_in_at ? formatClockTime(row.checked_in_at) : "—"} · your window closes at ${addMinutesToTime(row.slot_time, VISIT_WINDOW_HOURS * 60)}`,
@@ -301,6 +310,7 @@ function fromUpcomingRow(row: BookingRow): UpcomingBooking {
       id: row.id,
       reference: null,
       loungeName,
+      partnerName,
       statusLabel: "Waitlisted",
       status,
       dateTimeLabel: `${relativeDateLabel(row.date)} · ${row.slot_time} · no pass yet`,
@@ -313,7 +323,7 @@ function fromUpcomingRow(row: BookingRow): UpcomingBooking {
   }
 
   const daysAhead = Math.round(
-    (parseDate(row.date).getTime() - parseDate(TODAY).getTime()) / (24 * 60 * 60 * 1000),
+    (parseDate(row.date).getTime() - parseDate(today()).getTime()) / (24 * 60 * 60 * 1000),
   );
   const hoursUntilArrival = Math.max(daysAhead, 0) * 24;
 
@@ -324,6 +334,7 @@ function fromUpcomingRow(row: BookingRow): UpcomingBooking {
     id: row.id,
     reference,
     loungeName,
+    partnerName,
     statusLabel: "Confirmed",
     status,
     dateTimeLabel: `${relativeDateLabel(row.date)}, ${formatFullDate(row.date)} · arrive ${row.slot_time}${free ? ` · free until ${freeCancellationDeadlineLabel}` : ""}`,

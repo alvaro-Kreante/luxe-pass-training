@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { TODAY } from "@/lib/availability";
+import { today } from "@/lib/availability";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedAdminAndSignIn } from "@/lib/testing/confirmed-user";
 
@@ -68,7 +68,7 @@ beforeAll(async () => {
     .insert({
       member_id: created.user.id,
       lounge_id: loungeId,
-      date: TODAY,
+      date: today(),
       band: "morning",
       slot_time: "8:00 AM",
       status: "confirmed",

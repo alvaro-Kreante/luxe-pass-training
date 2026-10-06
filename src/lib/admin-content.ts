@@ -1,6 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { amenityLabel, type AmenityId } from "@/lib/amenities";
 import {
   closedWeekdaysFromHours,
   hoursSummary,
@@ -27,7 +26,7 @@ import {
  * verdad detrás — desviación anotada en `docs/design/COMPONENT-MAP.md`.
  */
 
-export type LoungeContentStatus = "live" | "draft" | "archived";
+export type LoungeContentStatus = "live" | "draft" | "archived" | "suspended";
 
 /** Fila cruda de `admin_lounge_list`. */
 export interface AdminLoungeListRow {
@@ -40,6 +39,10 @@ export interface AdminLoungeListRow {
   photos_count: number;
   amenities_count: number;
   updated_at: string;
+  city: string;
+  created_at: string;
+  partner_id: string | null;
+  partner_name: string | null;
 }
 
 export interface AdminLoungeRow {
@@ -52,6 +55,10 @@ export interface AdminLoungeRow {
   photosCount: number;
   amenitiesCount: number;
   updatedLabel: string;
+  city: string;
+  /** Story 10.5 — null mientras el borrador no tiene partner. */
+  partnerId: string | null;
+  partnerName: string | null;
 }
 
 function formatShortDate(iso: string): string {
@@ -69,6 +76,9 @@ export function mapLoungeListRow(row: AdminLoungeListRow): AdminLoungeRow {
     photosCount: row.photos_count,
     amenitiesCount: row.amenities_count ?? 0,
     updatedLabel: formatShortDate(row.updated_at),
+    city: row.city,
+    partnerId: row.partner_id,
+    partnerName: row.partner_name,
   };
 }
 
@@ -87,12 +97,23 @@ export async function archiveLounges(supabase: SupabaseClient, loungeIds: string
 /* Ficha de contenido de un lounge (LoungeEdit.dc.html)                 */
 /* ------------------------------------------------------------------ */
 
+/** Story 10.10 — encuadre en píxeles del original y tamaño elegido. */
+export interface PhotoCrop {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  size: "large" | "standard" | "light";
+}
+
 export interface LoungeImage {
   id: string;
   url: string;
   caption: string;
   detail: string | null;
   position: number;
+  originalUrl: string | null;
+  crop: PhotoCrop | null;
 }
 
 export interface LoungeClosure {
@@ -140,6 +161,18 @@ export interface LoungeContentDetail {
   pendingProposed: ProposedLoungeContent | null;
   pendingSubmittedBy: string | null;
   pendingSubmittedAt: string | null;
+  /** Story 10.5 — LoungePartner.dc.html (Fase 10 · 10), en solo lectura. */
+  partner: LoungePartnerSummary | null;
+}
+
+export interface LoungePartnerSummary {
+  id: string;
+  name: string;
+  status: "draft" | "active" | "suspended";
+  city: string;
+  loungeCount: number;
+  userCount: number;
+  representative: { name: string; email: string } | null;
 }
 
 interface AdminLoungeDetailRow {
@@ -153,7 +186,7 @@ interface AdminLoungeDetailRow {
   closed_weekdays: number[];
   weekly_hours: string[];
   booking_restrictions: string[];
-  images: { id: string; url: string; caption: string; detail: string | null; position: number }[];
+  images: { id: string; url: string; caption: string; detail: string | null; position: number; original_url: string | null; crop: PhotoCrop | null }[];
   closures: { id: string; starts_on: string; ends_on: string; reason: string; reopens_label: string }[];
   phone: string;
   email: string;
@@ -167,6 +200,15 @@ interface AdminLoungeDetailRow {
   pending_proposed: ProposedLoungeContent | null;
   pending_submitted_by: string | null;
   pending_submitted_at: string | null;
+  partner: {
+    id: string;
+    name: string;
+    status: LoungePartnerSummary["status"];
+    city: string;
+    lounge_count: number;
+    user_count: number;
+    representative: { name: string; email: string } | null;
+  } | null;
 }
 
 function mapLoungeDetailRow(row: AdminLoungeDetailRow): LoungeContentDetail {
@@ -181,7 +223,15 @@ function mapLoungeDetailRow(row: AdminLoungeDetailRow): LoungeContentDetail {
     closedWeekdays: row.closed_weekdays,
     weeklyHours: row.weekly_hours,
     bookingRestrictions: row.booking_restrictions,
-    images: row.images.map((i) => ({ id: i.id, url: i.url, caption: i.caption, detail: i.detail ?? null, position: i.position })),
+    images: row.images.map((i) => ({
+      id: i.id,
+      url: i.url,
+      caption: i.caption,
+      detail: i.detail ?? null,
+      position: i.position,
+      originalUrl: i.original_url ?? null,
+      crop: i.crop ?? null,
+    })),
     closures: row.closures.map((c) => ({
       id: c.id,
       startsOn: c.starts_on,
@@ -201,6 +251,17 @@ function mapLoungeDetailRow(row: AdminLoungeDetailRow): LoungeContentDetail {
     pendingProposed: row.pending_proposed,
     pendingSubmittedBy: row.pending_submitted_by,
     pendingSubmittedAt: row.pending_submitted_at,
+    partner: row.partner
+      ? {
+          id: row.partner.id,
+          name: row.partner.name,
+          status: row.partner.status,
+          city: row.partner.city,
+          loungeCount: row.partner.lounge_count,
+          userCount: row.partner.user_count,
+          representative: row.partner.representative,
+        }
+      : null,
   };
 }
 
@@ -212,36 +273,6 @@ export async function getLoungeContentDetail(
   if (error) throw error;
   const row = (data as AdminLoungeDetailRow[])[0];
   return row ? mapLoungeDetailRow(row) : undefined;
-}
-
-export async function submitLoungeContentChange(
-  supabase: SupabaseClient,
-  loungeId: string,
-  proposed: ProposedLoungeContent,
-): Promise<string> {
-  const { data, error } = await supabase.rpc("admin_submit_lounge_content_change", {
-    p_lounge_id: loungeId,
-    p_proposed: proposed,
-  });
-  if (error) throw error;
-  return data as string;
-}
-
-export async function approveLoungeSubmission(supabase: SupabaseClient, submissionId: string): Promise<void> {
-  const { error } = await supabase.rpc("admin_approve_lounge_submission", { p_submission_id: submissionId });
-  if (error) throw error;
-}
-
-export async function rejectLoungeSubmission(
-  supabase: SupabaseClient,
-  submissionId: string,
-  note: string,
-): Promise<void> {
-  const { error } = await supabase.rpc("admin_reject_lounge_submission", {
-    p_submission_id: submissionId,
-    p_note: note,
-  });
-  if (error) throw error;
 }
 
 /* ------------------------------------------------------------------ */
@@ -265,6 +296,8 @@ function draftPayload(input: LoungeDraftInput) {
     hours: hoursSummary(input.weeklyHours),
     amenities: input.amenities,
     capacity: input.capacity,
+    booking_restrictions: input.bookingRestrictions,
+    partner_id: input.partnerId,
   };
 }
 
@@ -292,6 +325,8 @@ export interface DraftPhoto {
   url: string;
   caption: string;
   detail: string | null;
+  originalUrl?: string | null;
+  crop?: PhotoCrop | null;
 }
 
 /** El orden es la posición: la primera es la foto principal. */
@@ -307,6 +342,16 @@ export async function setDraftLoungePhotos(
   if (error) throw new Error(error.message);
 }
 
+/** Epic 8 · LoungeEditConfirm.dc.html — el lounge vuelve a borrador para editarlo. */
+export async function unpublishLounge(supabase: SupabaseClient, loungeId: string): Promise<void> {
+  const { error } = await supabase.rpc("admin_unpublish_lounge", { p_lounge_id: loungeId });
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * Story 10.1 — publicar ya no crea cuentas ni invita a nadie: exige un
+ * partner activo, que invitó a sus usuarios al activarse (Story 10.4).
+ */
 export async function publishLounge(supabase: SupabaseClient, loungeId: string): Promise<void> {
   const { error } = await supabase.rpc("admin_publish_lounge", { p_lounge_id: loungeId });
   if (error) throw new Error(error.message);
@@ -334,149 +379,8 @@ export async function uploadLoungeImage(
   return publicUrl;
 }
 
-/* ------------------------------------------------------------------ */
-/* Diff genérico para la cola de aprobación (Approval.dc.html)         */
-/* ------------------------------------------------------------------ */
-
-export interface PendingChange {
-  id: string;
-  title: string;
-  fromLabel: string;
-  toLabel: string;
-  note?: string;
-}
-
-const WEEKDAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-
-function safeAmenityLabel(id: string): string {
-  try {
-    return amenityLabel(id as AmenityId);
-  } catch {
-    return id;
-  }
-}
-
-/**
- * Compara la ficha actual de un lounge contra su propuesta pendiente y
- * arma una línea de diff por campo cambiado — generaliza el
- * `VESTRY_PENDING_CHANGES` literal del mock a cualquier lounge real.
- */
-export function diffLoungeChanges(current: LoungeContentDetail, proposed: ProposedLoungeContent): PendingChange[] {
-  const changes: PendingChange[] = [];
-
-  if (proposed.amenities) {
-    const before = current.amenities.map(safeAmenityLabel);
-    const after = proposed.amenities.map(safeAmenityLabel);
-    if (JSON.stringify([...before].sort()) !== JSON.stringify([...after].sort())) {
-      changes.push({
-        id: "amenities",
-        title: "Amenities updated",
-        fromLabel: before.length > 0 ? before.join(", ") : "none",
-        toLabel: after.length > 0 ? after.join(", ") : "none",
-      });
-    }
-  }
-
-  if (proposed.weekly_hours) {
-    proposed.weekly_hours.forEach((hours, index) => {
-      if (hours !== current.weeklyHours[index]) {
-        changes.push({
-          id: `hours-${index}`,
-          title: `${WEEKDAY_NAMES[index]} hours changed`,
-          fromLabel: current.weeklyHours[index] ?? "—",
-          toLabel: hours,
-        });
-      }
-    });
-  }
-
-  if (typeof proposed.capacity === "number" && proposed.capacity !== current.capacity) {
-    changes.push({
-      id: "capacity",
-      title: "Capacity updated",
-      fromLabel: `${current.capacity} seats`,
-      toLabel: `${proposed.capacity} seats`,
-    });
-  }
-
-  if (proposed.booking_restrictions) {
-    const before = current.bookingRestrictions.join("; ") || "none";
-    const after = proposed.booking_restrictions.join("; ") || "none";
-    if (before !== after) {
-      changes.push({ id: "restrictions", title: "Booking restrictions updated", fromLabel: before, toLabel: after });
-    }
-  }
-
-  if (proposed.photos) {
-    changes.push({
-      id: "photos",
-      title: "Photos updated",
-      fromLabel: `${current.images.length} photos`,
-      toLabel: `${proposed.photos.length} photos`,
-    });
-  }
-
-  if (proposed.publish === true && current.contentStatus !== "live") {
-    changes.push({ id: "publish", title: "Publish", fromLabel: "Draft", toLabel: "Live" });
-  }
-
-  return changes;
-}
-
-export function loungeStatusLabel(lounge: Pick<AdminLoungeRow, "contentStatus" | "pendingCount">): string {
-  if (lounge.pendingCount > 0) return `${lounge.pendingCount} to approve`;
+export function loungeStatusLabel(lounge: Pick<AdminLoungeRow, "contentStatus">): string {
   if (lounge.contentStatus === "draft") return "Draft";
   if (lounge.contentStatus === "archived") return "Archived";
   return "Live";
-}
-
-/* ------------------------------------------------------------------ */
-/* Cola de aprobación (Approval.dc.html) — global, no un solo lounge    */
-/* ------------------------------------------------------------------ */
-
-export interface PendingApproval {
-  submissionId: string;
-  loungeId: string;
-  loungeName: string;
-  submittedBy: string | null;
-  submittedAtLabel: string;
-  changes: PendingChange[];
-}
-
-function formatSubmittedAt(iso: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZone: "UTC",
-  }).format(new Date(iso));
-}
-
-/**
- * Recorre todos los lounges con un cambio pendiente y arma su diff — no hay
- * una RPC dedicada a "todas las propuestas pendientes" porque
- * `admin_lounge_list`/`admin_lounge_detail` ya bastan para componerla en el
- * cliente, mismo criterio que el resto de listados derivados de este
- * proyecto.
- */
-export async function listPendingApprovals(supabase: SupabaseClient): Promise<PendingApproval[]> {
-  const lounges = await listAdminLounges(supabase);
-  const withPending = lounges.filter((l) => l.pendingCount > 0);
-
-  const details = await Promise.all(withPending.map((l) => getLoungeContentDetail(supabase, l.id)));
-
-  return details.flatMap((detail, index) => {
-    if (!detail || !detail.pendingSubmissionId || !detail.pendingProposed) return [];
-    return [
-      {
-        submissionId: detail.pendingSubmissionId,
-        loungeId: detail.id,
-        loungeName: withPending[index].name,
-        submittedBy: detail.pendingSubmittedBy,
-        submittedAtLabel: detail.pendingSubmittedAt ? formatSubmittedAt(detail.pendingSubmittedAt) : "",
-        changes: diffLoungeChanges(detail, detail.pendingProposed),
-      },
-    ];
-  });
 }

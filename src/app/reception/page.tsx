@@ -5,7 +5,7 @@ import Image from "next/image";
 import { CircleAlert, CircleCheck, ScanLine, Search, ShieldAlert } from "lucide-react";
 
 import { buttonVariants } from "@/components/ui/button";
-import { TODAY } from "@/lib/availability";
+import { today } from "@/lib/availability";
 import {
   RECEPTION_CLOSE_MATCHES,
   checkInReceptionBooking,
@@ -44,7 +44,7 @@ export default function ReceptionPage() {
   const supabase = React.useMemo(() => createClient(), []);
 
   const refreshSummary = React.useCallback(() => {
-    fetchReceptionTodaySummary(supabase, THE_AINSWORTH, TODAY).then(setSummary);
+    fetchReceptionTodaySummary(supabase, THE_AINSWORTH, today()).then(setSummary);
   }, [supabase]);
 
   React.useEffect(() => {
@@ -52,23 +52,23 @@ export default function ReceptionPage() {
   }, [refreshSummary]);
 
   async function lookUp() {
-    const found = await lookupReceptionBooking(supabase, THE_AINSWORTH, TODAY, code);
+    const found = await lookupReceptionBooking(supabase, THE_AINSWORTH, today(), code);
     setBooking(found);
     setLookedUpCode(code);
   }
 
   async function handleCheckIn() {
     if (!booking) return;
-    await checkInReceptionBooking(supabase, THE_AINSWORTH, TODAY, booking.reference);
-    const refreshed = await lookupReceptionBooking(supabase, THE_AINSWORTH, TODAY, booking.reference);
+    await checkInReceptionBooking(supabase, THE_AINSWORTH, today(), booking.reference);
+    const refreshed = await lookupReceptionBooking(supabase, THE_AINSWORTH, today(), booking.reference);
     setBooking(refreshed);
     refreshSummary();
   }
 
   async function handleNoShow() {
     if (!booking) return;
-    await reportReceptionNoShow(supabase, THE_AINSWORTH, TODAY, booking.reference);
-    const refreshed = await lookupReceptionBooking(supabase, THE_AINSWORTH, TODAY, booking.reference);
+    await reportReceptionNoShow(supabase, THE_AINSWORTH, today(), booking.reference);
+    const refreshed = await lookupReceptionBooking(supabase, THE_AINSWORTH, today(), booking.reference);
     setBooking(refreshed);
     refreshSummary();
   }

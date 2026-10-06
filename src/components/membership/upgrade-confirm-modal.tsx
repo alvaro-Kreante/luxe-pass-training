@@ -8,7 +8,7 @@ import { Modal } from "@/components/patterns/modal";
 import { Button } from "@/components/ui/button";
 import { CardBrandBadge } from "@/components/ui/card-brand-badge";
 import { formatUsd } from "@/components/membership/plan-summary-card";
-import { TODAY } from "@/lib/availability";
+import { today } from "@/lib/availability";
 import {
   cardBrandLabel,
   chargeMembershipWithSavedCard,
@@ -242,7 +242,7 @@ export function UpgradeConfirmModal({
 }
 
 function currentMonthName() {
-  return new Intl.DateTimeFormat("en-US", { month: "long", timeZone: "UTC" }).format(new Date(`${TODAY}T00:00:00Z`));
+  return new Intl.DateTimeFormat("en-US", { month: "long", timeZone: "UTC" }).format(new Date(`${today()}T00:00:00Z`));
 }
 
 function SavedCardPayButton({

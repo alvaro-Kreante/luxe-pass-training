@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Printer, Search, Sparkles } from "lucide-react";
+import { Building2, Printer, Search, Sparkles } from "lucide-react";
 
 import { PartnerShell, LiveStatusChip, PartnerRefreshButton } from "@/components/patterns/partner-shell";
 import { ActivityPanel } from "@/components/partner/activity-panel";
@@ -10,9 +10,11 @@ import { GuestDetailDrawer } from "@/components/partner/guest-detail-drawer";
 import { GuestListTable } from "@/components/partner/guest-list-table";
 import { ExportGuestListPopover } from "@/components/partner/export-guest-list-popover";
 import { NoShowModal } from "@/components/partner/no-show-modal";
+import { usePartnerContext } from "@/components/partner/partner-context";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Toast } from "@/components/ui/toast";
 import { createClient } from "@/lib/supabase/client";
-import { TODAY } from "@/lib/availability";
+import { today } from "@/lib/availability";
 import {
   findPartnerGuest,
   formatLongWeekdayDate,
@@ -55,7 +57,9 @@ function nowLabel(): string {
 
 export function TodayDashboard() {
   const supabase = React.useMemo(() => createClient(), []);
-  const [loungeId, setLoungeId] = React.useState<string | null>(null);
+  // Story 10.6 — siempre un lounge concreto: el elegido en la cabecera.
+  const partner = usePartnerContext();
+  const loungeId = partner?.context?.selectedLoungeId ?? null;
   const [rows, setRows] = React.useState<PartnerGuestRow[]>([]);
   const [activity, setActivity] = React.useState<PartnerActivityItem[]>([]);
   const [query, setQuery] = React.useState("");
@@ -67,7 +71,7 @@ export function TodayDashboard() {
 
   const fetchGuestList = React.useCallback(
     async (lounge: string): Promise<PartnerGuestRow[]> => {
-      const { data } = await supabase.rpc("partner_guest_list", { p_lounge_id: lounge, p_date: TODAY });
+      const { data } = await supabase.rpc("partner_guest_list", { p_lounge_id: lounge, p_date: today() });
       const nextRows = (data as PartnerGuestRow[] | null) ?? [];
       setRows(nextRows);
       return nextRows;
@@ -76,21 +80,15 @@ export function TodayDashboard() {
   );
 
   React.useEffect(() => {
+    if (!loungeId) return;
     let active = true;
-    supabase
-      .from("partner_lounges")
-      .select("lounge_id")
-      .limit(1)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!active || !data) return;
-        setLoungeId(data.lounge_id);
-        fetchGuestList(data.lounge_id);
-      });
+    supabase.rpc("partner_guest_list", { p_lounge_id: loungeId, p_date: today() }).then(({ data }) => {
+      if (active) setRows((data as PartnerGuestRow[] | null) ?? []);
+    });
     return () => {
       active = false;
     };
-  }, [supabase, fetchGuestList]);
+  }, [supabase, loungeId]);
 
   React.useEffect(() => {
     if (!loungeId) return;
@@ -114,7 +112,7 @@ export function TodayDashboard() {
             slot_time: string;
             confirmation_code: string;
           };
-          if (booking.date !== TODAY || booking.status !== "confirmed") return;
+          if (booking.date !== today() || booking.status !== "confirmed") return;
 
           const nextRows = await fetchGuestList(loungeId);
           const guestRow = nextRows.find((row) => row.id === booking.id);
@@ -159,7 +157,7 @@ export function TodayDashboard() {
             confirmation_code: string;
           };
           const previous = payload.old as { status?: string };
-          if (updated.date !== TODAY) return;
+          if (updated.date !== today()) return;
 
           const nextRows = await fetchGuestList(loungeId);
 
@@ -249,12 +247,27 @@ export function TodayDashboard() {
     fetchGuestList(loungeId);
   }
 
+  if (partner?.context && partner.context.lounges.length === 0) {
+    return (
+      <PartnerShell topbarLabel="Today" topbarMeta={`· ${formatLongWeekdayDate(today())}`}>
+        <div className="flex min-h-[60vh] items-center justify-center">
+          <EmptyState
+            icon={Building2}
+            title="No lounges yet"
+            description={`En Soleil is setting up your lounges. As soon as the first one is linked to ${partner.context.partner.name}, its guests show up here.`}
+            width={520}
+          />
+        </div>
+      </PartnerShell>
+    );
+  }
+
   return (
     <>
       <PartnerShell
         blurred={blurred}
         topbarLabel="Today"
-        topbarMeta={`· ${formatLongWeekdayDate(TODAY)}`}
+        topbarMeta={`· ${formatLongWeekdayDate(today())}`}
         topbarRight={
           <div className="flex items-center gap-2.5">
             <LiveStatusChip label="Live" />
@@ -272,7 +285,7 @@ export function TodayDashboard() {
         <div className="flex items-center gap-6">
           <div className="min-w-0 flex-1">
             <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">
-              {formatLongWeekdayDate(TODAY)} ·{" "}
+              {formatLongWeekdayDate(today())} ·{" "}
               <Link href="/partner/emails/digest" className="normal-case text-accent-strong">
                 view this morning&apos;s digest
               </Link>

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { bookingReferenceFromId, confirmBooking } from "@/lib/booking";
-import { TODAY } from "@/lib/availability";
+import { today } from "@/lib/availability";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
 
@@ -48,7 +48,7 @@ beforeAll(async () => {
 
   const booking = await confirmBooking(member, {
     loungeId: "the-ainsworth",
-    dateIso: TODAY,
+    dateIso: today(),
     band: "morning",
     time: "8:00 AM",
     specialRequests: "",

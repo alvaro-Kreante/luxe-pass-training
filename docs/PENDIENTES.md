@@ -495,28 +495,25 @@ usa el cron, en vez de que el cliente invoque la Edge Function
 directamente) — no solo el alta de Vault de arriba. Ver
 `docs/design/COMPONENT-MAP.md` tabla de desviaciones.
 
-### 4.8 Epic 9 no tiene nada desplegado a `staging`/`main` todavía
+### 4.8 Epic 9: despliegue a `staging`/`main` — faltan los pasos manuales
 
-Mismo hueco que Epic 5–8 antes de sus PR de despliegue dedicados:
-`.github/workflows/deploy.yml` no conoce `stripe-membership-checkout` ni
-`membership-renewal`. `stripe-membership-checkout` no necesita
-secreto propio (reutiliza `STRIPE_SECRET_KEY`/`APP_URL`, ya presentes);
-`membership-renewal` necesita `STRIPE_SECRET_KEY` (ya presente) y `MEMBERSHIP_RENEWAL_WEBHOOK_SECRET`
-y los 2 secretos de Vault (`membership_renewal_webhook_url`/`_secret`),
-dados de alta solo en el Docker local de esta rama.
+`deploy.yml` ya despliega `stripe-membership-checkout` y
+`membership-renewal` en `migrate-dev`/`migrate-prod` (rama
+`feat/deploy-epic9-membership`, apilada sobre el PR de Epic 9) — mismo
+patrón que Epic 4–6. Antes de mergearla hacen falta, a mano:
 
-**Desbloquea:** un PR aparte que amplíe `deploy.yml` con `supabase
-functions deploy stripe-membership-checkout` + `supabase secrets set
-MEMBERSHIP_RENEWAL_WEBHOOK_SECRET` + `supabase functions deploy
-membership-renewal --no-verify-jwt` en
-`migrate-dev`/`migrate-prod`, los secrets de GitHub
-`MEMBERSHIP_RENEWAL_WEBHOOK_SECRET_DEV`/`_PROD` y el alta manual de los 2
-secretos de Vault en `luxepass-dev`/`luxepass-prod` vía Studio (SQL en
-`CLAUDE.md` §"Membresía y referidos reales"). Hasta entonces el cron de
-renovación sí inserta la notificación en la app y vence los términos sin
-auto-renovación (no depende de Vault), pero **no cobra las renovaciones**
-ni manda el email — en staging/prod, un término vencido con
-auto-renovación seguiría activo sin cobrar hasta completar este paso.
+1. ~~**Secrets de GitHub** `MEMBERSHIP_RENEWAL_WEBHOOK_SECRET_DEV` y
+   `MEMBERSHIP_RENEWAL_WEBHOOK_SECRET_PROD`~~ — hecho (23 sept 2026, valor
+   aleatorio distinto por ambiente, generado y dado de alta con `gh`).
+2. **Secretos de Vault** en `luxepass-dev` y `luxepass-prod` (Studio → SQL
+   Editor): `membership_renewal_webhook_url` (la URL pública de
+   `membership-renewal` de ese proyecto) y `membership_renewal_webhook_secret`
+   (el mismo valor que el secret de GitHub de ese ambiente) — SQL en
+   `CLAUDE.md` §"Membresía y referidos reales". Sin ellos, el cron no cobra
+   renovaciones ni manda el aviso por email (sí vence los términos sin
+   auto-renovación y avisa en la app).
+3. Después del primer deploy, **`scripts/sql/epic9-backfill-membership-status.sql`**
+   en cada proyecto (ver §2.12, opción A).
 
 ---
 
@@ -536,9 +533,13 @@ queda fuera. Con una base limpia (`supabase db reset`) probablemente pasa.
 
 Opciones: que el test filtre por un rango de fechas propio, que el export no
 dependa del límite de PostgREST, o limpiar los datos de prueba entre corridas.
-Relacionado con la nota de recursos compartidos (Stripe): la suite deja
-datos reales en la base local (las reservas de usuarios de test sí se
-borran antes de cada corrida, en `vitest.global-setup.ts`).
+Relacionado con la nota de recursos compartidos (Stripe). **Desde el 2 oct
+2026 la suite ya no deja datos de test en la base local**: `vitest.global-setup.ts`
+llama a `cleanTestData` (`src/lib/testing/clean-test-data.ts`) antes de
+empezar y al terminar, y borra las cuentas de dominios de test (con sus
+reservas, pagos y perfiles en cascada), los lounges `test-…` y los partners
+de test. Las reservas antiguas que hacían fallar este export desaparecen con
+ellas.
 
 ### 4.10 Auth local falla de forma intermitente con la suite completa en paralelo
 
@@ -568,7 +569,92 @@ cuanto se eligen, antes de que exista el lounge. Si el admin abandona el
 alta sin guardar, esos archivos quedan huérfanos en el bucket — no hay
 limpieza automática.
 
+### 4.12 Invitación de partner: caducidad en los remotos y reenvío
+
+El email de invitación (`EmailInvite.dc.html`) promete un enlace de 24 h.
+En local vale porque `supabase/config.toml` fija `otp_expiry = 86400`, pero
+**los remotos no leen ese archivo**: en `luxepass-dev`/`luxepass-prod` hay
+que poner a mano *Authentication → Providers → Email → Email OTP
+Expiration* a `86400` (hoy, por defecto, 1 h). Afecta también a los
+enlaces de confirmación y recovery.
+
+Desde el Epic 10 (1 oct 2026) la invitación la envía activar el partner,
+no publicar el lounge; reenviarla vuelve con la Story 10.4.
+
+**Además:**
+- **La cola de aprobación se retiró de la UI pero no de la base.** La
+  tabla `lounge_content_submissions` y las RPC `admin_submit_lounge_content_change`,
+  `admin_approve_lounge_submission`, `admin_reject_lounge_submission` (y la
+  columna `pending_count` de `admin_lounge_list`) siguen en
+  `supabase/schemas/admin_content.sql` sin uso. Borrarlas es destructivo
+  (genera `DROP`); el 1 oct 2026 el usuario decidió **dejarlas** por ahora.
+- El aviso tras guardar/publicar desde `/admin/lounges/new` no tiene test
+  de pantalla: guardar exige una dirección de Google Places, que no carga
+  en jsdom. Lo cubren el test del detalle (`[id]/page.test.tsx`, mismo
+  formulario y mismo aviso) y la verificación de Playwright.
+
+### 4.14 Epic 10: historias 10.9–10.12
+
+- **10.12 (búsqueda en el detalle del partner):** hecha.
+- **10.9 hecha** (datos, UI de admin en vista live y borrador, ficha del
+  miembro con el horario de la temporada vigente). Queda abierto:
+  - Las tarjetas y el filtro de fecha de `/explore` siguen con
+    `lounges.hours` / `closed_weekdays` habituales; la reserva sí respeta la
+    temporada porque sale de `lounge_availability_range`.
+  - Las bandas (mañana/tarde/noche) son del lounge, no de la temporada.
+  - "Save anyway" sobre reservas confirmadas solo avisa: no cancela ni
+    notifica a esos miembros. **Decidido así** (2 oct 2026): las reservas
+    siguen vigentes y nadie recibe aviso.
+- **10.10 hecha** (editor con `react-easy-crop`, recorte en `<canvas>`,
+  original y encuadre guardados en `lounge_images`). Abierto: sin
+  porcentaje de subida ni "Retry" (ver desviaciones de COMPONENT-MAP);
+  los originales ocupan Storage aunque el lounge cambie de foto, solo los
+  limpia `cleanTestData` en local — en remoto no hay limpieza de huérfanos.
+- **10.11 hecha** (selección, cambio de status, horario, temporada y cierre
+  masivos con confirmación y resultado parcial). Abierto: sin registro de
+  auditoría de la acción masiva. El cierre masivo sigue la misma decisión
+  que "Save anyway": las reservas confirmadas siguen vigentes, sin aviso.
+- **10.12:** su criterio de selección al buscar ya está cubierto (test de
+  `src/app/admin/partners/[id]/bulk.test.tsx`).
+
+### 4.13 Epic 10: el modelo de partners cambió y los remotos no lo tienen
+
+Paso a paso para `staging` y `main`: `docs/ci-cd/EPIC-10-DESPLIEGUE.md`.
+
+La Story 10.1 (1 oct 2026, migración `partner_organizations`) sustituye el
+partner-persona por el partner-organización. Antes del primer PR a
+`staging` con este cambio:
+
+- **`partners` tiene que estar vacía en el remoto.** La migración añade
+  `partners.name not null` sin default y borra `partner_lounges` y
+  `lounge_partner_invites`: con filas fallará el deploy, y sin vaciarla se
+  perderían igualmente los vínculos con lounges. En local ya se vació (con
+  todas las cuentas salvo el admin). Hacerlo en `luxepass-dev`/`luxepass-prod`
+  es una acción sobre datos remotos: pedir confirmación antes.
+- **Las Edge Functions `admin-publish-lounge` y `admin-lounge-partners` se
+  borraron del repo y de `deploy.yml`**, pero quitarlas de `deploy.yml` no
+  las borra de los proyectos remotos donde ya estén desplegadas: hay que
+  borrarlas a mano (`supabase functions delete …`, con confirmación).
+- **Lounges live sin partner:** los sembrados que no están en
+  `scripts/seed-partners.mjs` siguen live sin partner (la base lo admite;
+  solo publicar lo exige). Para asignarles uno hay que pasarlos a draft
+  ("Edit lounge"), elegir el partner y publicar.
+- **El partner en el pase de un lounge que ya no está live (10.8):** el
+  miembro solo puede leer el nombre del partner de un lounge publicado
+  (policy "read partner of a live lounge"), así que el pase de una reserva
+  en un lounge pasado a draft o suspendido se ve sin el partner.
+- **Vistas previas de email de `/partner/emails/*`** siguen con el venue fijo
+  de `PARTNER_VENUE` (son la vista previa del artboard, como antes); los
+  emails reales ya nombran al partner y al lounge (10.7).
+- **`admin_revenue_by_partner`** sigue agrupando por lounge, no por partner.
+- **`admin-partners` (Story 10.4) es una Edge Function nueva:** ya está en `deploy.yml`, pero necesita `APP_URL` y `BREVO_*` en los remotos, como las demás que envían emails.
+- **Suspender un usuario no invalida su token al instante** (el ban solo impide renovarlo), pero `RequirePartnerSession` y el login comprueban el acceso con `partner_context()`: el usuario sale con la sesión cerrada y el aviso "Your access… is suspended" en cuanto abre o recarga /partner.
+
 ## 5. Decisiones abiertas
+
+### 5.0 Filtro por país en `/admin/lounges`
+
+Pedido el 1 oct 2026 junto al filtro de ciudad. `lounges` no tiene columna de país (solo `city`/`city_id`), así que quedó fuera: hacerlo pide una columna `country` en `supabase/schemas/lounges.sql`, rellenarla para los lounges existentes y pedirla en el alta/edición (la dirección elegida en Google Places ya trae el país en `address_components`). Hasta entonces solo se filtra por ciudad (artboards 27–28).
 
 ### 5.1 El error de términos de `/signup` no se puede llegar a ver
 

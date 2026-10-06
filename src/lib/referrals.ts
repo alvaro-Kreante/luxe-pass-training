@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { TODAY } from "./availability";
+import { today } from "./availability";
 
 /**
  * Story 9.2 (Referral Program) — conectada a Supabase real (`referrals`,
@@ -146,7 +146,7 @@ const RECENT_MS = 48 * 60 * 60 * 1000;
  */
 export async function fetchReferralOverview(
   supabase: SupabaseClient,
-  { todayIso = TODAY, now = new Date() }: { todayIso?: string; now?: Date } = {},
+  { todayIso = today(), now = new Date() }: { todayIso?: string; now?: Date } = {},
 ): Promise<ReferralOverview> {
   const {
     data: { user },

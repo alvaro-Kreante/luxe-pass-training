@@ -30,6 +30,8 @@ export function LoungeListItem({
     <article className="flex flex-col gap-5 rounded-content border border-line bg-surface p-4 transition-shadow duration-150 hover:shadow-content lg:flex-row">
       <LoungeThumb
         loungeId={lounge.id}
+        src={lounge.mainImageUrl}
+        alt={lounge.name}
         className="h-[120px] w-full rounded-[14px] lg:w-[200px]"
       />
 
@@ -42,6 +44,7 @@ export function LoungeListItem({
             <Rating value={lounge.rating} />
           </div>
           <p className="m-0 text-[12.5px] text-fg-subtle">
+            {lounge.partnerName ? `${lounge.partnerName} · ` : ""}
             {lounge.neighborhood} · {lounge.city} · {lounge.hours}
           </p>
         </div>

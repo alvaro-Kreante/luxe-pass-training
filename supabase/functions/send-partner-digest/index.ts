@@ -1,10 +1,12 @@
 // Story 7.2 — "Morning digest email with day's guest list". pg_cron
 // (`dispatch_partner_morning_digest`, `supabase/schemas/partner_notifications.sql`)
-// llama aquí cada día a las 6:30 AM (hora real, no el "hoy" de mockup) por
-// cada lounge que gestiona un partner — mismo mecanismo de secreto
+// llama aquí cada día a las 6:30 AM (hora real, no el "hoy" de mockup) una vez
+// por usuario activo de cada partner, con todos sus lounges agrupados (Story
+// 10.7, `partner_digest_batches`) — mismo mecanismo de secreto
 // compartido que `send-partner-booking-event` (Postgres, no un miembro
 // autenticado).
 import { sendBrevoEmail } from "../_shared/brevo.ts";
+import { renderPartnerDigest } from "../_shared/partner-emails.ts";
 
 const webhookSecret = Deno.env.get("PARTNER_DIGEST_WEBHOOK_SECRET") as string;
 
@@ -14,47 +16,18 @@ interface DigestGuest {
   status: string;
 }
 
-interface WebhookPayload {
-  partner_email: string;
-  partner_business_name: string;
+interface DigestLounge {
   lounge_id: string;
   lounge_name: string;
-  date: string;
   guest_count: number;
   guests: DigestGuest[];
 }
 
-function formatWeekdayDate(dateIso: string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    timeZone: "UTC",
-  }).format(new Date(`${dateIso}T00:00:00Z`));
-}
-
-function renderDigestHtml(input: WebhookPayload): string {
-  const rows = input.guests
-    .map(
-      (guest) => `
-        <tr>
-          <td style="padding:6px 0;font-weight:bold;">${guest.slot_time}</td>
-          <td style="padding:6px 0;">${guest.name}</td>
-        </tr>
-      `,
-    )
-    .join("");
-
-  return `
-    <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
-      <p style="font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#8a8a8a;">${input.lounge_name}</p>
-      <h1 style="font-size:24px;color:#1a1a1a;">${formatWeekdayDate(input.date)} · ${input.guest_count} guests expected</h1>
-      <p style="font-size:14px;color:#4a4a4a;line-height:1.6;">Good morning. Here is today's guest list as it stands at 6:30 AM.</p>
-      <table style="width:100%;font-size:13px;color:#4a4a4a;border-collapse:collapse;margin:16px 0;">
-        ${rows || `<tr><td style="padding:6px 0;">No guests expected today.</td></tr>`}
-      </table>
-    </div>
-  `;
+interface WebhookPayload {
+  partner_email: string;
+  partner_business_name: string;
+  date: string;
+  lounges: DigestLounge[];
 }
 
 Deno.serve(async (req) => {
@@ -71,12 +44,18 @@ Deno.serve(async (req) => {
 
   const payload = (await req.json()) as WebhookPayload;
 
+  const email = renderPartnerDigest({
+    partnerName: payload.partner_business_name,
+    dateIso: payload.date,
+    lounges: payload.lounges.map((lounge) => ({
+      loungeName: lounge.lounge_name,
+      guestCount: lounge.guest_count,
+      guests: lounge.guests.map((guest) => ({ name: guest.name, slotTime: guest.slot_time })),
+    })),
+  });
+
   try {
-    await sendBrevoEmail(
-      payload.partner_email,
-      `Today at ${payload.lounge_name} · ${payload.guest_count} guests expected`,
-      renderDigestHtml(payload),
-    );
+    await sendBrevoEmail(payload.partner_email, email.subject, email.html);
   } catch (error) {
     const message = error instanceof Error ? error.message : "brevo error";
     return new Response(JSON.stringify({ error: { message } }), {

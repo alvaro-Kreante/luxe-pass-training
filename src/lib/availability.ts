@@ -42,10 +42,31 @@ export function timeBandLabel(band: TimeBand): string {
 }
 
 /**
- * El "hoy" del mockup. Los artboards de la Fase 3 muestran septiembre de 2025
- * con los días 1–8 ya pasados, y el resto del proyecto comparte esa semana.
+ * El "hoy" real, como fecha ISO (`YYYY-MM-DD`) en `timeZone` — por defecto
+ * el huso del dispositivo. Un lounge pasa el suyo (`lounges.timezone`) para
+ * que "hoy" y "Open now" sean los de su ciudad, no los de quien mira.
  */
-export const TODAY = "2025-09-09";
+export function today(timeZone?: string, now: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone,
+  }).format(now);
+}
+
+/** Minutos desde medianoche en `timeZone` (por defecto, el del dispositivo). */
+export function minutesNow(timeZone?: string, now: Date = new Date()): number {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZone,
+  }).formatToParts(now);
+  const value = (type: string) => Number(parts.find((part) => part.type === type)!.value);
+
+  return value("hour") * 60 + value("minute");
+}
 
 /** Fecha ISO a Date en UTC, para que el día de la semana no dependa del huso. */
 export function parseDate(iso: string): Date {
@@ -57,7 +78,7 @@ export function weekdayOf(iso: string): number {
 }
 
 export function isPast(iso: string): boolean {
-  return iso < TODAY;
+  return iso < today();
 }
 
 /** "Sun, Sep 14" — el formato de los chips de filtro activo. */

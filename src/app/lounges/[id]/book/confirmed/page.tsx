@@ -146,7 +146,7 @@ export default function ConfirmedPage() {
         open={calendarOpen}
         onOpenChange={setCalendarOpen}
         lounge={lounge}
-        address={lounge.address}
+        address={[lounge.partnerName, lounge.address].filter(Boolean).join(" · ")}
         dateIso={draft.dateIso}
         time={draft.time}
         bookingReference={reference}

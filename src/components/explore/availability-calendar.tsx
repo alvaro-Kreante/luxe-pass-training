@@ -1,6 +1,6 @@
 "use client";
 
-import { addDays, TODAY, isPast, parseDate } from "@/lib/availability";
+import { addDays, today, isPast, parseDate } from "@/lib/availability";
 import { cn } from "@/lib/utils";
 
 /**
@@ -17,10 +17,10 @@ const WEEKS = 3;
 
 /** El lunes de la semana en que cae `TODAY`. */
 function firstMonday(): string {
-  const weekday = parseDate(TODAY).getUTCDay();
+  const weekday = parseDate(today()).getUTCDay();
   const backToMonday = weekday === 0 ? 6 : weekday - 1;
 
-  return addDays(TODAY, -backToMonday);
+  return addDays(today(), -backToMonday);
 }
 
 export function AvailabilityCalendar({
@@ -41,7 +41,7 @@ export function AvailabilityCalendar({
     month: "long",
     year: "numeric",
     timeZone: "UTC",
-  }).format(parseDate(TODAY));
+  }).format(parseDate(today()));
 
   return (
     <>

@@ -7,6 +7,8 @@ import { RequirePartnerSession } from "@/components/partner/require-partner-sess
 import { PartnerShell } from "@/components/patterns/partner-shell";
 import { Segmented } from "@/components/ui/segmented";
 import { StatusChip } from "@/components/ui/status-chip";
+import { usePartnerContext } from "@/components/partner/partner-context";
+import { analyticsLoungeId } from "@/lib/partner-lounges";
 import { createClient } from "@/lib/supabase/client";
 import {
   type PartnerRepeatGuestRow,
@@ -42,17 +44,19 @@ function RepeatGuestsContent() {
   const [guests, setGuests] = React.useState<RepeatGuestRow[]>([]);
   const [query, setQuery] = React.useState("");
   const [filter, setFilter] = React.useState<RepeatGuestFilter>("everyone");
+  // Story 10.6 — el lounge de la cabecera, o todos con "All lounges".
+  const loungeId = analyticsLoungeId(usePartnerContext()?.context ?? null);
 
   React.useEffect(() => {
     let active = true;
-    supabase.rpc("partner_repeat_guests").then(({ data }) => {
+    supabase.rpc("partner_repeat_guests", { p_lounge_id: loungeId }).then(({ data }) => {
       if (!active || !data) return;
       setGuests((data as PartnerRepeatGuestRow[]).map(mapRepeatGuestRow));
     });
     return () => {
       active = false;
     };
-  }, [supabase]);
+  }, [supabase, loungeId]);
 
   const filtered = filterRepeatGuests(guests, filter).filter((guest) =>
     matchesRepeatGuestQuery(guest, query),
@@ -61,6 +65,7 @@ function RepeatGuestsContent() {
 
   return (
     <PartnerShell
+      allowAllLounges
       topbarLabel="Guests"
       topbarMeta="· all-time"
       topbarRight={

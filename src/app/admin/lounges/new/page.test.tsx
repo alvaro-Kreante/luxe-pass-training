@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -28,12 +28,23 @@ function image(name: string) {
   return new File(["fake-bytes"], name, { type: "image/jpeg" });
 }
 
+/** Story 10.10 — cada foto pasa por el editor ("Use photo") antes de subirse. */
 async function renderWithPhotos(names: string[]) {
   const user = userEvent.setup({ delay: null });
   render(<NewLoungePage />);
   const input = await screen.findByLabelText("Add lounge photos");
   await user.upload(input, names.map(image));
-  await screen.findAllByRole("button", { name: /^Edit photo/ });
+  const accepted = names.slice(0, 3);
+  for (const name of accepted) {
+    const editor = await waitFor(() => {
+      const dialog = screen.getByRole("dialog", { name: "Frame this photo" });
+      expect(within(dialog).getByText(name)).toBeInTheDocument();
+      return dialog;
+    });
+    await user.click(within(editor).getByRole("button", { name: "Use photo" }));
+  }
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  await waitFor(() => expect(screen.getAllByRole("button", { name: /^Edit photo/ })).toHaveLength(accepted.length), { timeout: 8000 });
   return user;
 }
 
@@ -159,6 +170,15 @@ describe("horario de apertura", () => {
     expect(screen.queryByLabelText("Sun opens at")).toBeNull();
   });
 
+  it("la semana empieza el lunes", async () => {
+    render(<NewLoungePage />);
+
+    const switches = await screen.findAllByRole("switch", { name: / open$/ });
+    expect(switches.map((s) => s.getAttribute("aria-label"))).toEqual([
+      "Mon open", "Tue open", "Wed open", "Thu open", "Fri open", "Sat open", "Sun open",
+    ]);
+  });
+
   it("copia el horario del lunes a todos los días", async () => {
     const user = userEvent.setup({ delay: null });
     render(<NewLoungePage />);
@@ -169,5 +189,31 @@ describe("horario de apertura", () => {
 
     expect(screen.getByRole("switch", { name: "Sun open" })).toHaveAttribute("aria-checked", "true");
     expect(screen.getByLabelText("Sat opens at")).toHaveValue("9:00 AM");
+  });
+});
+
+/** Story 10.9 — también al crear el lounge; se guardan con él la primera vez. */
+describe("temporadas y cierres del lounge nuevo", () => {
+  it("se añaden antes de guardar y quedan en la lista", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<NewLoungePage />);
+
+    const seasons = await screen.findByRole("region", { name: "Seasonal hours" });
+    await user.click(within(seasons).getByRole("button", { name: "Add season" }));
+    const season = within(seasons).getByRole("group", { name: "New season" });
+    await user.type(within(season).getByLabelText("Name · optional"), "Summer hours");
+    await user.type(within(season).getByLabelText("From"), "2026-06-01");
+    await user.type(within(season).getByLabelText("To"), "2026-08-31");
+    await user.click(within(season).getByRole("button", { name: "Add season" }));
+    expect(await within(seasons).findByRole("listitem", { name: /Summer hours/ })).toBeInTheDocument();
+
+    const closures = screen.getByRole("region", { name: "Special closures" });
+    await user.click(within(closures).getByRole("button", { name: "Add closure" }));
+    const closure = within(closures).getByRole("group", { name: "New closure" });
+    await user.type(within(closure).getByLabelText("From"), "2026-12-24");
+    await user.type(within(closure).getByLabelText("To"), "2026-12-25");
+    await user.type(within(closure).getByLabelText("Reason · members see it"), "Holidays");
+    await user.click(within(closure).getByRole("button", { name: "Add closure" }));
+    expect(await within(closures).findByRole("listitem", { name: /Holidays/ })).toBeInTheDocument();
   });
 });

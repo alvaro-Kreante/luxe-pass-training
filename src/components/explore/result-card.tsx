@@ -47,7 +47,7 @@ export function ResultCard({
           : "border border-line hover:border-accent",
       )}
     >
-      <LoungeThumb loungeId={lounge.id} className="size-[70px] rounded-[10px]" />
+      <LoungeThumb loungeId={lounge.id} src={lounge.mainImageUrl} className="size-[70px] rounded-[10px]" />
 
       <span className="min-w-0 flex-1">
         <span className="flex items-baseline justify-between gap-2">
@@ -58,6 +58,7 @@ export function ResultCard({
         </span>
 
         <span className="mb-2 mt-[3px] block text-xs text-fg-subtle">
+          {lounge.partnerName ? `${lounge.partnerName} · ` : ""}
           {lounge.neighborhood} · {lounge.city}
         </span>
 

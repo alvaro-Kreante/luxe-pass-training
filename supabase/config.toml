@@ -249,7 +249,10 @@ max_frequency = "1s"
 # Number of characters used in the email OTP.
 otp_length = 6
 # Number of seconds before the email OTP expires (defaults to 1 hour).
-otp_expiry = 3600
+# 24 h (el máximo): la invitación de partner (Epic 7 · EmailInvite.dc.html)
+# promete ese plazo. Afecta también a los enlaces de confirmación y recovery.
+# Los remotos no leen este archivo — ver docs/PENDIENTES.md.
+otp_expiry = 86400
 
 # Use a production-ready SMTP server
 # [auth.email.smtp]

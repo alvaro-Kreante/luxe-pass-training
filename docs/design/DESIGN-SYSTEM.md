@@ -355,6 +355,7 @@ Debajo, leyenda con muestras de 16px. El sello de frescura (`Updated N min ago �
 | 7 | Epic 6 — Member Experience & Notifications (tema claro) | ✅ Completa — 11 artboards |
 | 8 | Epic 8 — Admin & Support (tema oscuro) | ✅ Completa — 13 artboards |
 | 9 | Epic 9 — Membership & Referrals (tema claro) | ✅ Completa — 9 artboards |
+| 10 | Epic 10 — Partner Organizations (tema oscuro, admin y partner) | ✅ Completa — 34 artboards (10.2–10.6, 10.9–10.11) |
 
 Cada fase vive en `design/epic-N-slug/` con sus `.dc.html`, su `canvas.json` y una copia de
 `logo.png`, y se publica como un canvas propio.
@@ -467,13 +468,14 @@ son datos de muestra.
 
 Canvas: https://claude.ai/code/artifact/f1d95df8-0c67-43a4-9c06-b6f1266496a8
 
-9 artboards en 3 filas, entrando desde "View details" de la lista/mapa de la Fase 3:
+12 artboards en 4 filas, entrando desde "View details" de la lista/mapa de la Fase 3:
 
 | Fila | Artboards | Historia |
 |---|---|---|
 | 1 | `Main` (perfil) → `Gallery` → `Share` | 3.1 |
 | 2 | `Availability` → `NotAvailable` → `Closure` | 3.2 |
 | 3 | `Reviews` → `NoRatings` → `Loading` | 3.1 / 3.2 |
+| 4 | `SeasonalHours` → `NoSchedule` → `ClosedToday` | 3.2 / 10.9 |
 
 Cobertura de criterios: carousel de 6 imágenes con flechas, contador y dots más lightbox con tira
 de miniaturas; nombre, dirección y contacto (teléfono, email, web); horarios con el día de hoy
@@ -484,6 +486,19 @@ estado en tiempo real Available / Not available; calendario semanal por franjas 
 (tier de membresía, antelación mínima, admisión para uno); aviso de cierre por festivo con los días
 marcados y aviso de reapertura; sello "Updated N min ago · refreshes every 5 min" en toda vista de
 disponibilidad; estado sin ratings y skeleton de carga del perfil.
+
+Fila 4 (temporadas y cierres de `lounge_seasons`/`lounge_closures`, tal como los define el admin en
+`SeasonalFilled`/`ClosureEdit` de la Fase 10): `SeasonalHours` es la ficha desplazada bajo la topbar
+con hoy = Tue Sep 9 dentro de "Late summer hours" (Sep 1–30). La semana de la temporada reemplaza a
+la habitual en `Operating hours`, con un chip con su nombre y la fecha de vuelta al horario
+habitual; debajo, `Seasonal hours` lista cada temporada en curso o futura (chip `In effect` /
+`Upcoming`) y `Special closures` pinta cada cierre próximo con el mismo aviso de `Closure` (motivo +
+reapertura, idéntico a la vista previa de `ClosureEdit`). Una temporada sin nombre se titula
+"Seasonal hours". `NoSchedule`: sin temporadas ni cierres próximos las dos secciones no se pintan
+(sin estado vacío). `ClosedToday`: hoy = Fri Sep 12 dentro del cierre "Private event"; el aviso sube
+encima del hero, `Operating hours` marca los días cerrados con el motivo y la card de disponibilidad
+reutiliza la de `NotAvailable` con la reapertura como siguiente hueco. Temporadas y cierres ya
+pasados no se muestran.
 
 Pendientes conocidos: las fotos son bloques de marca (degradado oscuro + patrón de puntos dorados)
 a sustituir por fotografía real; nombres, direcciones, teléfonos (rango 555) y textos de reviews
@@ -787,6 +802,145 @@ término ni historial de facturas fechado** que dejaría el hueco a la vista; al
 elegir una de las dos y corregir el artboard de la Fase 7, igual que con el corazón de favorito que
 la Fase 7 dejó pendiente para la Fase 4. El texto legal de `Terms` es una propuesta estructural, a
 reemplazar por el documento real de En Soleil.
+
+### Fase 10 — `design/epic-10-partner-organizations/`
+
+Rediseña el modelo de partner: deja de ser una persona con un lounge y pasa a ser la
+**organización** (hotel, spa, club) dueña de varios lounges y con varios usuarios. Hereda sin
+cambios el lenguaje del admin de la Fase 8 (sidebar, top bar, cards de `--dark-card`, chips de
+estado, inputs de 44px, formulario discontinuo de partner del artboard 23). Añade la entrada
+**Partners** al sidebar del admin, entre Bookings y Lounges.
+
+| Artboard | Qué muestra | Historia |
+|---|---|---|
+| `Partners` | Listado: nombre + email de contacto, status, nº de lounges, representante, ciudad principal; búsqueda y filtros Active / Draft / Suspended | 10.2 |
+| `PartnerNew` | Partner nuevo en draft: datos, edificio central como texto (sin mapa) y el primer usuario, que queda como representante | 10.3 |
+| `PartnerDetail` | Detalle en draft: datos editables, tabla de usuarios con lápiz y "Make representative", lounges con "Open lounge", checklist para activar | 10.3 |
+| `PartnerUserEdit` | Edición en línea de un usuario (email bloqueado) y aviso al intentar borrar al representante | 10.3 |
+| `PartnerActivate` | Modal de activar: lista de usuarios que reciben el email de crear contraseña | 10.4 |
+| `PartnerActive` | Partner activo: usuarios Active / Invited (reenviar) / Suspended, "Suspend partner" | 10.4 |
+| `PartnerSuspend` | Modal de suspender el partner: lounges suspendidos, usuarios sin acceso | 10.4 |
+| `PartnerSuspended` | Partner suspendido: qué pasa con cada lounge al reactivar | 10.4 |
+| `LoungesWithPartner` | Artboard 11 de la Fase 8 con columna Partner y filtro Suspended | 10.5 |
+| `LoungePartner` | Artboard 17 con la tarjeta de partner en solo lectura y "Suspend lounge" | 10.4 / 10.5 |
+| `LoungeSuspend` | Modal de suspender un lounge suelto | 10.4 |
+| `LoungeDraftPartner` | Artboard 23 con el selector de partner (incluye draft) y "An active partner" en la checklist | 10.5 |
+| `PartnerToday` | `Main` de la Fase 2 con el selector partner + lounge al final de la top bar y el usuario real en el sidebar | 10.6 |
+| `PartnerLoungeMenu` | Menú de lounges abierto; la elección se guarda en la cuenta | 10.6 |
+| `PartnerAnalyticsAll` | `Analytics` de la Fase 2 con "All lounges" (solo en Analytics, Guests y Reports) | 10.6 |
+| `PartnerNoLounges` | Estado vacío de un partner sin lounges | 10.6 |
+
+Decisiones: el chip **Suspended** reutiliza el color de error que la Fase 8 ya usa en los
+inputs (`#D9826B` / `#E39A85`); el usuario sin acceso todavía muestra **On activation**, gemelo
+del **On publish** del artboard 23. Los artboards de lounge (9–12) son copias de los 11, 17 y 23
+de la Fase 8 donde solo cambia lo que toca al partner; el resto sigue siendo la fuente de la
+Fase 8. Reactivar un lounge suspendido lo devuelve a draft, igual que al reactivar el partner.
+El selector de `/partner` (13–16) parte de `Main` y `Analytics` de la Fase 2: el partner es texto fijo y solo el lounge es botón. Las historias 10.7 (emails) y 10.8 (vista del miembro) ajustan artboards de las Fases 2, 3, 4 y 6 y no tienen artboard propio aquí.
+
+#### 10.9 — Temporadas y cierres especiales
+
+Dos cards nuevas en el formulario admin del lounge, **debajo de Operating hours**. Parten del
+artboard 23 de la Fase 8 (ya con la tarjeta de partner de la 10.5) sobre The Ainsworth, live,
+con el formulario desplazado hasta los horarios. Solo el admin escribe; el partner y el miembro
+leen el resultado.
+
+| Artboard | Qué muestra | Criterios |
+|---|---|---|
+| `SeasonalEmpty` | Seasonal hours y Special closures vacías, cada una con su estado vacío y su "Add"; rail con el orden de precedencia (cierre → temporada → semana habitual) y quién puede escribir | 1, 4, 7 |
+| `SeasonalEdit` | Temporada nueva "Summer hours", Jun 1 – Aug 31, 2026: nombre opcional, desde/hasta y su semana con el mismo editor de Operating hours (switch por día + desde/hasta) | 1, 2 |
+| `SeasonalOverlap` | "Late summer" Aug 20 → Aug 5: error bajo cada fecha (se solapa con Summer hours · termina antes de empezar), la temporada con la que choca marcada y "Add season" deshabilitado | 3 |
+| `ClosureEdit` | Cierre nuevo "Private event", Fri Sep 12 – Sat Sep 13, 2025, reabre Sun Sep 14 a las 10:00 AM, con la vista previa del aviso tal como lo lee el miembro en `Closure` (Fase 4) | 4, 5 |
+| `ClosureBookingsWarning` | Modal antes de guardar: "3 confirmed bookings fall in this closure", lista de las tres reservas, Cancel / Save anyway | 6 |
+| `SeasonalFilled` | Guardado: 2 temporadas y 1 cierre en filas con editar/borrar, "Next 7 days" en el rail y el toast "The Ainsworth is still live" | 1, 4, 8 |
+
+Decisiones: el editor de semana de una temporada es el de `lounge-draft-form.tsx` (filas con
+switch y dos selects), no las siete casillas de solo lectura del artboard 23, que se mantienen
+para la semana habitual ya guardada; en dos columnas los selects bajan a 96px y 34px de alto.
+Las filas guardadas son una caja `--panel-black` de `border-radius: 14px` con icono de 36px,
+título 13.5px/700, fechas en 12px y botones cuadrados de 34px (lápiz y papelera). El estado
+"Upcoming" / "In 3 days" reutiliza los chips existentes; el error reutiliza `#D9826B` / `#E39A85`
+de la Fase 8. El campo **Reopens** propone el siguiente día abierto a su hora de apertura (hint
+del artboard 20); qué pasa con las reservas confirmadas tras "Save anyway" no lo fija la
+historia: el modal solo avisa y enlaza a Bookings.
+
+#### 10.10 — Fotos recortadas y optimizadas
+
+Cinco artboards (23–27) sobre el formulario de lounge de la Fase 8 (The Ainsworth, en edición),
+en la sección **Photos · up to 3**. El editor es un modal de la misma familia que `PhotoCaption`
+(Fase 8 · 15): mismo scrim, `--dark-card`, radio 24px, eyebrow + título Bodoni 27px, cierre de
+40px y pie con botones de 52px; mide 940px de ancho porque lleva el lienzo de recorte.
+
+| Artboard | Qué muestra | Criterios |
+|---|---|---|
+| `PhotoCropOpen` | Tras elegir `ainsworth-terrace.jpg` (6000 × 4000 · 8.4 MB) se abre "Frame this photo": lienzo con marco fijo 3 : 2 y cuadrícula de tercios, pista "Drag to reposition", zoom con slider (− / + y 1.4×), nombre y peso del original, tamaño Standard ya elegido | 1, 2 |
+| `PhotoCropSize` | El mismo editor con **Light · 1200 px** elegido: tres opciones Large 2400 · Standard 1600 (Recommended) · Light 1200, cada una con sus dimensiones y peso estimado; el pie resume lo que se sube; Cancel / Use photo | 3, 4, 5 |
+| `PhotoUploading` | De vuelta en Photos: Main room subida, Reading corner subiendo (barra 64 %, 198 de 310 KB), Terrace en cola; Amenities y horarios intactos | 4, 8 |
+| `PhotoRecrop` | Una foto subida con la acción **Adjust crop** (junto a Details) y el editor "Adjust the crop" abierto sobre su encuadre actual (1.8×), con "Live now · Standard · 1600 px" y **Save crop** | 6 |
+| `PhotoInvalidFile` | Se eligió `ainsworth-menu.pdf`: alerta en la sección ("isn't an image · Nothing was uploaded") con "Choose another file", el hueco de añadir en rojo; nada subido | 7 |
+
+Decisiones:
+
+- **Encuadre con `react-easy-crop`**: la foto se mueve bajo un marco fijo (arrastre, slider, rueda o
+  pellizco); no hay recorte libre por esquinas. La proporción es **3 : 2**, la de las fotos de
+  muestra (3024 × 2016); si el perfil del lounge usa otra, se cambia el marco, no el diseño.
+- **Tamaños**: Large 2400 px · Standard 1600 px (recomendado, por defecto) · Light 1200 px, por el
+  lado largo, en JPEG. El peso es una estimación que se recalcula con el encuadre y el zoom.
+  Sustituye la nota del artboard de la Fase 8 "Resized to 1600, 800 and 400 px on upload — send
+  the original, not a crop": ahora se recorta antes de subir.
+- **Se sube solo el recorte**; el original no sale del navegador. Cancelar no sube nada.
+- **Re-encuadre**: el editor abre en el encuadre guardado. Para no perder calidad al reencuadrar
+  hace falta conservar el original (de ahí "Original · kept" en el artboard 26); si se guarda
+  o no en Storage lo decide la implementación — anotarlo en `docs/PENDIENTES.md` si no se guarda.
+  Guardar un recorte nuevo reemplaza la foto y mantiene área, detalle y orden.
+- **Cada miniatura** lleva dos botones cuadrados de 30px: recortar (abre el editor) y lápiz (abre
+  `PhotoCaption`). Las miniaturas pasan a `aspect-ratio: 3 / 2`.
+- **Subida**: de una en una, con chip "Uploading" y barra; la siguiente espera como "Queued ·
+  next". Save changes espera a que terminen. Un fallo ofrece Retry en la propia miniatura (sin
+  artboard propio).
+- **Archivo no válido**: se aceptan JPEG, PNG y WebP; un archivo que no es imagen o no se puede
+  leer no abre el editor y muestra la alerta en la sección con el error `#D9826B` / `#E39A85` de
+  la Fase 8. La alerta se va al elegir otro archivo.
+
+#### 10.11 — Acciones masivas sobre los lounges del partner
+
+Siete artboards (28–34) sobre el detalle de un partner **activo**, *Ainsworth Collection*, con 5
+lounges: The Ainsworth (live), Ainsworth Hudson Yards (suspendido por el admin) y tres drafts que
+abren en octubre — Tribeca y Brooklyn Heights con la checklist completa, SoHo con 5 de 6 (le faltan
+fotos). "Hoy" = 9 sept 2025. Las tarjetas Partner details y Partner users aparecen plegadas para que
+la tarjeta **Lounges** (`partner-lounges-card.tsx`, con su buscador de la 10.12) quepa entera. El
+lenguaje de selección es el de `Lounges` de la Fase 8 (casilla 20px, fila marcada con
+`rgba(201,168,118,0.09)`, barra masiva de 52px con borde `--gold-500`); los editores son los de la 10.9.
+
+| Artboard | Qué muestra | Criterios |
+|---|---|---|
+| `PartnerBulkSelect` | Casilla por fila y "Select all shown" (estado mixto) en la cabecera, columnas Status y Checklist; búsqueda "New York" con 4 de 5 resultados y la barra "3 selected · 1 hidden by the search" (Change status · Set hours · Add season · Add closure · Clear): Brooklyn Heights sigue seleccionado aunque la búsqueda lo oculte | 1 |
+| `PartnerBulkStatus` | Modal "Set a new status": chips de los 3 lounges, tres opciones Live / Draft / Suspended con su regla; en Live, el chequeo previo "2 ready to publish · 1 can't publish — SoHo, checklist 5 of 6" | 2, 6 |
+| `PartnerBulkHours` | Modal "Same weekly hours": el editor de Operating hours en una columna (switch + desde/hasta, "Start from a lounge", "Copy Monday to every day"); aviso de que reemplaza la semana habitual y no toca temporadas ni cierres | 3 |
+| `PartnerBulkSeason` | Modal "Same season everywhere": el editor de `SeasonalEdit` (nombre, desde/hasta, semana en dos columnas) con "Holiday hours" Dec 22, 2025 – Jan 2, 2026; aviso de choque con "Holiday season" de Brooklyn Heights, que se salta; pie "Adds to 2 · skips 1" | 4, 6 |
+| `PartnerBulkClosure` | Modal "Same closure everywhere" sobre otra selección (The Ainsworth, Hudson Yards, Tribeca): el editor de `ClosureEdit` con su vista previa para el miembro y el aviso "5 confirmed bookings fall in this closure" desglosado por lounge (3 · 2 · ninguna en el draft) | 4 |
+| `PartnerBulkConfirm` | Confirmación "Publish 2 of 3 lounges?": cada lounge con Draft → Live o con el motivo por el que se salta; botón con el número real ("Publish 2 lounges") | 5, 6 |
+| `PartnerBulkResult` | Resultado parcial "Published in 2 of 3": Tribeca y Brooklyn Heights live (filas marcadas en la lista de fondo), SoHo "Not published: checklist incomplete · photos 1 of 3" con "Open lounge"; SoHo queda seleccionado; registro en el log | 6 |
+
+Decisiones:
+
+- **Las reglas no cambian por ser en bloque.** Publicar exige partner activo y checklist completa; un
+  lounge suspendido por el admin sigue suspendido hasta reactivarlo (y vuelve como draft). Lo dice la
+  nota fija del rail en todos los artboards.
+- **Aplicación parcial, nunca todo o nada.** El chequeo previo se muestra ya en el modal de la acción
+  (29, 31), la confirmación (33) cuenta solo los que cambian y el resultado (34) lista aplicados y no
+  aplicados con su motivo. Los no aplicados **siguen seleccionados** para corregirlos y reintentar.
+- **La búsqueda solo filtra.** La selección se mantiene al buscar; la barra dice cuántos seleccionados
+  quedan ocultos. "Select all shown" selecciona solo lo visible.
+- **Un modal por acción**, de la familia de `LoungeSuspend` (scrim, `--dark-card`, radio 24px, cierre
+  de 40px, pie con botones de 50px), con los lounges afectados como chips arriba. Cada acción pasa por
+  la confirmación de 33 antes de escribir; solo se dibujó la de status porque las demás repiten la
+  misma estructura con su resumen (semana, temporada, cierre + reservas).
+- **Horario masivo** reemplaza la semana habitual; temporadas y cierres de cada lounge se conservan.
+  **Temporada masiva**: si choca con una temporada existente de un lounge, ese lounge se salta (no se
+  recorta ni se sobrescribe). **Cierre masivo**: el aviso de reservas confirmadas de la 10.9 suma por
+  lounge; un lounge suspendido conserva sus reservas previas y entra en la suma.
+- Status suspendido usa el chip `#D9826B` / `#E39A85` de la Fase 10; el motivo de no aplicado usa el
+  mismo color en el texto.
 
 ## 7. Cómo regenerar y publicar un canvas
 

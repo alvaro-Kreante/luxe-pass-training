@@ -109,6 +109,28 @@ jobs:
             ACCOUNT_DELETION_WEBHOOK_SECRET="${{ secrets.ACCOUNT_DELETION_WEBHOOK_SECRET_DEV }}"
       - name: Desplegar la Edge Function delete-account
         run: supabase functions deploy delete-account --no-verify-jwt
+      # Epic 10 · Story 10.4 — activar/suspender partners y el acceso de sus
+      # usuarios (cuentas de Auth con service role). La llama el admin con
+      # su sesión, así que verifica JWT. Usa APP_URL y BREVO_* de este job.
+      - name: Desplegar la Edge Function admin-partners
+        run: supabase functions deploy admin-partners
+      # Epic 9 — membresía y referidos. `stripe-membership-checkout` (alta y
+      # subida de plan) la llama un miembro autenticado, así que verifica JWT
+      # por defecto y reutiliza STRIPE_SECRET_KEY/APP_URL, ya dados de alta
+      # arriba. `membership-renewal` (aviso de renovación + cobro de la
+      # renovación automática) la llama el cron `dispatch_membership_renewals`
+      # vía pg_net, sin JWT de usuario — mismo patrón que send-booking-reminder.
+      # El secreto compartido debe coincidir con el de Supabase Vault
+      # (`membership_renewal_webhook_secret`) de este mismo proyecto — paso
+      # manual, ver CLAUDE.md §Membresía y referidos reales.
+      - name: Configurar secret de la Edge Function membership-renewal
+        run: |
+          supabase secrets set \
+            MEMBERSHIP_RENEWAL_WEBHOOK_SECRET="${{ secrets.MEMBERSHIP_RENEWAL_WEBHOOK_SECRET_DEV }}"
+      - name: Desplegar las Edge Functions de membresía (Epic 9)
+        run: |
+          supabase functions deploy stripe-membership-checkout
+          supabase functions deploy membership-renewal --no-verify-jwt
       - name: Instalar Vercel CLI
         run: npm install --global vercel@latest
       - name: Descargar configuración del proyecto luxepass-dev
@@ -184,6 +206,20 @@ jobs:
             ACCOUNT_DELETION_WEBHOOK_SECRET="${{ secrets.ACCOUNT_DELETION_WEBHOOK_SECRET_PROD }}"
       - name: Desplegar la Edge Function delete-account
         run: supabase functions deploy delete-account --no-verify-jwt
+      # Epic 10 · Story 10.4 — activar/suspender partners y el acceso de sus
+      # usuarios (cuentas de Auth con service role). La llama el admin con
+      # su sesión, así que verifica JWT. Usa APP_URL y BREVO_* de este job.
+      - name: Desplegar la Edge Function admin-partners
+        run: supabase functions deploy admin-partners
+      # Epic 9 — mismo patrón que migrate-dev arriba.
+      - name: Configurar secret de la Edge Function membership-renewal
+        run: |
+          supabase secrets set \
+            MEMBERSHIP_RENEWAL_WEBHOOK_SECRET="${{ secrets.MEMBERSHIP_RENEWAL_WEBHOOK_SECRET_PROD }}"
+      - name: Desplegar las Edge Functions de membresía (Epic 9)
+        run: |
+          supabase functions deploy stripe-membership-checkout
+          supabase functions deploy membership-renewal --no-verify-jwt
       - name: Instalar Vercel CLI
         run: npm install --global vercel@latest
       - name: Descargar configuración del proyecto luxepass-prod

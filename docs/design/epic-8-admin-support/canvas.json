@@ -119,6 +119,110 @@
       "w": 1440,
       "h": 900,
       "title": "15. Name a photo"
+    },
+    {
+      "file": "LoungeNewPartner.dc.html",
+      "x": 6160,
+      "y": 3150,
+      "w": 1440,
+      "h": 900,
+      "title": "16. Add a lounge with its partner"
+    },
+    {
+      "file": "LoungeLive.dc.html",
+      "x": 0,
+      "y": 5250,
+      "w": 1440,
+      "h": 1080,
+      "title": "17. A live lounge, locked"
+    },
+    {
+      "file": "LoungeEditConfirm.dc.html",
+      "x": 1540,
+      "y": 5250,
+      "w": 1440,
+      "h": 1080,
+      "title": "18. Move it to draft to edit"
+    },
+    {
+      "file": "LoungeDraftPartners.dc.html",
+      "x": 3080,
+      "y": 5250,
+      "w": 1440,
+      "h": 1300,
+      "title": "19. Edit a draft, partners in the main column"
+    },
+    {
+      "file": "PartnerAdd.dc.html",
+      "x": 0,
+      "y": 6700,
+      "w": 1440,
+      "h": 1080,
+      "title": "20. Add a partner to a live lounge"
+    },
+    {
+      "file": "PartnerSuspend.dc.html",
+      "x": 1540,
+      "y": 6700,
+      "w": 1440,
+      "h": 1080,
+      "title": "21. Suspend a partner"
+    },
+    {
+      "file": "PartnerDelete.dc.html",
+      "x": 3080,
+      "y": 6700,
+      "w": 1440,
+      "h": 1080,
+      "title": "22. Delete a partner account"
+    },
+    {
+      "file": "LoungePartnersMain.dc.html",
+      "x": 0,
+      "y": 7930,
+      "w": 1440,
+      "h": 1300,
+      "title": "23. Partners in the main column"
+    },
+    {
+      "file": "LoungeDraftSaved.dc.html",
+      "x": 1540,
+      "y": 7930,
+      "w": 1440,
+      "h": 1300,
+      "title": "24. Draft saved"
+    },
+    {
+      "file": "LoungePublished.dc.html",
+      "x": 3080,
+      "y": 7930,
+      "w": 1440,
+      "h": 1080,
+      "title": "25. Published — you stay on the lounge"
+    },
+    {
+      "file": "LoungePhotoViewer.dc.html",
+      "x": 4620,
+      "y": 7930,
+      "w": 1440,
+      "h": 1080,
+      "title": "26. Taller photos, full-size viewer"
+    },
+    {
+      "file": "LoungeFilterCity.dc.html",
+      "x": 0,
+      "y": 9380,
+      "w": 1440,
+      "h": 900,
+      "title": "27. Live only, find a city"
+    },
+    {
+      "file": "LoungeFilterApplied.dc.html",
+      "x": 1540,
+      "y": 9380,
+      "w": 1440,
+      "h": 900,
+      "title": "28. Live lounges in Miami"
     }
   ],
   "annotations": [
@@ -163,6 +267,41 @@
       "y": 3055,
       "w": 940,
       "text": "Add a lounge · The same form stays open while the lounge is a draft — address and pin included. Once it is published the address is fixed: screen 12 edits a live lounge without a location section. Every photo gets an area name members read under it (15)."
+    },
+    {
+      "id": "partner-account-note",
+      "x": 6160,
+      "y": 3055,
+      "w": 940,
+      "text": "Add a lounge, partner included · The form that creates a lounge also creates the person who runs it: first and last name, work email and mobile. Publishing — not saving a draft — opens the partner account and emails the invitation (Epic 7, screens 13–15). The address the admin types is the one the partner signs in with."
+    },
+    {
+      "id": "live-lounge-note",
+      "x": 0,
+      "y": 5155,
+      "w": 940,
+      "text": "Edit a lounge · replaces screens 12 and 13 (29 sept 2026). A live lounge shows everything members read — location and map included — locked; the approval queue is gone. Edit lounge (18) moves it back to draft: it leaves the member app, bookings already made stay valid, and it goes live again only when an admin publishes it (19). The draft form is the same one that creates a lounge: several partners, invited when it is published."
+    },
+    {
+      "id": "partners-note",
+      "x": 0,
+      "y": 6605,
+      "w": 940,
+      "text": "Partners · managed while the lounge stays live. Adding one (20) invites them at once — someone who already runs another lounge is just added. Suspend (21) is reversible and covers every lounge on the account; delete (22) is final. A live lounge always keeps at least one active partner. A partner who has not set a password yet can be sent a fresh 24-hour link (Resend invitation, 17)."
+    },
+    {
+      "id": "lounge-adjustments-note",
+      "x": 0,
+      "y": 7835,
+      "w": 1400,
+      "text": "Lounge adjustments · A partner runs one lounge: an email already used by another lounge — or by any other account — is refused with 'Already in use' (screen 20 no longer adds them silently). Partners sit in the main column of the new-lounge form and the draft; the form saves with 'Save partner' and closes, and 'Add partner' opens a new one (19, 23). Saving a draft and publishing confirm with a notice and keep the admin on the lounge (24, 25). Location is one column — address on top, the map full width below. Live photos are 144px tall and open full size in a viewer (26). The week starts on Monday. No 'Preview as a member': no story asks for it."
+    },
+    {
+      "id": "lounge-filters-note",
+      "x": 0,
+      "y": 9285,
+      "w": 1400,
+      "text": "Lounge filters · The list is newest first. Live and Draft are quick filters: one press shows only that status, a second press clears it. The city button opens a search over the cities that already have a lounge — typing narrows the list, picking one filters the table and becomes the button's label. Status and city combine; Clear filters drops both."
     }
   ],
   "launch": {

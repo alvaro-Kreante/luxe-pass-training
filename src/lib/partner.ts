@@ -21,9 +21,8 @@ export const PARTNER_VENUE = {
 };
 
 /**
- * Cuenta de muestra para desarrollo local (ver
- * `scripts/seed-partner-account.ts` y `supabase/schemas/partners.sql` "Alta
- * de un partner") — ya no valida credenciales en el cliente (Story 7.1/7.2,
+ * Cuenta de muestra para desarrollo local (usuario de The Ainsworth
+ * Collection en `scripts/seed-partners.mjs`) — ya no valida credenciales en el cliente (Story 7.1/7.2,
  * backend real): `/partner/login` usa Supabase Auth de verdad.
  */
 export const PARTNER_ACCOUNT = {

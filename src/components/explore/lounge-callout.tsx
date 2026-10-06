@@ -82,6 +82,7 @@ export function LoungeCallout({
       <div className="flex gap-3 px-3.5 pb-2.5 pt-3.5">
         <LoungeThumb
           loungeId={lounge.id}
+          src={lounge.mainImageUrl}
           className="size-[74px] rounded-control"
         />
 
@@ -90,6 +91,7 @@ export function LoungeCallout({
             {lounge.name}
           </p>
           <p className="m-0 mb-2 text-xs text-fg-subtle">
+            {lounge.partnerName ? `${lounge.partnerName} · ` : ""}
             {lounge.neighborhood} · {formatDistance(lounge.distanceMiles, unit)} ·{" "}
             {walkingMinutes(lounge.distanceMiles)} min walk
           </p>

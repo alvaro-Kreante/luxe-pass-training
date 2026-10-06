@@ -1,20 +1,18 @@
 "use client";
 
 import * as React from "react";
+import { APIProvider } from "@vis.gl/react-google-maps";
 import { Clock, MapPin, SatelliteDish } from "lucide-react";
 
 import { Modal } from "@/components/patterns/modal";
 import { Button } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Input } from "@/components/ui/input";
-import {
-  RECENT_CITY_ID,
-  cityById,
-  loungeCountIn,
-  searchCities,
-  type City,
-} from "@/lib/location";
+import type { Place } from "@/lib/place-search";
 import { cn } from "@/lib/utils";
+import { useLocationOptions, type LocationOption } from "./use-location-options";
+
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!;
 
 /**
  * Story 2.1 — permiso de ubicación y su alternativa manual.
@@ -60,23 +58,47 @@ export function LocationPermissionDialog({
   );
 }
 
-export function ManualLocationDialog({
+interface ManualLocationProps {
+  open: boolean;
+  onConfirm: (place: Place) => void;
+  onRetryGps: () => void;
+  /** Catálogo ya traído de Supabase — ver `lib/lounge-directory.ts`. */
+  lounges: { cityId: string }[];
+  /** La última ubicación escrita a mano — ver `lib/explore-location.ts`. */
+  recent: Place | null;
+}
+
+export function ManualLocationDialog(props: ManualLocationProps) {
+  return (
+    <APIProvider apiKey={GOOGLE_MAPS_API_KEY}>
+      <ManualLocationDialogInner {...props} />
+    </APIProvider>
+  );
+}
+
+function ManualLocationDialogInner({
   open,
   onConfirm,
   onRetryGps,
   lounges,
-}: {
-  open: boolean;
-  onConfirm: (cityId: string) => void;
-  onRetryGps: () => void;
-  /** Catálogo ya traído de Supabase — ver `lib/lounge-directory.ts`. */
-  lounges: { cityId: string }[];
-}) {
+  recent,
+}: ManualLocationProps) {
   const [query, setQuery] = React.useState("");
-  const [chosen, setChosen] = React.useState<string | null>(null);
+  const [chosen, setChosen] = React.useState<LocationOption | null>(null);
+  const [resolving, setResolving] = React.useState(false);
 
-  const matches = searchCities(query);
-  const recent = cityById(RECENT_CITY_ID);
+  const matches = useLocationOptions(query, lounges);
+  const recentOption: LocationOption | null = recent
+    ? { id: "recent", main: recent.label, secondary: "", resolve: async () => recent }
+    : null;
+
+  async function confirm() {
+    if (!chosen) return;
+    setResolving(true);
+    const place = await chosen.resolve();
+    setResolving(false);
+    if (place) onConfirm(place);
+  }
 
   return (
     <Modal
@@ -95,8 +117,8 @@ export function ManualLocationDialog({
         <>
           <Button
             block
-            disabled={chosen === null}
-            onClick={() => onConfirm(chosen!)}
+            disabled={chosen === null || resolving}
+            onClick={() => void confirm()}
           >
             Use this location
           </Button>
@@ -129,55 +151,52 @@ export function ManualLocationDialog({
           aria-label="Matching locations"
           className="mt-4 flex list-none flex-col gap-0.5 p-0"
         >
-          {matches.map((city) => (
-            <CityOption
-              key={city.id}
-              city={city}
-              selected={chosen === city.id}
-              onSelect={() => setChosen(city.id)}
-              count={loungeCountIn(lounges, city.id)}
+          {matches.map((option) => (
+            <LocationOptionRow
+              key={option.id}
+              option={option}
+              selected={chosen?.id === option.id}
+              onSelect={() => setChosen(option)}
             />
           ))}
         </ul>
 
         {matches.length === 0 && query.trim() !== "" ? (
           <p className="mt-4 text-[13px] text-fg-subtle">
-            No LuxePass city matches that yet.
+            No location matches that yet.
           </p>
         ) : null}
 
-        <Eyebrow muted className="mb-2 mt-5">
-          Recent
-        </Eyebrow>
-        <ul role="listbox" aria-label="Recent locations" className="list-none p-0">
-          <CityOption
-            city={recent}
-            selected={chosen === recent.id}
-            onSelect={() => setChosen(recent.id)}
-            icon={Clock}
-            showCount={false}
-            count={loungeCountIn(lounges, recent.id)}
-          />
-        </ul>
+        {recentOption ? (
+          <>
+            <Eyebrow muted className="mb-2 mt-5">
+              Recent
+            </Eyebrow>
+            <ul role="listbox" aria-label="Recent locations" className="list-none p-0">
+              <LocationOptionRow
+                option={recentOption}
+                selected={chosen?.id === recentOption.id}
+                onSelect={() => setChosen(recentOption)}
+                icon={Clock}
+              />
+            </ul>
+          </>
+        ) : null}
       </div>
     </Modal>
   );
 }
 
-function CityOption({
-  city,
+function LocationOptionRow({
+  option,
   selected,
   onSelect,
   icon: Icon = MapPin,
-  showCount = true,
-  count,
 }: {
-  city: City;
+  option: LocationOption;
   selected: boolean;
   onSelect: () => void;
   icon?: typeof MapPin;
-  showCount?: boolean;
-  count: number;
 }) {
   return (
     <li>
@@ -199,14 +218,17 @@ function CityOption({
           className={selected ? "text-accent-strong" : "text-fg-subtle"}
         />
         <span className="flex-1 text-[13.5px] font-semibold text-fg-muted">
-          <span className={cn(selected && "font-bold text-fg")}>
-            {city.name}, {city.region}
-          </span>{" "}
-          <span className="font-medium text-fg-subtle">· {city.country}</span>
+          <span className={cn(selected && "font-bold text-fg")}>{option.main}</span>
+          {option.secondary ? (
+            <>
+              {" "}
+              <span className="font-medium text-fg-subtle">· {option.secondary}</span>
+            </>
+          ) : null}
         </span>
-        {showCount ? (
+        {option.count !== undefined ? (
           <span className="text-xs text-fg-subtle">
-            {count} {count === 1 ? "lounge" : "lounges"}
+            {option.count} {option.count === 1 ? "lounge" : "lounges"}
           </span>
         ) : null}
       </button>

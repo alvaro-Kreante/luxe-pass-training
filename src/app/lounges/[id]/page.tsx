@@ -18,7 +18,9 @@ import { RequireSession } from "@/components/onboarding/require-session";
 import { AmenitiesGrid } from "@/components/lounges/amenities-grid";
 import { AvailabilityCard } from "@/components/lounges/availability-card";
 import { ContactInfo } from "@/components/lounges/contact-info";
+import { ClosureBanner } from "@/components/lounges/closure-banner";
 import { HeroCarousel } from "@/components/lounges/hero-carousel";
+import { LoungeScheduleSections, toBannerClosure } from "@/components/lounges/lounge-schedule-sections";
 import { OperatingHours } from "@/components/lounges/operating-hours";
 import { PhotoGalleryDialog } from "@/components/lounges/photo-gallery-dialog";
 import { ProfileSkeleton } from "@/components/lounges/profile-skeleton";
@@ -30,13 +32,14 @@ import {
   fetchNextAvailableSlot,
   fetchWeeklyAvailability,
   mondayOf,
-  operatingHoursFor,
   type LoungeImage,
   type LoungeProfile,
   type WeekBandId,
 } from "@/lib/lounge-profile";
-import { TODAY } from "@/lib/availability";
+import { today } from "@/lib/availability";
 import { addFavoriteLounge, isFavoriteLounge, removeFavoriteLounge } from "@/lib/profile";
+import { today as todayIso } from "@/lib/availability";
+import { listLoungeSchedule, memberSchedule, weekHoursFrom, type LoungeSchedule } from "@/lib/lounge-schedule";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -77,9 +80,10 @@ async function fetchTodayAvailability(
   supabase: ReturnType<typeof createClient>,
   lounge: LoungeProfile,
 ): Promise<TodayAvailability> {
-  const cells = await fetchWeeklyAvailability(supabase, lounge, mondayOf(TODAY));
-  const today = cells.filter((cell) => cell.dateIso === TODAY);
-  const seatsLeft = today
+  const todayIso = today();
+  const cells = await fetchWeeklyAvailability(supabase, lounge, mondayOf(todayIso));
+  const todayCells = cells.filter((cell) => cell.dateIso === todayIso);
+  const seatsLeft = todayCells
     .filter((cell) => cell.status === "available")
     .reduce((sum, cell) => sum + (cell.seatsLeft ?? 0), 0);
   const available = seatsLeft > 0;
@@ -114,6 +118,7 @@ function LoungeProfileScreen() {
   );
   const [images, setImages] = React.useState<LoungeImage[]>([]);
   const [today, setToday] = React.useState<TodayAvailability | null>(null);
+  const [schedule, setSchedule] = React.useState<LoungeSchedule | null>(null);
   /** El intervalo de refresco necesita el lounge más reciente, pero el efecto
    * solo se re-arma cuando cambia `id` — un ref evita el cierre obsoleto. */
   const loungeRef = React.useRef<LoungeProfile | null>(null);
@@ -140,13 +145,15 @@ function LoungeProfileScreen() {
       loungeRef.current = profile;
       if (!profile) return;
 
-      const [loungeImages, availability, isFavorite] = await Promise.all([
+      const [loungeImages, availability, isFavorite, loungeSchedule] = await Promise.all([
         fetchLoungeImages(supabase, id),
         fetchTodayAvailability(supabase, profile),
         isFavoriteLounge(supabase, id),
+        listLoungeSchedule(supabase, id),
       ]);
       if (!active) return;
       setImages(loungeImages);
+      setSchedule(loungeSchedule);
       setToday(availability);
       if (!favoriteOverriddenRef.current) setFavorite(isFavorite);
     });
@@ -168,7 +175,9 @@ function LoungeProfileScreen() {
     return null;
   }
 
-  const loading = forceLoading || lounge === undefined || today === null;
+  const loading = forceLoading || lounge === undefined || today === null || schedule === null;
+  const visible = lounge && schedule ? memberSchedule(schedule, todayIso()) : null;
+  const hoursRows = lounge && schedule ? weekHoursFrom(todayIso(), lounge.usualWeeklyHours, schedule) : [];
 
   async function toggleFavorite() {
     const supabase = supabaseRef.current;
@@ -240,10 +249,16 @@ function LoungeProfileScreen() {
           ) : null}
         </div>
 
-        {loading || !lounge || !today ? (
+        {loading || !lounge || !today || !visible ? (
           <ProfileSkeleton />
         ) : (
           <>
+            {visible.closedToday ? (
+              <div className="shrink-0 px-8 pt-5.5">
+                <ClosureBanner closure={toBannerClosure(visible.closedToday)} />
+              </div>
+            ) : null}
+
             <HeroCarousel
               loungeId={lounge.id}
               images={images}
@@ -280,6 +295,12 @@ function LoungeProfileScreen() {
                   </Link>
                 </div>
 
+                {lounge.partnerName ? (
+                  <p className="m-0 mt-1 text-[13.5px] text-fg-muted">
+                    at <span className="font-bold text-fg">{lounge.partnerName}</span>
+                  </p>
+                ) : null}
+
                 <div className="mt-2.5 flex flex-wrap items-center gap-3.5">
                   <span className="flex items-center gap-1.5 text-[13px] text-fg-muted">
                     <MapPin size={15} strokeWidth={1.7} className="text-fg-subtle" aria-hidden />
@@ -295,20 +316,23 @@ function LoungeProfileScreen() {
                 <AmenitiesGrid amenities={lounge.amenities} />
 
                 <div className="mt-6 grid grid-cols-2 gap-5.5">
-                  <OperatingHours weeklyHours={lounge.weeklyHours} />
+                  <OperatingHours rows={hoursRows} season={visible.inEffect} />
                   <ContactInfo lounge={lounge} />
                 </div>
+
+                <LoungeScheduleSections seasons={visible.seasons} closures={visible.closures} />
               </div>
 
               <AvailabilityCard
                 loungeId={lounge.id}
                 capacity={lounge.capacity}
                 bookingRestrictions={lounge.bookingRestrictions}
-                hoursToday={operatingHoursFor(lounge.weeklyHours)[0]}
+                hoursToday={hoursRows[0]}
                 available={today.available}
                 todaySeatsLeft={today.seatsLeft}
                 nextAvailable={today.nextAvailable}
                 lastUpdatedAt={today.lastUpdatedAt}
+                closedToday={visible.closedToday}
               />
             </div>
           </>

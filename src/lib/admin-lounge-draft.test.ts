@@ -7,6 +7,7 @@ import { signUpConfirmedAdminAndSignIn } from "@/lib/testing/confirmed-user";
 import {
   createLoungeDraft,
   getLoungeContentDetail,
+  listAdminLounges,
   publishLounge,
   setDraftLoungePhotos,
   updateLoungeDraft,
@@ -27,7 +28,7 @@ const created: string[] = [];
 
 function draftInput(overrides: Partial<LoungeDraftInput> = {}): LoungeDraftInput {
   return {
-    name: `Larkspur Test ${stamp} ${created.length}`,
+    name: `Test Lounge Draft ${stamp} ${created.length}`,
     phone: "+1 212 555 0148",
     email: "hello@thelarkspur.com",
     website: "thelarkspur.com",
@@ -35,14 +36,33 @@ function draftInput(overrides: Partial<LoungeDraftInput> = {}): LoungeDraftInput
     weeklyHours: ["Closed", "8 AM – 9 PM", "8 AM – 9 PM", "8 AM – 9 PM", "8 AM – 9 PM", "8 AM – 9 PM", "9 AM – 6 PM"],
     amenities: ["wifi", "co-working"],
     capacity: 24,
+    bookingRestrictions: [],
+    partnerId: null,
     ...overrides,
   };
 }
 
-async function create(overrides: Partial<LoungeDraftInput> = {}) {
+let activePartnerId: string;
+
+/** Story 10.1 — publicar exige un partner activo; hasta la Story 10.5 el admin aún no lo elige desde el formulario. */
+async function create(overrides: Partial<LoungeDraftInput> = {}, partnerId: string | null = activePartnerId) {
   const id = await createLoungeDraft(supabase, draftInput(overrides));
   created.push(id);
+  if (partnerId) {
+    const { error } = await service.from("lounges").update({ partner_id: partnerId }).eq("id", id);
+    if (error) throw error;
+  }
   return id;
+}
+
+async function createPartner(status: "draft" | "active") {
+  const { data, error } = await service
+    .from("partners")
+    .insert({ name: `Draft Test Partner ${status} ${stamp}`, status })
+    .select("id")
+    .single();
+  if (error) throw error;
+  return data.id as string;
 }
 
 /** Un miembro cualquiera, con su propia sesión (sin tocar la del admin). */
@@ -58,10 +78,12 @@ async function memberClient() {
 
 beforeAll(async () => {
   await signUpConfirmedAdminAndSignIn(supabase, `draft-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
+  activePartnerId = await createPartner("active");
 });
 
 afterAll(async () => {
   await service.from("lounges").delete().in("id", created);
+  await service.from("partners").delete().like("name", `Draft Test Partner % ${stamp}`);
 });
 
 describe("dar de alta un lounge", () => {
@@ -146,11 +168,91 @@ describe("editar un borrador", () => {
     ]);
   });
 
+  it("cada foto recortada guarda su original y su encuadre para reencuadrarla (Story 10.10)", async () => {
+    const id = await create();
+    const crop = { x: 857, y: 572, width: 4286, height: 2857, size: "standard" as const };
+
+    await setDraftLoungePhotos(supabase, id, [
+      { url: "https://example.com/terrace-1600.jpg", caption: "Terrace", detail: null, originalUrl: "https://example.com/terrace-original.jpg", crop },
+      { url: "https://example.com/seeded.jpg", caption: "Seeded", detail: null },
+    ]);
+
+    const detail = await getLoungeContentDetail(supabase, id);
+    expect(detail?.images.map((image) => [image.caption, image.originalUrl, image.crop])).toEqual([
+      ["Terrace", "https://example.com/terrace-original.jpg", crop],
+      ["Seeded", null, null],
+    ]);
+  });
+
+  it("un lounge que ya tenía más de 3 fotos se guarda con las que tiene, pero no admite más", async () => {
+    const id = await create();
+    const six = Array.from({ length: 6 }, (_, index) => ({ lounge_id: id, url: `https://example.com/seed-${index}.jpg`, caption: `Seed ${index}`, position: index }));
+    await service.from("lounge_images").insert(six);
+    const asStored = six.map((photo) => ({ url: photo.url, caption: photo.caption, detail: null }));
+
+    await expect(setDraftLoungePhotos(supabase, id, asStored)).resolves.toBeUndefined();
+    await expect(setDraftLoungePhotos(supabase, id, asStored.slice(0, 5))).resolves.toBeUndefined();
+    await expect(
+      setDraftLoungePhotos(supabase, id, [...asStored.slice(0, 5), { url: "https://example.com/new-1.jpg", caption: "New", detail: null }, { url: "https://example.com/new-2.jpg", caption: "New 2", detail: null }]),
+    ).rejects.toThrow(/up to 3/i);
+  });
+
   it("no admite más de 3 fotos", async () => {
     const id = await create();
     const four = Array.from({ length: 4 }, (_, index) => ({ url: `https://example.com/${index}.jpg`, caption: `p${index}`, detail: null }));
 
     await expect(setDraftLoungePhotos(supabase, id, four)).rejects.toThrow(/up to 3/i);
+  });
+});
+
+describe("el partner del lounge (Story 10.5)", () => {
+  it("el borrador guarda su partner, aunque esté en draft, y se puede quitar", async () => {
+    const draftPartner = await createPartner("draft");
+    const id = await create({ partnerId: draftPartner }, null);
+
+    expect((await getLoungeContentDetail(supabase, id))?.partner).toMatchObject({ id: draftPartner, status: "draft" });
+
+    await updateLoungeDraft(supabase, id, draftInput({ partnerId: null }));
+    expect((await getLoungeContentDetail(supabase, id))?.partner).toBeNull();
+  });
+
+  it("se publica con el partner activo elegido en el formulario", async () => {
+    const id = await create({ partnerId: activePartnerId }, null);
+
+    await publishLounge(supabase, id);
+
+    expect((await getLoungeContentDetail(supabase, id))?.contentStatus).toBe("live");
+  });
+
+  it("el detalle trae el nombre, el estado y el representante del partner", async () => {
+    await service.from("partner_members").insert({
+      partner_id: activePartnerId,
+      first_name: "Camille",
+      last_name: "Duarte",
+      email: `lounge-rep-${stamp}@halcyon-test.com`,
+    });
+    const id = await create({ partnerId: activePartnerId }, null);
+
+    const partner = (await getLoungeContentDetail(supabase, id))?.partner;
+
+    expect(partner).toMatchObject({
+      id: activePartnerId,
+      name: `Draft Test Partner active ${stamp}`,
+      status: "active",
+      representative: { name: "Camille Duarte", email: `lounge-rep-${stamp}@halcyon-test.com` },
+    });
+  });
+
+  it("la lista de lounges trae el nombre de su partner", async () => {
+    const id = await create({ partnerId: activePartnerId }, null);
+
+    const row = (await listAdminLounges(supabase)).find((lounge) => lounge.id === id);
+
+    expect(row?.partnerName).toBe(`Draft Test Partner active ${stamp}`);
+  });
+
+  it("un partner que no existe no se guarda", async () => {
+    await expect(create({ partnerId: "00000000-0000-0000-0000-000000000000" }, null)).rejects.toThrow(/partner/i);
   });
 });
 
@@ -170,6 +272,18 @@ describe("publicar", () => {
       p_to: "2026-10-01",
     });
     expect(seats).toContainEqual({ date: "2026-10-01", band: "morning", seats_left: 24 });
+  });
+
+  it("sin partner no se puede publicar", async () => {
+    const id = await create({}, null);
+
+    await expect(publishLounge(supabase, id)).rejects.toThrow(/active partner/i);
+  });
+
+  it("con un partner todavía en draft no se puede publicar", async () => {
+    const id = await create({}, await createPartner("draft"));
+
+    await expect(publishLounge(supabase, id)).rejects.toThrow(/active partner/i);
   });
 
   it("el servidor rechaza publicar un borrador incompleto", async () => {

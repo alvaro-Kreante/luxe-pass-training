@@ -2,6 +2,8 @@
 
 import * as React from "react";
 
+import type { PhotoCrop } from "@/lib/admin-content";
+
 import { Modal } from "@/components/patterns/modal";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -15,6 +17,11 @@ export interface DraftPhotoItem {
   caption: string;
   detail: string;
   fileName: string;
+  /** Story 10.10 — original y encuadre, para "Adjust crop". */
+  originalUrl?: string | null;
+  crop?: PhotoCrop | null;
+  /** Story 10.10 — mientras sube (PhotoUploading.dc.html). */
+  uploading?: boolean;
 }
 
 const AREA_SHORTCUTS = ["Main room", "Bar", "Day room", "Shower suite", "Terrace", "Work area"];

@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 
-import { TODAY, addDays } from "@/lib/availability";
+import { today, addDays } from "@/lib/availability";
 import {
   WEEK_BANDS,
   type AvailabilityCell,
@@ -50,7 +50,7 @@ export function WeeklyCalendar({
       >
         <div />
         {days.map((dateIso) => {
-          const isToday = dateIso === TODAY;
+          const isToday = dateIso === today();
           return (
             <div
               key={dateIso}

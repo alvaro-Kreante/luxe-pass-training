@@ -1,0 +1,357 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<!-- ClosedToday: Story 3.2 criterio 5 · hoy (Fri Sep 12) cae dentro de un cierre especial: aviso de Closure.dc.html arriba, card de NotAvailable.dc.html con la reapertura, hoy marcado Closed en Operating hours -->
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,500&family=Manrope:wght@400;500;600;700;800&display=swap">
+  <style>
+    :root {
+      --bg-blush-1: #F8EAE1; --bg-blush-2: #FCF4EE;
+      --ink-900: #221A14; --ink-700: #55483D; --ink-400: #9C8D80;
+      --gold-500: #C9A876; --gold-600: #AD8A5C; --gold-100: #F1E3D0;
+      --border: #E7D9C9; --white: #FFFFFF; --panel-black: #15110D;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Manrope', 'Segoe UI', sans-serif; color: var(--ink-900); }
+    h1, h2, h3 { font-family: 'Bodoni Moda', Georgia, 'Times New Roman', serif; margin: 0; font-weight: 500; }
+    a { color: var(--gold-600); text-decoration: none; }
+    a:hover { color: var(--ink-900); }
+    .amn { width: 17px; height: 17px; fill: none; stroke: var(--gold-600); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .nav-item { transition: background .15s ease; }
+    .nav-item:hover { background: var(--gold-100); }
+    .btn-gold { transition: background .15s ease; }
+    .btn-gold:hover { background: var(--gold-600) !important; }
+    .btn-outline { transition: background .15s ease, border-color .15s ease; }
+    .btn-outline:hover { background: var(--gold-100); }
+    .carousel-arrow { transition: background .15s ease; }
+    .carousel-arrow:hover { background: var(--white); }
+    .slot { transition: border-color .15s ease, background .15s ease; }
+    .slot:hover { border-color: var(--gold-500); }
+    .cal-cell { height: 104px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: border-color .15s ease; }
+    .cal-cell:hover { border-color: var(--gold-500); }
+    .cell-ok { background: var(--gold-100); border: 1px solid transparent; }
+    .cell-low { background: var(--white); border: 1.5px solid var(--gold-500); }
+    .cell-full { background: var(--white); border: 1px solid var(--border); }
+    .cell-closed { background: var(--bg-blush-1); border: 1px dashed var(--border); }
+    .cell-past { background: var(--bg-blush-1); border: 1px solid transparent; }
+    .cv { font-size: 15px; font-weight: 700; color: var(--ink-900); }
+    .cl { font-size: 11px; color: var(--ink-700); }
+    .cd { font-size: 12.5px; font-weight: 700; color: var(--ink-400); }
+    .panel-scroll { overflow-y: auto; }
+    .panel-scroll::-webkit-scrollbar { width: 6px; }
+    .panel-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    @keyframes shimmer { 0% { background-position: -420px 0; } 100% { background-position: 420px 0; } }
+    .skeleton { background: linear-gradient(90deg, #F1E7DD 0%, #F8F1EA 50%, #F1E7DD 100%); background-size: 420px 100%; animation: shimmer 1.4s linear infinite; border-radius: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { animation: spin 1s linear infinite; }
+  </style>
+</helmet>
+
+<div style="position:relative; display:flex; width:1440px; height:900px; background:var(--bg-blush-2); overflow:hidden; font-family:'Manrope',sans-serif;">
+
+  <!-- Sidebar -->
+  <div style="width:248px; min-width:248px; height:900px; background:var(--white); border-right:1px solid var(--border); display:flex; flex-direction:column; padding:32px 20px;">
+
+    <img src="logo.png" alt="En Soleil" style="width:52px; height:auto; margin:0 0 40px 12px;">
+
+    <div class="nav-item" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--ink-700);">Home</span>
+    </div>
+    <div class="nav-item" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; background:var(--gold-100); margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="m15 9-2 6-6 2 2-6 6-2Z"/></svg>
+      <span style="font-size:14px; font-weight:700; color:var(--ink-900);">Explore</span>
+    </div>
+    <div class="nav-item" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; margin-bottom:4px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4V8Z"/><path d="M14 6v2M14 11v2M14 16v2" stroke-dasharray="2 3"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--ink-700);">My Pass</span>
+    </div>
+    <div class="nav-item" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.5"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg>
+      <span style="font-size:14px; font-weight:600; color:var(--ink-700);">Profile</span>
+    </div>
+
+    <div style="flex:1;"></div>
+
+    <div style="display:flex; align-items:center; gap:10px; padding:12px 14px; border-top:1px solid var(--border); padding-top:20px;">
+      <div style="width:36px; height:36px; min-width:36px; border-radius:50%; background:var(--gold-500); display:flex; align-items:center; justify-content:center; color:var(--white); font-size:13px; font-weight:700; font-family:'Bodoni Moda',serif;">AR</div>
+      <div style="flex:1; overflow:hidden;">
+        <p style="font-size:13px; font-weight:700; color:var(--ink-900); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Alexandra Rivas</p>
+        <p style="font-size:11.5px; color:var(--ink-400); margin:2px 0 0;">Annual member</p>
+      </div>
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3"/><path d="M15 16l4-4-4-4"/><path d="M19 12H9"/></svg>
+    </div>
+
+  </div>
+
+  <!-- Lounge profile -->
+  <div style="flex:1; height:900px; display:flex; flex-direction:column; overflow:hidden;">
+
+    <!-- Top bar -->
+    <div style="height:64px; min-height:64px; background:var(--white); border-bottom:1px solid var(--border); display:flex; align-items:center; gap:16px; padding:0 32px;">
+
+      <div style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-700)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg>
+        <span style="font-size:13.5px; font-weight:600; color:var(--ink-700);">Back to results</span>
+      </div>
+
+      <div style="flex:1;"></div>
+
+      <div style="display:flex; align-items:center; gap:10px;">
+        <button class="btn-outline" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 16px; background:var(--white); border:1.5px solid var(--border); border-radius:11px; color:var(--ink-700); font-family:'Manrope',sans-serif; font-size:12.5px; font-weight:700; letter-spacing:0.06em; cursor:pointer;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5h3l1.5 4-2 1.5a12 12 0 0 0 6 6l1.5-2 4 1.5v3a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4.5 5.7a2 2 0 0 1 2-2.2Z"/></svg>
+          Call
+        </button>
+        <button class="btn-outline" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 16px; background:var(--white); border:1.5px solid var(--border); border-radius:11px; color:var(--ink-700); font-family:'Manrope',sans-serif; font-size:12.5px; font-weight:700; letter-spacing:0.06em; cursor:pointer;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 3.5 3.5 10.4l7 2.6 2.6 7 7.4-16.5Z"/><path d="m10.5 13 4-4"/></svg>
+          Directions
+        </button>
+        <button class="btn-outline" style="display:flex; align-items:center; gap:8px; height:40px; padding:0 16px; background:var(--white); border:1.5px solid var(--border); border-radius:11px; color:var(--ink-700); font-family:'Manrope',sans-serif; font-size:12.5px; font-weight:700; letter-spacing:0.06em; cursor:pointer;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="6" r="2.6"/><circle cx="6" cy="12" r="2.6"/><circle cx="18" cy="18" r="2.6"/><path d="m8.4 10.8 7.2-3.6M8.4 13.2l7.2 3.6"/></svg>
+          Share
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Closure notice — today falls inside a special closure (Closure.dc.html) -->
+    <div style="padding:22px 32px 0;">
+        <div style="display:flex; align-items:center; gap:14px; padding:14px 18px; border:1.5px solid var(--gold-500); border-radius:14px; background:var(--gold-100);">
+          <span style="width:38px; height:38px; min-width:38px; border-radius:50%; background:var(--white); display:flex; align-items:center; justify-content:center;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 20.5 19h-17L12 3.5Z"/><path d="M12 10v4"/><circle cx="12" cy="16.6" r="0.9" fill="var(--gold-600)" stroke="none"/></svg>
+          </span>
+          <div style="flex:1;">
+            <p style="font-size:13.5px; font-weight:700; color:var(--ink-900); margin:0;">Closed Fri Sep 12 – Sat Sep 13 for Private event</p>
+            <p style="font-size:12.5px; color:var(--ink-700); margin:3px 0 0;">Bookings are paused on these dates. The lounge reopens Sun Sep 14 at 10:00 AM.</p>
+          </div>
+          <a href="#" style="font-size:12.5px; font-weight:700;">Find another lounge</a>
+        </div>
+    </div>
+
+    <!-- Hero carousel -->
+    <div style="display:grid; grid-template-columns:1fr 348px; gap:12px; height:268px; min-height:268px; padding:22px 32px 0;">
+
+      <div style="position:relative; border-radius:18px; overflow:hidden; background:radial-gradient(circle at 30% 20%, #3a3128, #15110d 72%);">
+        <div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.20) 1px, transparent 1.5px); background-size:16px 16px;"></div>
+        <div class="carousel-arrow" style="position:absolute; left:16px; top:114px; width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,0.88); display:flex; align-items:center; justify-content:center; cursor:pointer;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-900)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg>
+        </div>
+        <div class="carousel-arrow" style="position:absolute; right:16px; top:114px; width:40px; height:40px; border-radius:50%; background:rgba(255,255,255,0.88); display:flex; align-items:center; justify-content:center; cursor:pointer;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-900)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m10 6 6 6-6 6"/></svg>
+        </div>
+        <span style="position:absolute; top:16px; right:16px; padding:5px 12px; border-radius:20px; background:rgba(21,17,13,0.55); color:var(--gold-100); font-size:11.5px; font-weight:700; letter-spacing:0.06em;">1 / 6</span>
+        <span style="position:absolute; bottom:18px; left:20px; font-size:12.5px; font-weight:600; color:rgba(241,227,208,0.92);">Main lounge · Level 2</span>
+        <div style="position:absolute; bottom:18px; left:0; right:0; display:flex; align-items:center; justify-content:center; gap:6px;">
+          <span style="width:18px; height:5px; border-radius:3px; background:var(--gold-500);"></span>
+          <span style="width:5px; height:5px; border-radius:50%; background:rgba(241,227,208,0.45);"></span>
+          <span style="width:5px; height:5px; border-radius:50%; background:rgba(241,227,208,0.45);"></span>
+          <span style="width:5px; height:5px; border-radius:50%; background:rgba(241,227,208,0.45);"></span>
+          <span style="width:5px; height:5px; border-radius:50%; background:rgba(241,227,208,0.45);"></span>
+          <span style="width:5px; height:5px; border-radius:50%; background:rgba(241,227,208,0.45);"></span>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div style="position:relative; flex:1; border-radius:18px; overflow:hidden; background:radial-gradient(circle at 70% 30%, #4a3626, #15110d 74%);">
+          <div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.20) 1px, transparent 1.5px); background-size:16px 16px;"></div>
+          <span style="position:absolute; bottom:12px; left:14px; font-size:11.5px; font-weight:600; color:rgba(241,227,208,0.92);">Day rooms</span>
+        </div>
+        <div style="position:relative; flex:1; border-radius:18px; overflow:hidden; background:radial-gradient(circle at 40% 60%, #362d24, #15110d 74%); cursor:pointer;">
+          <div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.20) 1px, transparent 1.5px); background-size:16px 16px;"></div>
+          <div style="position:absolute; inset:0; background:rgba(21,17,13,0.55); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--gold-100)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="8.5" cy="10" r="1.6"/><path d="m4 17 5-4.5 4 3.5 3-2.5 4 3.5"/></svg>
+            <span style="font-size:13px; font-weight:700; color:var(--gold-100);">View all 6 photos</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Details -->
+    <div style="flex:1; min-height:0; display:flex; gap:28px; padding:22px 32px 28px;">
+
+      <div style="flex:1; min-width:0;">
+
+        <div style="display:flex; align-items:center; gap:12px;">
+          <h1 style="font-size:30px; color:var(--ink-900);">The Ainsworth</h1>
+          <span style="display:inline-flex; align-items:center; gap:5px; font-size:13.5px; font-weight:700; color:var(--ink-900);">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="var(--gold-500)" stroke="none"><path d="m12 2.5 2.9 6 6.6.9-4.8 4.6 1.1 6.6L12 17.6 6.2 20.6l1.1-6.6-4.8-4.6 6.6-.9L12 2.5Z"/></svg>
+            4.9
+          </span>
+          <a href="#" style="font-size:12.5px; font-weight:600;">128 reviews</a>
+        </div>
+
+        <div style="display:flex; align-items:center; gap:14px; margin-top:10px;">
+          <span style="display:flex; align-items:center; gap:7px; font-size:13px; color:var(--ink-700);">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.1 7-11a7 7 0 1 0-14 0c0 4.9 7 11 7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+            122 E 45th St, New York, NY 10017
+          </span>
+          <span style="width:1px; height:14px; background:var(--border);"></span>
+          <span style="font-size:13px; font-weight:700; color:var(--gold-600);">0.3 mi away</span>
+          <span style="width:1px; height:14px; background:var(--border);"></span>
+          <span style="display:flex; align-items:center; gap:7px; font-size:13px; color:var(--ink-700);">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5h3l1.5 4-2 1.5a12 12 0 0 0 6 6l1.5-2 4 1.5v3a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4.5 5.7a2 2 0 0 1 2-2.2Z"/></svg>
+            +1 (212) 555-0184
+          </span>
+        </div>
+
+        <p style="font-size:12px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-600); margin:24px 0 12px;">Amenities</p>
+
+        <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:12px 22px;">
+
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span style="width:36px; height:36px; min-width:36px; border-radius:10px; background:var(--gold-100); display:flex; align-items:center; justify-content:center;"><svg class="amn" viewBox="0 0 24 24"><path d="M2.5 8.5a15 15 0 0 1 19 0"/><path d="M5.6 12a10.5 10.5 0 0 1 12.8 0"/><path d="M8.7 15.4a6 6 0 0 1 6.6 0"/><circle cx="12" cy="18.8" r="1"/></svg></span>
+            <div>
+              <p style="font-size:13.5px; font-weight:700; color:var(--ink-900); margin:0;">High-speed WiFi</p>
+              <p style="font-size:12px; color:var(--ink-400); margin:2px 0 0;">1 Gbps, private member network</p>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span style="width:36px; height:36px; min-width:36px; border-radius:10px; background:var(--gold-100); display:flex; align-items:center; justify-content:center;"><svg class="amn" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="11" rx="2"/><path d="M2 19h20"/></svg></span>
+            <div>
+              <p style="font-size:13.5px; font-weight:700; color:var(--ink-900); margin:0;">Co-working</p>
+              <p style="font-size:12px; color:var(--ink-400); margin:2px 0 0;">14 desks and 3 bookable meeting pods</p>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span style="width:36px; height:36px; min-width:36px; border-radius:10px; background:var(--gold-100); display:flex; align-items:center; justify-content:center;"><svg class="amn" viewBox="0 0 24 24"><path d="M5 5h14l-7 7Z"/><path d="M12 12v6"/><path d="M8.5 18h7"/></svg></span>
+            <div>
+              <p style="font-size:13.5px; font-weight:700; color:var(--ink-900); margin:0;">Lounge and bar</p>
+              <p style="font-size:12px; color:var(--ink-400); margin:2px 0 0;">Signature cocktails and small plates</p>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span style="width:36px; height:36px; min-width:36px; border-radius:10px; background:var(--gold-100); display:flex; align-items:center; justify-content:center;"><svg class="amn" viewBox="0 0 24 24"><path d="M6 4v6a5 5 0 0 0 10 0"/><path d="M16 4h4v6"/><circle cx="11" cy="16" r="0.9"/><circle cx="14" cy="19" r="0.9"/><circle cx="8" cy="19" r="0.9"/></svg></span>
+            <div>
+              <p style="font-size:13.5px; font-weight:700; color:var(--ink-900); margin:0;">Showers</p>
+              <p style="font-size:12px; color:var(--ink-400); margin:2px 0 0;">4 suites with towels and amenities</p>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span style="width:36px; height:36px; min-width:36px; border-radius:10px; background:var(--gold-100); display:flex; align-items:center; justify-content:center;"><svg class="amn" viewBox="0 0 24 24"><rect x="5" y="7" width="14" height="13" rx="2.5"/><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg></span>
+            <div>
+              <p style="font-size:13.5px; font-weight:700; color:var(--ink-900); margin:0;">Luggage storage</p>
+              <p style="font-size:12px; color:var(--ink-400); margin:2px 0 0;">Attended, up to 8 hours per visit</p>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:12px;">
+            <span style="width:36px; height:36px; min-width:36px; border-radius:10px; background:var(--gold-100); display:flex; align-items:center; justify-content:center;"><svg class="amn" viewBox="0 0 24 24"><path d="M3 18V7"/><path d="M3 12h18v6"/><path d="M21 12v-1.5a2 2 0 0 0-2-2h-6V12"/><circle cx="7.6" cy="10" r="1.8"/></svg></span>
+            <div>
+              <p style="font-size:13.5px; font-weight:700; color:var(--ink-900); margin:0;">Day rooms</p>
+              <p style="font-size:12px; color:var(--ink-400); margin:2px 0 0;">Private rooms, bookable by the hour</p>
+            </div>
+          </div>
+
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:22px; margin-top:24px;">
+
+          <div>
+            <p style="font-size:12px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-600); margin:0 0 10px;">Operating hours</p>
+            <div style="display:flex; flex-direction:column; gap:2px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:5px 10px; border-radius:8px; background:var(--gold-100);">
+                <span style="font-size:12.5px; font-weight:700; color:var(--ink-900);">Friday · Today</span>
+                <span style="font-size:12.5px; font-weight:700; color:var(--ink-900);">Closed · Private event</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; padding:5px 10px;">
+                <span style="font-size:12.5px; color:var(--ink-700);">Saturday</span>
+                <span style="font-size:12.5px; color:var(--ink-700);">Closed · Private event</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; padding:5px 10px;">
+                <span style="font-size:12.5px; color:var(--ink-700);">Sunday</span>
+                <span style="font-size:12.5px; color:var(--ink-700);">10:00 AM – 9:00 PM</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; padding:5px 10px;">
+                <span style="font-size:12.5px; color:var(--ink-700);">Monday – Wednesday</span>
+                <span style="font-size:12.5px; color:var(--ink-700);">8:00 AM – 11:00 PM</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; padding:5px 10px;">
+                <span style="font-size:12.5px; color:var(--ink-700);">Thursday</span>
+                <span style="font-size:12.5px; color:var(--ink-700);">8:00 AM – 11:00 PM</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <p style="font-size:12px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-600); margin:0 0 10px;">Contact</p>
+            <div style="display:flex; flex-direction:column; gap:9px;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5h3l1.5 4-2 1.5a12 12 0 0 0 6 6l1.5-2 4 1.5v3a2 2 0 0 1-2.2 2A16.5 16.5 0 0 1 4.5 5.7a2 2 0 0 1 2-2.2Z"/></svg>
+                <span style="font-size:12.5px; color:var(--ink-700);">+1 (212) 555-0184</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="m3.6 7 8.4 6 8.4-6"/></svg>
+                <span style="font-size:12.5px; color:var(--ink-700);">reception@ainsworth.example</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5a15 15 0 0 1 0 17 15 15 0 0 1 0-17Z"/></svg>
+                <span style="font-size:12.5px; color:var(--ink-700);">ainsworth.example</span>
+              </div>
+              <div style="display:flex; align-items:flex-start; gap:10px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="margin-top:2px; min-width:15px;"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5"/><circle cx="12" cy="8" r="0.9"/></svg>
+                <span style="font-size:12.5px; color:var(--ink-700); line-height:1.5;">Reception is on Level 2. Show your booking confirmation on arrival.</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Availability card — closed today (NotAvailable.dc.html) -->
+      <div style="width:344px; min-width:344px; height:fit-content; background:var(--white); border:1px solid var(--border); border-radius:18px; box-shadow:0 10px 30px -14px rgba(34,26,20,0.14); padding:22px;">
+
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+          <p style="font-size:12px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--gold-600); margin:0;">Today · Fri, Sep 12</p>
+          <span style="display:flex; align-items:center; gap:6px; padding:4px 10px; border-radius:20px; border:1px solid var(--border); font-size:11.5px; font-weight:700; color:var(--ink-400); white-space:nowrap;"><span style="width:6px; height:6px; border-radius:50%; background:var(--ink-400);"></span>Closed</span>
+        </div>
+
+        <h2 style="font-size:22px; color:var(--ink-900); margin:12px 0 4px;">Closed today</h2>
+        <p style="font-size:12.5px; color:var(--ink-400); margin:0; line-height:1.5;">Private event · bookings reopen Sun Sep 14 at 10:00 AM.</p>
+
+        <div style="height:1px; background:var(--border); margin:18px 0;"></div>
+
+        <p style="font-size:12.5px; font-weight:700; color:var(--ink-900); margin:0 0 10px;">Next available</p>
+
+        <div class="slot" style="display:flex; align-items:center; gap:12px; padding:12px 14px; border:1.5px solid var(--gold-500); border-radius:12px; background:var(--gold-100); cursor:pointer;">
+          <div style="flex:1;">
+            <p style="font-size:13.5px; font-weight:700; color:var(--ink-900); margin:0;">Sun, Sep 14 · 10:00 AM</p>
+            <p style="font-size:11.5px; color:var(--ink-700); margin:3px 0 0;">22 seats free in the morning band</p>
+          </div>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m10 6 6 6-6 6"/></svg>
+        </div>
+
+        <div style="display:flex; gap:8px; margin-top:8px;">
+          <span class="slot" style="flex:1; height:42px; border:1.5px solid var(--border); border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:12.5px; font-weight:600; color:var(--ink-700); cursor:pointer;">Sun 12:00 PM</span>
+          <span class="slot" style="flex:1; height:42px; border:1.5px solid var(--border); border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:12.5px; font-weight:600; color:var(--ink-700); cursor:pointer;">Mon 8:00 AM</span>
+        </div>
+
+        <button class="btn-gold" style="width:100%; height:52px; margin-top:14px; background:var(--gold-500); border:none; border-radius:12px; color:var(--white); font-family:'Manrope',sans-serif; font-size:13px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer;">Pick another day</button>
+        <button class="btn-outline" style="width:100%; height:52px; margin-top:10px; background:var(--white); border:1.5px solid var(--border); border-radius:12px; color:var(--ink-700); font-family:'Manrope',sans-serif; font-size:13px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; cursor:pointer;">Back to search</button>
+
+        <div style="display:flex; align-items:center; gap:8px; margin-top:16px; padding-top:14px; border-top:1px solid var(--border);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink-400)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-2.3-5.6"/><path d="M20 4v4h-4"/></svg>
+          <span style="font-size:11.5px; color:var(--ink-400);">Updated 1 min ago · refreshes every 5 min</span>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+</x-dc>
+</body>
+</html>

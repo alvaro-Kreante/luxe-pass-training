@@ -3,6 +3,7 @@
 import Link from "next/link";
 
 import { AppShell } from "@/components/patterns/app-shell";
+import { RequireSession } from "@/components/onboarding/require-session";
 import { FeaturedLoungeCard } from "@/components/lounges/featured-lounge-card";
 import { featuredLounges } from "@/lib/lounges";
 import { useCurrentMember } from "@/lib/current-member";
@@ -12,6 +13,14 @@ import { useCurrentMember } from "@/lib/current-member";
  * Artboard: docs/design/epic-1-onboarding/Home.dc.html (App shell, patrón 3).
  */
 export default function HomePage() {
+  return (
+    <RequireSession requireProfile>
+      <Home />
+    </RequireSession>
+  );
+}
+
+function Home() {
   const [firstName] = useCurrentMember().name.split(" ");
 
   return (

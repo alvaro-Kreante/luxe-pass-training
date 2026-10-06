@@ -153,6 +153,12 @@ begin
     raise exception 'Not authenticated';
   end if;
 
+  -- Story 10.4 — un lounge en draft, suspendido o archivado no acepta
+  -- reservas nuevas (las ya hechas siguen valiendo).
+  if not exists (select 1 from public.lounges l where l.id = p_lounge_id and l.content_status = 'live') then
+    raise exception 'This lounge is not taking bookings';
+  end if;
+
   -- Epic 9 — quién paga (ver booking_coverage.sql). Antes, sin
   -- `p_payment_id`, la reserva salía gratis sin comprobar nada.
   if p_payment_id is null then
@@ -239,6 +245,12 @@ declare
 begin
   if v_member_id is null then
     raise exception 'Not authenticated';
+  end if;
+
+  -- Story 10.4 — un lounge en draft, suspendido o archivado no acepta
+  -- reservas nuevas (las ya hechas siguen valiendo).
+  if not exists (select 1 from public.lounges l where l.id = p_lounge_id and l.content_status = 'live') then
+    raise exception 'This lounge is not taking bookings';
   end if;
 
   insert into public.bookings as b

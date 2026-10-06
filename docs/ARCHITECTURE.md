@@ -30,6 +30,11 @@ simulado de Supabase (Inbucket/Mailpit) — Auth llama al Hook `send_email`
   de un dominio de test (`*-test.com`, `example.*`, `email.com`,
   `_shared/test-recipient.ts`) — solo lo registra en el log de la
   function. Un email real en local sí se envía; en staging/prod, siempre.
+- **Sin `APP_ENV`, nada sale (29 sept 2026).** El runner de GitHub Actions
+  (`ci.yml`) no define `APP_ENV` ni tiene clave de Brevo: `emailSkipReason`
+  (`_shared/test-recipient.ts`, con test en Vitest) devuelve
+  `"no-environment"` y `_shared/brevo.ts` solo lo registra. Los tests
+  solo pueden mandar emails desde local; subir a GitHub nunca envía nada.
 - **Staging/prod:** el hook se registra **a mano**, una vez por proyecto
   remoto, en su dashboard (`Authentication` → `Hooks` → `Send Email`) —
   nunca vía `supabase config push`, que sincroniza *todo* `config.toml`
@@ -336,13 +341,54 @@ sin esperar a que el JWT del miembro se refresque. Sin fila = miembro
 corriente; solo se registran roles elevados. Epic 8 (rol admin) reutiliza
 la misma tabla cuando se conecte.
 
-`partners`/`partner_lounges` (tabla puente many-to-many — un partner puede
-gestionar varios lounges, decisión tomada con el usuario, no una FK directa
-`lounges.partner_id`) completan el modelo. Dar de alta un partner es un
-proceso operativo, nunca self-service (no hay historia de "partner
-signup", solo `Login.dc.html`) — ver "Alta de un partner" en
-`supabase/schemas/partners.sql` y `scripts/seed-partner-account.mjs` para
-la cuenta de muestra de The Ainsworth en local.
+**Partner = organización (Epic 10, 1 oct 2026).** El modelo del Epic 7/8
+(un partner = una persona con un lounge, `partner_lounges` +
+`lounge_partner_invites`, invitar al publicar) se sustituyó por
+`partners` (organización) 1 → N `lounges.partner_id` y 1 → N
+`partner_members` (usuarios, uno de ellos representante). Detalle en
+`docs/DATA-MODEL-MAP.md` "Epic 10" y `supabase/schemas/partners.sql`.
+
+- Un partner nace en `draft`; activarlo envía a sus usuarios el email de
+  crear contraseña (Story 10.4). **Publicar un lounge ya no invita a nadie**:
+  `admin_publish_lounge` exige un partner `active`. Las Edge Functions
+  `admin-publish-lounge` y `admin-lounge-partners` y
+  `_shared/partner-accounts.ts` se retiraron; el admin publica con la RPC.
+- La invitación sigue llegando a `/partner/welcome?token_hash=…&type=invite`
+  (`lib/partner-invite.ts`): el usuario corrige nombre/móvil/foto en
+  `partner_members` y fija su contraseña. El email no lo puede cambiar
+  (trigger `partner_members_guard_issued_fields`).
+- El usuario partner ve todos los lounges de su partner
+  (`partner_lounge_ids()`), nunca escribe en `lounges` (solo el admin) y
+  pierde todo acceso si el partner o él mismo están suspendidos.
+- Notificaciones (`partner_notifications.sql`, Story 10.7): los destinatarios
+  salen de `partner_notification_recipients(lounge)` (usuarios con cuenta del
+  partner activo, sin suspendidos) y el digest de `partner_digest_batches(fecha)`
+  (uno por usuario, sus lounges agrupados y los invitados por hora real). Las
+  plantillas viven en `_shared/partner-emails.ts`.
+- Editar un lounge live lo devuelve a borrador (`admin_unpublish_lounge`); la
+  policy de `lounges` lo mantiene visible para su partner y para quien tiene
+  reserva allí.
+- **Acceso (Story 10.4).** La Edge Function `admin-partners` (verifica JWT +
+  `has_role('admin')`) hace lo que necesita la API de Auth: activar crea la
+  cuenta invitada de cada usuario (`generateLink`, no envía nada), su rol y
+  `partner_members.user_id`, y después envía la invitación por Brevo
+  (`_shared/partner-invite-email.ts`); si una cuenta falla, borra las ya
+  creadas y el partner sigue en draft. Añadir a un partner activo invita al
+  momento; reenviar solo a quien no tiene `email_confirmed_at`; suspender un
+  usuario es `suspended_at` + `ban_duration`; borrar, la fila (el trigger
+  protege al representante) y luego su usuario de Auth. Suspender/reactivar
+  el partner es la RPC más el ban de todos sus usuarios (al reactivar, salvo
+  los suspendidos uno a uno). El estado de lounges lo deciden las RPC
+  (`admin_suspend_partner`, `admin_reactivate_partner`, `admin_suspend_lounge`,
+  `admin_reactivate_lounge`).
+- `confirm_booking`/`join_waitlist` rechazan un lounge que no esté `live`
+  ("This lounge is not taking bookings"): antes no comprobaban el estado.
+- **Selector de lounge (Story 10.6).** `partner_context()` devuelve partner,
+  usuario y lounges con la elección ya validada (si el lounge guardado dejó
+  de ser del partner, el primero); `partner_select_lounge()` la guarda en
+  `partner_members.selected_lounge_id`/`all_lounges`. Today usa siempre un
+  lounge concreto; las RPC de analítica aceptan `p_lounge_id` (null = todos).
+- Datos de muestra en local: `scripts/seed-partners.mjs`.
 
 ## Notificaciones al partner reales (Database Webhook + pg_cron)
 

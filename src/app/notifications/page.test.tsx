@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import { confirmBooking } from "@/lib/booking";
-import { TODAY } from "@/lib/availability";
+import { today } from "@/lib/availability";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
 
@@ -70,7 +70,7 @@ describe("centro de notificaciones", () => {
     const { supabase } = await signUpFreshMember("filter");
     const booking = await confirmBooking(supabase, {
       loungeId: "sable-and-stone",
-      dateIso: TODAY,
+      dateIso: today(),
       band: "afternoon",
       time: "3:30 PM",
       specialRequests: "",

@@ -1,7 +1,7 @@
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { describe, expect, it } from "vitest";
 
-import { TODAY, addDays } from "./availability";
+import { today, addDays } from "./availability";
 import { confirmBooking, fetchBookingCoverage, type BookingRequest } from "./booking";
 import { fetchVisitsThisMonth } from "./membership";
 import { createClient } from "./supabase/client";
@@ -83,8 +83,8 @@ async function seedCreditedReferral(referrerId: string) {
 async function datesWithSeats(count: number): Promise<string[]> {
   const { data, error } = await admin().rpc("lounge_availability_range", {
     p_lounge_id: "belmont-terrace",
-    p_from: addDays(TODAY, 20),
-    p_to: addDays(TODAY, 80),
+    p_from: addDays(today(), 20),
+    p_to: addDays(today(), 80),
   });
   if (error) throw error;
   return (data as { date: string; band: string; seats_left: number }[])
@@ -92,6 +92,12 @@ async function datesWithSeats(count: number): Promise<string[]> {
     .slice(0, count)
     .map((row) => row.date);
 }
+
+/** Las visitas cuentan por mes natural: "este mes" y "el que viene", con el reloj real. */
+const THIS_MONTH = today().slice(0, 7);
+const NEXT_MONTH = addDays(`${THIS_MONTH}-28`, 7).slice(0, 7);
+const dayOfThisMonth = (day: number) => `${THIS_MONTH}-${String(day).padStart(2, "0")}`;
+const eightVisitsThisMonth = Array.from({ length: 8 }, (_, index) => dayOfThisMonth(index + 1));
 
 const bookingOn = (dateIso: string): BookingRequest => ({
   loungeId: "belmont-terrace",
@@ -105,16 +111,16 @@ describe("fetchBookingCoverage", () => {
   it("sin plan, la visita se paga como day pass", async () => {
     const { supabase } = await freshMember("none");
 
-    const coverage = await fetchBookingCoverage(supabase, TODAY);
+    const coverage = await fetchBookingCoverage(supabase, today());
     expect(coverage.kind).toBe("none");
   });
 
   it("con plan activo y visitas libres, la cubre la membresía", async () => {
     const { supabase, user } = await freshMember("membership");
     await grantTestMembership(user.id, "annual");
-    await seedVisits(user.id, [addDays(TODAY, -2)]);
+    await seedVisits(user.id, [dayOfThisMonth(1)]);
 
-    const coverage = await fetchBookingCoverage(supabase, TODAY);
+    const coverage = await fetchBookingCoverage(supabase, today());
     expect(coverage.kind).toBe("membership");
     expect(coverage.plan).toBe("annual");
     expect(coverage.visitsUsed).toBe(1);
@@ -126,10 +132,10 @@ describe("fetchBookingCoverage", () => {
     await grantTestMembership(user.id, "monthly");
     await seedVisits(
       user.id,
-      Array.from({ length: 8 }, (_, index) => `2025-09-0${index + 1}`),
+      eightVisitsThisMonth,
     );
 
-    expect((await fetchBookingCoverage(supabase, TODAY)).kind).toBe("none");
+    expect((await fetchBookingCoverage(supabase, today())).kind).toBe("none");
   });
 
   it("las visitas cuentan por el mes de la reserva, no por el de hoy", async () => {
@@ -137,10 +143,10 @@ describe("fetchBookingCoverage", () => {
     await grantTestMembership(user.id, "monthly");
     await seedVisits(
       user.id,
-      Array.from({ length: 8 }, (_, index) => `2025-09-0${index + 1}`),
+      eightVisitsThisMonth,
     );
 
-    expect((await fetchBookingCoverage(supabase, "2025-10-15")).kind).toBe("membership");
+    expect((await fetchBookingCoverage(supabase, `${NEXT_MONTH}-15`)).kind).toBe("membership");
   });
 
   it("un day pass de referido se usa antes que las visitas incluidas", async () => {
@@ -148,24 +154,26 @@ describe("fetchBookingCoverage", () => {
     await grantTestMembership(user.id, "annual");
     await seedCreditedReferral(user.id);
 
-    const coverage = await fetchBookingCoverage(supabase, TODAY);
+    const coverage = await fetchBookingCoverage(supabase, today());
     expect(coverage.kind).toBe("day_pass_credit");
     expect(coverage.creditSource).toBe("referral");
   });
 
   it("el day pass de cumpleaños solo vale en el mes del cumpleaños", async () => {
-    const { supabase, user } = await freshMember("birthday", { birthMonth: 9 });
+    const { supabase, user } = await freshMember("birthday", {
+      birthMonth: Number(THIS_MONTH.slice(5)),
+    });
     await grantTestMembership(user.id, "annual");
 
-    expect((await fetchBookingCoverage(supabase, "2025-09-20")).creditSource).toBe("birthday");
-    expect((await fetchBookingCoverage(supabase, "2025-10-20")).kind).toBe("membership");
+    expect((await fetchBookingCoverage(supabase, dayOfThisMonth(20))).creditSource).toBe("birthday");
+    expect((await fetchBookingCoverage(supabase, `${NEXT_MONTH}-20`)).kind).toBe("membership");
   });
 
   it("sin plan activo, los day passes de regalo no se pueden usar (Terms §4)", async () => {
     const { supabase, user } = await freshMember("credit-no-plan");
     await seedCreditedReferral(user.id);
 
-    expect((await fetchBookingCoverage(supabase, TODAY)).kind).toBe("none");
+    expect((await fetchBookingCoverage(supabase, today())).kind).toBe("none");
   });
 });
 
@@ -190,12 +198,14 @@ describe("confirm_booking hace cumplir quién paga", () => {
   it("con las visitas agotadas, rechaza la reserva sin pago", async () => {
     const { supabase, user } = await freshMember("exhausted-reject");
     await grantTestMembership(user.id, "monthly");
+    const [date] = await datesWithSeats(1);
+    /** Las 8 visitas, en el mes de la reserva. */
     await seedVisits(
       user.id,
-      Array.from({ length: 8 }, (_, index) => `2025-09-0${index + 1}`),
+      Array.from({ length: 8 }, (_, index) => `${date!.slice(0, 7)}-0${index + 1}`),
     );
 
-    await expect(confirmBooking(supabase, bookingOn("2025-09-30"))).rejects.toThrow(/payment/i);
+    await expect(confirmBooking(supabase, bookingOn(date!))).rejects.toThrow(/payment/i);
   });
 
   it("con un day pass de referido, lo gasta y no toca las visitas incluidas", async () => {
