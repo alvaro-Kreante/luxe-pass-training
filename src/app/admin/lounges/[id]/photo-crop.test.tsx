@@ -74,6 +74,13 @@ afterAll(async () => {
   await service.from("lounges").delete().like("id", `test-lounge-photo-crop-${stamp}-%`);
 });
 
+/** El botón del editor se habilita cuando la imagen carga y hay encuadre — en CI tarda. */
+async function confirmCrop(user: ReturnType<typeof userEvent.setup>, dialog: HTMLElement, name: "Use photo" | "Save crop") {
+  const button = within(dialog).getByRole("button", { name });
+  await waitFor(() => expect(button).toBeEnabled(), { timeout: 8000 });
+  await user.click(button);
+}
+
 describe("elegir una foto abre el editor", () => {
   it("con el encuadre 3 : 2, el nombre del original y los tres tamaños, Standard por defecto", async () => {
     const user = userEvent.setup({ delay: null });
@@ -107,7 +114,7 @@ describe("elegir una foto abre el editor", () => {
 
     const editor = await screen.findByRole("dialog", { name: "Frame this photo" });
     await user.click(within(editor).getByRole("radio", { name: /Light · 1200 px/ }));
-    await user.click(within(editor).getByRole("button", { name: "Use photo" }));
+    await confirmCrop(user, editor, "Use photo");
     await screen.findByRole("button", { name: "Edit photo terrace" }, { timeout: 8000 });
 
     await user.click(screen.getByRole("button", { name: "Save draft" }));
@@ -126,9 +133,9 @@ describe("elegir una foto abre el editor", () => {
 
     const first = await screen.findByRole("dialog", { name: "Frame this photo" });
     expect(within(first).getByText("bar.jpg")).toBeInTheDocument();
-    await user.click(within(first).getByRole("button", { name: "Use photo" }));
+    await confirmCrop(user, first, "Use photo");
     await waitFor(() => expect(within(screen.getByRole("dialog", { name: "Frame this photo" })).getByText("terrace.jpg")).toBeInTheDocument(), { timeout: 8000 });
-    await user.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Use photo" }));
+    await confirmCrop(user, screen.getByRole("dialog"), "Use photo");
 
     await screen.findByRole("button", { name: "Edit photo terrace" }, { timeout: 8000 });
     expect(screen.getByRole("button", { name: "Edit photo bar" })).toBeInTheDocument();
@@ -163,7 +170,7 @@ describe("reencuadrar una foto ya subida", () => {
     const editor = await screen.findByRole("dialog", { name: "Adjust the crop" });
     expect(within(editor).getByText("Original · kept")).toBeInTheDocument();
     await user.click(within(editor).getByRole("radio", { name: /Large · 2400 px/ }));
-    await user.click(within(editor).getByRole("button", { name: "Save crop" }));
+    await confirmCrop(user, editor, "Save crop");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull(), { timeout: 8000 });
 
     await user.click(screen.getByRole("button", { name: "Save draft" }));
@@ -186,7 +193,7 @@ describe("reencuadrar una foto ya subida", () => {
 
     await user.click(await screen.findByRole("button", { name: "Adjust crop Terrace" }));
     const editor = await screen.findByRole("dialog", { name: "Adjust the crop" });
-    await user.click(within(editor).getByRole("button", { name: "Save crop" }));
+    await confirmCrop(user, editor, "Save crop");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull(), { timeout: 8000 });
 
     await user.click(screen.getByRole("button", { name: "Save draft" }));
