@@ -179,6 +179,23 @@ describe("desde el listado", () => {
 
     expect(router.push).toHaveBeenCalledWith(`/admin/partners/${partnerIds[0]}`);
   });
+
+  it("un clic en cualquier celda de la fila abre el detalle (ticket 002)", async () => {
+    const user = await searchFor(halcyon);
+
+    const row = await waitFor(() => rowOf(halcyon));
+    await user.click(within(row).getByText("New York"));
+
+    expect(router.push).toHaveBeenCalledWith(`/admin/partners/${partnerIds[0]}`);
+  });
+
+  it("la flecha es un botón 'View <nombre>' que abre el detalle (ticket 002)", async () => {
+    const user = await searchFor(halcyon);
+
+    await user.click(await screen.findByRole("button", { name: `View ${halcyon}` }));
+
+    expect(router.push).toHaveBeenCalledWith(`/admin/partners/${partnerIds[0]}`);
+  });
 });
 
 describe("quién puede listar partners", () => {

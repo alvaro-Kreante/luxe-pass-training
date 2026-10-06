@@ -173,7 +173,7 @@ function MemberResultsTable({
           aria-label={`Open ${member.name}`}
           onClick={() => onOpen(member.id)}
           className={cn(
-            "grid w-full items-center gap-3.5 border-b border-[rgba(58,50,42,0.6)] px-5.5 text-left transition-colors duration-150 last:border-b-0 hover:bg-surface-hover",
+            "grid w-full cursor-pointer items-center gap-3.5 border-b border-[rgba(58,50,42,0.6)] px-5.5 text-left transition-colors duration-150 last:border-b-0 hover:bg-surface-hover",
             GRID,
           )}
           style={{ minHeight: 62 }}

@@ -1,6 +1,6 @@
 # 002 — Interacciones de tablas y del shell en Admin y Partner
 
-- **Estado:** Abierto
+- **Estado:** Hecho (salvo `/partner/guests`, ver `docs/PENDIENTES.md` §2.8b)
 - **Tipo:** fix / feat
 - **Rama sugerida:** `fix/admin-partner-shell-interactions` (desde `staging`). 
 - **Epics relacionados:** Epic 7 (Partner Dashboard, Fase 2) y Epic 8 (Admin & Support, Fase 8)

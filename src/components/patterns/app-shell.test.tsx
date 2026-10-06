@@ -17,6 +17,7 @@ const pathname = vi.fn(() => "/");
 
 vi.mock("next/navigation", () => ({
   usePathname: () => pathname(),
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
 }));
 
 describe("navegación del área de miembro", () => {
@@ -135,5 +136,14 @@ describe("bloque de usuario de la sidebar", () => {
     const photo = await screen.findByAltText("Test Member");
     expect(photo.getAttribute("src")).toContain("/object/sign/profile-photos/");
     expect(screen.queryByText("TM")).not.toBeInTheDocument();
+  });
+});
+
+describe("logout del miembro", () => {
+  it("es un botón que cierra sesión, no un enlace que solo navega", () => {
+    render(<AppShell>contenido</AppShell>);
+
+    expect(screen.getByRole("button", { name: "Log out" })).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Log out" })).not.toBeInTheDocument();
   });
 });
