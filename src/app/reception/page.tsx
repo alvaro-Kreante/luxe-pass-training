@@ -43,12 +43,20 @@ export default function ReceptionPage() {
   const [summary, setSummary] = React.useState<ReceptionTodaySummary>({ expected: 0, checkedIn: 0 });
   const supabase = React.useMemo(() => createClient(), []);
 
+  const mounted = React.useRef(false);
+
   const refreshSummary = React.useCallback(() => {
-    fetchReceptionTodaySummary(supabase, THE_AINSWORTH, today()).then(setSummary);
+    fetchReceptionTodaySummary(supabase, THE_AINSWORTH, today()).then((next) => {
+      if (mounted.current) setSummary(next);
+    });
   }, [supabase]);
 
   React.useEffect(() => {
+    mounted.current = true;
     refreshSummary();
+    return () => {
+      mounted.current = false;
+    };
   }, [refreshSummary]);
 
   async function lookUp() {
