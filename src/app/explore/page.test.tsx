@@ -218,6 +218,7 @@ describe("permiso de ubicación", () => {
     expect(
       await within(resultsPanel()).findByText("The Ainsworth"),
     ).toBeInTheDocument();
+    await waitForRememberedLocation();
   });
 });
 
