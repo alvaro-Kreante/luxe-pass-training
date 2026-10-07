@@ -67,7 +67,7 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.116.0
 
       # El hook `send_email` (Story 1.1/1.2, envío real vía Brevo) exige
       # `SEND_EMAIL_HOOK_SECRET` con formato "v1,whsec_<base64>" — el CLI
