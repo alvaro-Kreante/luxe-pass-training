@@ -19,6 +19,7 @@ const params = vi.fn(() => ({ id: "the-ainsworth" }));
 vi.mock("next/navigation", () => ({
   useParams: () => params(),
   usePathname: () => "/lounges/the-ainsworth/book",
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
   notFound: () => {
     throw new Error("NEXT_NOT_FOUND");
   },

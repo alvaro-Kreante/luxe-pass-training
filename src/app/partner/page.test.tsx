@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -12,6 +12,7 @@ import {
 } from "@/lib/testing/confirmed-user";
 
 import PartnerTodayPage from "./page";
+import { findDialog } from "@/lib/testing/find-dialog";
 
 /**
  * Story 7.1 — Daily Guest Management. Story 7.2 — Booking Notifications for
@@ -150,6 +151,18 @@ describe("no-show reporting", () => {
         screen.queryByRole("button", { name: `Mark ${guestNoShow.name} as arrived` }),
       ).not.toBeInTheDocument(),
     );
+  });
+});
+
+describe("abrir la ficha desde la fila (ticket 002)", () => {
+  it("un clic en cualquier parte de la fila abre la ficha del invitado", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<PartnerTodayPage />);
+
+    const view = await screen.findByRole("button", { name: `View ${guestSearchA.name}` });
+    await user.click(within(view.parentElement!).getByText(guestSearchA.email));
+
+    expect(await findDialog()).toHaveTextContent(guestSearchA.name);
   });
 });
 

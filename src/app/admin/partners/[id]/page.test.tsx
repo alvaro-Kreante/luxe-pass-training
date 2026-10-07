@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedAdminAndSignIn } from "@/lib/testing/confirmed-user";
 
 import PartnerDetailPage from "./page";
+import { findDialog } from "@/lib/testing/find-dialog";
 
 /**
  * Story 10.3 — detalle de un partner en draft (PartnerDetail.dc.html 3 y
@@ -262,7 +263,7 @@ async function activePartner() {
   const { id, loungeId } = await draftPartner();
   const user = userEvent.setup({ delay: null });
   await chooseStatus(user, "Active");
-  await user.click(within(await screen.findByRole("dialog", { name: "Activate this partner?" })).getByRole("button", { name: "Activate and invite" }));
+  await user.click(within(await findDialog({ name: "Activate this partner?" })).getByRole("button", { name: "Activate and invite" }));
   await screen.findByRole("button", { name: "Status: Active" }, { timeout: 30000 });
   return { id, loungeId, user };
 }
@@ -284,7 +285,7 @@ describe("activar el partner", () => {
 
     await chooseStatus(user, "Active");
 
-    const dialog = await screen.findByRole("dialog", { name: "Activate this partner?" });
+    const dialog = await findDialog({ name: "Activate this partner?" });
     expect(within(dialog).getByText(`camille-${stamp}-${count}@halcyon-test.com`)).toBeInTheDocument();
     expect(within(dialog).getByText(`julian-${stamp}-${count}@halcyon-test.com`)).toBeInTheDocument();
   }, 90_000);
@@ -324,7 +325,7 @@ describe("el acceso de cada usuario de un partner activo", () => {
     const { user } = await activePartner();
 
     await user.click(within(userRow("Julian Mercer")).getByRole("button", { name: "Suspend Julian Mercer" }));
-    const dialog = await screen.findByRole("dialog", { name: "Suspend this user?" });
+    const dialog = await findDialog({ name: "Suspend this user?" });
     await user.click(within(dialog).getByRole("button", { name: "Suspend user" }));
 
     await waitFor(() => expect(within(userRow("Julian Mercer")).getByText("Suspended")).toBeInTheDocument());
@@ -336,7 +337,7 @@ describe("el acceso de cada usuario de un partner activo", () => {
     const { user } = await activePartner();
 
     await user.click(within(userRow("Julian Mercer")).getByRole("button", { name: "Delete Julian Mercer" }));
-    const dialog = await screen.findByRole("dialog", { name: "Delete this user?" });
+    const dialog = await findDialog({ name: "Delete this user?" });
     await user.click(within(dialog).getByRole("button", { name: "Delete user" }));
 
     await waitFor(() => expect(within(usersTable()).queryByRole("row", { name: /Julian Mercer/ })).toBeNull());
@@ -351,7 +352,7 @@ describe("suspender y reactivar el partner", () => {
     loungeIds.push(liveId);
 
     await chooseStatus(user, "Suspended");
-    const dialog = await screen.findByRole("dialog", { name: "Suspend this partner?" });
+    const dialog = await findDialog({ name: "Suspend this partner?" });
     await user.click(within(dialog).getByRole("button", { name: "Suspend partner" }));
 
     expect(await screen.findByRole("button", { name: "Status: Suspended" }, { timeout: 30000 })).toBeInTheDocument();
@@ -363,7 +364,7 @@ describe("suspender y reactivar el partner", () => {
   it("reactivarlo lo deja activo otra vez", async () => {
     const { id, user } = await activePartner();
     await chooseStatus(user, "Suspended");
-    await user.click(within(await screen.findByRole("dialog", { name: "Suspend this partner?" })).getByRole("button", { name: "Suspend partner" }));
+    await user.click(within(await findDialog({ name: "Suspend this partner?" })).getByRole("button", { name: "Suspend partner" }));
     await screen.findByRole("button", { name: "Status: Suspended" }, { timeout: 30000 });
 
     await chooseStatus(user, "Active");

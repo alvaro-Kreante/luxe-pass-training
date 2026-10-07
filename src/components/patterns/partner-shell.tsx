@@ -4,8 +4,9 @@ import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, LayoutGrid, RefreshCw, Settings, Ticket, UsersRound } from "lucide-react";
+import { LayoutGrid, RefreshCw, Settings, Ticket, UsersRound } from "lucide-react";
 
+import { LogoutButton } from "@/components/patterns/logout-button";
 import { LoungeSwitcher } from "@/components/partner/lounge-switcher";
 import { usePartnerContext } from "@/components/partner/partner-context";
 import { cn } from "@/lib/utils";
@@ -140,7 +141,7 @@ export function PartnerShell({
               <span className="block truncate text-[13px] font-bold text-fg">{userName}</span>
               <span className="mt-0.5 block truncate text-[11.5px] text-fg-subtle">{context.partner.name}</span>
             </span>
-            <ChevronDown size={16} strokeWidth={1.8} className="text-fg-subtle" aria-hidden />
+            <LogoutButton redirectTo="/partner/login" />
           </div>
         ) : null}
       </nav>

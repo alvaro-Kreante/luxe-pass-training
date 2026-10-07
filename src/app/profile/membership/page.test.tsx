@@ -8,6 +8,7 @@ import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
 import { giveTestMemberSavedCard, grantTestMembership } from "@/lib/testing/membership-fixture";
 
 import MembershipPage from "./page";
+import { findDialog } from "@/lib/testing/find-dialog";
 
 /** La pantalla hace varias llamadas reales (Supabase + Stripe); bajo la suite completa en paralelo 1 s no alcanza. */
 const LOAD = { timeout: 10000 };
@@ -92,7 +93,7 @@ describe("AC 'Upgrade options to monthly subscribers and pricing (monthly → ye
     expect(screen.queryByText("October 3")).not.toBeInTheDocument();
     await userEvents.click(screen.getByRole("button", { name: "Switch to annual" }));
 
-    const dialog = await screen.findByRole("dialog", {}, LOAD);
+    const dialog = await findDialog({}, LOAD);
     expect(within(dialog).getByText("Confirm your new plan")).toBeInTheDocument();
     expect(await within(dialog).findByText("Credit for 22 unused days on monthly", {}, LOAD)).toBeInTheDocument();
     expect(within(dialog).getAllByText("$2,217.40").length).toBeGreaterThan(0);

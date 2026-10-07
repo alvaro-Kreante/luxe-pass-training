@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronRight, Plus, Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -12,6 +12,7 @@ import { LoungeStatusChip } from "@/components/admin/lounge-status-chip";
 import { StatusFilter } from "@/components/admin/status-filter";
 import { BulkActionBar, BulkActionButton } from "@/components/ui/bulk-action-bar";
 import { Checkbox } from "@/components/ui/checkbox";
+import { TableRow, TableRowChevron } from "@/components/ui/table-row";
 import { createClient } from "@/lib/supabase/client";
 import { getTicketCounts, type TicketCounts } from "@/lib/admin";
 import {
@@ -202,12 +203,11 @@ function LoungesScreen() {
         </div>
 
         {filtered.map((lounge) => (
-          <div
+          <TableRow
             key={lounge.id}
-            className={cn(
-              "grid items-center gap-3.5 border-b border-[rgba(58,50,42,0.6)] px-5.5 last:border-b-0",
-              GRID,
-            )}
+            onOpen={() => router.push(`/admin/lounges/${lounge.id}`)}
+            selected={selected.includes(lounge.id)}
+            className={cn("grid items-center gap-3.5 px-5.5", GRID)}
             style={{ height: 54 }}
           >
             <Checkbox
@@ -220,7 +220,7 @@ function LoungesScreen() {
               type="button"
               onClick={() => router.push(`/admin/lounges/${lounge.id}`)}
               aria-label={`Open ${lounge.name}`}
-              className="flex min-w-0 items-center text-left"
+              className="flex min-w-0 cursor-pointer items-center text-left"
             >
               <span className="min-w-0">
                 <span className="block truncate text-[13.5px] font-bold text-fg">{lounge.name}</span>
@@ -245,15 +245,8 @@ function LoungesScreen() {
             <p className="m-0 text-[12.5px] text-fg-muted">{lounge.photosCount}</p>
             <p className="m-0 text-[12.5px] text-fg-muted">{lounge.amenitiesCount}</p>
             <p className="m-0 text-[12.5px] font-bold text-fg-muted">{lounge.updatedLabel}</p>
-            <button
-              type="button"
-              onClick={() => router.push(`/admin/lounges/${lounge.id}`)}
-              aria-label={`View ${lounge.name}`}
-              className="flex justify-end text-fg-subtle"
-            >
-              <ChevronRight size={17} strokeWidth={1.8} />
-            </button>
-          </div>
+            <TableRowChevron label={lounge.name} onOpen={() => router.push(`/admin/lounges/${lounge.id}`)} />
+          </TableRow>
         ))}
 
         {lounges && filtered.length === 0 ? (

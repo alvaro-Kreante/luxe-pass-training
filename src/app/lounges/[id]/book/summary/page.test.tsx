@@ -12,6 +12,7 @@ import { grantTestMembership } from "@/lib/testing/membership-fixture";
 import { attachTestCard } from "@/lib/testing/stripe-fixture";
 
 import SummaryPage from "./page";
+import { findDialog } from "@/lib/testing/find-dialog";
 
 /**
  * Story 4.1 — paso 3 "Review and confirm" (`Summary.dc.html`), con las
@@ -220,7 +221,7 @@ describe("el servidor manda sobre quién paga (Epic 9)", () => {
 
     await acceptTermsAndConfirm();
 
-    const dialog = await screen.findByRole("dialog", {}, { timeout: 10_000 });
+    const dialog = await findDialog({}, { timeout: 10_000 });
     expect(within(dialog).getByText(/no longer covered/i)).toBeInTheDocument();
     expect(push).not.toHaveBeenCalled();
   }, 15_000);

@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedAdminAndSignIn } from "@/lib/testing/confirmed-user";
 
 import LoungeEditPage from "./page";
+import { findDialog } from "@/lib/testing/find-dialog";
 
 /**
  * Story 10.10 · PhotoCropOpen (23), PhotoCropSize (24), PhotoUploading (25),
@@ -74,15 +75,8 @@ afterAll(async () => {
   await service.from("lounges").delete().like("id", `test-lounge-photo-crop-${stamp}-%`);
 });
 
-/**
- * Radix pone `pointer-events: none` en el body al abrir el modal y el
- * contenido lo anula con `auto` un render después; en CI, `findByRole` puede
- * devolver el diálogo en ese hueco y el primer clic dentro falla.
- */
-async function findEditor(name: "Frame this photo" | "Adjust the crop") {
-  const dialog = await screen.findByRole("dialog", { name });
-  await waitFor(() => expect(getComputedStyle(dialog).pointerEvents).not.toBe("none"), { timeout: 8000 });
-  return dialog;
+function findEditor(name: "Frame this photo" | "Adjust the crop") {
+  return findDialog({ name });
 }
 
 /** El botón del editor se habilita cuando la imagen carga y hay encuadre — en CI tarda. */
@@ -129,7 +123,7 @@ describe("elegir una foto abre el editor", () => {
     await screen.findByRole("button", { name: "Edit photo terrace" }, { timeout: 8000 });
 
     await user.click(screen.getByRole("button", { name: "Save draft" }));
-    await screen.findByRole("dialog", { name: "Draft saved" }, { timeout: 8000 });
+    await findDialog({ name: "Draft saved" }, { timeout: 8000 });
     const [image] = await storedImages(id);
     expect(image.caption).toBe("terrace");
     expect(image.original_url).toMatch(/lounge-images\/.+terrace\.jpg$/);
@@ -185,7 +179,7 @@ describe("reencuadrar una foto ya subida", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull(), { timeout: 8000 });
 
     await user.click(screen.getByRole("button", { name: "Save draft" }));
-    await screen.findByRole("dialog", { name: "Draft saved" }, { timeout: 8000 });
+    await findDialog({ name: "Draft saved" }, { timeout: 8000 });
     const [image] = await storedImages(id);
     expect(image.caption).toBe("Main room");
     expect(image.original_url).toBe(originalUrl);
@@ -208,7 +202,7 @@ describe("reencuadrar una foto ya subida", () => {
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull(), { timeout: 8000 });
 
     await user.click(screen.getByRole("button", { name: "Save draft" }));
-    await screen.findByRole("dialog", { name: "Draft saved" }, { timeout: 8000 });
+    await findDialog({ name: "Draft saved" }, { timeout: 8000 });
     const [image] = await storedImages(id);
     expect(image.original_url).toBe(seededUrl);
     expect(image.url).not.toBe(seededUrl);

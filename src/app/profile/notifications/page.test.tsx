@@ -12,6 +12,7 @@ import NotificationSettingsPage from "./page";
  */
 vi.mock("next/navigation", () => ({
   usePathname: () => "/profile/notifications",
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
 }));
 
 describe("ajustes de notificación por canal", () => {

@@ -6,16 +6,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   BarChart3,
-  Bell,
   BriefcaseBusiness,
   Building2,
-  ChevronDown,
   ClipboardList,
   FileBarChart,
   RefreshCw,
   Users,
 } from "lucide-react";
 
+import { LogoutButton } from "@/components/patterns/logout-button";
 import { NavBadge } from "@/components/ui/nav-badge";
 import { displayNameFromEmail } from "@/lib/admin";
 import { createClient } from "@/lib/supabase/client";
@@ -173,7 +172,7 @@ export function AdminShell({
             <span className="block truncate text-[13px] font-bold text-fg">{adminName}</span>
             <span className="mt-0.5 block text-[11.5px] text-fg-subtle">Support · En Soleil</span>
           </span>
-          <ChevronDown size={16} strokeWidth={1.8} className="text-fg-subtle" aria-hidden />
+          <LogoutButton redirectTo="/admin/login" />
         </div>
       </nav>
 
@@ -184,7 +183,6 @@ export function AdminShell({
           <div className="flex-1" />
           {topbarRight}
           <AuditedChip />
-          <AdminNotificationsButton />
           <AdminRefreshButton />
         </div>
 
@@ -201,27 +199,6 @@ function AuditedChip() {
       <span aria-hidden className="size-1.5 rounded-full bg-accent shadow-[0_0_0_3px_rgba(201,168,118,0.28)]" />
       <span className="text-xs font-bold text-fg-muted">Every action logged</span>
     </span>
-  );
-}
-
-/**
- * Campana 40×40 con el badge de no leídas de la topbar (patrón 21). Ningún
- * artboard de la Fase 8 dibuja el panel abierto — a diferencia de la campana
- * de cuenta (patrón 14) y de actividad del partner (patrón 17), aquí queda
- * inerte, como "Write a review" en el Epic 3.
- */
-function AdminNotificationsButton() {
-  return (
-    <button
-      type="button"
-      aria-label="Notifications"
-      className="relative flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-[11px] border-[1.5px] border-line transition-colors duration-150 hover:border-accent hover:bg-surface-hover"
-    >
-      <Bell size={17} strokeWidth={1.8} className="text-accent" aria-hidden />
-      <span className="absolute -right-1.5 -top-1.5 flex h-[19px] min-w-[19px] items-center justify-center rounded-pill border-2 border-panel-black bg-accent px-1 text-[10.5px] font-extrabold text-panel-black">
-        3
-      </span>
-    </button>
   );
 }
 

@@ -4,8 +4,9 @@ import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Compass, House, LogOut, Ticket, UserRound } from "lucide-react";
+import { Compass, House, Ticket, UserRound } from "lucide-react";
 
+import { LogoutButton } from "@/components/patterns/logout-button";
 import { useCurrentMember } from "@/lib/current-member";
 import { cn } from "@/lib/utils";
 
@@ -153,9 +154,7 @@ export function AppShell({
               {member.tier}
             </span>
           </span>
-          <Link href="/login" aria-label="Log out">
-            <LogOut size={17} strokeWidth={1.6} className="text-fg-subtle" />
-          </Link>
+          <LogoutButton redirectTo="/login" />
         </div>
       </nav>
 
