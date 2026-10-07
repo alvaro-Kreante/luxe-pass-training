@@ -137,7 +137,7 @@ function SupportDeskScreen() {
             aria-label={`Open case ${supportCase.id} · ${supportCase.subject}`}
             onClick={() => router.push(`/admin/support/${supportCase.id}`)}
             className={cn(
-              "grid w-full items-center gap-3.5 border-b border-[rgba(58,50,42,0.6)] px-5.5 text-left transition-colors duration-150 last:border-b-0 hover:bg-surface-hover",
+              "grid w-full cursor-pointer items-center gap-3.5 border-b border-[rgba(58,50,42,0.6)] px-5.5 text-left transition-colors duration-150 last:border-b-0 hover:bg-surface-hover",
               GRID,
               supportCase.status === "new" && "bg-[rgba(201,168,118,0.09)] shadow-[inset_3px_0_0_var(--gold-500)]",
             )}

@@ -172,6 +172,18 @@ recibe cada aviso, pero esa vista no está diseñada — `DESIGN-SYSTEM.md` §6
 
 **Se resuelve:** cuando una historia futura diseñe esa pantalla.
 
+### 2.8b La flecha de las filas de `/partner/guests` no lleva a ningún sitio
+
+El ticket 002 hizo clicables las filas de las tablas de Admin y Partner
+(`TableRow`), pero en `/partner/guests` (Story 7.3, `RepeatGuests.dc.html`) la
+flecha de cada fila sigue siendo decorativa: no existe una pantalla de detalle
+de un invitado recurrente ni artboard para ella, y la ficha de Today es de una
+reserva concreta, no de un historial. Decisión (6 oct 2026): queda pendiente,
+sin quitar la flecha ni reutilizar otra ficha.
+
+**Se resuelve:** cuando se diseñe el detalle del invitado recurrente (o se
+decida quitar la flecha).
+
 ### 2.9 Mini-mapa embebido en el perfil de lounge sigue sin construirse
 
 Con Google Maps ya real en `/explore` (§2.3, resuelto) y Epic 3 ya conectado

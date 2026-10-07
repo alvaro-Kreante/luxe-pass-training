@@ -1,10 +1,10 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { ChevronRight } from "lucide-react";
 
 import { AttendanceCheckbox } from "@/components/ui/attendance-checkbox";
 import { StatusChip } from "@/components/ui/status-chip";
+import { TableRow, TableRowChevron } from "@/components/ui/table-row";
 import type { PartnerGuest } from "@/lib/partner";
 import { cn } from "@/lib/utils";
 
@@ -44,13 +44,11 @@ export function GuestListTable({
       </div>
 
       {guests.map((guest) => (
-        <div
+        <TableRow
           key={guest.id}
-          className={cn(
-            "grid items-center gap-3.5 border-b border-[rgba(58,50,42,0.6)] px-5.5 transition-colors duration-150 last:border-b-0",
-            GRID,
-            highlightedId === guest.id && "bg-[rgba(201,168,118,0.09)] shadow-[inset_3px_0_0_var(--gold-500)]",
-          )}
+          onOpen={() => onOpenDetail(guest.id)}
+          selected={highlightedId === guest.id}
+          className={cn("grid items-center gap-3.5 px-5.5", GRID)}
           style={{ height: 54 }}
         >
           <AttendanceCheckbox
@@ -88,15 +86,8 @@ export function GuestListTable({
             <span className="block truncate text-[11.5px] text-fg-subtle">{guest.phone}</span>
           </span>
 
-          <button
-            type="button"
-            onClick={() => onOpenDetail(guest.id)}
-            aria-label={`Open ${guest.name}`}
-            className="flex cursor-pointer justify-end text-fg-subtle"
-          >
-            <ChevronRight size={17} strokeWidth={1.8} />
-          </button>
-        </div>
+          <TableRowChevron label={guest.name} onOpen={() => onOpenDetail(guest.id)} />
+        </TableRow>
       ))}
     </div>
   );

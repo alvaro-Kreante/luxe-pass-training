@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ChevronRight, Info, Plus, Search } from "lucide-react";
+import { Info, Plus, Search } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -9,6 +9,7 @@ import { AdminShell } from "@/components/patterns/admin-shell";
 import { PartnerStatusChip } from "@/components/admin/partner-status-chip";
 import { RequireAdminSession } from "@/components/admin/require-admin-session";
 import { StatusFilter } from "@/components/admin/status-filter";
+import { TableRow, TableRowChevron } from "@/components/ui/table-row";
 import { getTicketCounts, type TicketCounts } from "@/lib/admin";
 import { listAdminPartners, type AdminPartnerRow, type PartnerStatus } from "@/lib/admin-partners";
 import { createClient } from "@/lib/supabase/client";
@@ -124,11 +125,12 @@ function PartnersScreen() {
         </div>
 
         {filtered.map((partner) => (
-          <div
+          <TableRow
             key={partner.id}
             role="row"
             aria-label={partner.name}
-            className={cn("grid items-center gap-3.5 border-b border-[rgba(58,50,42,0.6)] px-5.5 last:border-b-0", GRID)}
+            onOpen={() => router.push(`/admin/partners/${partner.id}`)}
+            className={cn("grid items-center gap-3.5 px-5.5", GRID)}
             style={{ height: 58 }}
           >
             <div role="cell" className="min-w-0">
@@ -136,7 +138,7 @@ function PartnersScreen() {
                 type="button"
                 onClick={() => router.push(`/admin/partners/${partner.id}`)}
                 aria-label={`Open ${partner.name}`}
-                className="block min-w-0 text-left"
+                className="block min-w-0 cursor-pointer text-left"
               >
                 <span
                   className={cn(
@@ -171,10 +173,10 @@ function PartnersScreen() {
             <p role="cell" className="m-0 truncate text-[12.5px] text-fg-muted">
               {partner.city}
             </p>
-            <div role="cell" className="flex justify-end text-fg-subtle">
-              <ChevronRight size={17} strokeWidth={1.8} aria-hidden />
+            <div role="cell" className="flex justify-end">
+              <TableRowChevron label={partner.name} onOpen={() => router.push(`/admin/partners/${partner.id}`)} />
             </div>
-          </div>
+          </TableRow>
         ))}
 
         {partners && filtered.length === 0 ? (

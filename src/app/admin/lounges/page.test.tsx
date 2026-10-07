@@ -1,7 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedAdminAndSignIn } from "@/lib/testing/confirmed-user";
@@ -16,9 +16,11 @@ import LoungesPage from "./page";
  * este archivo.
  */
 
+const router = vi.hoisted(() => ({ push: vi.fn(), replace: vi.fn() }));
+
 vi.mock("next/navigation", () => ({
   usePathname: () => "/admin/lounges",
-  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useRouter: () => router,
 }));
 
 const admin = createAdminClient(
@@ -87,6 +89,41 @@ afterAll(async () => {
 });
 
 describe("Lounges (/admin/lounges)", () => {
+  describe("abrir el detalle desde la fila (ticket 002)", () => {
+    beforeEach(() => router.push.mockClear());
+
+    it("un clic en cualquier parte de la fila abre el detalle", async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<LoungesPage />);
+
+      await waitFor(() => expect(screen.getByText(loungeAName)).toBeInTheDocument());
+      const row = screen.getByRole("button", { name: `View ${loungeAName}` }).parentElement!;
+      await user.click(within(row).getByText("Draft"));
+
+      expect(router.push).toHaveBeenCalledWith(`/admin/lounges/${loungeAId}`);
+    });
+
+    it("la flecha es un botón 'View <nombre>' que abre el detalle con el teclado", async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<LoungesPage />);
+
+      const view = await screen.findByRole("button", { name: `View ${loungeAName}` });
+      view.focus();
+      await user.keyboard("{Enter}");
+
+      expect(router.push).toHaveBeenCalledWith(`/admin/lounges/${loungeAId}`);
+    });
+
+    it("marcar el checkbox de la fila no abre el detalle", async () => {
+      const user = userEvent.setup({ delay: null });
+      render(<LoungesPage />);
+
+      await user.click(await screen.findByRole("checkbox", { name: `Select ${loungeAName}` }));
+
+      expect(router.push).not.toHaveBeenCalled();
+    });
+  });
+
   it("Add lounge opens the new-lounge form", async () => {
     render(<LoungesPage />);
 

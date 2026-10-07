@@ -13,4 +13,4 @@ nueva de `docs/specs/`.
 | # | Ticket | Estado |
 |---|---|---|
 | 001 | [Formulario de tarjeta nueva en blanco en el paso de pago](001-booking-new-card-form-blank.md) | Abierto |
-| 002 | [Interacciones de tablas y del shell en Admin y Partner](002-admin-partner-table-and-shell-interactions.md) | Abierto |
+| 002 | [Interacciones de tablas y del shell en Admin y Partner](002-admin-partner-table-and-shell-interactions.md) | Hecho (salvo `/partner/guests`) |
