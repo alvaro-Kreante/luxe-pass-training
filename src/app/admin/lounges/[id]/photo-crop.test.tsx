@@ -74,6 +74,17 @@ afterAll(async () => {
   await service.from("lounges").delete().like("id", `test-lounge-photo-crop-${stamp}-%`);
 });
 
+/**
+ * Radix pone `pointer-events: none` en el body al abrir el modal y el
+ * contenido lo anula con `auto` un render después; en CI, `findByRole` puede
+ * devolver el diálogo en ese hueco y el primer clic dentro falla.
+ */
+async function findEditor(name: "Frame this photo" | "Adjust the crop") {
+  const dialog = await screen.findByRole("dialog", { name });
+  await waitFor(() => expect(getComputedStyle(dialog).pointerEvents).not.toBe("none"), { timeout: 8000 });
+  return dialog;
+}
+
 /** El botón del editor se habilita cuando la imagen carga y hay encuadre — en CI tarda. */
 async function confirmCrop(user: ReturnType<typeof userEvent.setup>, dialog: HTMLElement, name: "Use photo" | "Save crop") {
   const button = within(dialog).getByRole("button", { name });
@@ -87,7 +98,7 @@ describe("elegir una foto abre el editor", () => {
     await draftLounge();
     await user.upload(await renderDraft(), photo("ainsworth-terrace.jpg"));
 
-    const editor = await screen.findByRole("dialog", { name: "Frame this photo" });
+    const editor = await findEditor("Frame this photo");
     expect(within(editor).getByText("ainsworth-terrace.jpg")).toBeInTheDocument();
     expect(within(editor).getByRole("slider", { name: "Zoom" })).toBeInTheDocument();
     expect(within(editor).getByRole("radio", { name: /Large · 2400 px/ })).not.toBeChecked();
@@ -100,7 +111,7 @@ describe("elegir una foto abre el editor", () => {
     await draftLounge();
     await user.upload(await renderDraft(), photo("terrace.jpg"));
 
-    const editor = await screen.findByRole("dialog", { name: "Frame this photo" });
+    const editor = await findEditor("Frame this photo");
     await user.click(within(editor).getByRole("button", { name: "Cancel" }));
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -112,7 +123,7 @@ describe("elegir una foto abre el editor", () => {
     const id = await draftLounge();
     await user.upload(await renderDraft(), photo("terrace.jpg"));
 
-    const editor = await screen.findByRole("dialog", { name: "Frame this photo" });
+    const editor = await findEditor("Frame this photo");
     await user.click(within(editor).getByRole("radio", { name: /Light · 1200 px/ }));
     await confirmCrop(user, editor, "Use photo");
     await screen.findByRole("button", { name: "Edit photo terrace" }, { timeout: 8000 });
@@ -131,7 +142,7 @@ describe("elegir una foto abre el editor", () => {
     await draftLounge();
     await user.upload(await renderDraft(), [photo("bar.jpg"), photo("terrace.jpg")]);
 
-    const first = await screen.findByRole("dialog", { name: "Frame this photo" });
+    const first = await findEditor("Frame this photo");
     expect(within(first).getByText("bar.jpg")).toBeInTheDocument();
     await confirmCrop(user, first, "Use photo");
     await waitFor(() => expect(within(screen.getByRole("dialog", { name: "Frame this photo" })).getByText("terrace.jpg")).toBeInTheDocument(), { timeout: 8000 });
@@ -167,7 +178,7 @@ describe("reencuadrar una foto ya subida", () => {
     await renderDraft();
 
     await user.click(await screen.findByRole("button", { name: "Adjust crop Main room" }));
-    const editor = await screen.findByRole("dialog", { name: "Adjust the crop" });
+    const editor = await findEditor("Adjust the crop");
     expect(within(editor).getByText("Original · kept")).toBeInTheDocument();
     await user.click(within(editor).getByRole("radio", { name: /Large · 2400 px/ }));
     await confirmCrop(user, editor, "Save crop");
@@ -192,7 +203,7 @@ describe("reencuadrar una foto ya subida", () => {
     await renderDraft();
 
     await user.click(await screen.findByRole("button", { name: "Adjust crop Terrace" }));
-    const editor = await screen.findByRole("dialog", { name: "Adjust the crop" });
+    const editor = await findEditor("Adjust the crop");
     await confirmCrop(user, editor, "Save crop");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull(), { timeout: 8000 });
 
