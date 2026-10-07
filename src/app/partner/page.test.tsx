@@ -12,6 +12,7 @@ import {
 } from "@/lib/testing/confirmed-user";
 
 import PartnerTodayPage from "./page";
+import { findDialog } from "@/lib/testing/find-dialog";
 
 /**
  * Story 7.1 — Daily Guest Management. Story 7.2 — Booking Notifications for
@@ -161,7 +162,7 @@ describe("abrir la ficha desde la fila (ticket 002)", () => {
     const view = await screen.findByRole("button", { name: `View ${guestSearchA.name}` });
     await user.click(within(view.parentElement!).getByText(guestSearchA.email));
 
-    expect(await screen.findByRole("dialog")).toHaveTextContent(guestSearchA.name);
+    expect(await findDialog()).toHaveTextContent(guestSearchA.name);
   });
 });
 

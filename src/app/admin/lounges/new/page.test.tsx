@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedAdminAndSignIn } from "@/lib/testing/confirmed-user";
 
 import NewLoungePage from "./page";
+import { findDialog } from "@/lib/testing/find-dialog";
 
 /**
  * Story 8.3 — "Add/edit/remove lounge profiles" y "Upload and manage lounge
@@ -75,7 +76,7 @@ describe("fotos del lounge nuevo", () => {
     const user = await renderWithPhotos(["img-2041.jpg"]);
 
     await user.click(screen.getByRole("button", { name: "Edit photo img 2041" }));
-    const dialog = await screen.findByRole("dialog", { name: "What does this photo show?" });
+    const dialog = await findDialog({ name: "What does this photo show?" });
     const area = within(dialog).getByLabelText("Area");
     expect(area).toHaveValue("img 2041");
 
@@ -91,7 +92,7 @@ describe("fotos del lounge nuevo", () => {
     const user = await renderWithPhotos(["x.jpg"]);
 
     await user.click(screen.getByRole("button", { name: "Edit photo x" }));
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await findDialog();
     await user.click(within(dialog).getByRole("button", { name: "Terrace" }));
 
     expect(within(dialog).getByLabelText("Area")).toHaveValue("Terrace");
@@ -101,7 +102,7 @@ describe("fotos del lounge nuevo", () => {
     const user = await renderWithPhotos(["bar.jpg", "terrace.jpg"]);
 
     await user.click(screen.getByRole("button", { name: "Edit photo terrace" }));
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await findDialog();
     await user.click(within(dialog).getByRole("checkbox", { name: /Main photo/ }));
     await user.click(within(dialog).getByRole("button", { name: "Save photo" }));
 
@@ -115,7 +116,7 @@ describe("fotos del lounge nuevo", () => {
     const user = await renderWithPhotos(["bar.jpg", "terrace.jpg"]);
 
     await user.click(screen.getByRole("button", { name: "Edit photo bar" }));
-    const dialog = await screen.findByRole("dialog");
+    const dialog = await findDialog();
     await user.click(within(dialog).getByRole("button", { name: "Remove photo" }));
 
     expect(screen.getAllByRole("button", { name: /^Edit photo/ })).toHaveLength(1);

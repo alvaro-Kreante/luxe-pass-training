@@ -10,6 +10,7 @@ import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
 import { giveTestMemberSavedCard, grantTestMembership } from "@/lib/testing/membership-fixture";
 
 import PlansPage from "./page";
+import { findDialog } from "@/lib/testing/find-dialog";
 
 /** La pantalla hace varias llamadas reales (Supabase + Stripe); bajo la suite completa en paralelo 1 s no alcanza. */
 const LOAD = { timeout: 10000 };
@@ -68,7 +69,7 @@ describe("sin membresía — elegir plan", () => {
 
     await user.click(await screen.findByRole("button", { name: "Choose annual" }, LOAD));
 
-    const dialog = await screen.findByRole("dialog", {}, LOAD);
+    const dialog = await findDialog({}, LOAD);
     expect(within(dialog).getByText("Confirm your new plan")).toBeInTheDocument();
     expect(await within(dialog).findByRole("button", { name: "Pay $2,400.00 and join" }, LOAD)).toBeInTheDocument();
     expect(within(dialog).queryByText(/unused days/)).not.toBeInTheDocument();
@@ -111,7 +112,7 @@ describe("con membresía", () => {
 
     await userEvents.click(await screen.findByRole("button", { name: "Switch to monthly" }, LOAD));
 
-    const dialog = await screen.findByRole("dialog", {}, LOAD);
+    const dialog = await findDialog({}, LOAD);
     expect(within(dialog).getByText("Confirm your new plan")).toBeInTheDocument();
     expect(within(dialog).getByText("$0.00")).toBeInTheDocument();
     await userEvents.click(within(dialog).getByRole("button", { name: /^Switch to monthly on / }));
@@ -142,7 +143,7 @@ describe("con membresía", () => {
 
     await userEvents.click(await screen.findByRole("button", { name: "Switch to annual" }, LOAD));
 
-    const dialog = await screen.findByRole("dialog", {}, LOAD);
+    const dialog = await findDialog({}, LOAD);
     expect(await within(dialog).findByRole("button", { name: /^Pay \$[\d,.]+ and switch$/ }, LOAD)).toBeInTheDocument();
   });
 });

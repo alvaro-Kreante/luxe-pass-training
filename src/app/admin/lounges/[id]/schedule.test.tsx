@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedAdminAndSignIn } from "@/lib/testing/confirmed-user";
 
 import LoungeEditPage from "./page";
+import { findDialog } from "@/lib/testing/find-dialog";
 
 /**
  * Story 10.9 · SeasonalEmpty (17), SeasonalEdit (18), SeasonalOverlap (19),
@@ -202,7 +203,7 @@ describe("cierres especiales", () => {
     await user.type(within(editor).getByLabelText("Reason · members see it"), "Private event");
     await user.click(within(editor).getByRole("button", { name: "Add closure" }));
 
-    const dialog = await screen.findByRole("dialog", { name: "1 confirmed booking falls in this closure" });
+    const dialog = await findDialog({ name: "1 confirmed booking falls in this closure" });
     expect(within(dialog).getByText("Marcus Bell")).toBeInTheDocument();
     expect(within(dialog).getByText(/Fri Sep 12 · 3:30 PM/)).toBeInTheDocument();
     await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
@@ -213,7 +214,7 @@ describe("cierres especiales", () => {
     await waitFor(() => expect(document.body.style.pointerEvents).not.toBe("none"));
     const again = await waitFor(() => within(closures()).getByRole("button", { name: "Add closure" }));
     await user.click(again);
-    await user.click(within(await screen.findByRole("dialog")).getByRole("button", { name: "Save anyway" }));
+    await user.click(within(await findDialog()).getByRole("button", { name: "Save anyway" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     await within(closures()).findByRole("listitem", { name: /Private event/ });
     expect((await service.from("lounge_closures").select("id").eq("lounge_id", id)).data).toHaveLength(1);

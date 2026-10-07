@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedAdminAndSignIn } from "@/lib/testing/confirmed-user";
 
 import LoungeEditPage from "./page";
+import { findDialog } from "@/lib/testing/find-dialog";
 
 /**
  * Epic 8 · LoungeLive.dc.html (17), LoungeEditConfirm (18) y
@@ -127,7 +128,7 @@ describe("un lounge live se ve entero y bloqueado", () => {
     const id = await liveLounge();
 
     await user.click(screen.getByRole("button", { name: "Edit lounge" }));
-    const dialog = await screen.findByRole("dialog", { name: "Move to draft to edit?" });
+    const dialog = await findDialog({ name: "Move to draft to edit?" });
     await user.click(within(dialog).getByRole("button", { name: "Keep it live" }));
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -154,7 +155,7 @@ describe("suspender un lounge suelto (Story 10.4)", () => {
     const id = await liveLounge();
 
     await chooseStatus(user, "Suspended");
-    const dialog = await screen.findByRole("dialog", { name: "Suspend this lounge?" });
+    const dialog = await findDialog({ name: "Suspend this lounge?" });
     await user.click(within(dialog).getByRole("button", { name: "Suspend lounge" }));
 
     expect(await screen.findByRole("button", { name: "Status: Suspended" })).toBeInTheDocument();
@@ -168,7 +169,7 @@ describe("suspender un lounge suelto (Story 10.4)", () => {
 
     await chooseStatus(user, "Draft");
 
-    expect(await screen.findByRole("dialog", { name: "Move to draft to edit?" })).toBeInTheDocument();
+    expect(await findDialog({ name: "Move to draft to edit?" })).toBeInTheDocument();
   });
 
   it("en un borrador, Live del selector lo publica", async () => {
@@ -180,7 +181,7 @@ describe("suspender un lounge suelto (Story 10.4)", () => {
 
     await chooseStatus(user, "Live");
 
-    await screen.findByRole("dialog", { name: "The lounge is live" }, { timeout: 8000 });
+    await findDialog({ name: "The lounge is live" }, { timeout: 8000 });
     expect(await contentStatus(id)).toBe("live");
   });
 
@@ -214,7 +215,7 @@ describe("un lounge en borrador", () => {
 
     await user.click(await screen.findByRole("button", { name: "Publish lounge" }));
 
-    const notice = await screen.findByRole("dialog", { name: "The lounge is live" }, { timeout: 8000 });
+    const notice = await findDialog({ name: "The lounge is live" }, { timeout: 8000 });
     expect(await contentStatus(id)).toBe("live");
     await user.click(within(notice).getByRole("button", { name: "Done" }));
     await dialogClosed();
@@ -230,7 +231,7 @@ describe("un lounge en borrador", () => {
 
     await user.click(await screen.findByRole("button", { name: "Save draft" }));
 
-    const notice = await screen.findByRole("dialog", { name: "Draft saved" }, { timeout: 8000 });
+    const notice = await findDialog({ name: "Draft saved" }, { timeout: 8000 });
     await user.click(within(notice).getByRole("button", { name: "Keep editing" }));
     await dialogClosed();
     expect(screen.getByRole("button", { name: "Publish lounge" })).toBeInTheDocument();
@@ -256,7 +257,7 @@ describe("el partner del lounge (Story 10.5)", () => {
     await user.click(await screen.findByRole("option", { name: new RegExp(draftName) }));
     await user.click(screen.getByRole("button", { name: "Save draft" }));
 
-    await screen.findByRole("dialog", { name: "Draft saved" }, { timeout: 8000 });
+    await findDialog({ name: "Draft saved" }, { timeout: 8000 });
     const { data } = await admin.from("lounges").select("partner_id").eq("id", id).single();
     expect(data?.partner_id).toBe(partnerId);
   });
@@ -305,9 +306,9 @@ describe("las fotos del lounge", () => {
 
     await user.click(await screen.findByRole("button", { name: "View photo Main room" }));
 
-    const viewer = await screen.findByRole("dialog", { name: "Main room · 1 of 2" });
+    const viewer = await findDialog({ name: "Main room · 1 of 2" });
     expect(within(viewer).getByRole("img", { name: "Main room" })).toHaveAttribute("src", "https://example.com/main-room.jpg");
     await user.click(within(viewer).getByRole("button", { name: "Next photo" }));
-    expect(await screen.findByRole("dialog", { name: "Bar · 2 of 2" })).toBeInTheDocument();
+    expect(await findDialog({ name: "Bar · 2 of 2" })).toBeInTheDocument();
   });
 });
