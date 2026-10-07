@@ -330,10 +330,13 @@ local real levantado en el runner). La migración a `luxepass-dev` y los
 advisors contra el proyecto real, confirmados en el PR #2. Ver filas en
 `docs/PENDIENTES.md` §Resueltos.
 
-Nota aparte, sin acción: al reintentar el deploy tras el PR #2, un job falló
-una vez con "Failed to resolve latest Supabase CLI release: rate limit
-exceeded" (`supabase/setup-cli@v1` contra la API de GitHub) — transitorio,
-se resolvió solo con `gh run rerun --failed`.
+Nota aparte: al reintentar el deploy tras el PR #2, un job falló una vez con
+"Failed to resolve latest Supabase CLI release: rate limit exceeded"
+(`supabase/setup-cli@v1` contra la API de GitHub). Volvió a pasar en el CI
+del PR #40 (7 oct 2026). **Resuelto:** `ci.yml` y `deploy.yml` fijan
+`version: 2.116.0` en vez de `latest` — sin consulta a la API para resolver
+la última versión, y el pipeline usa la misma CLI que local. Al actualizar
+la CLI en local, subir también esta versión en los tres `setup-cli`.
 
 ### Primer deploy real de punta a punta (11-12 sept 2026): 3 bugs reales, uno tapando al otro
 
