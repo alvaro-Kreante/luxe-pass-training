@@ -73,6 +73,13 @@ qué estado usa qué param está en `docs/PENDIENTES.md` §2.2 (estados de
 
 **Nunca `git push` directo a `staging` ni a `main`.** Todo cambio entra por PR (`<prefijo>/*` → `staging`, `staging` → `main`) con el CI en verde: cada push a esas ramas migra un Supabase remoto al instante. (La protección de ramas en GitHub sigue pendiente, ver `docs/ci-cd/RESUMEN.md` — mientras tanto la regla depende de cumplirla.)
 
+**Subir a GitHub requiere confirmación explícita.** Commitear en la rama local
+está bien; `git push` (de cualquier rama, también `fix/*`/`feat/*`) y abrir un
+PR (`gh pr create`) se hacen solo cuando se pide para ese paso concreto. Un
+"hazlo" sobre una lista de pasos que incluía el PR no cuenta: al terminar,
+dejar el commit local y preguntar "¿subo la rama y abro el PR contra
+`staging`?".
+
 El trabajo sale de `staging` en una rama con prefijo:
 
 | Prefijo | Cuándo |
@@ -130,6 +137,9 @@ Se pueden correr a la vez: `next build` escribe en `.next-build` y `next dev` en
 
 **9. Revisar `docs/PENDIENTES.md`**: añadir lo que quede abierto (algo provisional,
 un asset que falte, un criterio que solo se pueda enunciar) y cerrar lo resuelto.
+
+**10. Commit local y parar.** Push y PR contra `staging` solo con confirmación
+explícita (ver §Ramas).
 
 ### Correspondencia specs ↔ diseño
 
