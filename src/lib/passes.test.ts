@@ -17,7 +17,7 @@ import {
 } from "./passes";
 import { checkInReceptionBooking, reportReceptionNoShow } from "./reception";
 import { createClient } from "./supabase/client";
-import { signUpConfirmedMemberAndSignIn } from "./testing/confirmed-user";
+import { signInReceptionStaff, signUpConfirmedMemberAndSignIn } from "./testing/confirmed-user";
 
 /**
  * Story 5.1 (Digital Pass Generation). Criterios en
@@ -135,7 +135,7 @@ describe("fetchUpcomingBookings", () => {
 
   it("una reserva de hoy con check-in aparece como 'in-progress'", async () => {
     const { supabase, reference } = await bookAndSignIn("upcoming-2", today(), "afternoon", "3:30 PM");
-    const kiosk = createClient();
+    const kiosk = await signInReceptionStaff(ainsworth.id);
     await checkInReceptionBooking(kiosk, ainsworth.id, today(), reference);
 
     const upcoming = await fetchUpcomingBookings(supabase);
@@ -148,7 +148,7 @@ describe("fetchUpcomingBookings", () => {
 describe("fetchPastBookings", () => {
   it("AC 'No-show tracking for booking history' — un no-show aparece como outcome 'no-show'", async () => {
     const { supabase, reference } = await bookAndSignIn("past-1", today(), "afternoon", "1:00 PM");
-    const kiosk = createClient();
+    const kiosk = await signInReceptionStaff(ainsworth.id);
     await reportReceptionNoShow(kiosk, ainsworth.id, today(), reference);
 
     const past = await fetchPastBookings(supabase);

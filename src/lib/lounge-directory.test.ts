@@ -76,12 +76,15 @@ describe("fetchLounges (Supabase local)", () => {
     }
   });
 
-  it("RLS bloquea a un cliente sin sesión", async () => {
+  it("un cliente sin sesión no puede leer el catálogo", async () => {
     const supabase = createClient();
     /** Un test anterior puede haber dejado una sesión en el mismo jsdom. */
     await supabase.auth.signOut();
 
-    await expect(fetchLounges(supabase)).resolves.toEqual([]);
+    // `lounge_seats_on` no se concede a `anon` (lounge_availability.sql):
+    // la migración de SEC-01 aplicó por fin ese `revoke`, que el schema ya
+    // declaraba, así que la llamada se rechaza en vez de volver vacía.
+    await expect(fetchLounges(supabase)).rejects.toMatchObject({ code: "42501" });
   });
 });
 

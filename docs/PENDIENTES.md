@@ -131,34 +131,14 @@ recibe por prop, así que un lector real no obtendría nada útil de él.
 **Se resuelve:** añadiendo una librería de generación de QR cuando el pase
 tenga que ser escaneable de verdad, no solo mostrarse.
 
-### 2.7 `/reception` sigue sin login propio ni vivir bajo `/partner`
+### 2.7 `/reception` sin login de personal — resuelto
 
-El Epic 7 ya trae su `Login.dc.html` y su shell (`/partner/login`, `/partner`),
-pero `/reception` (patrón 12, Epic 5) sigue siendo una URL suelta sin
-verificación de que quien la abre sea personal del lounge. Ninguna de las tres
-historias del Epic 7 pide mover la consola de recepción ni fusionarla con el
-dashboard — son artboards distintos (un kiosco de check-in vs. un back-office)
-— así que se deja como estaba, documentado como desviación consciente en
-`docs/design/COMPONENT-MAP.md`.
-
-Al conectar Epic 5 a Supabase (21 sept 2026, decisión tomada con el usuario)
-esta misma falta de login se trasladó **a propósito** al backend: las
-funciones `reception_*` (`supabase/schemas/bookings.sql`) son RPC "de
-kiosco" concedidas a `anon`, autorizadas solo por LP# + lounge + fecha — no
-se esperó a que Epic 7 resolviera el rol de staff, tal como
-`docs/DATA-MODEL-MAP.md` ya anticipaba que esa decisión era "al empezar
-Epic 7, no antes".
-
-**Rol de partner ya resuelto** (22 sept 2026, al conectar Epic 7 — tabla
-`user_roles`, ver `docs/DATA-MODEL-MAP.md` §Epic 7), pero `/reception`
-**sigue sin moverse detrás de ese login a propósito**: ninguna de las tres
-historias del Epic 7 lo pide (siguen siendo artboards distintos, kiosco vs.
-back-office).
-
-**Se resuelve:** si una historia futura pide explícitamente que la recepción
-viva detrás del login de partner (p. ej. `/partner/reception`), no antes —
-ese mismo momento es el que debería endurecer las RPC de kiosco a exigir
-`has_role('partner')` en vez de `anon`.
+Cerrado por SEC-01 (`docs/audit/seguridad-y-datos.md`, 12 oct 2026): las
+RPC `reception_*` ya no se conceden a `anon` y solo responden en los
+lounges del partner de quien llama (`partner_lounge_ids()`); `/reception`
+exige sesión de partner (`RequirePartnerSession`) y usa el lounge elegido
+en su contexto. La consola sigue en su URL propia, fuera del shell de
+`/partner`: ninguna historia pide fusionarla con el dashboard.
 
 ### 2.8 "Settings" del Partner Dashboard no tiene pantalla propia
 
@@ -793,3 +773,4 @@ de la tarifa de no-show.
 | Epic 8 (Admin & Support) era mockup puro: las 11 pantallas de `/admin/**` corrían sobre datos de muestra fijos (`SUPPORT_CASES`, `ADMIN_MEMBERS`, `NETWORK_METRICS`, `ADMIN_LOUNGES`...), sin login de admin ni forma de tocar Supabase | 22 sept 2026 | Conectado a Supabase local real, dos decisiones de alcance tomadas con el usuario antes de implementar que revierten la nota original de `docs/DATA-MODEL-MAP.md`: el reembolso (Story 8.1) es real vía Stripe (`stripe-refund-payment`) para un cargo `succeeded`, y los reportes programados (Story 8.2) son reales vía `pg_cron` + Brevo (`send-admin-report`, adjunto CSV real) — mismo nivel de realismo que el resto del proyecto. `/admin/login` nace sin artboard propio (la Fase 8 nunca dibujó ese nodo del flow) — decisión confirmada con el usuario: reutiliza el layout de `/partner/login`. Story 8.1: `support_tickets`/`support_ticket_messages` (nacen aquí), un no-show reportado por un partner abre un caso automáticamente; `BookingOverrideDrawer` reescrito sobre los 5 horarios reales del dominio (el artboard dibujaba horas ficticias). Story 8.2: analítica real sobre TODA la red (no un lounge elegido), export por dataset con columnas anonimizadas por defecto. Story 8.3: `lounges.content_status` (live/draft/archived) + `lounge_content_submissions` (nace aquí) generalizan el "Content approval workflow" a cualquier lounge, no solo The Vestry como el mock; bucket de Storage real `lounge-images`; de la barra de acción masiva, solo "Archive" quedó real. **Dos bugs reales encontrados y corregidos con TDD**: (1) `admin_search_members` trataba "4+ dígitos en la consulta" como rama excluyente de la búsqueda por nombre, así que un query con nombre y unos dígitos (p. ej. un email de test con timestamp) dejaba de buscar por nombre — la condición pasó a ser inclusiva (OR); (2) las RPC que reutiliza el cron de reportes (`admin_generate_report_csv` y las `admin_export_*`) rechazaban la llamada con "Not authorized" porque el guard exigía `has_role('admin')` incluso cuando el cron las llama sin sesión (`auth.uid()` nulo) — el guard pasó a `auth.uid() is not null and not has_role('admin')`, que sigue rechazando a un autenticado sin el rol pero deja pasar la llamada interna sin sesión. Verificado de punta a punta: `stripe-refund-payment` con un cargo real de la sandbox, `dispatch_scheduled_reports` disparado a mano con `200` confirmado en `net._http_response`. Ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 8" y `docs/DATA-MODEL-MAP.md` §Epic 8. |
 | Epic 9 (Membership & Referrals) era mockup puro: `/profile/membership/**` corría sobre las cuentas de muestra de Alexandra/Naomi (`?plan=monthly`, `?state=credited`), el código de referido era determinista sin persistir y "Pay … and switch" solo cerraba el modal | 23 sept 2026 | Conectado a Supabase local real + Stripe en modo test, decisiones de producto tomadas con el usuario antes de implementar: un miembro nace sin membresía hasta elegir plan (elección de plan sobre `Plans.dc.html` + el modal de `Upgrade.dc.html`, sin artboard propio); alta y subida mensual→anual son un cobro puntual real (no Stripe Billing), con tarjeta guardada o `<PaymentElement>` embebido; el premio de referido se acredita con el primer pago real liquidado del amigo; el amigo entra por `/join/[code]` → `/signup?ref=` (metadatos de Auth, sin campo nuevo). Nacen `memberships`, `referrals`, `referral_shares`; `profiles.membership_status` pasa a espejo de `memberships` y el miembro ya no puede escribirlo (ni `referral_code`/`stripe_customer_id`, `guard_profile_managed_columns`). Cuarto uso de `pg_cron` (`dispatch_membership_renewals`, aviso de un mes antes + vencimientos). Ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 9" y §2.12/§4.8 de este archivo para lo que queda abierto. |
 | La disponibilidad de los lounges (`lounge_availability`) era un seed estático de 18 semanas desde `TODAY`: un lounge nuevo no tenía plazas sin otra migración, y cancelar una reserva como miembro (`cancel_booking`) nunca devolvía la plaza | 25 sept 2026 | Tabla eliminada; disponibilidad en vivo con `lounge_availability_range` (`capacity` por franja − reservas `confirmed`/`in_progress`/`completed`), `confirm_booking`/`admin_reschedule_booking` serializados con `pg_advisory_xact_lock` por lounge/fecha/franja. Cancelar libera la plaza sola. Tests: `fillSlot` (`src/lib/testing/lounge-fixture.ts`) llena una franja con reservas reales y `vitest.global-setup.ts` borra las reservas de usuarios de test antes de cada corrida. Ver §2.10 y `docs/design/COMPONENT-MAP.md` "Backend real — Epic 3" |
+| SEC-01: las RPC de recepción (`reception_*`) eran invocables sin sesión y exponían nombre, email y contacto de emergencia de cualquier reserva, además de permitir check-in/no-show anónimos | 12 oct 2026 | Solo `authenticated` y filtradas por `partner_lounge_ids()`; `/reception` detrás de `RequirePartnerSession` con el lounge del contexto del partner. Tests de regresión en `src/lib/reception.test.ts` y `src/app/reception/page.test.tsx` |

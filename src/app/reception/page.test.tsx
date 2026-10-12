@@ -1,11 +1,12 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { bookingReferenceFromId, confirmBooking } from "@/lib/booking";
 import { today } from "@/lib/availability";
 import { createClient } from "@/lib/supabase/client";
-import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
+import { signUpConfirmedMemberAndSignIn, signUpConfirmedPartnerAndSignIn } from "@/lib/testing/confirmed-user";
+import { isolatedClient } from "@/lib/testing/partner-invite-fixture";
 
 import ReceptionPage from "./page";
 
@@ -16,16 +17,22 @@ import ReceptionPage from "./page";
  * dos estados de la misma consola: se alcanzan tecleando el número, no por
  * query param, porque es una interacción real del usuario.
  *
- * Backend real (Supabase local): la consola no inicia sesión (RPC "de
- * kiosco", ver `src/lib/reception.ts`), así que cada test primero confirma
- * una reserva real de The Ainsworth para hoy con otro cliente (un miembro
- * con sesión) y luego la busca desde la consola sin sesión.
+ * Backend real (Supabase local). SEC-01: la consola exige sesión de
+ * personal del partner dueño del lounge — cada test confirma una reserva
+ * real de The Ainsworth para hoy con un miembro (cliente aislado) y la
+ * busca desde la consola con la sesión de un partner de The Ainsworth.
  */
+const replace = vi.fn();
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ replace }),
+}));
+
 let reference = "";
 let memberName = "";
 
 beforeAll(async () => {
-  const member = createClient();
+  const member = isolatedClient();
   await signUpConfirmedMemberAndSignIn(
     member,
     `reception-page-${Date.now()}@ensoleil-test.com`,
@@ -56,6 +63,13 @@ beforeAll(async () => {
   if (!booking) throw new Error("No se pudo confirmar la reserva de prueba");
 
   reference = bookingReferenceFromId(booking.id);
+
+  await signUpConfirmedPartnerAndSignIn(
+    createClient(),
+    `reception-page-staff-${Date.now()}@ensoleil-test.com`,
+    "EnSoleil!2026",
+    { businessName: "Ainsworth Hospitality", loungeIds: ["the-ainsworth"] },
+  );
 });
 
 async function lookUp(user: ReturnType<typeof userEvent.setup>, code: string) {
@@ -70,6 +84,7 @@ describe("al buscar una reserva válida de hoy", () => {
     const user = userEvent.setup({ delay: null });
     render(<ReceptionPage />);
 
+    await screen.findByRole("textbox", { name: /confirmation number/i });
     await lookUp(user, reference);
 
     await waitFor(() => expect(screen.getByRole("heading", { name: memberName })).toBeInTheDocument());
@@ -83,6 +98,7 @@ describe("al buscar un número que no existe hoy", () => {
     const user = userEvent.setup({ delay: null });
     render(<ReceptionPage />);
 
+    await screen.findByRole("textbox", { name: /confirmation number/i });
     await lookUp(user, "LP-000000");
 
     await waitFor(() =>
@@ -98,11 +114,22 @@ describe("al confirmar el check-in", () => {
     const user = userEvent.setup({ delay: null });
     render(<ReceptionPage />);
 
+    await screen.findByRole("textbox", { name: /confirmation number/i });
     await lookUp(user, reference);
     await waitFor(() => expect(screen.getByRole("heading", { name: memberName })).toBeInTheDocument());
 
     await user.click(screen.getByRole("button", { name: /check in/i }));
 
     await waitFor(() => expect(screen.getByRole("button", { name: /checked in/i })).toBeDisabled());
+  });
+});
+
+describe("SEC-01 — sin sesión de personal", () => {
+  it("manda a /partner/login y no muestra la consola", async () => {
+    await createClient().auth.signOut();
+    render(<ReceptionPage />);
+
+    await waitFor(() => expect(replace).toHaveBeenCalledWith("/partner/login"));
+    expect(screen.queryByRole("textbox", { name: /confirmation number/i })).not.toBeInTheDocument();
   });
 });

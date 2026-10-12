@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { bookingReferenceFromId, confirmBooking, type BookingRequest } from "./booking";
 import { today } from "./availability";
@@ -10,21 +10,26 @@ import {
   lookupReceptionBooking,
   reportReceptionNoShow,
 } from "./reception";
-import { createClient } from "./supabase/client";
-import { signUpConfirmedMemberAndSignIn } from "./testing/confirmed-user";
+import { signUpConfirmedMemberAndSignIn, signUpConfirmedPartnerAndSignIn } from "./testing/confirmed-user";
+import { isolatedClient } from "./testing/partner-invite-fixture";
 
 /**
  * Story 5.2 — Lounge Check-In Process. Criterios en
  * docs/specs/epic-5-qr-code-check-in/story-5.2-lounge-check-in-process.md.
- * Corre contra Supabase local real (RPC "de kiosco", ver
- * supabase/schemas/bookings.sql), como exige la metodología de test del
- * proyecto — `lookupReceptionBooking`/`checkInReceptionBooking`/
- * `reportReceptionNoShow` se llaman con un cliente SIN sesión (anon),
- * porque `/reception` no inicia sesión de personal ni de miembro.
+ * Corre contra Supabase local real. SEC-01 (docs/audit/seguridad-y-datos.md):
+ * las RPC de recepción solo responden al personal del partner dueño del
+ * lounge — `kiosk` es una sesión real de partner de The Ainsworth.
  */
 
 const ainsworth = LOUNGES.find((lounge) => lounge.id === "the-ainsworth")!;
-const kiosk = createClient();
+const kiosk = isolatedClient();
+
+beforeAll(async () => {
+  await signUpConfirmedPartnerAndSignIn(kiosk, `reception-staff-${Date.now()}@ensoleil-test.com`, "EnSoleil!2026", {
+    businessName: "Ainsworth Hospitality",
+    loungeIds: [ainsworth.id],
+  });
+});
 
 /**
  * `TODAY` (2025-09-09) tiene plazas reales de sobra (aforo por franja
@@ -41,7 +46,7 @@ const BANDS: { band: BookingRequest["band"]; time: string }[] = [
 ];
 
 async function bookTodayForReception(label: number) {
-  const memberSupabase = createClient();
+  const memberSupabase = isolatedClient();
   const member = await signUpConfirmedMemberAndSignIn(
     memberSupabase,
     `reception-${Date.now()}-${label}@ensoleil-test.com`,
@@ -157,6 +162,52 @@ describe("fetchReceptionTodaySummary", () => {
     const after = await fetchReceptionTodaySummary(kiosk, ainsworth.id, today());
 
     expect(after.checkedIn).toBeGreaterThanOrEqual(before.checkedIn + 1);
+  });
+});
+
+describe("SEC-01 — solo el personal del lounge usa la recepción", () => {
+  it("sin sesión no puede buscar una reserva", async () => {
+    const { reference } = await bookTodayForReception(20);
+
+    await expect(lookupReceptionBooking(isolatedClient(), ainsworth.id, today(), reference)).rejects.toThrow();
+  });
+
+  it("sin sesión no puede hacer check-in ni marcar no-show", async () => {
+    const { reference } = await bookTodayForReception(21);
+    const anonymous = isolatedClient();
+
+    await expect(checkInReceptionBooking(anonymous, ainsworth.id, today(), reference)).rejects.toThrow();
+    await expect(reportReceptionNoShow(anonymous, ainsworth.id, today(), reference)).rejects.toThrow();
+
+    const found = await lookupReceptionBooking(kiosk, ainsworth.id, today(), reference);
+    expect(found?.status).toBe("confirmed");
+    expect(found?.noShow).toBe(false);
+  });
+
+  it("sin sesión no puede leer el resumen del día", async () => {
+    await expect(fetchReceptionTodaySummary(isolatedClient(), ainsworth.id, today())).rejects.toThrow();
+  });
+
+  it("un miembro con sesión no ve las reservas de otros", async () => {
+    const { reference } = await bookTodayForReception(22);
+    const otherMember = isolatedClient();
+    await signUpConfirmedMemberAndSignIn(otherMember, `reception-other-${Date.now()}@ensoleil-test.com`, "EnSoleil!2026");
+
+    expect(await lookupReceptionBooking(otherMember, ainsworth.id, today(), reference)).toBeNull();
+    await expect(checkInReceptionBooking(otherMember, ainsworth.id, today(), reference)).rejects.toThrow();
+  });
+
+  it("el personal de otro lounge no ve ni toca las reservas de este", async () => {
+    const { reference } = await bookTodayForReception(23);
+    const otherStaff = isolatedClient();
+    await signUpConfirmedPartnerAndSignIn(otherStaff, `reception-cordelia-${Date.now()}@ensoleil-test.com`, "EnSoleil!2026", {
+      businessName: "Cordelia Group",
+      loungeIds: ["the-cordelia"],
+    });
+
+    expect(await lookupReceptionBooking(otherStaff, ainsworth.id, today(), reference)).toBeNull();
+    await expect(reportReceptionNoShow(otherStaff, ainsworth.id, today(), reference)).rejects.toThrow();
+    expect(await fetchReceptionTodaySummary(otherStaff, ainsworth.id, today())).toEqual({ expected: 0, checkedIn: 0 });
   });
 });
 

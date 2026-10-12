@@ -168,3 +168,21 @@ export async function signUpConfirmedAdminAndSignIn(
 
   return user;
 }
+
+/**
+ * SEC-01 — las RPC de recepción solo responden al personal del partner
+ * dueño del lounge. Cliente aislado (sin compartir la sesión del navegador
+ * de jsdom) con un partner de ese lounge ya con sesión.
+ */
+export async function signInReceptionStaff(loungeId: string): Promise<SupabaseClient> {
+  const staff = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  await signUpConfirmedPartnerAndSignIn(
+    staff,
+    `reception-staff-${loungeId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@ensoleil-test.com`,
+    "EnSoleil!2026",
+    { businessName: `Reception ${loungeId}`, loungeIds: [loungeId] },
+  );
+  return staff;
+}
