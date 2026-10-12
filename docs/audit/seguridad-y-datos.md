@@ -19,7 +19,7 @@
 | SEC-08 | Baja | CORS `*` en Edge Functions invocadas por el navegador |
 | SEC-09 | Baja | Comparación no constante del secreto compartido `x-webhook-secret` |
 | SEC-10 | Info | 56 funciones `SECURITY DEFINER` (incl. 31 `admin_*`) ejecutables por `anon` por privilegio por defecto; hoy protegidas solo por el chequeo interno |
-| SEC-11 | Info | Guardas de `/admin` y `/partner` solo en cliente (no hay `middleware.ts`) — aceptable porque los datos dependen de RLS/RPC |
+| SEC-11 | Info | Guardas de `/admin` y `/partner` solo en cliente (el `middleware.ts` raíz solo refresca la sesión, no comprueba rol) — aceptable porque los datos dependen de RLS/RPC |
 
 ## Hallazgos
 
@@ -91,7 +91,7 @@
 
 ### SEC-11 — Guardas de rol solo en cliente (Info, Inferido)
 
-- No existe `src/middleware.ts`; `/admin` y `/partner` se protegen en el cliente. Los datos dependen de RLS/RPC con `has_role`, así que no se encontró fuga; queda como nota.
+- El `middleware.ts` de la raíz solo llama a `updateSession` (refresco de sesión de Supabase) y no comprueba rol; `/admin` y `/partner` se protegen en el cliente. Los datos dependen de RLS/RPC con `has_role`, así que no se encontró fuga; queda como nota.
 
 ## Matriz de explotabilidad
 
