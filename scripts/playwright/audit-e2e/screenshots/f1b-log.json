@@ -1,0 +1,18 @@
+{
+  "results": [
+    {
+      "id": "F1.1 signup UI completo",
+      "status": "PASS",
+      "obs": "dialogButtons=[\"DECLINE\",\"ACCEPT & CONTINUE\"] validation=\"Email address Enter a valid email address. Password Use at least 8 characters. Confirm password Both passwords must match. I have read and agree to the Terms of Service and Privacy Policy CREATE ACCOUNT Disabled until the terms are accepted.\" url=/verify-email?email=e2e-signup-1791840679717%40example.com userCreated=true confirmed=false"
+    },
+    {
+      "id": "F1.1b signup email duplicado",
+      "status": "PASS",
+      "obs": "url=/signup text=Join a community of discerning travelers. Back to log in Create account Join our exclusive community of members. Email address An account already exists with this email. Log in instead, or reset your password. Password 8+ characters, including one sp"
+    }
+  ],
+  "log": {
+    "console": [],
+    "failed": []
+  }
+}

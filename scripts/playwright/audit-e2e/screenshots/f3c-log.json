@@ -1,0 +1,22 @@
+{
+  "results": [
+    {
+      "id": "F3.6b tarjeta guardada visible + doble click",
+      "status": "PASS",
+      "obs": "radios=[\"VISA\",\"Use a new card\"] url=http://localhost:3005/lounges/the-ainsworth/book/confirmed"
+    }
+  ],
+  "log": {
+    "console": [],
+    "failed": [
+      "GET http://localhost:3005/lounges/the-ainsworth?_rsc=1p-R_iEY6bj0jY31 net::ERR_ABORTED",
+      "GET http://localhost:3005/lounges/belmont-terrace?_rsc=1p-R_iEY6bj0jY31 net::ERR_ABORTED",
+      "GET http://localhost:3005/lounges/marbella-sky-lounge?_rsc=1p-R_iEY6bj0jY31 net::ERR_ABORTED",
+      "GET http://localhost:3005/lounges/the-ainsworth/book/payment?_rsc=qvulRVtUI7yr13Rs net::ERR_ABORTED",
+      "GET http://localhost:3005/lounges/the-ainsworth/book/summary?_rsc=xzd1MfXSITZXhe4M net::ERR_ABORTED",
+      "GET http://localhost:3005/lounges/the-ainsworth/book/confirmed?_rsc=m0BRV-O8TSqOfIAd net::ERR_ABORTED",
+      "GET http://localhost:3005/lounges/the-ainsworth/book/receipt?_rsc=cMXMGIU-hGR3KfBV net::ERR_ABORTED",
+      "GET http://localhost:3005/lounges/the-ainsworth/book/confirmed?_rsc=Zvzf7P9G6fjmy-XM net::ERR_ABORTED"
+    ]
+  }
+}

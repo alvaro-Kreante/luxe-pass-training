@@ -1,0 +1,11 @@
+import { open, BASE, shot } from "./lib.mjs";
+const X = await open();
+await X.page.goto(BASE + "/signup", { waitUntil: "load" }); await X.page.waitForTimeout(1500);
+for (let i = 0; i < 6; i++) await X.page.keyboard.press("Tab");
+const f = await X.page.evaluate(() => document.activeElement.outerHTML.slice(0, 200));
+await X.page.keyboard.press("Space"); await X.page.waitForTimeout(500);
+const c1 = await X.page.getByRole("checkbox").first().isChecked();
+const dlg = await X.page.getByRole("dialog").count();const btnDisabled = dlg;
+await shot(X.page, "f9-signup-kbd-space");
+console.log({ focused: f, checkedAfterSpace: c1, createDisabled: btnDisabled });
+await X.browser.close();

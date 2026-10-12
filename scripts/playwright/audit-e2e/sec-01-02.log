@@ -1,0 +1,32 @@
+member e2e-sec-1791838925187@example.com
+SEC-02 result: {
+  bookingStatus: 'confirmed',
+  date: '2026-10-15',
+  band: 'morning',
+  paymentId: '206be411-1484-4c3d-8ed4-8014bdef9956',
+  payStatus: 'pending'
+}
+payment after confirm: {
+  status: 'pending',
+  booking_id: 'fa82de68-d75d-4f09-b7b7-2a9fe7fcf55c'
+}
+SEC-01 anon lookup: [
+  {
+    id: 'fa82de68-d75d-4f09-b7b7-2a9fe7fcf55c',
+    confirmation_code: 'LP-596559',
+    member_name: 'E2E Sec',
+    member_email: '<present>',
+    slot_time: '8:00 AM',
+    special_requests: '',
+    status: 'confirmed',
+    checked_in_at: null,
+    no_show: false,
+    emergency_contact_name: null,
+    emergency_contact_relation: null,
+    emergency_contact_phone: null
+  }
+]
+confirmation_code format: XX-XXXXXX
+anon today_summary: [ { expected: 1, checked_in: 0 } ]
+{"lounge":"the-ainsworth","date":"2026-10-15","code":"LP-596559","email":"e2e-sec-1791838925187@example.com"}
+anon no_show: { status: 'completed', no_show: true, fee: 3500 }

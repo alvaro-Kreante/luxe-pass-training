@@ -1,0 +1,53 @@
+{
+  "results": [
+    {
+      "id": "F9.1 390px sin sesión",
+      "status": "PASS",
+      "obs": "/login:390/390 /signup:390/390 /reception:566/390"
+    },
+    {
+      "id": "F9.2 390px con sesión",
+      "status": "PASS",
+      "obs": "/:390/390 /explore:390/390 /lounges/the-ainsworth:598/390 /lounges/the-ainsworth/book:676/390 /my-pass:599/390 /profile:948/390 /profile/membership/plans:686/390"
+    },
+    {
+      "id": "F9.3 teclado /login (tab + Enter)",
+      "status": "PASS",
+      "obs": "tabs=input:email[Email address] > input:password[Password] > button:button[Show password] > input:checkbox[Remember me] > a[Forgot password?] > button:submit[LOG IN] > a[Create account] > body[Your next moment of calm ] ; enter-submit-> /"
+    },
+    {
+      "id": "F9.4 teclado /signup (checkbox con Space)",
+      "status": "PASS",
+      "obs": "tabs=a[Back to log in] > input:email[Email address] > input:password[Password] > button:button[Show password] > input:password[Confirm password] > input:checkbox[I have read and agree to ] > button:button[Terms of Service] > button:button[Privacy Policy] > a[Log in] ; spaceChecks=false"
+    },
+    {
+      "id": "F9.5 teclado reserva paso 1 (calendario/slots)",
+      "status": "PASS",
+      "obs": "a[Home] > a[Explore] > a[My Pass] > a[Profile] > button:button[Log out] > a[Back to The Ainsworth] > a[Booking help] > button:button[Next month] > button:button[12] > button:button[13] > button:button[14] > button:button[15] > button:button[16] > button:button[17] > button:button[19] > button:button[20] > button:button[21] > button:button[22] > button:button[23] > button:button[24] > button:button[26] > button:button[27] > button:button[28] > button:button[29] > button:button[30]"
+    }
+  ],
+  "log": {
+    "mobile": {
+      "console": [
+        "http://localhost:3005/explore :: Attempted to load a Vector Map, but failed. Falling back to Raster. Please see https://developers.google.com/maps/documentation/javascript/webgl/support for more info"
+      ],
+      "failed": [
+        "GET http://localhost:3005/lounges/belmont-terrace?_rsc=1p-R_iEY6bj0jY31 net::ERR_ABORTED",
+        "GET http://localhost:3005/lounges/the-ainsworth?_rsc=1p-R_iEY6bj0jY31 net::ERR_ABORTED",
+        "GET http://localhost:3005/lounges/the-ainsworth?_rsc=1p-R_iEY6bj0jY31 net::ERR_ABORTED",
+        "GET http://localhost:3005/lounges/belmont-terrace?_rsc=1p-R_iEY6bj0jY31 net::ERR_ABORTED",
+        "GET http://localhost:3005/lounges/marbella-sky-lounge?_rsc=1p-R_iEY6bj0jY31 net::ERR_ABORTED",
+        "GET https://maps.gstatic.com/mapfiles/transparent.png net::ERR_ABORTED",
+        "GET http://localhost:3005/lounges/the-ainsworth/reviews?_rsc=uwVo6YPWnHwZTKMF net::ERR_ABORTED",
+        "GET http://localhost:3005/lounges/the-ainsworth/book?_rsc=uwVo6YPWnHwZTKMF net::ERR_ABORTED"
+      ]
+    },
+    "kbd": {
+      "console": [],
+      "failed": [
+        "GET http://localhost:3005/lounges/the-ainsworth?_rsc=1p-R_iEY6bj0jY31 net::ERR_ABORTED",
+        "GET http://localhost:3005/lounges/belmont-terrace?_rsc=1p-R_iEY6bj0jY31 net::ERR_ABORTED"
+      ]
+    }
+  }
+}

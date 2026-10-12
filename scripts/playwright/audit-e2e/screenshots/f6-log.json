@@ -1,0 +1,30 @@
+{
+  "results": [
+    {
+      "id": "F6.1 alta membresía mensual con 4242",
+      "status": "PASS",
+      "obs": "buttons=[\"CANCEL\",\"PAY $249.00 AND JOIN\"] memberships=[{\"plan\":\"monthly\",\"status\":\"active\"}] payments=[{\"status\":\"succeeded\",\"membership_plan\":\"monthly\",\"amount_cents\":24900}]"
+    },
+    {
+      "id": "F6.2 cliente no puede escribir memberships (RLS)",
+      "status": "PASS",
+      "obs": "insert=DENIED 42501 updateOther=rows=0"
+    },
+    {
+      "id": "F6.3 referidos: código + /join/[code] anónimo",
+      "status": "PASS",
+      "obs": "code=EA-SOLEIL-14 status=200 valid=\"Join a community of discerning travelers. Back to log in Create account Join our exclusive community of members. Email address Password 8+ characters, including one special character. Confirm password\" invalid=\"Join a community of discerning travelers. Back to log in Create account Join our exclusive community of members. Email address Password 8+ characters, including one special character. Confirm password\""
+    }
+  ],
+  "log": {
+    "console": [],
+    "failed": [
+      "GET http://localhost:3005/lounges/the-ainsworth?_rsc=1p-R_iEY6bj0jY31 net::ERR_ABORTED",
+      "GET http://localhost:3005/lounges/belmont-terrace?_rsc=1p-R_iEY6bj0jY31 net::ERR_ABORTED",
+      "GET http://localhost:3005/lounges/marbella-sky-lounge?_rsc=1p-R_iEY6bj0jY31 net::ERR_ABORTED",
+      "GET https://0abf69a56472.w.hcaptcha.com/logo.png net::ERR_ABORTED",
+      "HEAD http://127.0.0.1:54331/rest/v1/referral_shares?select=id&member_id=eq.599e63a5-61ba-4f14-ae53-bb92730eb4ba net::ERR_ABORTED",
+      "HEAD http://127.0.0.1:54331/rest/v1/referral_shares?select=id&member_id=eq.599e63a5-61ba-4f14-ae53-bb92730eb4ba net::ERR_ABORTED"
+    ]
+  }
+}
