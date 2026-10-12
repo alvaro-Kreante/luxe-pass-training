@@ -96,6 +96,38 @@ gh pr create --base dev               # 3. PR siempre contra dev (con confirmaci
 Promover (`dev` → `staging`, `staging` → `main`) es un PR aparte que se abre
 solo cuando se pide; nunca se hace merge local entre esas tres ramas.
 
+#### Trabajo en paralelo (worktrees)
+
+Varias sesiones pueden trabajar a la vez, **cada una en su propio worktree**:
+
+```bash
+bash scripts/new-worktree.sh <prefijo>/<descripcion> [puerto-dev]   # rama desde origin/dev, copia .env*, npm install
+```
+
+- Nunca hacer `git switch` en una carpeta que usa otra sesión. Antes de
+  empezar, comprobar con `git branch --show-current` (y `git worktree list`)
+  que la carpeta corresponde a la rama de la tarea.
+- **Lo compartido entre worktrees se usa de uno en uno**: Supabase local
+  (cambios de schema, `supabase db reset`, `supabase migration up`) y la suite
+  completa (`npm test`), porque `cleanTestData` borra los datos de test de las
+  otras sesiones. Antes de lanzarlos, preguntar si otra sesión lo está haciendo.
+- Cada dev server en su propio puerto (`npm run dev -- -p 3001`…).
+- Al terminar y mergear: `git worktree remove <carpeta>`.
+
+**Cuando dos ramas tocan lo mismo**, el merge es secuencial: se mergea un PR
+en `dev` y la otra rama se pone al día en su worktree (`git fetch origin &&
+git rebase origin/dev`), resuelve conflictos conservando ambos cambios y
+**vuelve a pasar toda la verificación** (paso 8 de la receta) antes de
+actualizar su PR (`git push --force-with-lease`, con confirmación).
+
+- `COMPONENT-MAP.md` / `PENDIENTES.md`: quedarse con las filas de ambas ramas.
+- Schema: si ambas ramas tocan la misma entidad, resolver el conflicto en
+  `supabase/schemas/*.sql`, **borrar la migración propia no mergeada** y
+  regenerarla con `supabase db schema declarative sync --no-apply -f <nombre>`
+  sobre la base ya actualizada. Una migración que ya llegó a `dev` no se toca nunca.
+- Si dos tareas van a tocar la misma tabla o componente, mejor hacerlas en
+  serie o en una sola rama.
+
 El trabajo sale de `dev` en una rama con prefijo:
 
 | Prefijo | Cuándo |
