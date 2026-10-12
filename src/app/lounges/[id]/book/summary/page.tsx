@@ -3,7 +3,6 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { ShieldCheck } from "lucide-react";
-import { useCheckoutElements } from "@stripe/react-stripe-js/checkout";
 
 import { useBooking } from "@/components/booking/booking-context";
 import { BookingSummaryCard } from "@/components/booking/booking-summary-card";
@@ -39,7 +38,8 @@ import { createClient } from "@/lib/supabase/client";
  *   - Tarjeta nueva: `checkout.confirm()` de Stripe sobre el
  *     `<CheckoutElementsProvider>` que vive en `BookLayout` — montado en el
  *     paso 2, sigue disponible aquí porque es el mismo layout, no una
- *     página nueva.
+ *     página nueva. Llega por `checkoutElementsRef` del contexto (ver
+ *     `stripe-checkout-bridge.tsx`, ticket 001).
  *
  * El pago (si lo hay) se confirma *antes* de `confirm_booking`: así una
  * tarjeta rechazada nunca deja una reserva real con su plaza ya consumida.
@@ -67,19 +67,19 @@ export default function SummaryPage() {
   );
 }
 
-/** Tarjeta nueva — la única rama que puede llamar a `useCheckoutElements()` (exige un `<CheckoutElementsProvider>` montado). */
+/** Tarjeta nueva — confirma la misma Checkout Session que montó el paso 2. */
 function SummaryScreenNewCard() {
-  const { checkoutSession } = useBooking();
-  const checkoutResult = useCheckoutElements();
+  const { checkoutSession, checkoutElementsRef } = useBooking();
 
   const chargePayment = React.useCallback(async (): Promise<PaymentOutcome> => {
     const paymentId = checkoutSession?.paymentId ?? null;
+    const checkoutResult = checkoutElementsRef.current;
 
-    if (checkoutResult.type !== "success") {
+    if (checkoutResult?.type !== "success") {
       return {
         ok: false,
         message:
-          checkoutResult.type === "error"
+          checkoutResult?.type === "error"
             ? checkoutResult.error.message
             : "The payment form is still loading.",
         paymentId,
@@ -90,7 +90,7 @@ function SummaryScreenNewCard() {
 
     if (result.type === "success") return { ok: true, paymentId };
     return { ok: false, message: result.error.message, paymentId };
-  }, [checkoutResult, checkoutSession]);
+  }, [checkoutElementsRef, checkoutSession]);
 
   return <SummaryScreenBody chargePayment={chargePayment} />;
 }

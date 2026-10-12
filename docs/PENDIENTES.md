@@ -281,6 +281,19 @@ alcance tomadas con el usuario, no simulaciones:
   Retirarla rompe los tests de Story 6.2 que la usan como muestra; queda
   para una limpieza de Epic 6.
 
+### 2.13 Filas `payments` en `pending` que nunca se cierran
+
+Cada Checkout Session de tarjeta nueva nace con su fila `payments` en
+`pending` (`stripe-create-checkout-session`). Desde el ticket 001 hay una
+sola por intento, pero siguen quedando huérfanas las de los intentos
+abandonados: el miembro elige "Use a new card" y se va, o marca/desmarca
+"Save this card" (abre otra sesión, ver desviación en `COMPONENT-MAP.md`).
+No se cobran ni se ligan a ninguna reserva, pero nadie las pasa a un
+estado final ni expira la sesión en Stripe. **Desbloquea:** decidir si un
+cron las cierra (p. ej. al expirar la sesión, con
+`checkout.session.expired` en `stripe-webhook`) o si se filtran en los
+reportes de Epic 8.
+
 ---
 
 ## 3. Criterios de aceptación cubiertos solo de forma declarativa

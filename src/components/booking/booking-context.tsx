@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import type { StripeUseCheckoutElementsResult } from "@stripe/react-stripe-js/checkout";
 
 import { today } from "@/lib/availability";
 import {
@@ -11,6 +12,7 @@ import {
   type BookingCoverage,
 } from "@/lib/booking";
 import type { LoungeProfile, WeekBandId } from "@/lib/lounge-profile";
+import { createCheckoutSession } from "@/lib/stripe-payments";
 import { createClient } from "@/lib/supabase/client";
 
 /**
@@ -76,11 +78,28 @@ interface BookingContextValue {
   /** "Slot held for M:SS" (`Payment.dc.html`, `Summary.dc.html`) — cuenta
    * atrás única para todo el flujo, no por pantalla. */
   holdSecondsLeft: number;
-  /** `null` salvo cuando `draft.paymentMethodId === NEW_CARD_OPTION_ID` —
-   * el `<CheckoutElementsProvider>` de `BookLayout` solo se monta si esto
+  /** `null` hasta que el miembro elige "Use a new card" — el
+   * `<CheckoutElementsProvider>` de `BookLayout` solo se monta si esto
    * tiene valor (ver `stripe-checkout-bridge.tsx`). */
   checkoutSession: CheckoutSessionState | null;
-  setCheckoutSession: (session: CheckoutSessionState | null) => void;
+  /** La Edge Function falló al crear la sesión: el paso 2 lo dice en vez de quedarse cargando. */
+  checkoutSessionFailed: boolean;
+  /**
+   * Pide la Checkout Session del borrador actual. Idempotente (ticket 001):
+   * una sola sesión por visita elegida y por opción de "Save this card",
+   * aunque el paso 2 se remonte o StrictMode duplique el efecto — una
+   * segunda sesión dejaba una fila `payments` huérfana y la reserva ligada a
+   * un pago que Stripe no cobraba. Cambiar "Save this card" sí abre otra:
+   * `setup_future_usage` se fija al crearla, y el `checkout.confirm({
+   * savePaymentMethod })` que lo evitaría obliga a Stripe a pintar su propio
+   * checkbox de guardado, duplicado con el del artboard.
+   */
+  requestCheckoutSession: () => void;
+  /** Lo último que devolvió `useCheckoutElements()` dentro del provider del
+   * bridge, para que `/book/summary` confirme sin colgar de ese provider. Es
+   * un ref y no estado: Stripe devuelve un objeto nuevo en cada render y
+   * guardarlo en estado entraba en bucle; solo se lee al confirmar. */
+  checkoutElementsRef: React.RefObject<StripeUseCheckoutElementsResult | null>;
   /**
    * Dónde debe pintarse (por portal) el `<PaymentElement>` real, ver
    * `stripe-checkout-bridge.tsx`. `stripe.confirm()` exige que el elemento
@@ -134,6 +153,9 @@ export function BookingProvider({
   const [checkoutSession, setCheckoutSession] = React.useState<CheckoutSessionState | null>(
     null,
   );
+  const [checkoutSessionFailed, setCheckoutSessionFailed] = React.useState(false);
+  const checkoutElementsRef = React.useRef<StripeUseCheckoutElementsResult | null>(null);
+  const checkoutSessionKey = React.useRef<string | null>(null);
   const [paymentElementHost, setPaymentElementHost] = React.useState<HTMLDivElement | null>(
     null,
   );
@@ -178,6 +200,35 @@ export function BookingProvider({
 
   const reset = React.useCallback(() => setDraft(EMPTY_BOOKING_DRAFT), []);
 
+  const requestCheckoutSession = React.useCallback(() => {
+    const { dateIso, band, time, specialRequests, saveNewCard } = draft;
+    if (!dateIso || !band || !time) return;
+
+    const key = [lounge.id, dateIso, band, time, specialRequests, saveNewCard].join("|");
+    if (checkoutSessionKey.current === key) return;
+    checkoutSessionKey.current = key;
+    setCheckoutSession(null);
+    setCheckoutSessionFailed(false);
+
+    createCheckoutSession(createClient(), {
+      loungeId: lounge.id,
+      dateIso,
+      band,
+      slotTime: time,
+      specialRequests,
+      saveCard: saveNewCard,
+    })
+      .then((session) => {
+        if (checkoutSessionKey.current === key) setCheckoutSession(session);
+      })
+      .catch((error) => {
+        console.error("createCheckoutSession failed", error);
+        if (checkoutSessionKey.current !== key) return;
+        checkoutSessionKey.current = null;
+        setCheckoutSessionFailed(true);
+      });
+  }, [draft, lounge.id]);
+
   React.useEffect(() => {
     const id = setInterval(() => {
       setHoldSecondsLeft((seconds) => Math.max(0, seconds - 1));
@@ -197,7 +248,9 @@ export function BookingProvider({
       reset,
       holdSecondsLeft,
       checkoutSession,
-      setCheckoutSession,
+      checkoutSessionFailed,
+      requestCheckoutSession,
+      checkoutElementsRef,
       paymentElementHost,
       setPaymentElementHost,
       paymentElementHeight,
@@ -213,6 +266,8 @@ export function BookingProvider({
       reset,
       holdSecondsLeft,
       checkoutSession,
+      checkoutSessionFailed,
+      requestCheckoutSession,
       paymentElementHost,
       paymentElementHeight,
     ],
