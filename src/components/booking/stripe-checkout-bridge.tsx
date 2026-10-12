@@ -1,7 +1,11 @@
 "use client";
 
 import * as React from "react";
-import { CheckoutElementsProvider, PaymentElement } from "@stripe/react-stripe-js/checkout";
+import {
+  CheckoutElementsProvider,
+  PaymentElement,
+  useCheckoutElements,
+} from "@stripe/react-stripe-js/checkout";
 
 import { useBooking } from "./booking-context";
 import { getStripe } from "@/lib/stripe-client";
@@ -42,24 +46,43 @@ import { getStripe } from "@/lib/stripe-client";
  * (`paymentElementHeight`); `payment-method-form.tsx` la aplica como
  * `min-height` de su hueco — así el layout normal reserva el espacio real y
  * el checkbox se corre hacia abajo en vez de quedar tapado.
+ *
+ * Ticket 001 — tres reglas más, todas por fallos vistos con Playwright:
+ *
+ * - **`children` nunca cambia de padre.** Antes el provider envolvía a
+ *   `children` solo cuando llegaba la sesión; ese cambio de padre remontaba
+ *   `/book/payment` entero (y creaba otra sesión). Ahora el provider es un
+ *   hermano de `children` y publica `useCheckoutElements()` en
+ *   `BookingProvider` (`checkoutElementsRef`) para que `/book/summary` confirme.
+ * - **La posición sigue al layout, no solo al tamaño del hueco.** Si algo de
+ *   arriba cambia de alto (llegan las tarjetas guardadas), el hueco baja sin
+ *   cambiar de tamaño: se observa también `document.body`. Y el `rect` va
+ *   atado al host que lo midió, así que sin host no queda uno obsoleto.
+ * - **El `<PaymentElement>` no se monta hasta tener sitio real**, nunca en el
+ *   contenedor de 1px; una vez montado ya no se desmonta (paso 3).
  */
 const PLACEHOLDER_MIN_HEIGHT_PX = 360;
 
 export function StripeCheckoutBridge({ children }: { children: React.ReactNode }) {
   const { checkoutSession, paymentElementHost, setPaymentElementHeight } = useBooking();
-  const [rect, setRect] = React.useState<DOMRect | null>(null);
+  const [placement, setPlacement] = React.useState<{ host: HTMLDivElement; rect: DOMRect } | null>(
+    null,
+  );
+  const [placed, setPlaced] = React.useState(false);
   const contentRef = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
     if (!paymentElementHost) return;
 
     // El primer resize-observation entry llega en una microtarea, ya
-    // después del layout: no hace falta (ni se debe) llamar setRect aquí
-    // de forma síncrona.
-    const sync = () => setRect(paymentElementHost.getBoundingClientRect());
+    // después del layout: no hace falta (ni se debe) medir aquí de forma
+    // síncrona.
+    const sync = () =>
+      setPlacement({ host: paymentElementHost, rect: paymentElementHost.getBoundingClientRect() });
 
     const observer = new ResizeObserver(sync);
     observer.observe(paymentElementHost);
+    observer.observe(document.body);
     window.addEventListener("scroll", sync, true);
     window.addEventListener("resize", sync);
 
@@ -85,40 +108,65 @@ export function StripeCheckoutBridge({ children }: { children: React.ReactNode }
     };
   }, [checkoutSession, setPaymentElementHeight]);
 
-  if (!checkoutSession) return <>{children}</>;
-
-  const visible = paymentElementHost !== null && rect !== null;
+  const rect =
+    paymentElementHost !== null && placement?.host === paymentElementHost ? placement.rect : null;
+  const visible = rect !== null;
+  if (visible && !placed) setPlaced(true);
 
   return (
-    <CheckoutElementsProvider
-      stripe={getStripe()}
-      options={{ clientSecret: checkoutSession.clientSecret }}
-    >
+    <>
       {children}
-      <div
-        ref={contentRef}
-        aria-hidden={!visible}
-        style={
-          visible && rect
-            ? {
-                position: "fixed",
-                top: rect.top,
-                left: rect.left,
-                width: rect.width,
-                zIndex: 1,
-              }
-            : {
-                position: "fixed",
-                top: 0,
-                left: "-9999px",
-                width: "1px",
-                height: "1px",
-                overflow: "hidden",
-              }
-        }
-      >
-        <PaymentElement />
-      </div>
-    </CheckoutElementsProvider>
+      {checkoutSession ? (
+        <CheckoutElementsProvider
+          key={checkoutSession.clientSecret}
+          stripe={getStripe()}
+          options={{ clientSecret: checkoutSession.clientSecret }}
+        >
+          <CheckoutElementsPublisher />
+          <div
+            ref={contentRef}
+            aria-hidden={!visible}
+            style={
+              rect
+                ? {
+                    position: "fixed",
+                    top: rect.top,
+                    left: rect.left,
+                    width: rect.width,
+                    zIndex: 1,
+                  }
+                : {
+                    position: "fixed",
+                    top: 0,
+                    left: "-9999px",
+                    width: "1px",
+                    height: "1px",
+                    overflow: "hidden",
+                  }
+            }
+          >
+            {placed ? <PaymentElement /> : null}
+          </div>
+        </CheckoutElementsProvider>
+      ) : null}
+    </>
   );
+}
+
+function CheckoutElementsPublisher() {
+  const result = useCheckoutElements();
+  const { checkoutElementsRef } = useBooking();
+
+  React.useEffect(() => {
+    checkoutElementsRef.current = result;
+  });
+
+  React.useEffect(
+    () => () => {
+      checkoutElementsRef.current = null;
+    },
+    [checkoutElementsRef],
+  );
+
+  return null;
 }

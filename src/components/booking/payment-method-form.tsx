@@ -1,9 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { CircleCheck, CreditCard, Plus, Snowflake } from "lucide-react";
+import { CircleAlert, CircleCheck, CreditCard, Plus, Snowflake } from "lucide-react";
 
 import { useBooking } from "./booking-context";
+import { Button } from "@/components/ui/button";
 import { CardBrandBadge } from "@/components/ui/card-brand-badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Notice } from "@/components/ui/notice";
@@ -16,7 +17,6 @@ import {
   formatWholeCurrency,
 } from "@/lib/booking";
 import {
-  createCheckoutSession,
   listSavedPaymentMethods,
   removeSavedPaymentMethod,
   type SavedPaymentMethod,
@@ -38,11 +38,11 @@ export function PaymentMethodForm() {
 
 function PayableBody() {
   const {
-    lounge,
     draft,
     update,
     checkoutSession,
-    setCheckoutSession,
+    checkoutSessionFailed,
+    requestCheckoutSession,
     setPaymentElementHost,
     paymentElementHeight,
   } = useBooking();
@@ -52,14 +52,19 @@ function PayableBody() {
     const supabase = createClient();
     let active = true;
 
-    listSavedPaymentMethods(supabase).then((fetched) => {
-      if (!active) return;
-      setMethods(fetched);
-      if (draft.paymentMethodId === null) {
-        const defaultMethod = fetched.find((method) => method.isDefault) ?? fetched[0];
-        if (defaultMethod) update({ paymentMethodId: defaultMethod.id });
-      }
-    });
+    listSavedPaymentMethods(supabase)
+      .then((fetched) => {
+        if (!active) return;
+        setMethods(fetched);
+        if (draft.paymentMethodId === null) {
+          const defaultMethod = fetched.find((method) => method.isDefault) ?? fetched[0];
+          if (defaultMethod) update({ paymentMethodId: defaultMethod.id });
+        }
+      })
+      .catch((error) => {
+        console.error("listSavedPaymentMethods failed", error);
+        if (active) setMethods([]);
+      });
 
     return () => {
       active = false;
@@ -71,29 +76,8 @@ function PayableBody() {
   const wantsNewCard = draft.paymentMethodId === NEW_CARD_OPTION_ID;
 
   React.useEffect(() => {
-    if (!wantsNewCard || !draft.dateIso || !draft.band || !draft.time) return;
-
-    let active = true;
-
-    const supabase = createClient();
-    createCheckoutSession(supabase, {
-      loungeId: lounge.id,
-      dateIso: draft.dateIso,
-      band: draft.band,
-      slotTime: draft.time,
-      specialRequests: draft.specialRequests,
-      saveCard: draft.saveNewCard,
-    }).then((session) => {
-      if (active) setCheckoutSession(session);
-    });
-
-    return () => {
-      active = false;
-    };
-    // `draft.saveNewCard` recrea la sesión con `setup_future_usage` correcto
-    // si el miembro cambia de opinión sobre guardar la tarjeta.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [wantsNewCard, draft.saveNewCard]);
+    if (wantsNewCard) requestCheckoutSession();
+  }, [wantsNewCard, requestCheckoutSession]);
 
   async function removeMethod(id: string) {
     const supabase = createClient();
@@ -192,7 +176,27 @@ function PayableBody() {
             className="min-h-[360px]"
             style={paymentElementHeight ? { minHeight: paymentElementHeight } : undefined}
           >
-            {!checkoutSession ? (
+            {checkoutSessionFailed ? (
+              <Notice
+                role="alert"
+                tone="attention"
+                icon={<CircleAlert size={18} strokeWidth={1.6} />}
+              >
+                <p className="m-0 text-[13px] font-bold text-fg">
+                  We couldn&apos;t load Stripe&apos;s secure form
+                </p>
+                <p className="m-0 mt-1">Check your connection and try again. Nothing has been charged.</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="md"
+                  className="mt-3"
+                  onClick={requestCheckoutSession}
+                >
+                  Try again
+                </Button>
+              </Notice>
+            ) : !checkoutSession ? (
               <p className="m-0 text-[12.5px] text-fg-subtle">Loading Stripe&apos;s secure form…</p>
             ) : null}
           </div>

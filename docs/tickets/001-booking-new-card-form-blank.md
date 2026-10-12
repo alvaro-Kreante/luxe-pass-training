@@ -1,8 +1,8 @@
 # 001 — Formulario de tarjeta nueva en blanco en el paso de pago
 
-- **Estado:** Abierto
+- **Estado:** Hecho (pendiente de PR contra `dev`)
 - **Tipo:** fix
-- **Rama sugerida:** `fix/booking-new-card-payment-element` (desde `staging`)
+- **Rama:** `fix/booking-new-card-payment-element` (desde `dev`, según el flujo actual del CLAUDE.md)
 - **Historia relacionada:** Story 4.2 (`docs/specs/epic-4-booking-system/`), artboard `Payment.dc.html`
 - **Creado:** 2026-10-05
 
@@ -113,3 +113,30 @@ Skills: `systematic-debugging` y luego `test-driven-development`.
       siguen funcionando igual (sin regresión).
 - [ ] `npm test`, `npx tsc --noEmit`, `npm run lint` y `npm run build` en
       verde, con un test que reproduce el fallo y queda de guardia.
+
+## Resolución (12 oct 2026)
+
+Reproducido con `scripts/playwright/scripts/booking/ticket-001-new-card-verification.js`
+(dos miembros, sin tarjetas y con una Visa guardada; `--pay` paga con 4242).
+
+**Causa raíz confirmada:** la causa 1. El cambio de padre de `children` en el
+bridge remontaba `/book/payment`; junto con el doble efecto de StrictMode,
+**cada clic creaba 3 Checkout Sessions y 3 filas `pending`**. Stripe cobraba
+la primera y `summary` ligaba la reserva a la última, que se quedaba
+`pending` para siempre: la reserva quedaba asociada a un pago que nunca se
+cobró. El caso con tarjeta guardada también venía del remontaje: `methods`
+volvía a `null`, el hueco se medía sin la fila de la tarjeta, y al llegar
+las tarjetas bajaba sin cambiar de tamaño (el `ResizeObserver` no saltaba)
+→ el formulario fijo tapaba la fila "Use a new card". La causa 3 (sin
+`.catch`) también era real; la 2 no se observó.
+
+**Arreglo:** provider hermano de `children`, sesión idempotente en el
+contexto (`requestCheckoutSession`), `rect` atado a su host y
+recalculado ante cambios de layout, `PaymentElement` montado solo con sitio
+real, y aviso de error con "Try again". Marcar "Save this card" abre una
+sesión nueva a propósito (desviación decidida con el usuario, ver
+`COMPONENT-MAP.md`); las filas `pending` huérfanas quedan en
+`docs/PENDIENTES.md` §2.13.
+
+**Guardia:** `src/components/booking/new-card-checkout.test.tsx` (falla con
+el código anterior: 3 y 4 filas, ningún aviso de error).

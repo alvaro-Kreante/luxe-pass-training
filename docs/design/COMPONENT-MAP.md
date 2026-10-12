@@ -534,6 +534,7 @@ toca Supabase). Nacen las tablas `bookings` y `payments` — ver
 | `components/booking/payment-error-modal.tsx` | El mensaje de error deja de ser copy fijo ("tarjeta rechazada") y pasa a mostrar el `message` real que devuelve Stripe |
 | `components/ui/card-brand-badge.tsx` | `brand` amplía de `"visa"\|"mastercard"` a `string` — una tarjeta de prueba real puede volver con cualquier marca que Stripe reconozca (Amex, Discover…), no solo las dos del mock |
 | `components/booking/stripe-checkout-bridge.tsx`, `booking-context.tsx` | El contenedor `position: fixed` del `<PaymentElement>` ya no fuerza su propia altura a la del hueco (eso desbordaba el formulario real por encima del checkbox "Save this card" cuando la pestaña "Card" muestra más campos de los que caben en 360px) — ahora mide su contenido real con un segundo `ResizeObserver` y publica ese alto en `paymentElementHeight` (contexto), que `payment-method-form.tsx` aplica como `min-height` de su hueco para que el layout normal reserve el espacio real |
+| `components/booking/stripe-checkout-bridge.tsx`, `booking-context.tsx`, `payment-method-form.tsx`, `summary/page.tsx` | Ticket 001 — el provider de Stripe es **hermano** de `children` (antes los envolvía al llegar la sesión, y ese cambio de padre remontaba `/book/payment`). La sesión la pide `requestCheckoutSession` del contexto, idempotente por borrador + "Save this card"; `summary` confirma con `checkoutElementsRef` (lo publica el bridge desde dentro del provider). El `rect` va atado al host que lo midió, se recalcula también ante cambios de `document.body`, y el `<PaymentElement>` no se monta hasta tener sitio real |
 | `supabase/schemas/booking_receipts.sql` | Trigger `AFTER INSERT` en `bookings` (solo `status = 'confirmed'`) — **primer Database Webhook del proyecto**, vía `pg_net`, hacia `send-booking-receipt`. URL y secreto compartido en Supabase Vault (`booking_receipt_webhook_url`/`_secret`), no en el schema — ver `CLAUDE.md` §Email de recibo de reserva |
 | `supabase/functions/send-booking-receipt` | Edge Function — resuelve miembro/lounge/pago del `booking_id` recibido, arma el HTML del recibo (mismo contenido que `Receipt.dc.html`) y lo despacha vía Brevo. Reintenta unos segundos (`findSettledPayment`) si el pago de una tarjeta nueva sigue `pending` (webhook de Stripe asíncrono) |
 | `supabase/functions/_shared/brevo.ts` | Envío por Brevo factorizado — antes solo lo usaba `send-email` (Epic 1), ahora también `send-booking-receipt` |
@@ -569,6 +570,20 @@ Desviaciones conscientes de esta parte:
   `payment-method-form.tsx` reserva en el paso 2. jsdom nunca hubiera
   detectado esto (no reproduce el reflow del iframe); se confirmó con el
   script de Playwright `scripts/playwright/scripts/booking/stripe-payment-flow-verification.js`.
+- **Ticket 001 — aviso de error al crear la Checkout Session, sin artboard.**
+  `Payment.dc.html` no dibuja qué pasa si `stripe-create-checkout-session`
+  falla; antes la pantalla se quedaba en "Loading…" para siempre. Se
+  reutiliza `Notice` (`tone="attention"`, `role="alert"`) dentro del mismo
+  hueco del formulario, con un `Button` `outline`/`md` "Try again" — piezas
+  existentes, sin geometría nueva.
+- **Ticket 001 — marcar "Save this card" con tarjeta nueva abre otra
+  Checkout Session y recarga el formulario de Stripe.** `setup_future_usage`
+  se fija al crear la sesión; la alternativa sin recrearla
+  (`saved_payment_method_options.payment_method_save` + `confirm({
+  savePaymentMethod })`) obliga a Stripe a pintar su propio checkbox de
+  guardado dentro del Payment Element, duplicado con el del artboard.
+  Decidido con el usuario (12 oct 2026): fidelidad al artboard a cambio de
+  perder lo escrito en la tarjeta si se cambia la casilla después.
 - **Apple Pay/Google Pay quedan fuera de esta conexión real** — el Payment
   Element los ofrece automáticamente, pero exigen dominio verificado que no
   funciona en `localhost` ni sin el rollout de Vercel (ver
