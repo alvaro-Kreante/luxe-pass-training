@@ -83,7 +83,20 @@ PR (`gh pr create`) se hacen solo cuando se pide para ese paso concreto. Un
 dejar el commit local y preguntar "¿subo la rama y abro el PR contra
 `dev`?".
 
-El trabajo sale de `dev` (actualizada) en una rama con prefijo:
+**Base de toda rama de trabajo: `dev` actualizada** — nunca `staging` ni `main`,
+aunque sea la rama en la que esté el checkout al empezar:
+
+```bash
+git switch dev && git pull            # 1. dev al día
+git switch -c fix/<descripcion>       # 2. rama nueva desde dev
+# ...commits...
+gh pr create --base dev               # 3. PR siempre contra dev (con confirmación)
+```
+
+Promover (`dev` → `staging`, `staging` → `main`) es un PR aparte que se abre
+solo cuando se pide; nunca se hace merge local entre esas tres ramas.
+
+El trabajo sale de `dev` en una rama con prefijo:
 
 | Prefijo | Cuándo |
 |---|---|
