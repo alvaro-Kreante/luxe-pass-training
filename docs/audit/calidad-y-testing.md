@@ -102,3 +102,15 @@ Gate de entrega (calidad): **NO APTO** mientras siga abierto QA-01 (camino de pa
 - Dinero persistido como `*_cents` enteros; importe decidido en servidor.
 - "Hoy" calculado por huso del lounge (`today(timeZone)`), `parseDate` en UTC.
 - Limpieza determinista de datos de test (`cleanTestData`).
+
+## Anexo — `npm test` ejecutado en local (2026-10-12)
+
+| Corrida | Archivos | Tests |
+|---|---|---|
+| 1ª suite completa | 15 fallan / 124 pasan | 22 fallan · 1081 pasan · 15 skipped · 4 errores no capturados |
+| 2ª suite completa | — | 11 fallan · 1097 pasan · 10 skipped |
+| Archivos fallidos aislados (6) | 1 falla / 5 pasan | 1 falla · 62 pasan |
+
+- Los fallos cambian entre corridas y desaparecen al aislar el archivo. Son `fetch failed` / `other side closed`, `signUpConfirmedAndSignIn did not leave a session` y timeouts de render: saturación del Supabase local con la suite en paralelo. Refuerza **QA-06** (flakiness), que pasa a **Confirmado**.
+- **Único fallo determinista:** `src/lib/lounge-directory.test.ts:33` espera 17 lounges y hay 18. El extra es `xenos-walsh`, del partner "Kreante test", creado a mano el 2026-10-02 sin `created_by`. Es dato local ajeno a la suite, no regresión. Además, el test acopla el conteo al estado de la base: cualquier lounge creado a mano lo rompe.
+- La suite reporta 10–15 tests *skipped*, que contradice el criterio de CLAUDE.md "sin tests omitidos". El inventario de la auditoría no encontró `.skip`/`.todo` literales, así que son `skipIf`/condicionales: falta identificar cuáles.
