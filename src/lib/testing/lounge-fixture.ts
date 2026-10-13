@@ -44,6 +44,11 @@ const TIME_BY_BAND: Record<WeekBandId, string> = {
  *
  * `occurrence` (1 = el primero) evita que dos tests que confirman de verdad
  * elijan el mismo slot — cada test pide una ocurrencia distinta.
+ *
+ * Empieza en mañana, nunca hoy: los tests de recepción, pases y Partner
+ * Dashboard reservan de verdad en las franjas de hoy de The Ainsworth, y un
+ * `fillSlot` sobre una de ellas les deja sin plazas los días en que la
+ * fórmula marca hoy como "full" (rompió el CI de `dev` el 13 oct 2026).
  */
 export function findPredictedSlot(
   mockLounge: Lounge,
@@ -53,7 +58,7 @@ export function findPredictedSlot(
 ): { dateIso: string; band: WeekBandId; time: string } {
   let seen = 0;
 
-  for (let offset = 0; offset < withinDays; offset++) {
+  for (let offset = 1; offset <= withinDays; offset++) {
     const dateIso = addDays(today(), offset);
     const cells = weeklyAvailability(mockLounge, mondayOf(dateIso)).filter(
       (cellCandidate) => cellCandidate.dateIso === dateIso && cellCandidate.band !== "late",
