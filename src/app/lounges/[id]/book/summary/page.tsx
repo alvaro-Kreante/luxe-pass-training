@@ -98,6 +98,9 @@ function SummaryScreenNewCard() {
 /** Cubierta por membresía o tarjeta guardada — ninguna necesita `<PaymentElement>`. */
 function SummaryScreenOtherPayment() {
   const { lounge, covered, draft } = useBooking();
+  // E2E-01 — una clave por intento: un reintento del mismo cobro (otra
+  // pestaña, red) devuelve el mismo pago. Tras un rechazo se renueva.
+  const attemptKey = React.useRef(crypto.randomUUID());
 
   const chargePayment = React.useCallback(async (): Promise<PaymentOutcome> => {
     if (covered) return { ok: true, paymentId: null };
@@ -109,9 +112,11 @@ function SummaryScreenOtherPayment() {
       slotTime: draft.time!,
       specialRequests: draft.specialRequests,
       paymentMethodId: draft.paymentMethodId!,
+      idempotencyKey: attemptKey.current,
     });
 
     if (result.status === "succeeded") return { ok: true, paymentId: result.paymentId };
+    attemptKey.current = crypto.randomUUID();
     return {
       ok: false,
       message: result.error ?? "Your card was declined.",
@@ -142,7 +147,24 @@ function SummaryScreenBody({
     specialRequests: draft.specialRequests,
   };
 
+  // E2E-01 — un doble clic disparaba dos cobros y dos reservas: el ref
+  // corta la segunda llamada en el mismo tick, el estado deshabilita el botón.
+  const inFlight = React.useRef(false);
+  const [submitting, setSubmitting] = React.useState(false);
+
   async function handleConfirm() {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setSubmitting(true);
+    const done = await confirmAndPay();
+    if (!done) {
+      inFlight.current = false;
+      setSubmitting(false);
+    }
+  }
+
+  /** true si la reserva quedó hecha y ya se navega — el botón no se reactiva. */
+  async function confirmAndPay(): Promise<boolean> {
     let outcome: PaymentOutcome;
     try {
       outcome = await chargePayment();
@@ -163,7 +185,7 @@ function SummaryScreenBody({
         ? bookingReferenceFromId(outcome.paymentId)
         : errorReference(lounge.id, draft.dateIso!, draft.time!);
       setPaymentError({ message: outcome.message, reference });
-      return;
+      return false;
     }
 
     let booking: Awaited<ReturnType<typeof confirmBooking>>;
@@ -181,16 +203,17 @@ function SummaryScreenBody({
         message: "This visit is no longer covered by your membership — choose how to pay on the Payment step.",
         reference: errorReference(lounge.id, draft.dateIso!, draft.time!),
       });
-      return;
+      return false;
     }
 
     if (!booking) {
       setWaitlistOpen(true);
-      return;
+      return false;
     }
 
     update({ bookingId: booking.id, bookingStatus: booking.status });
     router.push(`/lounges/${lounge.id}/book/confirmed`);
+    return true;
   }
 
   async function handleJoinWaitlist() {
@@ -217,7 +240,7 @@ function SummaryScreenBody({
         stepCurrent={3}
         stepTotal={3}
         stepLabel="Review and confirm"
-        rail={<ConfirmPaymentRail onConfirm={handleConfirm} />}
+        rail={<ConfirmPaymentRail onConfirm={handleConfirm} submitting={submitting} />}
       >
         <BookingSummaryCard />
         <TermsPolicyCard />

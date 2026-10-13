@@ -13,11 +13,18 @@ import { cn } from "@/lib/utils";
  * Story 4.1 — "One-tap booking confirmation" (`Summary.dc.html`). El chequeo
  * final de disponibilidad y el cargo simulado los decide la página que
  * escucha `onConfirm`, que también sabe abrir Waitlist/PaymentError.
+ * `submitting` lo deshabilita mientras hay un cobro en curso (E2E-01).
  */
-export function ConfirmPaymentRail({ onConfirm }: { onConfirm: () => void }) {
+export function ConfirmPaymentRail({
+  onConfirm,
+  submitting = false,
+}: {
+  onConfirm: () => void;
+  submitting?: boolean;
+}) {
   const { covered, draft } = useBooking();
   const pricing = pricingFor(covered);
-  const canConfirm = draft.acceptedTerms;
+  const canConfirm = draft.acceptedTerms && !submitting;
 
   return (
     <Card variant="content" className="border border-line p-5.5">
