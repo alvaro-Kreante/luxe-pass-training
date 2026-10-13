@@ -2,10 +2,9 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Story 5.2 — Lounge Check-In Process (`Reception.dc.html` /
- * `CheckInError.dc.html`). RPC "de kiosco" contra Supabase (ver
- * `supabase/schemas/bookings.sql`): `/reception` no inicia sesión de
- * personal ni de miembro — autorizado solo por conocer el LP# de hoy en el
- * lounge correcto, igual que un lector físico de QR. `dateIso` es siempre
+ * `CheckInError.dc.html`). RPC contra Supabase (ver
+ * `supabase/schemas/bookings.sql`) que solo responden al personal del
+ * partner dueño del lounge (SEC-01): `/reception` exige sesión de partner. `dateIso` es siempre
  * el "hoy" de mockup del proyecto (`TODAY`, `src/lib/availability.ts`), no
  * la fecha real del navegador — mismo motivo que `confirm_booking` recibe
  * `p_date` en vez de asumirlo.

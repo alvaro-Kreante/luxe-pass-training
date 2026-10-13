@@ -268,15 +268,12 @@ $$;
 
 grant execute on function public.join_waitlist(text, date, text, text, text) to authenticated;
 
--- Story 5.2 — Lounge Check-In Process. `/reception` no tiene login de
--- personal (gap señalado en docs/PENDIENTES.md, y docs/DATA-MODEL-MAP.md
--- deja el rol staff/partner para cuando arranque el Epic 7, no antes) —
--- decisión consciente (ver CLAUDE.md): estas cuatro funciones son un RPC
--- "de kiosco", autorizado solo por conocer el LP# de hoy en el lounge
--- correcto, igual que un lector físico de QR en el mostrador de recepción.
--- Se conceden a `anon` a propósito — la consola no inicia sesión de
--- miembro ni de staff. Documentado como desviación consciente en
--- docs/design/COMPONENT-MAP.md "Backend real — Epic 5".
+-- Story 5.2 — Lounge Check-In Process. Solo el personal del partner dueño
+-- del lounge (`partner_lounge_ids()`) busca, hace check-in o marca no-show:
+-- fuera de sus lounges la búsqueda y el resumen no devuelven nada y las
+-- escrituras fallan. SEC-01 (docs/audit/seguridad-y-datos.md): antes eran
+-- RPC "de kiosco" concedidas a `anon`, que exponían nombre, email y
+-- contacto de emergencia de cualquier reserva con solo conocer el LP#.
 --
 -- `p_date` en vez de `current_date`: todo el proyecto trabaja sobre el "hoy"
 -- de mockup fijo (`TODAY` en `src/lib/availability.ts`, 2025-09-09), no el
@@ -312,6 +309,7 @@ begin
   select b.* into v_booking
   from public.bookings b
   where b.lounge_id = p_lounge_id
+    and b.lounge_id in (select public.partner_lounge_ids())
     and b.date = p_date
     and b.confirmation_code = upper(trim(p_confirmation_code))
     and b.status <> 'cancelled';
@@ -340,7 +338,8 @@ begin
 end;
 $$;
 
-grant execute on function public.reception_lookup_booking(text, date, text) to anon, authenticated;
+revoke execute on function public.reception_lookup_booking(text, date, text) from public, anon;
+grant execute on function public.reception_lookup_booking(text, date, text) to authenticated;
 
 -- AC "Instant verification of booking validity" + "Check-in confirmation to
 -- member's app" (el miembro ve `status='in_progress'` al recargar /my-pass,
@@ -363,6 +362,7 @@ begin
   update public.bookings b
     set checked_in_at = now(), status = 'in_progress', updated_at = now()
     where b.lounge_id = p_lounge_id
+      and b.lounge_id in (select public.partner_lounge_ids())
       and b.date = p_date
       and b.confirmation_code = upper(trim(p_confirmation_code))
       and b.status = 'confirmed'
@@ -377,7 +377,8 @@ begin
 end;
 $$;
 
-grant execute on function public.reception_checkin_booking(text, date, text) to anon, authenticated;
+revoke execute on function public.reception_checkin_booking(text, date, text) from public, anon;
+grant execute on function public.reception_checkin_booking(text, date, text) to authenticated;
 
 -- AC "No-show tracking for booking history". No hay valor 'no_show' en
 -- `status` (ver comentario de la tabla) — cierra la reserva como
@@ -401,6 +402,7 @@ begin
   update public.bookings b
     set no_show = true, status = 'completed', cancellation_fee_cents = 3500, updated_at = now()
     where b.lounge_id = p_lounge_id
+      and b.lounge_id in (select public.partner_lounge_ids())
       and b.date = p_date
       and b.confirmation_code = upper(trim(p_confirmation_code))
       and b.status = 'confirmed'
@@ -415,7 +417,8 @@ begin
 end;
 $$;
 
-grant execute on function public.reception_report_no_show(text, date, text) to anon, authenticated;
+revoke execute on function public.reception_report_no_show(text, date, text) from public, anon;
+grant execute on function public.reception_report_no_show(text, date, text) to authenticated;
 
 -- Decorativo pero real (contador "N expected today / M checked in" de la
 -- topbar de `/reception`) — agregado barato sobre el índice de
@@ -430,10 +433,12 @@ as $$
     count(*) filter (where status <> 'cancelled')::int,
     count(*) filter (where checked_in_at is not null)::int
   from public.bookings
-  where lounge_id = p_lounge_id and date = p_date;
+  where lounge_id = p_lounge_id and date = p_date
+    and lounge_id in (select public.partner_lounge_ids());
 $$;
 
-grant execute on function public.reception_today_summary(text, date) to anon, authenticated;
+revoke execute on function public.reception_today_summary(text, date) from public, anon;
+grant execute on function public.reception_today_summary(text, date) to authenticated;
 
 -- Story 6.1 (Epic 6) — "Modification options: Cancel", "24-hour advance
 -- notice requirement for cancellation", "No show policy enforcement - flat

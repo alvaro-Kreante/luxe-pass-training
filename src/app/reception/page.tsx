@@ -4,6 +4,8 @@ import * as React from "react";
 import Image from "next/image";
 import { CircleAlert, CircleCheck, ScanLine, Search, ShieldAlert } from "lucide-react";
 
+import { usePartnerContext } from "@/components/partner/partner-context";
+import { RequirePartnerSession } from "@/components/partner/require-partner-session";
 import { buttonVariants } from "@/components/ui/button";
 import { today } from "@/lib/availability";
 import {
@@ -24,19 +26,27 @@ import { cn } from "@/lib/utils";
  * `CheckInError.dc.html` (número no encontrado) son la misma pantalla:
  * escanear o teclear un LP# y mirar el resultado.
  *
- * Backend real (Supabase local): RPC "de kiosco" (`src/lib/reception.ts`,
- * sin login de personal ni de miembro — ver `supabase/schemas/bookings.sql`
- * y `docs/design/COMPONENT-MAP.md` "Backend real — Epic 5"). `THE_AINSWORTH`
- * sigue fijo como el lounge de esta consola, igual que el resto del
- * proyecto fija literalmente The Ainsworth donde no hay todavía un login de
- * partner que lo resuelva (Story 7.1).
+ * Backend real (Supabase local). SEC-01: exige sesión de partner
+ * (`RequirePartnerSession`, sin ella manda a `/partner/login`) y la consola
+ * trabaja sobre el lounge elegido en el contexto del partner — las RPC de
+ * `src/lib/reception.ts` solo responden en los lounges de ese partner.
  *
  * Costura declarada en pantalla (Fase 6): la lista diaria de invitados y las
  * notificaciones en tiempo real son la Story 7.1 del Partner Dashboard.
  */
-const THE_AINSWORTH = "the-ainsworth";
-
 export default function ReceptionPage() {
+  return (
+    <RequirePartnerSession>
+      <ReceptionConsole />
+    </RequirePartnerSession>
+  );
+}
+
+function ReceptionConsole() {
+  const partner = usePartnerContext();
+  const lounge = partner?.context?.lounges.find((item) => item.id === partner.context?.selectedLoungeId);
+  const loungeId = lounge?.id ?? "";
+  const loungeName = lounge?.name ?? "";
   const [code, setCode] = React.useState("");
   const [booking, setBooking] = React.useState<ReceptionBooking | null>(null);
   const [lookedUpCode, setLookedUpCode] = React.useState<string | null>(null);
@@ -46,10 +56,10 @@ export default function ReceptionPage() {
   const mounted = React.useRef(false);
 
   const refreshSummary = React.useCallback(() => {
-    fetchReceptionTodaySummary(supabase, THE_AINSWORTH, today()).then((next) => {
+    fetchReceptionTodaySummary(supabase, loungeId, today()).then((next) => {
       if (mounted.current) setSummary(next);
     });
-  }, [supabase]);
+  }, [supabase, loungeId]);
 
   React.useEffect(() => {
     mounted.current = true;
@@ -60,23 +70,23 @@ export default function ReceptionPage() {
   }, [refreshSummary]);
 
   async function lookUp() {
-    const found = await lookupReceptionBooking(supabase, THE_AINSWORTH, today(), code);
+    const found = await lookupReceptionBooking(supabase, loungeId, today(), code);
     setBooking(found);
     setLookedUpCode(code);
   }
 
   async function handleCheckIn() {
     if (!booking) return;
-    await checkInReceptionBooking(supabase, THE_AINSWORTH, today(), booking.reference);
-    const refreshed = await lookupReceptionBooking(supabase, THE_AINSWORTH, today(), booking.reference);
+    await checkInReceptionBooking(supabase, loungeId, today(), booking.reference);
+    const refreshed = await lookupReceptionBooking(supabase, loungeId, today(), booking.reference);
     setBooking(refreshed);
     refreshSummary();
   }
 
   async function handleNoShow() {
     if (!booking) return;
-    await reportReceptionNoShow(supabase, THE_AINSWORTH, today(), booking.reference);
-    const refreshed = await lookupReceptionBooking(supabase, THE_AINSWORTH, today(), booking.reference);
+    await reportReceptionNoShow(supabase, loungeId, today(), booking.reference);
+    const refreshed = await lookupReceptionBooking(supabase, loungeId, today(), booking.reference);
     setBooking(refreshed);
     refreshSummary();
   }
@@ -87,7 +97,7 @@ export default function ReceptionPage() {
         <Image src="/logo.png" alt="En Soleil" width={34} height={36} className="h-auto w-8.5" />
         <span aria-hidden className="h-6.5 w-px bg-line" />
         <div>
-          <h2 className="m-0 text-lg text-fg">The Ainsworth · Reception</h2>
+          <h2 className="m-0 text-lg text-fg">{loungeName} · Reception</h2>
         </div>
         <div className="flex-1" />
         <span className="inline-flex items-center gap-2 rounded-pill border border-line px-3.5 py-2">
@@ -147,7 +157,7 @@ export default function ReceptionPage() {
           {booking ? (
             <ValidResult booking={booking} onCheckIn={handleCheckIn} onNoShow={handleNoShow} />
           ) : (
-            lookedUpCode !== null && <ErrorResult code={lookedUpCode} />
+            lookedUpCode !== null && <ErrorResult code={lookedUpCode} loungeName={loungeName} />
           )}
 
           <p className="m-0 mt-4.5 flex items-center gap-2.5 text-xs text-fg-subtle">
@@ -256,7 +266,7 @@ function ValidResult({
   );
 }
 
-function ErrorResult({ code }: { code: string }) {
+function ErrorResult({ code, loungeName }: { code: string; loungeName: string }) {
   return (
     <div className="mt-5.5 rounded-[20px] border border-line bg-dark-card p-6.5">
       <div className="flex items-center gap-4 border-b border-line pb-5">
@@ -266,7 +276,7 @@ function ErrorResult({ code }: { code: string }) {
         <div className="flex-1">
           <h2 className="m-0 text-2xl text-fg">No booking matches this code</h2>
           <p className="m-0 mt-1.5 text-[12.5px] text-fg-subtle">
-            Nothing at The Ainsworth today carries the reference {code.trim().toUpperCase()}.
+            Nothing at {loungeName} today carries the reference {code.trim().toUpperCase()}.
           </p>
         </div>
         <span className="inline-flex items-center gap-2 rounded-pill border border-fg-subtle px-4 py-2.5">

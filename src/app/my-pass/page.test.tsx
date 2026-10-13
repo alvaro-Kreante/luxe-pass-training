@@ -8,7 +8,7 @@ import { fetchVisitsThisMonth } from "@/lib/membership";
 import { LATE_CANCELLATION_FEE_LABEL } from "@/lib/passes";
 import { checkInReceptionBooking, reportReceptionNoShow } from "@/lib/reception";
 import { createClient } from "@/lib/supabase/client";
-import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
+import { signInReceptionStaff, signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
 
 import MyPassPage from "./page";
 
@@ -39,7 +39,6 @@ beforeAll(async () => {
     "EnSoleil!2026",
     { membership: "annual" },
   );
-  const kiosk = createClient();
 
   // In progress: check-in ya hecho hoy.
   const inProgress = await confirmBooking(supabase, {
@@ -50,7 +49,7 @@ beforeAll(async () => {
     specialRequests: "",
   });
   if (!inProgress) throw new Error("No se pudo confirmar la reserva in-progress de prueba");
-  await checkInReceptionBooking(kiosk, "the-ainsworth", today(), bookingReferenceFromId(inProgress.id));
+  await checkInReceptionBooking(await signInReceptionStaff("the-ainsworth"), "the-ainsworth", today(), bookingReferenceFromId(inProgress.id));
 
   // Confirmada, dentro de las 24 horas (hoy mismo) — tarifa de cancelación.
   const withinWindow = await confirmBooking(supabase, {
@@ -90,7 +89,7 @@ beforeAll(async () => {
     specialRequests: "",
   });
   if (!noShowBooking) throw new Error("No se pudo confirmar la reserva de no-show de prueba");
-  await reportReceptionNoShow(kiosk, "the-meridian-salon", today(), bookingReferenceFromId(noShowBooking.id));
+  await reportReceptionNoShow(await signInReceptionStaff("the-meridian-salon"), "the-meridian-salon", today(), bookingReferenceFromId(noShowBooking.id));
 });
 
 describe("campana de notificaciones", () => {
