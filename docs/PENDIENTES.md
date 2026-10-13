@@ -315,9 +315,6 @@ cliente) ya es real. Abierto:
   usuario, 13 oct 2026, `partner_undo_booking_status`). Sin zona horaria en
   `lounges`, el servidor acepta ayer/hoy/mañana de su reloj y la pantalla lo
   limita a hoy; si `lounges` gana zona horaria, ajustar la ventana.
-- **El flow de admin no tiene los nodos de la 8.4.**
-  `flow-admin-support-experience.md` necesita un segmento "Story 8.4"; la
-  historia lo enlaza como pendiente.
 - **"See them in Bookings" del cierre masivo** (desviación de
   `COMPONENT-MAP.md`) ya tiene pantalla de destino, pero no filtra por un
   rango de fechas: haría falta abrir `/admin/bookings` en la fecha y el lounge

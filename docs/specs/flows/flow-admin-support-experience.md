@@ -12,6 +12,7 @@ flowchart TD
     AdminDashboard --> CustSupport
     AdminDashboard --> DataAnalytics
     AdminDashboard --> ContentMgmt
+    AdminDashboard --> BookingsOverview
 
     subgraph Story81["Story 8.1 - Customer Support Dashboard"]
         CustSupport["Customer support"] --> MemberSearch["Member search: by name, email, phone"]
@@ -43,6 +44,18 @@ flowchart TD
         BookingAvailability --> BulkUpdate["Bulk update capabilities: mass changes, batch processing"]
     end
 
+    subgraph Story84["Story 8.4 - Bookings Overview"]
+        BookingsOverview["Bookings overview: every booking across the network"] --> ChooseDay["Choose a day: opens on today, previous/next day, calendar"]
+        ChooseDay --> FilterBookings["Filter: lounge, partner, status, member name or LP reference"]
+        FilterBookings --> ByArrival["Grouped by arrival time: member, reference, lounge, status"]
+        ByArrival --> BandCapacity{"One lounge selected?"}
+        BandCapacity -->|Yes| SeatsByBand["Seats taken vs. capacity per band"]
+        BandCapacity -->|No| OpenBooking
+        SeatsByBand --> OpenBooking["Open a booking"]
+        OpenBooking --> BookingModification
+        OpenBooking --> ChangeStatus["Change the status: confirmed, checked in, no-show (no fee from admin)"]
+    end
+
     NoShowTrackingAdmin --> AdminReporting["Admin reporting: comprehensive dashboard, KPI monitoring, executive summaries"]
     BusinessIntel --> AdminReporting
     BulkUpdate --> AdminReporting
@@ -57,8 +70,10 @@ flowchart TD
 | [Story 8.1 - Customer Support Dashboard](../epic-8-admin-support/story-8.1-customer-support-dashboard.md) | Subgraph "Story 8.1": `Customer support` → `No-show tracking` |
 | [Story 8.2 - Data Export & Analytics](../epic-8-admin-support/story-8.2-data-export-analytics.md) | Subgraph "Story 8.2": `Data and Analytics` → `Business intelligence` |
 | [Story 8.3 - Content Management](../epic-8-admin-support/story-8.3-content-management.md) | Subgraph "Story 8.3": `Content management` → `Bulk update capabilities` |
+| [Story 8.4 - Bookings Overview](../epic-8-admin-support/story-8.4-bookings-overview.md) | Subgraph "Story 8.4": `Bookings overview` → `Change the status`, reusing `Booking modification` from 8.1 |
 
 ## Notes
 
-- All three stories branch independently from `Admin Dashboard` and converge at `Admin reporting` — they are parallel, not sequential.
+- Stories 8.1–8.3 branch independently from `Admin Dashboard` and converge at `Admin reporting` — they are parallel, not sequential.
+- Story 8.4 was added by the team (13 Oct 2026), not drawn in the original diagram. It does not converge at `Admin reporting`: it is a second way into the 8.1 `Booking modification`, without first finding the member. Partner filter, calendar and `Change the status` were added at the user's request after the acceptance criteria were written.
 - The original diagram carries several open design questions as sticky notes (e.g. how refunds are handled vs. Stripe, whether the admin can override lounge-set restrictions, how blackout dates are surfaced). These are unresolved product questions, not flow logic — flag them if implementing Epic 8.
