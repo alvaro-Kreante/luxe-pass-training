@@ -1,0 +1,55 @@
+{
+  "results": [
+    {
+      "id": "F7.1 partner login + dashboard",
+      "status": "PASS",
+      "obs": "url=http://localhost:3005/partner text=PARTNER DASHBOARD Today Guests Analytics Reports Settings EP E2E Partner The Ainsworth Collection Today · Monday, October 12 Live TA The Ainsworth Collection The Ainsworth MONDAY, OCTOBER 12 · view this morning's digest "
+    },
+    {
+      "id": "F7.2 partner: guests / analytics",
+      "status": "PASS",
+      "obs": "guests=PARTNER DASHBOARD Today Guests Analytics Reports Settings EP E2E Partner The Ainsworth Collection Guests · all-time Export CSV TA The Ainsworth Collection The Ainsworth EVERYONE WHO BOOKED HERE Guests who came back Searc"
+    },
+    {
+      "id": "F7.3 partner intenta /admin",
+      "status": "PASS",
+      "obs": "url=http://localhost:3005/admin/login text=EN SOLEIL · LUXEPASS Every case, every reversal, every review. Support, analytics and content — the console behind the pass every member carries. En Soleil · admin console ADMIN ACCESS Sign in Use the work address En Sol"
+    },
+    {
+      "id": "F8.1 admin login + members/partners/lounges/support",
+      "status": "PASS",
+      "obs": "/admin/members:200:/admin/members /admin/partners:200:/admin/partners /admin/lounges:200:/admin/lounges /admin/support:200:/admin/support /admin/analytics:200:/admin/analytics /admin/reports:200:/admin/reports"
+    },
+    {
+      "id": "F8.2 miembro normal intenta /admin y /partner",
+      "status": "PASS",
+      "obs": "admin-> /admin/login EN SOLEIL · LUXEPASS Every case, every reversal, every review. Support, analytics and content — the console behind the pass every member carries. En Soleil · admin console ADMIN ACCESS Sign in Use the work address En Sol || partner-> /partner/login EN SOLEIL · LUXEPASS Every arrival, prepared for. The day's guest list, who has walked in, and what the month looked like — the house side of the pass your members carry. The Ainsworth · a LuxePass partner lounge since 2"
+    },
+    {
+      "id": "F8.3 anónimo /admin y /partner",
+      "status": "PASS",
+      "obs": "admin->/admin/login partner->/partner/login my-pass->/login"
+    }
+  ],
+  "log": {
+    "partner": {
+      "console": [],
+      "failed": []
+    },
+    "admin": {
+      "console": [],
+      "failed": [
+        "GET http://localhost:3005/admin/partners/f454f6a0-ac32-4c16-ba53-afd452957b0e?_rsc=MXiZeP8c4qI6f9E7 net::ERR_ABORTED",
+        "GET http://localhost:3005/admin/partners/a710a757-cf28-423a-8cdf-edf6cf322a05?_rsc=MXiZeP8c4qI6f9E7 net::ERR_ABORTED",
+        "GET http://localhost:3005/admin/partners/4b613c0e-111b-421e-9049-5fe10b08ffb9?_rsc=MXiZeP8c4qI6f9E7 net::ERR_ABORTED",
+        "GET http://localhost:3005/admin/partners/f81f97c4-4941-4b27-9191-404148b8e97d?_rsc=MXiZeP8c4qI6f9E7 net::ERR_ABORTED"
+      ]
+    },
+    "member": {
+      "console": [],
+      "failed": [
+        "GET http://localhost:3005/lounges/marbella-sky-lounge?_rsc=1p-R_iEY6bj0jY31 net::ERR_ABORTED"
+      ]
+    }
+  }
+}

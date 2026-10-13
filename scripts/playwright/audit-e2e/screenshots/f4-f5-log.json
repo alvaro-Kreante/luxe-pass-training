@@ -1,0 +1,81 @@
+{
+  "results": [
+    {
+      "id": "F4.1 my-pass lista + QR",
+      "status": "PASS",
+      "obs": "qrLikeElements=8 text=My Pass LP-762554 DIRECTIONS SHARE Your digital pass Everything reception needs is on the card. Take a screenshot if you would rather not open the app at the door. The Ainsworth 122 E 45th St, New Yor"
+    },
+    {
+      "id": "F4.2 my-pass referencia ajena/inexistente",
+      "status": "PASS",
+      "obs": "status=200 text=Home Explore My Pass Profile EA E2E Audit Free member My Pass 13 Book a visit My bookings Every visit you have booked, what it is doing right now, and"
+    },
+    {
+      "id": "F4.3 recepción anónima: lookup + check-in",
+      "status": "PASS",
+      "obs": "found=\"The Ainsworth · Reception 4 expected today · 0 checked in Confirmation number Arrival 3:30 PM LOOK UP Scan the member's pass, type the LP number, or search by name or email. EA E2E Audit e2e-book-1791839837455@example.com Valid booking REFERENCE LP-762554 ARRIVAL 3:30 PM STATUS Confirmed SPECIAL REQ\" db={\"status\":\"in_progress\",\"checked_in_at\":\"2026-10-12T21:23:26.399638+00:00\"}"
+    },
+    {
+      "id": "F4.4 recepción: código inexistente",
+      "status": "PASS",
+      "obs": "The Ainsworth · Reception 4 expected today · 1 checked in Confirmation number Not recognised TRY AGAIN Scan the member's pass, type the LP number, or search by name or email. No booking matches this c"
+    },
+    {
+      "id": "F4.5 recepción: no-show",
+      "status": "PASS",
+      "obs": "buttons=[\"LOOK UP\",\"CHECK IN E2E\",\"MARK NO-SHOW\",\"REPORT ISSUE\"] db={\"status\":\"completed\",\"no_show\":true,\"cancellation_fee_cents\":3500}"
+    },
+    {
+      "id": "F4.6 recepción: check-in repetido",
+      "status": "PASS",
+      "obs": "The Ainsworth · Reception 4 expected today · 1 checked in Confirmation number Arrival 3:30 PM LOOK UP Scan the member's pass, type the LP number, or search by name or email. EA E2E Audit e2e-book-1791839837455@example.com Valid booking REFERENCE LP-7"
+    },
+    {
+      "id": "F4.7 miembro ve check-in",
+      "status": "PASS",
+      "obs": "My Pass LP-762554 DIRECTIONS SHARE Your digital pass Everything reception needs is on the card. Take a screenshot if you would rather not open the app at the door. The Ainsworth 122 E 45th St, New Yor"
+    },
+    {
+      "id": "F5.1 cancelar reserva pagada (>24h)",
+      "status": "FAIL",
+      "obs": "locator.click: Timeout 30000ms exceeded."
+    },
+    {
+      "id": "F5.2 cancelar dos veces (reintento RPC)",
+      "status": "PASS",
+      "obs": "ok {\"id\":\"ac54ae4e-17af-4e1d-9479-edcd166b5490\",\"member_id\":\"01656a7e-b281-43a0-bdb7-c8d2ffe02d83\",\"lounge_id\":\"the-ainsworth\",\"date\":\"2026-10-24\",\"band\""
+    }
+  ],
+  "log": {
+    "member": {
+      "console": [],
+      "failed": [
+        "GET http://localhost:3005/lounges/the-ainsworth?_rsc=1p-R_iEY6bj0jY31 net::ERR_ABORTED",
+        "GET http://localhost:3005/lounges/belmont-terrace?_rsc=1p-R_iEY6bj0jY31 net::ERR_ABORTED",
+        "GET http://localhost:3005/lounges/marbella-sky-lounge?_rsc=1p-R_iEY6bj0jY31 net::ERR_ABORTED",
+        "GET http://localhost:3005/my-pass/LP-698573?_rsc=HHlfNb0V-OAZaHlH net::ERR_ABORTED",
+        "GET http://localhost:3005/my-pass/LP-208657?_rsc=HHlfNb0V-OAZaHlH net::ERR_ABORTED",
+        "GET http://localhost:3005/my-pass/LP-762554?_rsc=HHlfNb0V-OAZaHlH net::ERR_ABORTED",
+        "GET http://localhost:3005/my-pass/LP-270962?_rsc=HHlfNb0V-OAZaHlH net::ERR_ABORTED",
+        "GET http://localhost:3005/my-pass/LP-479833?_rsc=HHlfNb0V-OAZaHlH net::ERR_ABORTED",
+        "GET http://localhost:3005/my-pass/LP-762554/reminder?_rsc=3_vm8iIUHsWnrFVC net::ERR_ABORTED",
+        "GET http://localhost:3005/my-pass/LP-698573?_rsc=HHlfNb0V-OAZaHlH net::ERR_ABORTED",
+        "GET http://localhost:3005/my-pass/LP-208657?_rsc=HHlfNb0V-OAZaHlH net::ERR_ABORTED",
+        "GET http://localhost:3005/my-pass/LP-762554?_rsc=HHlfNb0V-OAZaHlH net::ERR_ABORTED",
+        "GET http://localhost:3005/my-pass/LP-270962?_rsc=HHlfNb0V-OAZaHlH net::ERR_ABORTED",
+        "GET http://localhost:3005/my-pass/LP-479833?_rsc=HHlfNb0V-OAZaHlH net::ERR_ABORTED",
+        "GET http://localhost:3005/my-pass/LP-762554/reminder?_rsc=3_vm8iIUHsWnrFVC net::ERR_ABORTED",
+        "GET http://localhost:3005/my-pass/LP-479833/reminder?_rsc=Le6cX8leaamvvJTW net::ERR_ABORTED",
+        "GET http://localhost:3005/my-pass/LP-698573?_rsc=HHlfNb0V-OAZaHlH net::ERR_ABORTED",
+        "GET http://localhost:3005/my-pass/LP-762554?_rsc=HHlfNb0V-OAZaHlH net::ERR_ABORTED",
+        "GET http://localhost:3005/my-pass/LP-270962?_rsc=HHlfNb0V-OAZaHlH net::ERR_ABORTED",
+        "GET http://localhost:3005/my-pass/LP-479833?_rsc=HHlfNb0V-OAZaHlH net::ERR_ABORTED",
+        "GET http://localhost:3005/my-pass/LP-242120?_rsc=HHlfNb0V-OAZaHlH net::ERR_ABORTED"
+      ]
+    },
+    "reception": {
+      "console": [],
+      "failed": []
+    }
+  }
+}

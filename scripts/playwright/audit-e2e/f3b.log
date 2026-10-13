@@ -1,0 +1,35 @@
+PASS F3.3 doble click en pagar (tarjeta nueva 4242) url=http://localhost:3005/lounges/the-ainsworth/book/confirmed radios=1 db={"payments":[{"status":"succeeded","booking_id":"49d948ab-b609-4f23-ba73-77249e7d2f8a","amount_cents":8166}],"bookings":[{"id":"49d948ab-b609-4f23-ba73-77249e7d2f8a","status":"confirmed","date":"2026-10-22"}]}
+PASS F3.4 recarga a mitad del flujo (payment y summary) payment reload -> http://localhost:3005/lounges/the-ainsworth/book ; summary reload -> http://localhost:3005/lounges/the-ainsworth/book
+PASS F3.5 botón atrás tras confirmar back -> http://localhost:3005/lounges/the-ainsworth/book/summary; clicked again -> http://localhost:3005/lounges/the-ainsworth/book/summary; bookings 1 -> 2
+PASS F3.6 guardar tarjeta: marcar 'Save' antes de elegir tarjeta nueva saveChecked=true radiosAfter=["Use a new card\nCredit or debit · entered on Stripe's secure form"]
+{
+ "console": [
+  "http://localhost:3005/lounges/the-ainsworth/book/confirmed :: Failed to load resource: the server responded with a status of 400 ()",
+  "http://localhost:3005/lounges/the-ainsworth/book/confirmed :: Failed to load resource: the server responded with a status of 400 ()",
+  "http://localhost:3005/lounges/the-ainsworth/book/summary :: Failed to load resource: the server responded with a status of 400 ()",
+  "http://localhost:3005/lounges/the-ainsworth/book/summary :: Failed to load resource: the server responded with a status of 400 ()"
+ ],
+ "failed": [
+  "GET http://localhost:3005/lounges/the-ainsworth?_rsc=1p-R_iEY6bj0jY31 net::ERR_ABORTED",
+  "GET http://localhost:3005/lounges/belmont-terrace?_rsc=1p-R_iEY6bj0jY31 net::ERR_ABORTED",
+  "GET http://localhost:3005/lounges/marbella-sky-lounge?_rsc=1p-R_iEY6bj0jY31 net::ERR_ABORTED",
+  "GET http://localhost:3005/lounges/the-ainsworth/book/payment?_rsc=qvulRVtUI7yr13Rs net::ERR_ABORTED",
+  "GET http://localhost:3005/lounges/the-ainsworth/book/summary?_rsc=dIkD8q1izJBRGgAb net::ERR_ABORTED",
+  "GET https://f199d2d42cc2.w.hcaptcha.com/logo.png net::ERR_ABORTED",
+  "GET http://localhost:3005/lounges/the-ainsworth?_rsc=TfETMiPZyPtD6c1O net::ERR_ABORTED",
+  "GET http://localhost:3005/lounges/the-ainsworth/book/payment?_rsc=TfETMiPZyPtD6c1O net::ERR_ABORTED",
+  "GET http://localhost:3005/lounges/the-ainsworth/book/payment?_rsc=qvulRVtUI7yr13Rs net::ERR_ABORTED",
+  "GET http://localhost:3005/lounges/the-ainsworth?_rsc=TfETMiPZyPtD6c1O net::ERR_ABORTED",
+  "GET http://localhost:3005/lounges/the-ainsworth/book/payment?_rsc=qvulRVtUI7yr13Rs net::ERR_ABORTED",
+  "GET http://localhost:3005/lounges/the-ainsworth/book/summary?_rsc=dIkD8q1izJBRGgAb net::ERR_ABORTED",
+  "GET http://localhost:3005/lounges/the-ainsworth/book/summary?_rsc=xzd1MfXSITZXhe4M net::ERR_ABORTED",
+  "GET http://localhost:3005/lounges/the-ainsworth/book?_rsc=m0BRV-O8TSqOfIAd net::ERR_ABORTED",
+  "GET http://localhost:3005/lounges/the-ainsworth/book/summary?_rsc=dIkD8q1izJBRGgAb net::ERR_ABORTED",
+  "GET https://94bf83f5f6c3.w.hcaptcha.com/logo.png net::ERR_ABORTED",
+  "GET http://localhost:3005/lounges/the-ainsworth/book/summary?_rsc=xzd1MfXSITZXhe4M net::ERR_ABORTED",
+  "GET https://a189e3888d44.w.hcaptcha.com/logo.png net::ERR_ABORTED",
+  "GET http://localhost:3005/lounges/the-ainsworth/book/summary?_rsc=xzd1MfXSITZXhe4M net::ERR_ABORTED",
+  "GET http://localhost:3005/lounges/the-ainsworth/book/confirmed?_rsc=m0BRV-O8TSqOfIAd net::ERR_ABORTED",
+  "GET http://localhost:3005/lounges/the-ainsworth/book/payment?_rsc=qvulRVtUI7yr13Rs net::ERR_ABORTED"
+ ]
+}

@@ -1,0 +1,36 @@
+import { setPage, open, shot, step, dump, admin, BASE, PW } from "./lib.mjs";
+const X = await open(); setPage(X.page);
+const email = `e2e-signup-${Date.now()}@example.com`;
+await step("F1.1 signup UI completo", async () => {
+  await X.page.goto(BASE + "/signup", { waitUntil: "load" }); await X.page.waitForTimeout(1500);
+  await X.page.getByLabel(/Email/i).first().fill("bad@");
+  await X.page.getByRole("textbox", { name: "Password", exact: true }).fill("short");
+  await X.page.getByLabel(/Confirm password/i).fill("other");
+  await X.page.getByText("I have read and agree").click(); await X.page.waitForTimeout(800);
+  const dlg = X.page.getByRole("dialog"); const dbtn = await dlg.getByRole("button").allInnerTexts();
+  await dlg.getByText("I have read and accept the").first().click(); await dlg.getByText("I have read and accept the").nth(1).click(); await dlg.getByRole("button", { name: /accept/i }).last().click(); await X.page.waitForTimeout(500);
+  await X.page.getByRole("button", { name: /create account/i }).click(); await X.page.waitForTimeout(1000);
+  await shot(X.page, "f1-signup-validation");
+  const val = (await X.page.locator("form").innerText()).replace(/\s+/g, " ").slice(0, 300);
+  await X.page.getByLabel(/Email/i).first().fill(email);
+  await X.page.getByRole("textbox", { name: "Password", exact: true }).fill(PW);
+  await X.page.getByLabel(/Confirm password/i).fill(PW);
+  await X.page.getByRole("button", { name: /create account/i }).click();
+  await X.page.waitForTimeout(6000); await shot(X.page, "f1-signup-submitted");
+  const { data } = await admin.auth.admin.listUsers({ perPage: 1000 });
+  const u = data.users.find((x) => x.email === email);
+  return `dialogButtons=${JSON.stringify(dbtn)} validation="${val}" url=${X.page.url().replace(BASE, "")} userCreated=${!!u} confirmed=${!!u?.email_confirmed_at}`;
+});
+await step("F1.1b signup email duplicado", async () => {
+  await X.page.context().clearCookies();
+  await X.page.goto(BASE + "/signup", { waitUntil: "load" }); await X.page.waitForTimeout(1500);
+  await X.page.getByLabel(/Email/i).first().fill(email);
+  await X.page.getByRole("textbox", { name: "Password", exact: true }).fill(PW);
+  await X.page.getByLabel(/Confirm password/i).fill(PW);
+  await X.page.getByText("I have read and agree").click(); await X.page.waitForTimeout(800);
+  { const d = X.page.getByRole("dialog"); await d.getByText("I have read and accept the").first().click(); await d.getByText("I have read and accept the").nth(1).click(); await d.getByRole("button", { name: /accept/i }).last().click(); } await X.page.waitForTimeout(500);
+  await X.page.getByRole("button", { name: /create account/i }).click(); await X.page.waitForTimeout(5000);
+  await shot(X.page, "f1-signup-duplicate");
+  return `url=${X.page.url().replace(BASE, "")} text=${(await X.page.locator("body").innerText()).replace(/\s+/g, " ").slice(0, 250)}`;
+});
+dump("f1b", X.log); await X.browser.close();

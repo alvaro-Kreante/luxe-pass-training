@@ -1,0 +1,9 @@
+FAIL F1.1 signup form locator.click: Timeout 30000ms exceeded. | Call log: | [2m  - waiting for getByRole('button', { name: /create account/i })[22m
+PASS F1.2 login wrong pw + lockout #1: We could not find an account with that email and password. 4 attempts left before the account is locked. || #2: We could not find an account with that email and password. 3 attempts left before the account is locked. || #3: We could not find an account with that email and password. 2 attempts left before the account is locked. || #4: We could not find an account with that email and password. 1 attempt left before the account is locked. || #5:  || #6: 
+PASS F1.3 lockout bypass: anon reset_login_attempts + direct GoTrue lockedBefore=true directSignInWhileLocked=OK(session) anonReset=OK lockedAfter=false
+PASS F1.4 anon can lock victim (record_failed_login x5) victimLocked=true ([{"failed_count":5,"locked":true,"locked_until":"2026-10-12T21:24:11.133817+00:00"}])
+PASS F1.5 login happy path http://localhost:3005/
+PASS F2.1 explore + search Filters mi km Map List  18 LOUNGES NEAR YOU  Sorted by distance · New York, NY · Change  The Ainsworth 0.1 mi The Ainsworth Collection · Midtown East · New York +1 Open now Belmont Terrace 0.8 mi Brya
+PASS F2.2 lounge detail status=200
+PASS F2.3 lounge inexistente status=200 text=404 This page could not be found.
+PASS F2.4 explore ?map=error 

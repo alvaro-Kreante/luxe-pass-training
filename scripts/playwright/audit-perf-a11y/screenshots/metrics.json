@@ -1,0 +1,1128 @@
+[
+  {
+    "route": "/",
+    "name": "anon-",
+    "loadMs": 1725,
+    "fcp": 2356,
+    "lcp": 2480,
+    "cls": 0,
+    "tbt": 187,
+    "longtasks": 2,
+    "totalKB": 266,
+    "jsKB": 210,
+    "imgKB": 26,
+    "fontKB": 0,
+    "requests": 26,
+    "supabase": 0,
+    "authUser": 0,
+    "sbCounts": {},
+    "dups": [],
+    "imgs": [
+      {
+        "u": "http://localhost:3006/_next/image?url=%2Flogo.png&w=384&q=75",
+        "kb": 26
+      }
+    ],
+    "thirdParty": [],
+    "thirdKB": 0,
+    "axe": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "n": 4,
+        "ex": [
+          "a[href$=\"forgot-password\"] | Element has insufficient color contrast of 3.19 (foreground color: #ad8a5c, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected con",
+          ".mb-7 | Element has insufficient color contrast of 3.21 (foreground color: #9c8d80, background color: #ffffff, font size: 8.6pt (11.5px), font weight: normal). Expected",
+          ".inline-flex | Element has insufficient color contrast of 2.24 (foreground color: #ffffff, background color: #c9a876, font size: 9.8pt (13px), font weight: bold). Expected con"
+        ]
+      },
+      {
+        "id": "landmark-one-main",
+        "impact": "moderate",
+        "n": 1,
+        "ex": [
+          "html | Fix all of the following:\n  Document does not have a main landmark"
+        ]
+      },
+      {
+        "id": "region",
+        "impact": "moderate",
+        "n": 11,
+        "ex": [
+          "h1 | Some page content is not contained by landmarks",
+          ".mb-8 | Some page content is not contained by landmarks",
+          ".mb-\\[18px\\] > .gap-2.mb-2.items-center | Some page content is not contained by landmarks"
+        ]
+      },
+      {
+        "id": "target-size",
+        "impact": "serious",
+        "n": 1,
+        "ex": [
+          ".hover\\:text-fg-muted | Target has insufficient size (18px by 18px, should be at least 24px by 24px)"
+        ]
+      }
+    ],
+    "dom": {
+      "theme": "light",
+      "main": 0,
+      "nav": 0,
+      "h1": [
+        "Welcome back"
+      ],
+      "headings": "1",
+      "live": 0,
+      "targets": 7,
+      "small24": [
+        "Show password(18x18)",
+        "INPUT(1x1)",
+        "Forgot password?(112x20)",
+        "Create account(98x18)"
+      ],
+      "small24n": 4,
+      "under44": 4,
+      "overflow": 0,
+      "lang": "en"
+    },
+    "zoomOverflow": 0
+  },
+  {
+    "route": "/login",
+    "name": "anon-login",
+    "loadMs": 1992,
+    "fcp": 1156,
+    "lcp": 1168,
+    "cls": 0,
+    "tbt": 61,
+    "longtasks": 1,
+    "totalKB": 322,
+    "jsKB": 212,
+    "imgKB": 26,
+    "fontKB": 50,
+    "requests": 22,
+    "supabase": 0,
+    "authUser": 0,
+    "sbCounts": {},
+    "dups": [],
+    "imgs": [
+      {
+        "u": "http://localhost:3006/_next/image?url=%2Flogo.png&w=384&q=75",
+        "kb": 26
+      }
+    ],
+    "thirdParty": [],
+    "thirdKB": 0,
+    "axe": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "n": 4,
+        "ex": [
+          "a[href$=\"forgot-password\"] | Element has insufficient color contrast of 3.19 (foreground color: #ad8a5c, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected con",
+          ".mb-7 | Element has insufficient color contrast of 3.21 (foreground color: #9c8d80, background color: #ffffff, font size: 8.6pt (11.5px), font weight: normal). Expected",
+          ".inline-flex | Element has insufficient color contrast of 2.24 (foreground color: #ffffff, background color: #c9a876, font size: 9.8pt (13px), font weight: bold). Expected con"
+        ]
+      },
+      {
+        "id": "landmark-one-main",
+        "impact": "moderate",
+        "n": 1,
+        "ex": [
+          "html | Fix all of the following:\n  Document does not have a main landmark"
+        ]
+      },
+      {
+        "id": "region",
+        "impact": "moderate",
+        "n": 11,
+        "ex": [
+          "h1 | Some page content is not contained by landmarks",
+          ".mb-8 | Some page content is not contained by landmarks",
+          ".mb-\\[18px\\] > .gap-2.mb-2.items-center | Some page content is not contained by landmarks"
+        ]
+      },
+      {
+        "id": "target-size",
+        "impact": "serious",
+        "n": 1,
+        "ex": [
+          ".hover\\:text-fg-muted | Target has insufficient size (18px by 18px, should be at least 24px by 24px)"
+        ]
+      }
+    ],
+    "dom": {
+      "theme": "light",
+      "main": 0,
+      "nav": 0,
+      "h1": [
+        "Welcome back"
+      ],
+      "headings": "1",
+      "live": 0,
+      "targets": 7,
+      "small24": [
+        "Show password(18x18)",
+        "INPUT(1x1)",
+        "Forgot password?(112x20)",
+        "Create account(98x18)"
+      ],
+      "small24n": 4,
+      "under44": 4,
+      "overflow": 0,
+      "lang": "en"
+    },
+    "zoomOverflow": 0
+  },
+  {
+    "route": "/signup",
+    "name": "anon-signup",
+    "loadMs": 1746,
+    "fcp": 2008,
+    "lcp": 2116,
+    "cls": 0,
+    "tbt": 100,
+    "longtasks": 3,
+    "totalKB": 321,
+    "jsKB": 215,
+    "imgKB": 26,
+    "fontKB": 50,
+    "requests": 20,
+    "supabase": 0,
+    "authUser": 0,
+    "sbCounts": {},
+    "dups": [],
+    "imgs": [
+      {
+        "u": "http://localhost:3006/_next/image?url=%2Flogo.png&w=384&q=75",
+        "kb": 26
+      }
+    ],
+    "thirdParty": [],
+    "thirdKB": 0,
+    "axe": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "n": 6,
+        "ex": [
+          ".gap-1\\.5 | Element has insufficient color contrast of 3.21 (foreground color: #9c8d80, background color: #ffffff, font size: 9.8pt (13px), font weight: normal). Expected c",
+          ".mt-1\\.5 | Element has insufficient color contrast of 3.21 (foreground color: #9c8d80, background color: #ffffff, font size: 9.0pt (12px), font weight: normal). Expected c",
+          ".text-accent-strong.hover\\:text-fg[type=\"button\"]:nth-child(1) | Element has insufficient color contrast of 3.19 (foreground color: #ad8a5c, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected con"
+        ]
+      },
+      {
+        "id": "landmark-one-main",
+        "impact": "moderate",
+        "n": 1,
+        "ex": [
+          "html | Fix all of the following:\n  Document does not have a main landmark"
+        ]
+      },
+      {
+        "id": "region",
+        "impact": "moderate",
+        "n": 14,
+        "ex": [
+          ".gap-1\\.5 | Some page content is not contained by landmarks",
+          "h1 | Some page content is not contained by landmarks",
+          ".mb-7 | Some page content is not contained by landmarks"
+        ]
+      },
+      {
+        "id": "target-size",
+        "impact": "serious",
+        "n": 1,
+        "ex": [
+          ".hover\\:text-fg-muted | Target has insufficient size (18px by 18px, should be at least 24px by 24px)"
+        ]
+      }
+    ],
+    "dom": {
+      "theme": "light",
+      "main": 0,
+      "nav": 0,
+      "h1": [
+        "Create account"
+      ],
+      "headings": "1",
+      "live": 0,
+      "targets": 10,
+      "small24": [
+        "Back to log in(103x20)",
+        "Show password(18x18)",
+        "INPUT(1x1)",
+        "Terms of Service(104x20)",
+        "Privacy Policy(87x20)",
+        "Log in(37x18)"
+      ],
+      "small24n": 6,
+      "under44": 6,
+      "overflow": 0,
+      "lang": "en"
+    },
+    "zoomOverflow": 0
+  },
+  {
+    "route": "/explore",
+    "name": "anon-explore",
+    "loadMs": 1924,
+    "fcp": 2512,
+    "lcp": 2640,
+    "cls": 0,
+    "tbt": 178,
+    "longtasks": 3,
+    "totalKB": 369,
+    "jsKB": 259,
+    "imgKB": 26,
+    "fontKB": 50,
+    "requests": 27,
+    "supabase": 0,
+    "authUser": 0,
+    "sbCounts": {},
+    "dups": [],
+    "imgs": [
+      {
+        "u": "http://localhost:3006/_next/image?url=%2Flogo.png&w=384&q=75",
+        "kb": 26
+      }
+    ],
+    "thirdParty": [],
+    "thirdKB": 0,
+    "axe": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "n": 4,
+        "ex": [
+          "a[href$=\"forgot-password\"] | Element has insufficient color contrast of 3.19 (foreground color: #ad8a5c, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected con",
+          ".mb-7 | Element has insufficient color contrast of 3.21 (foreground color: #9c8d80, background color: #ffffff, font size: 8.6pt (11.5px), font weight: normal). Expected",
+          ".inline-flex | Element has insufficient color contrast of 2.24 (foreground color: #ffffff, background color: #c9a876, font size: 9.8pt (13px), font weight: bold). Expected con"
+        ]
+      },
+      {
+        "id": "landmark-one-main",
+        "impact": "moderate",
+        "n": 1,
+        "ex": [
+          "html | Fix all of the following:\n  Document does not have a main landmark"
+        ]
+      },
+      {
+        "id": "region",
+        "impact": "moderate",
+        "n": 11,
+        "ex": [
+          "h1 | Some page content is not contained by landmarks",
+          ".mb-8 | Some page content is not contained by landmarks",
+          ".mb-\\[18px\\] > .gap-2.mb-2.items-center | Some page content is not contained by landmarks"
+        ]
+      },
+      {
+        "id": "target-size",
+        "impact": "serious",
+        "n": 1,
+        "ex": [
+          ".hover\\:text-fg-muted | Target has insufficient size (18px by 18px, should be at least 24px by 24px)"
+        ]
+      }
+    ],
+    "dom": {
+      "theme": "light",
+      "main": 0,
+      "nav": 0,
+      "h1": [
+        "Welcome back"
+      ],
+      "headings": "1",
+      "live": 0,
+      "targets": 7,
+      "small24": [
+        "Show password(18x18)",
+        "INPUT(1x1)",
+        "Forgot password?(112x20)",
+        "Create account(98x18)"
+      ],
+      "small24n": 4,
+      "under44": 4,
+      "overflow": 0,
+      "lang": "en"
+    },
+    "zoomOverflow": 0
+  },
+  {
+    "route": "/explore",
+    "name": "member-explore",
+    "loadMs": 1910,
+    "fcp": 2456,
+    "lcp": 2848,
+    "cls": 0.797,
+    "tbt": 459,
+    "longtasks": 10,
+    "totalKB": 361,
+    "jsKB": 255,
+    "imgKB": 11,
+    "fontKB": 24,
+    "requests": 69,
+    "supabase": 8,
+    "authUser": 3,
+    "sbCounts": {
+      "GET /auth/v1/.well-known/jwks.json": 1,
+      "GET /auth/v1/user": 3,
+      "POST /rest/v1/rpc/lounge_seats_on": 1,
+      "GET /rest/v1/lounges": 1,
+      "GET /rest/v1/memberships": 1,
+      "GET /rest/v1/profiles": 1
+    },
+    "dups": [
+      "GET /auth/v1/user x3"
+    ],
+    "imgs": [
+      {
+        "u": "http://localhost:3006/_next/image?url=%2Flogo.png&w=128&q=75",
+        "kb": 11
+      },
+      {
+        "u": "http://localhost:3006/logo.png",
+        "kb": 0
+      },
+      {
+        "u": "https://maps.googleapis.com/maps/api/js/StaticMapService.GetMapImage?1m2&1i77014&2i98356&2e1&3u10&4m2&1u390&2u320&5m5&1e0&5sen-US&6sus&10b1&",
+        "kb": 0
+      },
+      {
+        "u": "https://maps.gstatic.com/mapfiles/openhand_8_8.cur",
+        "kb": 0
+      },
+      {
+        "u": "https://mapsresources-pa.googleapis.com/v1/tiles?map_id=964eef172b68fa6686972775&version=sdk-13065223795468617145&pb=!1m5!1m4!1i10!2i301!3i3",
+        "kb": 0
+      }
+    ],
+    "thirdParty": [
+      "maps.googleapis.com",
+      "maps.gstatic.com",
+      "mapsresources-pa.googleapis.com",
+      "fonts.googleapis.com",
+      "fonts.gstatic.com"
+    ],
+    "thirdKB": 7,
+    "axe": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "n": 38,
+        "ex": [
+          ".bg-transparent | Element has insufficient color contrast of 3.19 (foreground color: #ad8a5c, background color: #ffffff, font size: 9.8pt (13px), font weight: bold). Expected con",
+          ".mb-1\\.5 | Element has insufficient color contrast of 3.19 (foreground color: #ad8a5c, background color: #ffffff, font size: 9.0pt (12px), font weight: bold). Expected con",
+          ".pb-3 > .m-0 | Element has insufficient color contrast of 3.21 (foreground color: #9c8d80, background color: #ffffff, font size: 9.4pt (12.5px), font weight: normal). Expected"
+        ]
+      }
+    ],
+    "dom": {
+      "theme": "light",
+      "main": 1,
+      "nav": 1,
+      "h1": [],
+      "headings": "2",
+      "live": 1,
+      "targets": 42,
+      "small24": [
+        "Change location(47x19)",
+        "Keyboard shortcuts(87x14)",
+        "Terms (opens in new tab)(28x13)"
+      ],
+      "small24n": 3,
+      "under44": 15,
+      "overflow": 0,
+      "lang": "en"
+    },
+    "zoomOverflow": 0
+  },
+  {
+    "route": "/lounges/the-ainsworth",
+    "name": "member-lounges-the-ainsworth",
+    "loadMs": 1834,
+    "fcp": 2208,
+    "lcp": 3024,
+    "cls": 0,
+    "tbt": 103,
+    "longtasks": 2,
+    "totalKB": 313,
+    "jsKB": 232,
+    "imgKB": 11,
+    "fontKB": 24,
+    "requests": 53,
+    "supabase": 13,
+    "authUser": 2,
+    "sbCounts": {
+      "GET /auth/v1/.well-known/jwks.json": 1,
+      "GET /auth/v1/user": 2,
+      "GET /rest/v1/lounges": 1,
+      "GET /rest/v1/profiles": 1,
+      "GET /rest/v1/memberships": 1,
+      "GET /rest/v1/lounge_seasons": 2,
+      "GET /rest/v1/lounge_images": 1,
+      "GET /rest/v1/lounge_closures": 2,
+      "GET /rest/v1/member_favorite_lounges": 1,
+      "POST /rest/v1/rpc/lounge_availability_range": 1
+    },
+    "dups": [
+      "GET /auth/v1/user x2",
+      "GET /rest/v1/lounge_seasons x2",
+      "GET /rest/v1/lounge_closures x2"
+    ],
+    "imgs": [
+      {
+        "u": "http://localhost:3006/_next/image?url=%2Flogo.png&w=128&q=75",
+        "kb": 11
+      },
+      {
+        "u": "http://localhost:3006/logo.png",
+        "kb": 0
+      }
+    ],
+    "thirdParty": [],
+    "thirdKB": 0,
+    "axe": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "n": 8,
+        "ex": [
+          ".mb-3 | Element has insufficient color contrast of 2.94 (foreground color: #ad8a5c, background color: #fcf4ee, font size: 9.0pt (12px), font weight: bold). Expected con",
+          ".mb-2\\.5.justify-between.items-center > .tracking-\\[0\\.1em\\].uppercase.text-xs | Element has insufficient color contrast of 2.94 (foreground color: #ad8a5c, background color: #fcf4ee, font size: 9.0pt (12px), font weight: bold). Expected con",
+          ".gap-5\\.5 > div:nth-child(2) > .mb-2\\.5.tracking-\\[0\\.1em\\].uppercase | Element has insufficient color contrast of 2.94 (foreground color: #ad8a5c, background color: #fcf4ee, font size: 9.0pt (12px), font weight: bold). Expected con"
+        ]
+      }
+    ],
+    "dom": {
+      "theme": "light",
+      "main": 1,
+      "nav": 1,
+      "h1": [
+        "The Ainsworth"
+      ],
+      "headings": "12",
+      "live": 0,
+      "targets": 15,
+      "small24": [
+        "View weekly availability(298x19)"
+      ],
+      "small24n": 1,
+      "under44": 9,
+      "overflow": 208,
+      "lang": "en"
+    },
+    "zoomOverflow": 0
+  },
+  {
+    "route": "/lounges/the-ainsworth/book",
+    "name": "member-lounges-the-ainsworth-book",
+    "loadMs": 4917,
+    "fcp": 2116,
+    "lcp": 2880,
+    "cls": 0,
+    "tbt": 349,
+    "longtasks": 4,
+    "totalKB": 725,
+    "jsKB": 606,
+    "imgKB": 11,
+    "fontKB": 50,
+    "requests": 55,
+    "supabase": 12,
+    "authUser": 2,
+    "sbCounts": {
+      "GET /auth/v1/.well-known/jwks.json": 1,
+      "GET /auth/v1/user": 2,
+      "GET /rest/v1/lounges": 1,
+      "GET /rest/v1/profiles": 2,
+      "GET /rest/v1/memberships": 2,
+      "GET /rest/v1/lounge_seasons": 1,
+      "GET /rest/v1/lounge_closures": 1,
+      "POST /rest/v1/rpc/booking_coverage": 1,
+      "POST /rest/v1/rpc/lounge_availability_range": 1
+    },
+    "dups": [
+      "GET /auth/v1/user x2",
+      "GET /rest/v1/profiles x2",
+      "GET /rest/v1/memberships x2"
+    ],
+    "imgs": [
+      {
+        "u": "http://localhost:3006/_next/image?url=%2Flogo.png&w=128&q=75",
+        "kb": 11
+      }
+    ],
+    "thirdParty": [
+      "js.stripe.com",
+      "m.stripe.network",
+      "m.stripe.com"
+    ],
+    "thirdKB": 289,
+    "axe": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "n": 23,
+        "ex": [
+          ".tracking-\\[0\\.04em\\] | Element has insufficient color contrast of 3.19 (foreground color: #ad8a5c, background color: #ffffff, font size: 9.4pt (12.5px), font weight: bold). Expected c",
+          ".text-\\[12\\.5px\\].mt-0\\.5 | Element has insufficient color contrast of 3.21 (foreground color: #9c8d80, background color: #ffffff, font size: 9.4pt (12.5px), font weight: normal). Expected",
+          ".text-\\[11\\.5px\\].gap-2.text-fg-subtle | Element has insufficient color contrast of 3.21 (foreground color: #9c8d80, background color: #ffffff, font size: 8.6pt (11.5px), font weight: normal). Expected"
+        ]
+      },
+      {
+        "id": "dlitem",
+        "impact": "serious",
+        "n": 4,
+        "ex": [
+          ".py-4.gap-2\\.5.flex-col:nth-child(4) > .justify-between:nth-child(1) > dt | Description list item does not have a <dl> parent element",
+          ".py-4.gap-2\\.5.flex-col:nth-child(4) > .justify-between:nth-child(1) > dd | Description list item does not have a <dl> parent element",
+          ".py-4.gap-2\\.5.flex-col:nth-child(4) > .justify-between:nth-child(2) > dt | Description list item does not have a <dl> parent element"
+        ]
+      },
+      {
+        "id": "page-has-heading-one",
+        "impact": "moderate",
+        "n": 1,
+        "ex": [
+          "html | Fix all of the following:\n  Page must have a level-one heading"
+        ]
+      }
+    ],
+    "dom": {
+      "theme": "light",
+      "main": 1,
+      "nav": 1,
+      "h1": [],
+      "headings": "23",
+      "live": 0,
+      "targets": 28,
+      "small24": [
+        "Back to The Ainsworth(169x20)",
+        "Booking help(108x19)",
+        "Cancellation policy(105x15)"
+      ],
+      "small24n": 3,
+      "under44": 23,
+      "overflow": 286,
+      "lang": "en"
+    },
+    "zoomOverflow": 36
+  },
+  {
+    "route": "/my-pass",
+    "name": "member-my-pass",
+    "loadMs": 1956,
+    "fcp": 2440,
+    "lcp": 2440,
+    "cls": 0,
+    "tbt": 166,
+    "longtasks": 3,
+    "totalKB": 343,
+    "jsKB": 241,
+    "imgKB": 11,
+    "fontKB": 50,
+    "requests": 39,
+    "supabase": 9,
+    "authUser": 1,
+    "sbCounts": {
+      "GET /auth/v1/.well-known/jwks.json": 1,
+      "GET /auth/v1/user": 1,
+      "GET /rest/v1/notifications": 1,
+      "GET /rest/v1/bookings": 2,
+      "GET /rest/v1/memberships": 2,
+      "POST /rest/v1/rpc/membership_visits_in_month": 1,
+      "GET /rest/v1/profiles": 1
+    },
+    "dups": [
+      "GET /rest/v1/bookings x2",
+      "GET /rest/v1/memberships x2"
+    ],
+    "imgs": [
+      {
+        "u": "http://localhost:3006/_next/image?url=%2Flogo.png&w=128&q=75",
+        "kb": 11
+      }
+    ],
+    "thirdParty": [],
+    "thirdKB": 0,
+    "axe": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "n": 5,
+        "ex": [
+          ".border-transparent | Element has insufficient color contrast of 2.95 (foreground color: #9c8d80, background color: #fcf4ee, font size: 10.1pt (13.5px), font weight: normal). Expecte",
+          ".rounded-content.p-5.shadow-content:nth-child(1) > .text-xs.uppercase.tracking-\\[0\\.1em\\] | Element has insufficient color contrast of 3.19 (foreground color: #ad8a5c, background color: #ffffff, font size: 9.0pt (12px), font weight: bold). Expected con",
+          ".items-baseline > .text-xs.uppercase.tracking-\\[0\\.1em\\] | Element has insufficient color contrast of 3.19 (foreground color: #ad8a5c, background color: #ffffff, font size: 9.0pt (12px), font weight: bold). Expected con"
+        ]
+      }
+    ],
+    "dom": {
+      "theme": "light",
+      "main": 1,
+      "nav": 1,
+      "h1": [
+        "My bookings"
+      ],
+      "headings": "1",
+      "live": 0,
+      "targets": 8,
+      "small24": [],
+      "small24n": 0,
+      "under44": 3,
+      "overflow": 209,
+      "lang": "en"
+    },
+    "zoomOverflow": 0
+  },
+  {
+    "route": "/profile",
+    "name": "member-profile",
+    "loadMs": 1868,
+    "fcp": 2500,
+    "lcp": 2500,
+    "cls": 0,
+    "tbt": 414,
+    "longtasks": 4,
+    "totalKB": 300,
+    "jsKB": 251,
+    "imgKB": 11,
+    "fontKB": 0,
+    "requests": 57,
+    "supabase": 10,
+    "authUser": 2,
+    "sbCounts": {
+      "GET /auth/v1/.well-known/jwks.json": 1,
+      "GET /auth/v1/user": 2,
+      "GET /rest/v1/notifications": 1,
+      "GET /rest/v1/memberships": 2,
+      "POST /rest/v1/rpc/membership_visits_in_month": 1,
+      "POST /rest/v1/rpc/my_referral_code": 1,
+      "GET /rest/v1/profiles": 2
+    },
+    "dups": [
+      "GET /auth/v1/user x2",
+      "GET /rest/v1/memberships x2",
+      "GET /rest/v1/profiles x2"
+    ],
+    "imgs": [
+      {
+        "u": "http://localhost:3006/_next/image?url=%2Flogo.png&w=128&q=75",
+        "kb": 11
+      }
+    ],
+    "thirdParty": [
+      "js.stripe.com",
+      "m.stripe.network",
+      "m.stripe.com"
+    ],
+    "thirdKB": 21,
+    "axe": [
+      {
+        "id": "color-contrast",
+        "impact": "serious",
+        "n": 9,
+        "ex": [
+          ".h-16 > .text-\\[13\\.5px\\]:nth-child(3) | Element has insufficient color contrast of 3.21 (foreground color: #9c8d80, background color: #ffffff, font size: 10.1pt (13.5px), font weight: normal). Expecte",
+          ".disabled\\:hover\\:bg-accent.hover\\:bg-accent-strong.h-11 | Element has insufficient color contrast of 2.24 (foreground color: #ffffff, background color: #c9a876, font size: 9.4pt (12.5px), font weight: bold). Expected c",
+          ".mb-3 | Element has insufficient color contrast of 3.19 (foreground color: #ad8a5c, background color: #ffffff, font size: 9.0pt (12px), font weight: bold). Expected con"
+        ]
+      }
+    ],
+    "dom": {
+      "theme": "light",
+      "main": 1,
+      "nav": 2,
+      "h1": [
+        "Profile details"
+      ],
+      "headings": "12",
+      "live": 0,
+      "targets": 24,
+      "small24": [],
+      "small24n": 0,
+      "under44": 3,
+      "overflow": 558,
+      "lang": "en"
+    },
+    "zoomOverflow": 308
+  },
+  {
+    "route": "/partner",
+    "name": "partner-partner",
+    "loadMs": 1853,
+    "fcp": 2880,
+    "lcp": 2880,
+    "cls": 0.039,
+    "tbt": 132,
+    "longtasks": 3,
+    "totalKB": 271,
+    "jsKB": 238,
+    "imgKB": 0,
+    "fontKB": 0,
+    "requests": 28,
+    "supabase": 5,
+    "authUser": 0,
+    "sbCounts": {
+      "GET /auth/v1/.well-known/jwks.json": 1,
+      "POST /rest/v1/rpc/has_role": 1,
+      "POST /rest/v1/rpc/partner_context": 2,
+      "POST /rest/v1/rpc/partner_guest_list": 1
+    },
+    "dups": [
+      "POST /rest/v1/rpc/partner_context x2"
+    ],
+    "imgs": [
+      {
+        "u": "http://localhost:3006/_next/image?url=%2Flogo.png&w=96&q=75",
+        "kb": 0
+      }
+    ],
+    "thirdParty": [],
+    "thirdKB": 0,
+    "axe": [
+      {
+        "id": "region",
+        "impact": "moderate",
+        "n": 3,
+        "ex": [
+          ".h-16 > .text-\\[13\\.5px\\].text-fg.font-bold | Some page content is not contained by landmarks",
+          ".text-\\[12\\.5px\\].text-fg-subtle | Some page content is not contained by landmarks",
+          ".text-xs.text-fg-muted.font-bold | Some page content is not contained by landmarks"
+        ]
+      }
+    ],
+    "dom": {
+      "theme": "dark",
+      "main": 1,
+      "nav": 1,
+      "h1": [
+        "Today's guests"
+      ],
+      "headings": "1",
+      "live": 0,
+      "targets": 16,
+      "small24": [
+        "INPUT(156x20)",
+        "Mark E2E Audit as arrived(20x20)",
+        "View E2E Audit(34x17)",
+        "View E2E Audit(34x17)",
+        "View E2E Audit(34x17)",
+        "View E2E Audit(34x17)"
+      ],
+      "small24n": 6,
+      "under44": 13,
+      "overflow": 0,
+      "lang": "en"
+    },
+    "zoomOverflow": 0
+  },
+  {
+    "route": "/partner/analytics",
+    "name": "partner-partner-analytics",
+    "loadMs": 1886,
+    "fcp": 2992,
+    "lcp": 2992,
+    "cls": 0.214,
+    "tbt": 182,
+    "longtasks": 4,
+    "totalKB": 263,
+    "jsKB": 228,
+    "imgKB": 0,
+    "fontKB": 0,
+    "requests": 26,
+    "supabase": 6,
+    "authUser": 0,
+    "sbCounts": {
+      "GET /auth/v1/.well-known/jwks.json": 1,
+      "POST /rest/v1/rpc/has_role": 1,
+      "POST /rest/v1/rpc/partner_context": 2,
+      "POST /rest/v1/rpc/partner_analytics_summary": 1,
+      "POST /rest/v1/rpc/partner_bookings_by_day": 1
+    },
+    "dups": [
+      "POST /rest/v1/rpc/partner_context x2"
+    ],
+    "imgs": [
+      {
+        "u": "http://localhost:3006/_next/image?url=%2Flogo.png&w=96&q=75",
+        "kb": 0
+      }
+    ],
+    "thirdParty": [],
+    "thirdKB": 0,
+    "axe": [
+      {
+        "id": "heading-order",
+        "impact": "moderate",
+        "n": 1,
+        "ex": [
+          "h3 | Heading order invalid"
+        ]
+      },
+      {
+        "id": "region",
+        "impact": "moderate",
+        "n": 3,
+        "ex": [
+          ".text-\\[13\\.5px\\] | Some page content is not contained by landmarks",
+          ".h-16 > .text-\\[12\\.5px\\] | Some page content is not contained by landmarks",
+          ".gap-1 | Some page content is not contained by landmarks"
+        ]
+      }
+    ],
+    "dom": {
+      "theme": "dark",
+      "main": 1,
+      "nav": 1,
+      "h1": [
+        "How things are going"
+      ],
+      "headings": "13",
+      "live": 0,
+      "targets": 5,
+      "small24": [],
+      "small24n": 0,
+      "under44": 4,
+      "overflow": 0,
+      "lang": "en"
+    },
+    "zoomOverflow": 0
+  },
+  {
+    "route": "/admin/members",
+    "name": "admin-admin-members",
+    "loadMs": 1684,
+    "fcp": 2368,
+    "lcp": 2368,
+    "cls": 0.339,
+    "tbt": 76,
+    "longtasks": 3,
+    "totalKB": 278,
+    "jsKB": 201,
+    "imgKB": 7,
+    "fontKB": 25,
+    "requests": 24,
+    "supabase": 7,
+    "authUser": 1,
+    "sbCounts": {
+      "GET /auth/v1/.well-known/jwks.json": 1,
+      "POST /rest/v1/rpc/has_role": 1,
+      "GET /auth/v1/user": 1,
+      "POST /rest/v1/rpc/admin_ticket_counts": 1,
+      "POST /rest/v1/rpc/admin_search_members": 1,
+      "POST /storage/v1/object/sign/profile-photos": 1,
+      "GET /storage/v1/object/sign/profile-photos/f83043b2-ebb9-4ffd-a477-c58c25c25d7d/avatar.JPEG": 1
+    },
+    "dups": [],
+    "imgs": [
+      {
+        "u": "http://localhost:3006/_next/image?url=%2Flogo.png&w=96&q=75",
+        "kb": 7
+      },
+      {
+        "u": "http://127.0.0.1:54331/storage/v1/object/sign/profile-photos/f83043b2-ebb9-4ffd-a477-c58c25c25d7d/avatar.JPEG?token=eyJhbGciOiJIUzI1NiJ9.eyJ",
+        "kb": 0
+      }
+    ],
+    "thirdParty": [],
+    "thirdKB": 0,
+    "axe": [
+      {
+        "id": "region",
+        "impact": "moderate",
+        "n": 3,
+        "ex": [
+          ".text-\\[13\\.5px\\] | Some page content is not contained by landmarks",
+          ".bg-\\[rgba\\(21\\,17\\,13\\,0\\.72\\)\\] > .text-fg-subtle.text-\\[12\\.5px\\] | Some page content is not contained by landmarks",
+          ".text-xs.text-fg-muted.font-bold | Some page content is not contained by landmarks"
+        ]
+      }
+    ],
+    "dom": {
+      "theme": "dark",
+      "main": 1,
+      "nav": 1,
+      "h1": [
+        "Find a member"
+      ],
+      "headings": "1",
+      "live": 0,
+      "targets": 37,
+      "small24": [],
+      "small24n": 0,
+      "under44": 2,
+      "overflow": 0,
+      "lang": "en"
+    },
+    "zoomOverflow": 0
+  },
+  {
+    "route": "/admin/analytics",
+    "name": "admin-admin-analytics",
+    "loadMs": 1764,
+    "fcp": 2480,
+    "lcp": 2480,
+    "cls": 0.15,
+    "tbt": 169,
+    "longtasks": 3,
+    "totalKB": 244,
+    "jsKB": 204,
+    "imgKB": 7,
+    "fontKB": 0,
+    "requests": 25,
+    "supabase": 7,
+    "authUser": 1,
+    "sbCounts": {
+      "GET /auth/v1/.well-known/jwks.json": 1,
+      "POST /rest/v1/rpc/has_role": 1,
+      "GET /auth/v1/user": 1,
+      "POST /rest/v1/rpc/admin_network_summary": 1,
+      "POST /rest/v1/rpc/admin_bookings_by_day": 1,
+      "POST /rest/v1/rpc/admin_revenue_by_partner": 1,
+      "POST /rest/v1/rpc/admin_ticket_counts": 1
+    },
+    "dups": [],
+    "imgs": [
+      {
+        "u": "http://localhost:3006/_next/image?url=%2Flogo.png&w=96&q=75",
+        "kb": 7
+      }
+    ],
+    "thirdParty": [],
+    "thirdKB": 0,
+    "axe": [
+      {
+        "id": "region",
+        "impact": "moderate",
+        "n": 3,
+        "ex": [
+          ".h-16 > .text-\\[13\\.5px\\].text-fg | Some page content is not contained by landmarks",
+          ".h-16 > .text-\\[12\\.5px\\] | Some page content is not contained by landmarks",
+          ".text-xs | Some page content is not contained by landmarks"
+        ]
+      }
+    ],
+    "dom": {
+      "theme": "dark",
+      "main": 1,
+      "nav": 1,
+      "h1": [
+        "How the network is doing"
+      ],
+      "headings": "1",
+      "live": 0,
+      "targets": 7,
+      "small24": [],
+      "small24n": 0,
+      "under44": 4,
+      "overflow": 0,
+      "lang": "en"
+    },
+    "zoomOverflow": 0
+  },
+  {
+    "route": "/admin/lounges/the-ainsworth",
+    "name": "admin-admin-lounges-the-ainsworth",
+    "loadMs": 2122,
+    "fcp": 3140,
+    "lcp": 3140,
+    "cls": 0.111,
+    "tbt": 291,
+    "longtasks": 5,
+    "totalKB": 325,
+    "jsKB": 279,
+    "imgKB": 7,
+    "fontKB": 0,
+    "requests": 52,
+    "supabase": 6,
+    "authUser": 1,
+    "sbCounts": {
+      "GET /auth/v1/.well-known/jwks.json": 1,
+      "POST /rest/v1/rpc/has_role": 1,
+      "POST /rest/v1/rpc/admin_lounge_detail": 1,
+      "GET /rest/v1/lounge_closures": 1,
+      "GET /rest/v1/lounge_seasons": 1,
+      "GET /auth/v1/user": 1
+    },
+    "dups": [],
+    "imgs": [
+      {
+        "u": "http://localhost:3006/_next/image?url=%2Flogo.png&w=96&q=75",
+        "kb": 7
+      },
+      {
+        "u": "http://localhost:3006/logo.png",
+        "kb": 0
+      },
+      {
+        "u": "https://maps.gstatic.com/mapfiles/openhand_8_8.cur",
+        "kb": 0
+      }
+    ],
+    "thirdParty": [
+      "maps.googleapis.com",
+      "maps.gstatic.com",
+      "mapsresources-pa.googleapis.com"
+    ],
+    "thirdKB": 6,
+    "axe": [
+      {
+        "id": "image-redundant-alt",
+        "impact": "minor",
+        "n": 5,
+        "ex": [
+          "img[alt=\"Day rooms\"] | Fix all of the following:\n  Element contains <img> element with alt text that duplicates existing text",
+          "img[alt=\"Co-working floor\"] | Fix all of the following:\n  Element contains <img> element with alt text that duplicates existing text",
+          "img[alt=\"Reception\"] | Fix all of the following:\n  Element contains <img> element with alt text that duplicates existing text"
+        ]
+      },
+      {
+        "id": "region",
+        "impact": "moderate",
+        "n": 4,
+        "ex": [
+          ".hover\\:text-accent | Some page content is not contained by landmarks",
+          ".text-\\[13\\.5px\\].text-fg-subtle:nth-child(2) | Some page content is not contained by landmarks",
+          ".h-16 > .text-\\[13\\.5px\\].text-fg | Some page content is not contained by landmarks"
+        ]
+      },
+      {
+        "id": "target-size",
+        "impact": "serious",
+        "n": 6,
+        "ex": [
+          ".h-36.cursor-zoom-in.text-left:nth-child(1) | Target has insufficient size (2px by 144px, should be at least 24px by 24px)",
+          "button[aria-label=\"View photo Day rooms\"] | Target has insufficient size (2px by 144px, should be at least 24px by 24px)",
+          "button[aria-label=\"View photo Co-working floor\"] | Target has insufficient size (2px by 144px, should be at least 24px by 24px)"
+        ]
+      }
+    ],
+    "dom": {
+      "theme": "dark",
+      "main": 1,
+      "nav": 1,
+      "h1": [
+        "The Ainsworth"
+      ],
+      "headings": "1",
+      "live": 1,
+      "targets": 15,
+      "small24": [
+        "Lounges(56x20)",
+        "View photo Main lounge · Level(2x144)",
+        "View photo Day rooms(2x144)",
+        "View photo Co-working floor(2x144)",
+        "View photo Reception(2x144)",
+        "View photo Private suite(2x144)",
+        "View photo Terrace(2x144)"
+      ],
+      "small24n": 7,
+      "under44": 14,
+      "overflow": 0,
+      "lang": "en"
+    },
+    "zoomOverflow": 0
+  }
+]

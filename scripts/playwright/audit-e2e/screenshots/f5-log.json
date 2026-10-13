@@ -1,0 +1,25 @@
+{
+  "results": [
+    {
+      "id": "F5.1 cancelar desde /my-pass (pagada, >24h)",
+      "status": "PASS",
+      "obs": "modal=\"Cancel this visit? The Ainsworth · Monday, October 26, Monday, October 26 · arrive 8:00 AM · free until Sunday, October 25 at 8:00 AM · LP-242120 Free cancellation — you are 14 days ahead of the deadline Nothing is charged. You have until Sunday, October 25 at 8:00 AM to cancel this visit at no cost\" booking={\"id\":\"6953765f-44e3-41af-8132-117c7e410ad7\",\"status\":\"cancelled\",\"cancellation_fee_cents\":null} payment={\"status\":\"succeeded\",\"refunded_amount_cents\":null}"
+    }
+  ],
+  "log": {
+    "console": [
+      "http://localhost:3005/my-pass :: Failed to load resource: the server responded with a status of 400 (Bad Request)"
+    ],
+    "failed": [
+      "GET http://localhost:3005/lounges/the-ainsworth?_rsc=1p-R_iEY6bj0jY31 net::ERR_ABORTED",
+      "GET http://localhost:3005/lounges/belmont-terrace?_rsc=1p-R_iEY6bj0jY31 net::ERR_ABORTED",
+      "GET http://localhost:3005/lounges/marbella-sky-lounge?_rsc=1p-R_iEY6bj0jY31 net::ERR_ABORTED",
+      "GET http://localhost:3005/my-pass/LP-698573?_rsc=HHlfNb0V-OAZaHlH net::ERR_ABORTED",
+      "GET http://localhost:3005/my-pass/LP-762554?_rsc=HHlfNb0V-OAZaHlH net::ERR_ABORTED",
+      "GET http://localhost:3005/my-pass/LP-270962?_rsc=HHlfNb0V-OAZaHlH net::ERR_ABORTED",
+      "GET http://localhost:3005/my-pass/LP-242120?_rsc=HHlfNb0V-OAZaHlH net::ERR_ABORTED",
+      "GET http://localhost:3005/my-pass/LP-208282?_rsc=HHlfNb0V-OAZaHlH net::ERR_ABORTED",
+      "400 POST http://127.0.0.1:54331/rest/v1/rpc/cancel_booking"
+    ]
+  }
+}

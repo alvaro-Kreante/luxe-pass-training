@@ -1,0 +1,140 @@
+{
+  "loginEmpty": [
+    {
+      "id": "email",
+      "type": "email",
+      "invalid": "true",
+      "describedby": null,
+      "required": null
+    },
+    {
+      "id": "password",
+      "type": "password",
+      "invalid": "true",
+      "describedby": null,
+      "required": null
+    },
+    {
+      "id": "",
+      "type": "checkbox",
+      "invalid": null,
+      "describedby": null,
+      "required": null
+    }
+  ],
+  "loginEmptyAlerts": [],
+  "loginWrong": {
+    "alerts": [],
+    "inputs": [
+      "email inv=true desc=null",
+      "password inv=true desc=null",
+      " inv=null desc=null"
+    ]
+  },
+  "signupEmpty": [
+    "email inv=false desc=null descText=",
+    "password inv=false desc=null descText=",
+    "confirm-password inv=false desc=null descText=",
+    " inv=null desc=null descText="
+  ],
+  "termsDialog": {
+    "open": 1,
+    "allInside": true,
+    "noRing": [],
+    "afterEsc": {
+      "dialogs": 0,
+      "focus": {
+        "tag": "BODY",
+        "name": "Join a community of discerning",
+        "inDialog": false,
+        "ring": false
+      }
+    }
+  },
+  "focus-member-explore": {
+    "total": 25,
+    "withoutRing": [],
+    "first": {
+      "tag": "BUTTON",
+      "name": "Enter a location instead",
+      "inDialog": true,
+      "ring": true
+    }
+  },
+  "focus-member-lounge": {
+    "total": 25,
+    "withoutRing": [],
+    "first": {
+      "tag": "A",
+      "name": "Home",
+      "inDialog": false,
+      "ring": true
+    }
+  },
+  "focus-partner": {
+    "total": 25,
+    "withoutRing": [],
+    "first": {
+      "tag": "INPUT",
+      "name": "",
+      "inDialog": false,
+      "ring": true
+    }
+  },
+  "focus-admin-members": {
+    "total": 25,
+    "withoutRing": [],
+    "first": {
+      "tag": "INPUT",
+      "name": "",
+      "inDialog": false,
+      "ring": true
+    }
+  },
+  "menu-partner-desktop": {
+    "triggers": []
+  },
+  "menu-partner-390": {
+    "triggers": []
+  },
+  "menu-admin-390": {
+    "triggers": []
+  },
+  "menu-member-390": {
+    "triggers": [
+      "Notifications, 4 unread"
+    ],
+    "opened": [
+      "dialog"
+    ],
+    "focusAfterOpen": {
+      "tag": "BUTTON",
+      "name": "Mark all as read",
+      "inDialog": true,
+      "ring": true
+    },
+    "tabSeq": [
+      "Your birthday month is coming [in]",
+      "See all notifications[in]",
+      "Mark all as read[in]",
+      "Your birthday month is coming [in]",
+      "See all notifications[in]",
+      "Mark all as read[in]",
+      "Your birthday month is coming [in]",
+      "See all notifications[in]"
+    ],
+    "afterEsc": {
+      "tag": "BUTTON",
+      "name": "Notifications, 4 unread",
+      "inDialog": false,
+      "ring": true
+    }
+  },
+  "reducedMotion": {
+    "withTransition": 38,
+    "withAnimation": [
+      "[object SVGAnimatedString]"
+    ],
+    "smoothScroll": "auto"
+  }
+}
