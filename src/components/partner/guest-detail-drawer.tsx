@@ -19,14 +19,21 @@ export function GuestDetailDrawer({
   guest,
   onMarkArrived,
   onReportNoShow,
+  onUndo,
+  readOnly = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   guest: PartnerGuest;
   onMarkArrived: (id: string) => void;
   onReportNoShow: (id: string) => void;
+  /** Story 7.1 — corrige el error del día: devuelve un check-in o un no-show a pendiente. */
+  onUndo?: (id: string) => void;
+  /** Story 7.1 — otro día que no es hoy: sin "Mark as arrived" ni "No-show". */
+  readOnly?: boolean;
 }) {
-  const actionable = guest.status === "pending" || guest.status === "new-booking";
+  const actionable = !readOnly && (guest.status === "pending" || guest.status === "new-booking");
+  const undoable = !readOnly && onUndo && (guest.status === "arrived" || guest.status === "no-show");
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange} width={472} dark title={guest.name}>
@@ -40,6 +47,19 @@ export function GuestDetailDrawer({
           <Button variant="ghost" className="w-[145px] shrink-0" onClick={() => onReportNoShow(guest.id)}>
             No-show
           </Button>
+        </div>
+      ) : null}
+
+      {undoable ? (
+        <div className="mt-6">
+          <Button variant="ghost" block className="normal-case" onClick={() => onUndo(guest.id)}>
+            {guest.status === "arrived" ? "Undo check-in" : "Undo no-show"}
+          </Button>
+          <p className="m-0 mt-2.5 text-[11.5px] leading-[1.5] text-fg-subtle">
+            {guest.status === "arrived"
+              ? "Marked by mistake? This puts the guest back on the list as expected."
+              : "Marked by mistake? This removes the $35.00 fee and notes it on the support case."}
+          </p>
         </div>
       ) : null}
     </Drawer>

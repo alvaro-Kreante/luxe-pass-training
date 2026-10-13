@@ -301,6 +301,34 @@ cron las cierra (p. ej. al expirar la sesión, con
 `checkout.session.expired` en `stripe-webhook`) o si se filtran en los
 reportes de Epic 8.
 
+### 2.14 Vista de reservas: lo que queda tras la Story 8.4 (13 oct 2026)
+
+`/admin/bookings` (Story 8.4, historia propuesta por el equipo, no del
+cliente) ya es real. Abierto:
+
+- **Filtro por fecha del partner: resuelto (13 oct 2026).** `/partner` usa
+  el mismo `DayStepper`; un día que no es hoy es de solo lectura (sin
+  check-in ni no-show, que se registran el propio día o los corrige el
+  admin). Decisión tomada sin consultar al cliente: confirmar que el
+  partner no necesita corregir días pasados él mismo.
+- **"Undo check-in" / "Undo no-show" del partner, solo hoy** (decidido con el
+  usuario, 13 oct 2026, `partner_undo_booking_status`). Sin zona horaria en
+  `lounges`, el servidor acepta ayer/hoy/mañana de su reloj y la pantalla lo
+  limita a hoy; si `lounges` gana zona horaria, ajustar la ventana.
+- **El flow de admin no tiene los nodos de la 8.4.**
+  `flow-admin-support-experience.md` necesita un segmento "Story 8.4"; la
+  historia lo enlaza como pendiente.
+- **"See them in Bookings" del cierre masivo** (desviación de
+  `COMPONENT-MAP.md`) ya tiene pantalla de destino, pero no filtra por un
+  rango de fechas: haría falta abrir `/admin/bookings` en la fecha y el lounge
+  del cierre.
+- **Filtro por partner, lounge escribible, calendario y "Change the status"**
+  se añadieron a pedido del usuario (13 oct 2026) sin entrar en los
+  `## Acceptance Criteria` de la Story 8.4. Decidir si se suman a la historia
+  o quedan como mejoras fuera de contrato.
+- **Cambiar el status no avisa a nadie.** Ni al miembro ni al partner: no
+  hay email ni notificación in-app para una corrección del admin.
+
 ---
 
 ## 3. Criterios de aceptación cubiertos solo de forma declarativa

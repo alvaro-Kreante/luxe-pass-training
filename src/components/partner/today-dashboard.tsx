@@ -4,6 +4,7 @@ import * as React from "react";
 import Link from "next/link";
 import { Building2, Printer, Search, Sparkles } from "lucide-react";
 
+import { DayStepper } from "@/components/patterns/day-stepper";
 import { PartnerShell, LiveStatusChip, PartnerRefreshButton } from "@/components/patterns/partner-shell";
 import { ActivityPanel } from "@/components/partner/activity-panel";
 import { GuestDetailDrawer } from "@/components/partner/guest-detail-drawer";
@@ -63,6 +64,9 @@ export function TodayDashboard() {
   const [rows, setRows] = React.useState<PartnerGuestRow[]>([]);
   const [activity, setActivity] = React.useState<PartnerActivityItem[]>([]);
   const [query, setQuery] = React.useState("");
+  // Story 7.1 — "Search/filter guests by date": hoy por defecto; otro día es de solo lectura.
+  const [date, setDate] = React.useState(() => today());
+  const isToday = date === today();
   const [detailGuestId, setDetailGuestId] = React.useState<string | null>(null);
   const [noShowGuestId, setNoShowGuestId] = React.useState<string | null>(null);
   const [highlightedId, setHighlightedId] = React.useState<string | null>(null);
@@ -71,24 +75,24 @@ export function TodayDashboard() {
 
   const fetchGuestList = React.useCallback(
     async (lounge: string): Promise<PartnerGuestRow[]> => {
-      const { data } = await supabase.rpc("partner_guest_list", { p_lounge_id: lounge, p_date: today() });
+      const { data } = await supabase.rpc("partner_guest_list", { p_lounge_id: lounge, p_date: date });
       const nextRows = (data as PartnerGuestRow[] | null) ?? [];
       setRows(nextRows);
       return nextRows;
     },
-    [supabase],
+    [supabase, date],
   );
 
   React.useEffect(() => {
     if (!loungeId) return;
     let active = true;
-    supabase.rpc("partner_guest_list", { p_lounge_id: loungeId, p_date: today() }).then(({ data }) => {
+    supabase.rpc("partner_guest_list", { p_lounge_id: loungeId, p_date: date }).then(({ data }) => {
       if (active) setRows((data as PartnerGuestRow[] | null) ?? []);
     });
     return () => {
       active = false;
     };
-  }, [supabase, loungeId]);
+  }, [supabase, loungeId, date]);
 
   React.useEffect(() => {
     if (!loungeId) return;
@@ -112,7 +116,7 @@ export function TodayDashboard() {
             slot_time: string;
             confirmation_code: string;
           };
-          if (booking.date !== today() || booking.status !== "confirmed") return;
+          if (booking.date !== date || booking.status !== "confirmed") return;
 
           const nextRows = await fetchGuestList(loungeId);
           const guestRow = nextRows.find((row) => row.id === booking.id);
@@ -157,7 +161,7 @@ export function TodayDashboard() {
             confirmation_code: string;
           };
           const previous = payload.old as { status?: string };
-          if (updated.date !== today()) return;
+          if (updated.date !== date) return;
 
           const nextRows = await fetchGuestList(loungeId);
 
@@ -186,7 +190,7 @@ export function TodayDashboard() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [supabase, loungeId, fetchGuestList]);
+  }, [supabase, loungeId, date, fetchGuestList]);
 
   const guests = React.useMemo(
     () => rows.map((row) => mapGuestRow(row, { newlyBooked: newlyBookedIds.has(row.id) })),
@@ -214,6 +218,28 @@ export function TodayDashboard() {
         title: "Checked in",
         time: nowLabel(),
         body: `${guest.name} · ${guest.arrivalTime} arrival.`,
+        read: false,
+      },
+      ...current,
+    ]);
+    fetchGuestList(loungeId);
+  }
+
+  async function handleUndo(id: string) {
+    setDetailGuestId(null);
+    const guest = findPartnerGuest(guests, id);
+    if (!guest?.bookingId || !loungeId) return;
+
+    const { error } = await supabase.rpc("partner_undo_booking_status", { p_booking_id: guest.bookingId });
+    if (error) return;
+
+    setActivity((current) => [
+      {
+        id: `undo-${guest.bookingId}-${Date.now()}`,
+        kind: "checked-in",
+        title: guest.status === "no-show" ? "No-show undone" : "Check-in undone",
+        time: nowLabel(),
+        body: `${guest.name} · back to expected.`,
         read: false,
       },
       ...current,
@@ -267,7 +293,7 @@ export function TodayDashboard() {
       <PartnerShell
         blurred={blurred}
         topbarLabel="Today"
-        topbarMeta={`· ${formatLongWeekdayDate(today())}`}
+        topbarMeta={`· ${formatLongWeekdayDate(date)}`}
         topbarRight={
           <div className="flex items-center gap-2.5">
             <LiveStatusChip label="Live" />
@@ -285,12 +311,17 @@ export function TodayDashboard() {
         <div className="flex items-center gap-6">
           <div className="min-w-0 flex-1">
             <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">
-              {formatLongWeekdayDate(today())} ·{" "}
-              <Link href="/partner/emails/digest" className="normal-case text-accent-strong">
-                view this morning&apos;s digest
-              </Link>
+              {formatLongWeekdayDate(date)}
+              {isToday ? (
+                <>
+                  {" "}·{" "}
+                  <Link href="/partner/emails/digest" className="normal-case text-accent-strong">
+                    view this morning&apos;s digest
+                  </Link>
+                </>
+              ) : null}
             </p>
-            <h1 className="mt-2 text-[34px] text-fg">Today&apos;s guests</h1>
+            <h1 className="mt-2 text-[34px] text-fg">{isToday ? "Today's guests" : "Guests for this day"}</h1>
           </div>
 
           <div className="flex items-center gap-2.5">
@@ -321,11 +352,13 @@ export function TodayDashboard() {
           </div>
         </div>
 
-        <div className="mt-3.5 flex flex-wrap gap-2.5">
-          <SummaryChip label={`${counts.expected} expected today`} tone="active" />
+        <div className="mt-3.5 flex flex-wrap items-center gap-2.5">
+          <SummaryChip label={`${counts.expected} expected${isToday ? " today" : ""}`} tone="active" />
           <SummaryChip label={`${counts.arrived} checked in`} />
           <SummaryChip label={`${counts.pending} still to arrive`} />
           <SummaryChip label={`${counts.noShow} no-show`} tone="dashed" />
+          <div className="flex-1" />
+          <DayStepper value={date} todayIso={today()} onChange={setDate} />
         </div>
 
         <div className="mt-5">
@@ -334,13 +367,14 @@ export function TodayDashboard() {
             highlightedId={highlightedId}
             onMarkArrived={handleMarkArrived}
             onOpenDetail={setDetailGuestId}
+            readOnly={!isToday}
           />
         </div>
 
         <p className="m-0 mt-3.5 text-xs leading-[1.5] text-fg-subtle">
-          Tick the box the moment a guest walks in — the member sees the check-in in their app
-          straight away. A cross marks a reported no-show. The list refreshes on its own every 30
-          seconds.
+          {isToday
+            ? "Tick the box the moment a guest walks in — the member sees the check-in in their app straight away. A cross marks a reported no-show. The list refreshes on its own every 30 seconds."
+            : "Another day's list is for reference only — check-ins and no-shows are recorded on the day itself."}
         </p>
       </PartnerShell>
 
@@ -353,6 +387,8 @@ export function TodayDashboard() {
           onReportNoShow={(id) => {
             setNoShowGuestId(id);
           }}
+          onUndo={handleUndo}
+          readOnly={!isToday}
         />
       ) : null}
 

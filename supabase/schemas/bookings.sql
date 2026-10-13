@@ -88,6 +88,9 @@ create index if not exists bookings_confirmation_code_idx on public.bookings (co
 -- lounge/fecha/franja en cada consulta.
 create index if not exists bookings_lounge_date_band_idx on public.bookings (lounge_id, date, band);
 
+-- Story 8.4 — `admin_bookings_on` lee un día de toda la red, sin lounge.
+create index if not exists bookings_date_idx on public.bookings (date);
+
 alter table public.bookings enable row level security;
 
 -- Una sola policy (no dos OR'd por Postgres) para evitar el warning de

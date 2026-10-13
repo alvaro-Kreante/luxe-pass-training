@@ -10,14 +10,34 @@ import { Switch } from "@/components/ui/switch";
 import { SLOT_DEFS } from "@/lib/booking";
 import type { UpcomingBooking } from "@/lib/admin";
 import { createClient } from "@/lib/supabase/client";
-import { cancelBookingAsAdmin, rescheduleBooking } from "@/lib/admin";
+import { cancelBookingAsAdmin, rescheduleBooking, setBookingStatusAsAdmin } from "@/lib/admin";
+import type { BookingState } from "@/lib/admin-bookings";
 import { cn } from "@/lib/utils";
 
-type ChangeType = "reschedule" | "move" | "cancel";
+type ChangeType = "reschedule" | "move" | "cancel" | "status";
+type SettableStatus = Exclude<BookingState, "cancelled">;
+
+const STATUS_OPTIONS: { id: SettableStatus; label: string; detail: string }[] = [
+  { id: "confirmed", label: "Confirmed", detail: "Expected at the lounge. Clears any no-show or cancellation fee." },
+  { id: "checked-in", label: "Checked in", detail: "The member arrived. Clears any no-show fee." },
+  { id: "no-show", label: "No-show", detail: "The member never came. No fee is recorded from here." },
+];
 
 interface AvailabilityRow {
   band: string;
   seats_left: number;
+}
+
+/** El error de una RPC puede traer en `message` el JSON entero de PostgREST. */
+function errorMessage(err: unknown): string {
+  const raw = (err as { message?: unknown })?.message;
+  if (typeof raw !== "string") return "";
+  try {
+    const parsed = JSON.parse(raw) as { message?: unknown };
+    return typeof parsed.message === "string" ? parsed.message : raw;
+  } catch {
+    return raw;
+  }
 }
 
 /**
@@ -36,22 +56,33 @@ interface AvailabilityRow {
  * "Move to another lounge" sigue sin expandir ningún formulario propio: el
  * artboard solo dibuja la opción colapsada, sin una segunda pantalla de qué
  * lounge elegir — no se inventa una.
+ *
+ * Story 8.4 — "Change the status" (`admin_set_booking_status`): cuarta
+ * opción con las mismas filas de opción, pedida por el usuario (13 oct
+ * 2026); sin artboard propio, ver desviación en COMPONENT-MAP.md.
  */
 export function BookingOverrideDrawer({
   open,
   onOpenChange,
   memberName,
   booking,
+  status = "confirmed",
   onApply,
+  onMissing,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   memberName: string;
   booking: UpcomingBooking & { bookingId: string; loungeId: string; date: string; band: string; slotTime: string };
+  /** Status actual de la reserva; por defecto, una visita confirmada. */
+  status?: BookingState;
   onApply: () => void | Promise<void>;
+  /** La reserva ya no existe (la borró otra sesión o la limpieza de tests). */
+  onMissing?: () => void | Promise<void>;
 }) {
   const supabase = React.useMemo(() => createClient(), []);
-  const [changeType, setChangeType] = React.useState<ChangeType>("reschedule");
+  const [changeType, setChangeType] = React.useState<ChangeType>(status === "confirmed" ? "reschedule" : "status");
+  const [newStatus, setNewStatus] = React.useState<SettableStatus>(status === "cancelled" ? "confirmed" : status);
   const [newDate, setNewDate] = React.useState(booking.date);
   const [selectedSlot, setSelectedSlot] = React.useState(SLOT_DEFS.find((s) => s.time === booking.slotTime) ?? SLOT_DEFS[0]);
   const [overrideEnabled, setOverrideEnabled] = React.useState(false);
@@ -89,11 +120,19 @@ export function BookingOverrideDrawer({
         await rescheduleBooking(supabase, booking.bookingId, newDate, selectedSlot.band, selectedSlot.time, overrideEnabled);
       } else if (changeType === "cancel") {
         await cancelBookingAsAdmin(supabase, booking.bookingId);
+      } else if (changeType === "status") {
+        await setBookingStatusAsAdmin(supabase, booking.bookingId, newStatus, overrideEnabled);
       }
       await onApply();
       onOpenChange(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not apply this change");
+      const message = errorMessage(err);
+      if (message === "Booking not found" && onMissing) {
+        await onMissing();
+        onOpenChange(false);
+        return;
+      }
+      setError(message || "Could not apply this change");
     } finally {
       setSubmitting(false);
     }
@@ -137,7 +176,36 @@ export function BookingOverrideDrawer({
         />
         <PaymentOptionRow selected={changeType === "move"} onSelect={() => setChangeType("move")} title="Move to another lounge" />
         <PaymentOptionRow selected={changeType === "cancel"} onSelect={() => setChangeType("cancel")} title="Cancel the booking" />
+        <PaymentOptionRow selected={changeType === "status"} onSelect={() => setChangeType("status")} title="Change the status" />
       </div>
+
+      {changeType === "status" ? (
+        <>
+          <p className="mb-2.5 mt-4 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">New status</p>
+          <div role="radiogroup" aria-label="New status" className="flex flex-col gap-2.5">
+            {STATUS_OPTIONS.map((option) => (
+              <PaymentOptionRow
+                key={option.id}
+                selected={newStatus === option.id}
+                onSelect={() => setNewStatus(option.id)}
+                title={option.label}
+                subtitle={option.detail}
+              />
+            ))}
+          </div>
+          {status === "cancelled" ? (
+            <div className="mt-4 flex items-start gap-3.5 rounded-2xl border border-dashed border-gold-600 bg-panel-black px-4.5 py-3.5">
+              <div className="min-w-0 flex-1">
+                <p className="m-0 text-[13px] font-bold text-fg">Override the lounge&apos;s rules</p>
+                <p className="m-0 mt-1.5 text-[11.5px] leading-[1.5] text-fg-muted">
+                  This booking was cancelled. Bringing it back needs a free seat in its band unless you override.
+                </p>
+              </div>
+              <Switch checked={overrideEnabled} onCheckedChange={setOverrideEnabled} label="Override the lounge's rules" />
+            </div>
+          ) : null}
+        </>
+      ) : null}
 
       {changeType === "reschedule" ? (
         <>

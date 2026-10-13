@@ -39,6 +39,11 @@ export function AttendanceCheckbox({
     );
   }
 
+  // Sin `onMarkArrived` (un día que no es hoy, Story 7.1) la casilla solo se ve.
+  if (!onMarkArrived) {
+    return <span aria-hidden className="flex size-5 shrink-0 rounded-[5px] border-[1.5px] border-line opacity-50" />;
+  }
+
   return (
     <button
       type="button"

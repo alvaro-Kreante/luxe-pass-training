@@ -1,0 +1,294 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,500&family=Manrope:wght@400;500;600;700;800&display=swap">
+  <style>
+    :root {
+      --bg-blush-1: #F8EAE1; --bg-blush-2: #FCF4EE;
+      --ink-900: #221A14; --ink-700: #55483D; --ink-400: #9C8D80;
+      --gold-500: #C9A876; --gold-600: #AD8A5C; --gold-100: #F1E3D0;
+      --border: #E7D9C9; --white: #FFFFFF; --panel-black: #15110D;
+      --dark-ink-100: #F1E3D0; --dark-ink-300: #C9BDAF; --dark-ink-500: #8A7C6C;
+      --dark-border: #3A322A; --dark-card: #1E1813; --dark-hover: #241D17;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Manrope', 'Segoe UI', sans-serif; color: var(--dark-ink-100); }
+    h1, h2, h3 { font-family: 'Bodoni Moda', Georgia, 'Times New Roman', serif; margin: 0; font-weight: 500; }
+    p { margin: 0; }
+    .dk-nav { transition: background .15s ease; cursor: pointer; display:flex; align-items:center; gap:12px; padding:12px 14px; border-radius:10px; margin-bottom:4px; }
+    .dk-nav:hover { background: var(--dark-hover); }
+    .dk-nav span.l { font-size:14px; font-weight:600; color:var(--dark-ink-300); }
+    .dk-ghost { transition: background .15s ease, border-color .15s ease; cursor: pointer; }
+    .dk-ghost:hover { background: var(--dark-hover); border-color: var(--gold-500); }
+    .dk-tr { transition: background .15s ease; cursor: pointer; }
+    .dk-tr:hover { background: var(--dark-hover); }
+    .dk-link { transition: color .15s ease; cursor: pointer; }
+    .dk-link:hover { color: var(--gold-500); }
+    .eyebrow { font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); }
+    .row { display:grid; grid-template-columns:1fr 112px 170px 128px 24px; gap:14px; align-items:center; height:56px; padding:0 22px; border-bottom:1px solid rgba(58,50,42,0.6); }
+    .avatar { width:32px; height:32px; min-width:32px; border-radius:50%; background:var(--gold-500); display:flex; align-items:center; justify-content:center; color:var(--white); font-family:'Bodoni Moda',serif; font-size:12px; font-weight:700; }
+    .name { font-size:13.5px; font-weight:700; color:var(--dark-ink-100); }
+    .sub { font-size:11.5px; color:var(--dark-ink-500); margin-top:2px; }
+    .cell { font-size:12.5px; color:var(--dark-ink-300); }
+    .ref { font-size:12.5px; font-weight:700; letter-spacing:0.02em; color:var(--dark-ink-100); }
+    .chip { display:inline-flex; align-items:center; gap:7px; padding:5px 12px; border-radius:20px; font-size:11.5px; font-weight:700; }
+    .chip i { width:6px; height:6px; border-radius:50%; display:block; }
+    .st-confirmed { border:1px solid var(--dark-border); color:var(--dark-ink-300); }
+    .st-confirmed i { background:var(--dark-ink-500); }
+    .st-in { background:rgba(201,168,118,0.18); border:1px solid var(--gold-500); color:var(--dark-ink-100); }
+    .st-in i { background:var(--gold-500); }
+    .st-noshow { border:1.5px dashed var(--gold-600); color:var(--dark-ink-300); }
+    .st-noshow i { background:var(--gold-600); }
+    .st-cancel { border:1px solid var(--dark-border); color:var(--dark-ink-500); text-decoration:line-through; }
+    .st-cancel i { background:transparent; border:1px solid var(--dark-ink-500); }
+    .slot { display:flex; align-items:center; gap:14px; height:46px; padding:0 22px; background:rgba(21,17,13,0.55); border-bottom:1px solid var(--dark-border); }
+    .slot .t { font-family:'Bodoni Moda',serif; font-size:17px; color:var(--dark-ink-100); min-width:84px; }
+    .bar { flex:0 0 140px; height:5px; border-radius:3px; background:var(--dark-border); overflow:hidden; }
+    .bar b { display:block; height:100%; background:var(--gold-500); }
+    .filter { display:flex; align-items:center; gap:9px; height:44px; padding:0 15px; border:1.5px solid var(--dark-border); border-radius:11px; background:var(--panel-black); }
+    .filter span { font-size:12.5px; font-weight:700; color:var(--dark-ink-300); }
+    .stat { display:flex; align-items:baseline; justify-content:space-between; padding:11px 0; border-bottom:1px solid rgba(58,50,42,0.6); }
+    .stat p:first-child { font-size:12.5px; color:var(--dark-ink-300); }
+    .stat p:last-child { font-family:'Bodoni Moda',serif; font-size:20px; color:var(--dark-ink-100); }
+    .lg { display:flex; align-items:center; gap:10px; padding:10px 0; border-bottom:1px solid rgba(58,50,42,0.6); }
+    .lg p.n { flex:1; font-size:12.5px; font-weight:700; color:var(--dark-ink-100); }
+    .lg p.c { font-size:12px; color:var(--dark-ink-500); }
+  </style>
+</helmet>
+
+<div style="display:flex; width:1440px; height:900px; background:var(--panel-black); overflow:hidden; font-family:'Manrope',sans-serif;">
+
+  <!-- Admin sidebar -->
+  <div style="width:248px; min-width:248px; height:900px; background:var(--panel-black); border-right:1px solid var(--dark-border); display:flex; flex-direction:column; padding:30px 18px;">
+    <img src="logo.png" alt="En Soleil" style="width:46px; height:auto; margin:0 0 14px 12px;">
+    <p class="eyebrow" style="margin:0 0 24px 12px;">Admin console</p>
+
+    <div class="dk-nav">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 14.5v-2.5a7.5 7.5 0 0 1 15 0v2.5"/><rect x="2.8" y="13.2" width="4.2" height="6.4" rx="1.8"/><rect x="17" y="13.2" width="4.2" height="6.4" rx="1.8"/><path d="M19.1 19.6v.4a2.6 2.6 0 0 1-2.6 2.6H13"/></svg>
+      <span class="l">Support</span>
+      <div style="flex:1;"></div>
+      <span style="min-width:22px; height:20px; padding:0 7px; border-radius:10px; background:rgba(201,168,118,0.18); border:1px solid var(--gold-600); color:var(--dark-ink-300); font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center;">22</span>
+    </div>
+    <div class="dk-nav">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.6" r="3.2"/><path d="M3.2 19.6a5.8 5.8 0 0 1 11.6 0"/><path d="M16.2 6.4a3.2 3.2 0 0 1 0 6.4"/><path d="M17.6 14.4a5.8 5.8 0 0 1 3.2 5.2"/></svg>
+      <span class="l">Members</span>
+    </div>
+    <div class="dk-nav" style="background:rgba(201,168,118,0.16);">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg>
+      <span style="font-size:14px; font-weight:700; color:var(--dark-ink-100);">Bookings</span>
+    </div>
+    <div class="dk-nav">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2.5"/><path d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"/><path d="M3 13h18"/></svg>
+      <span class="l">Partners</span>
+    </div>
+    <div class="dk-nav">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 20.5h17"/><path d="M5.5 20.5V9.5l6.5-4.5 6.5 4.5v11"/><path d="M10 20.5v-5h4v5"/></svg>
+      <span class="l">Lounges</span>
+    </div>
+    <div class="dk-nav">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 20h18"/><path d="M6.5 20v-5.5M12 20V6M17.5 20v-8.5"/></svg>
+      <span class="l">Analytics</span>
+    </div>
+    <div class="dk-nav">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5h7l5 5v12H6z"/><path d="M13 3.5v5h5"/><path d="M9 13h6M9 16.5h4"/></svg>
+      <span class="l">Reports</span>
+    </div>
+
+    <div style="flex:1;"></div>
+
+    <div class="dk-nav" style="gap:11px; padding:18px 0 0; border-top:1px solid var(--dark-border); border-radius:0;">
+      <div style="width:36px; height:36px; min-width:36px; border-radius:10px; background:rgba(201,168,118,0.14); border:1px solid var(--gold-600); display:flex; align-items:center; justify-content:center; font-family:'Bodoni Moda',serif; font-size:16px; color:var(--gold-500);">P</div>
+      <div style="flex:1; overflow:hidden;">
+        <p style="font-size:13px; font-weight:700; color:var(--dark-ink-100); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Priya Raghunathan</p>
+        <p style="font-size:11.5px; color:var(--dark-ink-500); margin-top:2px;">Support lead · En Soleil</p>
+      </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m8 10 4 4 4-4"/></svg>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div style="position:relative; flex:1; height:900px; display:flex; flex-direction:column; background:radial-gradient(circle at 30% 0%, #2c241c, #15110d 62%); overflow:hidden;">
+    <div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.10) 1px, transparent 1.5px); background-size:18px 18px;"></div>
+
+    <!-- Top bar -->
+    <div style="position:relative; height:64px; min-height:64px; display:flex; align-items:center; gap:12px; padding:0 40px; background:rgba(21,17,13,0.72); border-bottom:1px solid var(--dark-border);">
+      <span style="font-size:13.5px; font-weight:700; color:var(--dark-ink-100);">Bookings</span>
+      <span style="font-size:12.5px; color:var(--dark-ink-500);">· Network · Friday, September 12 · 10:26 AM</span>
+      <div style="flex:1;"></div>
+      <span style="display:inline-flex; align-items:center; gap:9px; padding:8px 15px; border-radius:20px; border:1px solid var(--dark-border);">
+        <span style="width:6px; height:6px; border-radius:50%; background:var(--gold-500); box-shadow:0 0 0 3px rgba(201,168,118,0.28);"></span>
+        <span style="font-size:12px; font-weight:700; color:var(--dark-ink-300);">Every action logged</span>
+      </span>
+      <div class="dk-ghost" style="width:40px; height:40px; min-width:40px; border-radius:11px; border:1.5px solid var(--dark-border); display:flex; align-items:center; justify-content:center;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11a8 8 0 0 0-13.7-5.2L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 13.7 5.2L20 16"/><path d="M20 20v-4h-4"/></svg>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div style="position:relative; flex:1; min-height:0; display:flex; flex-direction:column; padding:24px 40px 22px;">
+
+      <div style="display:flex; align-items:flex-end; gap:16px;">
+        <div>
+          <p class="eyebrow">38 bookings · 9 lounges open</p>
+          <h1 style="font-size:34px; color:var(--dark-ink-100); margin-top:9px;">Who is coming</h1>
+        </div>
+        <div style="flex:1;"></div>
+        <!-- Date stepper -->
+        <div style="display:flex; align-items:center; gap:8px;">
+          <div class="dk-ghost" aria-label="Previous day" style="width:44px; height:44px; border-radius:11px; border:1.5px solid var(--dark-border); display:flex; align-items:center; justify-content:center;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14 7-5 5 5 5"/></svg>
+          </div>
+          <div style="display:flex; align-items:center; gap:11px; height:44px; padding:0 18px; border:1.5px solid var(--gold-500); border-radius:11px; background:var(--panel-black); box-shadow:0 0 0 3px rgba(201,168,118,0.15);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2.5"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg>
+            <span style="font-size:13.5px; font-weight:700; color:var(--dark-ink-100);">Friday, September 12</span>
+            <span style="padding:3px 9px; border-radius:20px; background:rgba(201,168,118,0.18); font-size:10.5px; font-weight:800; letter-spacing:0.06em; text-transform:uppercase; color:var(--gold-500);">Today</span>
+          </div>
+          <div class="dk-ghost" aria-label="Next day" style="width:44px; height:44px; border-radius:11px; border:1.5px solid var(--dark-border); display:flex; align-items:center; justify-content:center;">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m10 7 5 5-5 5"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div style="display:flex; align-items:center; gap:10px; margin-top:18px;">
+        <div class="filter" style="flex:1; border-color:var(--dark-border);">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4 4"/></svg>
+          <span style="font-weight:500; color:var(--dark-ink-500);">Member name or LP reference</span>
+        </div>
+        <div class="filter dk-ghost">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 20.5h17"/><path d="M5.5 20.5V9.5l6.5-4.5 6.5 4.5v11"/></svg>
+          <span>All lounges</span>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m8 10 4 4 4-4"/></svg>
+        </div>
+        <div style="width:1px; height:26px; background:var(--dark-border); margin:0 4px;"></div>
+        <span class="chip" style="background:rgba(201,168,118,0.18); border:1px solid var(--gold-500); color:var(--dark-ink-100); padding:7px 13px;">All · 38</span>
+        <span class="chip dk-ghost" style="border:1px solid var(--dark-border); color:var(--dark-ink-300); padding:7px 13px;">Confirmed · 21</span>
+        <span class="chip dk-ghost" style="border:1px solid var(--dark-border); color:var(--dark-ink-300); padding:7px 13px;">Checked in · 12</span>
+        <span class="chip dk-ghost" style="border:1px solid var(--dark-border); color:var(--dark-ink-300); padding:7px 13px;">No-show · 2</span>
+        <span class="chip dk-ghost" style="border:1px solid var(--dark-border); color:var(--dark-ink-300); padding:7px 13px;">Cancelled · 3</span>
+      </div>
+
+      <div style="display:flex; gap:16px; margin-top:16px; min-height:0; flex:1;">
+
+        <!-- List -->
+        <div style="flex:1; min-width:0; background:var(--dark-card); border:1px solid var(--dark-border); border-radius:20px; overflow:hidden; display:flex; flex-direction:column;">
+          <div class="row" style="height:40px; border-bottom:1px solid var(--dark-border);">
+            <p class="eyebrow">Member</p>
+            <p class="eyebrow">Reference</p>
+            <p class="eyebrow">Lounge</p>
+            <p class="eyebrow">Status</p>
+            <span></span>
+          </div>
+
+          <div style="overflow:hidden;">
+            <!-- 8:00 AM -->
+            <div class="slot">
+              <p class="t">8:00 AM</p>
+              <p style="font-size:12px; color:var(--dark-ink-500);"><span style="color:var(--dark-ink-100); font-weight:700;">6</span> bookings</p>
+            </div>
+            <div class="row dk-tr">
+              <div style="display:flex; align-items:center; gap:11px; min-width:0;"><div class="avatar">EA</div><div><p class="name">Eleanor Ainsworth</p><p class="sub">Annual · 2 guests</p></div></div>
+              <p class="ref">LP-840388</p>
+              <p class="cell">The Ainsworth</p>
+              <div><span class="chip st-in"><i></i>Checked in</span></div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m10 7 5 5-5 5"/></svg>
+            </div>
+            <div class="row dk-tr">
+              <div style="display:flex; align-items:center; gap:11px; min-width:0;"><div class="avatar">MD</div><div><p class="name">Marcus Deyn</p><p class="sub">Day pass</p></div></div>
+              <p class="ref">LP-840412</p>
+              <p class="cell">Aurelia House</p>
+              <div><span class="chip st-noshow"><i></i>No-show</span></div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m10 7 5 5-5 5"/></svg>
+            </div>
+
+            <!-- 10:30 AM -->
+            <div class="slot">
+              <p class="t">10:30 AM</p>
+              <p style="font-size:12px; color:var(--dark-ink-500);"><span style="color:var(--dark-ink-100); font-weight:700;">9</span> bookings</p>
+            </div>
+            <div class="row dk-tr" style="background:rgba(201,168,118,0.09); box-shadow:inset 3px 0 0 var(--gold-500);">
+              <div style="display:flex; align-items:center; gap:11px; min-width:0;"><div class="avatar">CD</div><div><p class="name">Camille Duforest</p><p class="sub">Annual · 1 guest</p></div></div>
+              <p class="ref">LP-840455</p>
+              <p class="cell">Belmont Terrace</p>
+              <div><span class="chip st-confirmed"><i></i>Confirmed</span></div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m10 7 5 5-5 5"/></svg>
+            </div>
+            <div class="row dk-tr">
+              <div style="display:flex; align-items:center; gap:11px; min-width:0;"><div class="avatar">EV</div><div><p class="name">Elena Vasquez</p><p class="sub">Monthly</p></div></div>
+              <p class="ref">LP-840471</p>
+              <p class="cell">The Winslow Club</p>
+              <div><span class="chip st-in"><i></i>Checked in</span></div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m10 7 5 5-5 5"/></svg>
+            </div>
+            <div class="row dk-tr">
+              <div style="display:flex; align-items:center; gap:11px; min-width:0;"><div class="avatar" style="background:rgba(201,168,118,0.22); color:var(--dark-ink-300);">TD</div><div><p class="name" style="color:var(--dark-ink-300);">Théo Duforest-Marin</p><p class="sub">Annual · cancelled 8:14 AM</p></div></div>
+              <p class="ref" style="color:var(--dark-ink-500);">LP-840480</p>
+              <p class="cell" style="color:var(--dark-ink-500);">Céleste Rooftop</p>
+              <div><span class="chip st-cancel"><i></i>Cancelled</span></div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m10 7 5 5-5 5"/></svg>
+            </div>
+
+            <!-- 1:00 PM -->
+            <div class="slot">
+              <p class="t">1:00 PM</p>
+              <p style="font-size:12px; color:var(--dark-ink-500);"><span style="color:var(--dark-ink-100); font-weight:700;">11</span> bookings</p>
+            </div>
+            <div class="row dk-tr">
+              <div style="display:flex; align-items:center; gap:11px; min-width:0;"><div class="avatar">AR</div><div><p class="name">Alexandra Rivas</p><p class="sub">Annual · 1 guest</p></div></div>
+              <p class="ref">LP-840502</p>
+              <p class="cell">Halcyon Reading Room</p>
+              <div><span class="chip st-confirmed"><i></i>Confirmed</span></div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m10 7 5 5-5 5"/></svg>
+            </div>
+            <div class="row dk-tr" style="border-bottom:none;">
+              <div style="display:flex; align-items:center; gap:11px; min-width:0;"><div class="avatar">NF</div><div><p class="name">Naomi Feldstein</p><p class="sub">Day pass</p></div></div>
+              <p class="ref">LP-840519</p>
+              <p class="cell">The Ainsworth</p>
+              <div><span class="chip st-confirmed"><i></i>Confirmed</span></div>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m10 7 5 5-5 5"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rail -->
+        <div style="width:300px; min-width:300px; display:flex; flex-direction:column; gap:14px;">
+          <div style="background:var(--dark-card); border:1px solid var(--dark-border); border-radius:20px; padding:18px 22px 8px;">
+            <p class="eyebrow">This day</p>
+            <div style="margin-top:6px;">
+              <div class="stat"><p>Expected</p><p>38</p></div>
+              <div class="stat"><p>Checked in</p><p>12</p></div>
+              <div class="stat"><p>No-shows</p><p>2</p></div>
+              <div class="stat" style="border-bottom:none;"><p>Cancelled</p><p>3</p></div>
+            </div>
+          </div>
+
+          <div style="background:var(--dark-card); border:1px solid var(--dark-border); border-radius:20px; padding:18px 22px 8px;">
+            <p class="eyebrow">By lounge</p>
+            <div style="margin-top:4px;">
+              <div class="lg dk-tr"><p class="n">The Ainsworth</p><p class="c">9 bookings</p></div>
+              <div class="lg dk-tr"><p class="n">Belmont Terrace</p><p class="c">7 bookings</p></div>
+              <div class="lg dk-tr"><p class="n">Aurelia House</p><p class="c">6 bookings</p></div>
+              <div class="lg dk-tr"><p class="n">The Winslow Club</p><p class="c">5 bookings</p></div>
+              <div class="lg dk-tr" style="border-bottom:none;"><p class="n" style="color:var(--dark-ink-300);">5 more lounges</p><p class="c">11 bookings</p></div>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:flex-start; gap:10px; padding:0 4px;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--dark-ink-500)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-top:1px; min-width:15px;"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/></svg>
+            <p style="font-size:12px; color:var(--dark-ink-500);">Open a booking to reschedule or cancel it. Check-in and no-shows stay with the lounge's front desk.</p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

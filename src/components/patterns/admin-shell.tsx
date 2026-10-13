@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import {
   BarChart3,
   BriefcaseBusiness,
+  CalendarDays,
   Building2,
   ClipboardList,
   FileBarChart,
@@ -30,13 +31,12 @@ import { cn } from "@/lib/utils";
  *
  * Artboard: docs/design/epic-8-admin-support/Main.dc.html
  *
- * "Bookings" queda fuera de las tres historias del Epic 8, igual que
- * "Settings" en `PartnerShell` — declarado en la nav, sin pantalla propia.
+ * "Bookings" lleva a la Story 8.4 (`/admin/bookings`, Bookings.dc.html).
  */
 const NAV_ITEMS = [
   { href: "/admin/support", label: "Support", icon: ClipboardList, badgeKey: "support" as const },
   { href: "/admin/members", label: "Members", icon: Users },
-  { href: null, label: "Bookings", icon: ClipboardList },
+  { href: "/admin/bookings", label: "Bookings", icon: CalendarDays },
   { href: "/admin/partners", label: "Partners", icon: BriefcaseBusiness },
   { href: "/admin/lounges", label: "Lounges", icon: Building2, badgeKey: "lounges" as const },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },

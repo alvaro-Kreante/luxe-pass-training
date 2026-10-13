@@ -25,11 +25,14 @@ export function GuestListTable({
   highlightedId,
   onMarkArrived,
   onOpenDetail,
+  readOnly = false,
 }: {
   guests: PartnerGuest[];
   highlightedId?: string | null;
   onMarkArrived: (id: string) => void;
   onOpenDetail: (id: string) => void;
+  /** Story 7.1 — otro día que no es hoy: la lista se ve, no se marca. */
+  readOnly?: boolean;
 }) {
   return (
     <div className="overflow-hidden rounded-content border border-line bg-dark-card">
@@ -54,7 +57,7 @@ export function GuestListTable({
           <AttendanceCheckbox
             status={guest.status === "new-booking" ? "pending" : guest.status}
             label={guest.name}
-            onMarkArrived={() => onMarkArrived(guest.id)}
+            onMarkArrived={readOnly ? undefined : () => onMarkArrived(guest.id)}
           />
 
           <button

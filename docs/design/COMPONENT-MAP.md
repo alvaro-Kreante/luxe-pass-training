@@ -219,6 +219,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `/admin/support/[id]` | `CaseDetail` + `Refund` | 8.1 |
 | `/admin/members` | `MemberSearch.dc.html` | 8.1 |
 | `/admin/members/[id]` | `MemberProfile` + `BookingOverride` | 8.1 |
+| `/admin/bookings` | `Bookings` (29) + `BookingOverride` | 8.4 |
 | `/admin/analytics` | `Analytics.dc.html` | 8.2 |
 | `/admin/analytics/demand` | `Popularity.dc.html` | 8.2 |
 | `/admin/reports` | `Export.dc.html` | 8.2 |
@@ -322,6 +323,11 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `app/admin/support/[id]/page.tsx` | Story 8.1 — caso con log de comunicación, resolución y escalado (`CaseDetail.dc.html`) |
 | `app/admin/members/page.tsx` | Story 8.1 — búsqueda de miembro por nombre, email, teléfono o LP# (`MemberSearch.dc.html`) |
 | `app/admin/members/[id]/page.tsx` | Story 8.1 — ficha de miembro: historial, pagos y membresía (`MemberProfile.dc.html`) |
+| `app/admin/bookings/page.tsx` + `lib/admin-bookings.ts` | Story 8.4 — reservas de un día de toda la red: fecha, lounge, estado y búsqueda, agrupadas por hora de llegada; abre `BookingOverrideDrawer` (`Bookings.dc.html`) |
+| `components/admin/lounge-combobox.tsx` | Story 8.4 — filtro de lounge en el que se escribe (combobox + listbox, mismas filas que `CityFilterPopover`); `null` = "All lounges" |
+| `components/patterns/day-stepper.tsx` | ‹ fecha › de `Bookings.dc.html`: la fecha abre el `MonthCalendar` de §4 en un popover (todos los días elegibles, "Back to today"). Lo usan `/admin/bookings` (8.4) y `/partner` (7.1, "filter guests by date") |
+| `partner/today-dashboard.tsx` — fecha elegible | Story 7.1 "Search/filter guests by name or date": `DayStepper` en la fila de los chips; otro día que no es hoy es de solo lectura (`readOnly` en `GuestListTable`/`GuestDetailDrawer`, casilla sin acción en `AttendanceCheckbox`). Sin artboard: `Main.dc.html` solo dibuja hoy |
+| `partner/guest-detail-drawer.tsx` — "Undo check-in" / "Undo no-show" | Story 7.1 — el partner corrige su error del día (`partner_undo_booking_status`, `support_tickets.sql`): vuelve a confirmed, deshacer un no-show borra el fee y lo anota en el caso. Botón ghost bajo la ficha, sin artboard (`GuestDetail.dc.html` solo dibuja un pendiente) |
 | `lib/admin-analytics.ts` | Story 8.2 — analítica de red, popularidad, datasets de export y reportes programados; los importes cuadran con `lib/partner.ts` (The Ainsworth: 187 reservas, $8,616.50) |
 | `app/admin/analytics/page.tsx` | Story 8.2 — "How the network is doing": reservas, no-shows, miembros e ingresos (`Analytics.dc.html`) |
 | `app/admin/analytics/demand/page.tsx` | Story 8.2 — "Where the demand is": lounges, amenities y ciudades más demandados (`Popularity.dc.html`) |
@@ -787,6 +793,8 @@ mismo nivel de realismo que el resto del proyecto a esta altura.
 | `supabase/schemas/admin_content.sql` | Story 8.3 — `lounges.content_status` (live/draft/archived, ortogonal a si hay un cambio pendiente de aprobar) + policy `select lounges` actualizada (un miembro solo ve `content_status='live'`); tabla `lounge_content_submissions` (nace aquí); `admin_lounge_list`/`admin_lounge_detail`; `admin_submit_lounge_content_change`/`admin_approve_lounge_submission`/`admin_reject_lounge_submission` ("Content approval workflow" real y genérico, no solo para The Vestry como el mock); `admin_archive_lounges` (el único botón real de la barra de acción masiva) |
 | Bucket de Storage `lounge-images` (público) | Story 8.3 — "Upload and manage lounge images" real (`uploadLoungeImage`, `lib/admin-content.ts`); solo un admin puede escribir, cualquiera puede leer (a diferencia de `profile-photos`, que es privado por usuario) |
 | `lib/admin-content.ts` — `diffLoungeChanges` | Diff genérico caso por caso (amenities/horario/capacidad/restricciones/fotos/publicación) para la cola de aprobación — generaliza el `VESTRY_PENDING_CHANGES` literal del mock a cualquier lounge real |
+| `support_tickets.sql` — `admin_bookings_on(p_date)` | Story 8.4 — el día entero de la red (solo `has_role('admin')`), con índice `bookings_date_idx`; lounge, estado y búsqueda filtran en cliente. Aforo por franja = `lounges.capacity` frente a las reservas no canceladas (misma regla que `booking_occupies_seat`) |
+| `support_tickets.sql` — `admin_set_booking_status` | Story 8.4 — el admin corrige el status (confirmed / checked-in / no-show). Decisiones del 13 oct 2026: un no-show del admin no registra fee ni abre caso (el trigger `booking_no_show_opens_ticket` ahora exige fee); salir de no-show o de cancelada borra el fee; volver de cancelada comprueba plaza salvo override |
 | `scripts/seed-admin-account.mjs` | Alta operativa (no self-service) de la cuenta de muestra de Priya Raghunathan en Supabase local — mismo patrón que `seed-partner-account.mjs` |
 
 Desviaciones conscientes de esta parte:
@@ -1067,3 +1075,6 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 | En el aviso de temporada que choca no hay "Open Brooklyn Heights" ni "Remove it from the selection"; en el cierre, sin "See them in Bookings" | El lounge que choca se salta solo y sale en la confirmación; los enlaces no llevan a ninguna pantalla que filtre por esas reservas |
 | La reapertura del cierre masivo propone el día siguiente al fin a las 10:00 AM | En el cierre de un solo lounge (10.9) se calcula con su horario; con varios lounges cada uno abre a una hora distinta. El admin la cambia en el modal |
 | "Set hours" sustituye el horario de lounges live sin pasarlos a borrador | Lo pide la historia (mismo horario para varios lounges, cualquier status); temporadas y cierres no se tocan (`admin_set_lounge_hours`) |
+| Story 8.4 (`/admin/bookings`): bajo el nombre dice "Membership"/"Day pass", no el plan ni los acompañantes del artboard | `bookings` no guarda acompañantes; "Day pass" sale de un pago `succeeded` ligado a la reserva, igual que en `partner_guest_list` |
+| Story 8.4: tarjeta "Seats by band" y estado vacío "No bookings match…" sin artboard propio | La tarjeta solo aparece con un lounge elegido (criterio de la historia) y el artboard dibuja "All lounges"; ambas reutilizan la tarjeta del rail y la tabla de la misma pantalla |
+| Story 8.4: filtro por partner, lounge escribible, calendario al pulsar la fecha y "Change the status" en el drawer | Pedidos por el usuario tras ver la pantalla (13 oct 2026), sin artboard propio: reutilizan `Select`, las filas de `CityFilterPopover`, `MonthCalendar` (§4) y `PaymentOptionRow`. Los filtros pasan a dos filas en 1440px. El botón "Previous month" del calendario conserva el fondo claro de la Fase 5 |
