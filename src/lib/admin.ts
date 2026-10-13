@@ -666,3 +666,18 @@ export async function cancelBookingAsAdmin(supabase: SupabaseClient, bookingId: 
   const { error } = await supabase.rpc("admin_cancel_booking", { p_booking_id: bookingId });
   if (error) throw error;
 }
+
+/** Story 8.4 — el admin corrige el status (`admin_set_booking_status`). */
+export async function setBookingStatusAsAdmin(
+  supabase: SupabaseClient,
+  bookingId: string,
+  status: "confirmed" | "checked-in" | "no-show",
+  override: boolean,
+): Promise<void> {
+  const { error } = await supabase.rpc("admin_set_booking_status", {
+    p_booking_id: bookingId,
+    p_status: status,
+    p_override: override,
+  });
+  if (error) throw error;
+}

@@ -1,11 +1,13 @@
 "use client";
 
 import * as React from "react";
-import { Building2, CalendarDays, ChevronLeft, ChevronRight, Info, Search } from "lucide-react";
+import { BriefcaseBusiness, ChevronLeft, ChevronRight, Info, Search } from "lucide-react";
 
 import { AdminShell } from "@/components/patterns/admin-shell";
 import { RequireAdminSession } from "@/components/admin/require-admin-session";
 import { BookingOverrideDrawer } from "@/components/admin/booking-override-drawer";
+import { DayPickerPopover } from "@/components/admin/day-picker-popover";
+import { LoungeCombobox } from "@/components/admin/lounge-combobox";
 import { StatusFilter } from "@/components/admin/status-filter";
 import { Select } from "@/components/ui/select";
 import { StatusChip } from "@/components/ui/status-chip";
@@ -33,7 +35,7 @@ import { cn } from "@/lib/utils";
  * Backend real: `admin_bookings_on` (`supabase/schemas/support_tickets.sql`)
  * trae el día entero de la red; lounge, estado y búsqueda filtran en cliente.
  * Abrir una reserva reutiliza el drawer de la Story 8.1
- * (`BookingOverrideDrawer`). Check-in y no-show se quedan en el partner.
+ * (`BookingOverrideDrawer`), que también corrige el status (Story 8.4).
  */
 export default function AdminBookingsPage() {
   return (
@@ -57,10 +59,12 @@ function BookingsScreen() {
   const [bookings, setBookings] = React.useState<NetworkBooking[]>([]);
   const [lounges, setLounges] = React.useState<BookingsLounge[]>([]);
   const [loungeId, setLoungeId] = React.useState<string | null>(null);
+  const [partnerId, setPartnerId] = React.useState<string | null>(null);
   const [state, setState] = React.useState<BookingState | null>(null);
   const [query, setQuery] = React.useState("");
   const [counts, setCounts] = React.useState<TicketCounts | null>(null);
   const [opened, setOpened] = React.useState<NetworkBooking | null>(null);
+  const [notice, setNotice] = React.useState("");
 
   const load = React.useCallback(
     async (day: string) => {
@@ -93,20 +97,29 @@ function BookingsScreen() {
     };
   }, [supabase]);
 
-  const inLounge = filterBookings(bookings, { loungeId, state: null, query: "" });
+  const partners = Array.from(
+    new Map(lounges.filter((l) => l.partnerId).map((l) => [l.partnerId!, l.partnerName ?? ""])),
+    ([id, name]) => ({ id, name }),
+  ).sort((a, b) => a.name.localeCompare(b.name));
+  const partnerLounges = partnerId ? lounges.filter((l) => l.partnerId === partnerId) : lounges;
+  const loungeIds = loungeId
+    ? new Set([loungeId])
+    : partnerId
+      ? new Set(partnerLounges.map((l) => l.id))
+      : null;
+  const inLounge = filterBookings(bookings, { loungeIds, state: null, query: "" });
   const stateCounts = countByState(inLounge);
-  const visible = filterBookings(inLounge, { loungeId: null, state, query });
+  const visible = filterBookings(inLounge, { loungeIds: null, state, query });
   const groups = groupByArrival(visible);
   const lounge = lounges.find((l) => l.id === loungeId) ?? null;
   const occupancy = lounge ? bandOccupancy(bookings, lounge) : [];
   const byLounge = Object.values(
-    bookings.reduce<Record<string, { name: string; count: number }>>((acc, b) => {
+    inLounge.reduce<Record<string, { name: string; count: number }>>((acc, b) => {
       acc[b.loungeId] ??= { name: b.loungeName, count: 0 };
       acc[b.loungeId].count += 1;
       return acc;
     }, {}),
   ).sort((a, b) => b.count - a.count);
-  const isToday = date === today();
 
   return (
     <AdminShell
@@ -127,15 +140,7 @@ function BookingsScreen() {
           <DayButton label="Previous day" onClick={() => setDate((d) => addDays(d, -1))}>
             <ChevronLeft size={17} strokeWidth={1.8} aria-hidden />
           </DayButton>
-          <p className="m-0 flex h-11 items-center gap-2.5 rounded-xl border-[1.5px] border-accent bg-panel-black px-4.5 shadow-ring">
-            <CalendarDays size={16} strokeWidth={1.8} className="text-accent" aria-hidden />
-            <span className="text-[13.5px] font-bold text-fg">{dayLabel(date)}</span>
-            {isToday ? (
-              <span className="rounded-pill bg-accent-soft px-2 py-0.5 text-[10.5px] font-extrabold uppercase tracking-[0.06em] text-accent">
-                Today
-              </span>
-            ) : null}
-          </p>
+          <DayPickerPopover value={date} todayIso={today()} label={dayLabel(date)} onChange={setDate} />
           <DayButton label="Next day" onClick={() => setDate((d) => addDays(d, 1))}>
             <ChevronRight size={17} strokeWidth={1.8} aria-hidden />
           </DayButton>
@@ -155,21 +160,28 @@ function BookingsScreen() {
             className="w-full bg-transparent text-[13px] font-bold text-fg placeholder:font-medium placeholder:text-fg-subtle focus:outline-none"
           />
         </label>
-        <div className="w-56">
+        <div className="w-52">
           <Select
-            aria-label="Lounge"
+            aria-label="Partner"
             inputSize="compact"
-            icon={<Building2 size={16} strokeWidth={1.7} className="text-accent" />}
-            value={loungeId ?? ""}
-            onChange={(event) => setLoungeId(event.target.value || null)}
+            icon={<BriefcaseBusiness size={16} strokeWidth={1.7} className="text-accent" />}
+            value={partnerId ?? ""}
+            onChange={(event) => {
+              const next = event.target.value || null;
+              setPartnerId(next);
+              if (next && loungeId && !lounges.some((l) => l.id === loungeId && l.partnerId === next)) setLoungeId(null);
+            }}
           >
-            <option value="">All lounges</option>
-            {lounges.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.name}
+            <option value="">All partners</option>
+            {partners.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
               </option>
             ))}
           </Select>
+        </div>
+        <div className="w-56">
+          <LoungeCombobox lounges={partnerLounges} value={loungeId} onChange={setLoungeId} />
         </div>
         <span className="mx-1 h-6.5 w-px bg-line" />
         <StatusFilter label="All" count={inLounge.length} pressed={state === null} onToggle={() => setState(null)} />
@@ -183,6 +195,13 @@ function BookingsScreen() {
           />
         ))}
       </div>
+
+      {notice ? (
+        <p role="status" className="m-0 mt-3.5 flex items-start gap-2.5 text-[12.5px] font-bold text-accent-strong">
+          <Info size={15} strokeWidth={1.8} className="mt-px shrink-0" aria-hidden />
+          {notice}
+        </p>
+      ) : null}
 
       <div className="mt-4 flex min-h-0 flex-col gap-4 lg:flex-row">
         <div className="min-w-0 flex-1 overflow-x-auto rounded-content border border-line bg-dark-card">
@@ -242,7 +261,7 @@ function BookingsScreen() {
 
           <p className="m-0 flex items-start gap-2.5 px-1 text-xs text-fg-subtle">
             <Info size={15} strokeWidth={1.8} className="mt-px shrink-0" aria-hidden />
-            Open a booking to reschedule or cancel it. Check-in and no-shows stay with the lounge&apos;s front desk.
+            Open a booking to reschedule it, cancel it or correct its status. A no-show marked here records no fee.
           </p>
         </div>
       </div>
@@ -265,7 +284,12 @@ function BookingsScreen() {
             band: opened.band,
             slotTime: opened.slotTime,
           }}
+          status={opened.state}
           onApply={() => load(date)}
+          onMissing={async () => {
+            setNotice(`${opened.reference} no longer exists — the list was refreshed.`);
+            await load(date);
+          }}
         />
       ) : null}
     </AdminShell>

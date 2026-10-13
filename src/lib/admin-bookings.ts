@@ -30,6 +30,8 @@ export interface BookingsLounge {
   name: string;
   capacity: number;
   bands: string[];
+  partnerId: string | null;
+  partnerName: string | null;
 }
 
 interface AdminBookingRow {
@@ -84,19 +86,32 @@ export async function fetchBookingsOn(supabase: SupabaseClient, date: string): P
 }
 
 export async function fetchBookingsLounges(supabase: SupabaseClient): Promise<BookingsLounge[]> {
-  const { data, error } = await supabase.from("lounges").select("id, name, capacity, bands").order("name");
+  const { data, error } = await supabase
+    .from("lounges")
+    .select("id, name, capacity, bands, partner_id, partners(name)")
+    .order("name");
   if (error) throw error;
-  return (data ?? []) as BookingsLounge[];
+  return (data ?? []).map((row) => {
+    const partner = row.partners as unknown as { name: string } | null;
+    return {
+      id: row.id as string,
+      name: row.name as string,
+      capacity: row.capacity as number,
+      bands: row.bands as string[],
+      partnerId: (row.partner_id as string | null) ?? null,
+      partnerName: partner?.name ?? null,
+    };
+  });
 }
 
 export function filterBookings(
   bookings: NetworkBooking[],
-  { loungeId, state, query }: { loungeId: string | null; state: BookingState | null; query: string },
+  { loungeIds, state, query }: { loungeIds: Set<string> | null; state: BookingState | null; query: string },
 ): NetworkBooking[] {
   const needle = query.trim().toLowerCase();
   return bookings.filter(
     (b) =>
-      (!loungeId || b.loungeId === loungeId) &&
+      (!loungeIds || loungeIds.has(b.loungeId)) &&
       (!state || b.state === state) &&
       (!needle || b.memberName.toLowerCase().includes(needle) || b.reference.toLowerCase().includes(needle)),
   );

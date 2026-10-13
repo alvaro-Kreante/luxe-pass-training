@@ -25,12 +25,28 @@ const OUT_DIR = path.resolve(__dirname, '../../screenshots/admin');
   console.log('shot bookings-overview.png');
 
   const lounge = page.getByRole('combobox', { name: 'Lounge' });
-  const options = await lounge.locator('option').allTextContents();
-  if (options.length > 1) {
-    await lounge.selectOption({ index: 1 });
-    await page.waitForTimeout(500);
-    await page.screenshot({ path: path.join(OUT_DIR, 'bookings-overview-lounge.png') });
-    console.log('shot bookings-overview-lounge.png');
+  await lounge.fill('au');
+  await page.screenshot({ path: path.join(OUT_DIR, 'bookings-overview-lounge.png') });
+  console.log('shot bookings-overview-lounge.png');
+  await page.getByRole('listbox', { name: 'Lounges' }).getByRole('option').first().click();
+
+  await page.getByRole('button', { name: /Choose a date/ }).click();
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: path.join(OUT_DIR, 'bookings-overview-calendar.png') });
+  console.log('shot bookings-overview-calendar.png');
+  await page.keyboard.press('Escape');
+
+  // Primer día con reservas en los próximos 60, para abrir el drawer.
+  for (let i = 0; i < 60 && !(await page.locator('[data-booking-row]').count()); i++) {
+    await page.getByRole('button', { name: 'Next day' }).click();
+    await page.waitForTimeout(250);
+  }
+  if (await page.locator('[data-booking-row]').count()) {
+    await page.locator('[data-booking-row]').first().click();
+    await page.getByRole('radio', { name: 'Change the status' }).click();
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: path.join(OUT_DIR, 'bookings-overview-status.png') });
+    console.log('shot bookings-overview-status.png');
   }
 
   await browser.close();

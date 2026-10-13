@@ -290,6 +290,12 @@ cliente) ya es real. Abierto:
   `COMPONENT-MAP.md`) ya tiene pantalla de destino, pero no filtra por un
   rango de fechas: haría falta abrir `/admin/bookings` en la fecha y el lounge
   del cierre.
+- **Filtro por partner, lounge escribible, calendario y "Change the status"**
+  se añadieron a pedido del usuario (13 oct 2026) sin entrar en los
+  `## Acceptance Criteria` de la Story 8.4. Decidir si se suman a la historia
+  o quedan como mejoras fuera de contrato.
+- **Cambiar el status no avisa a nadie.** Ni al miembro ni al partner: no
+  hay email ni notificación in-app para una corrección del admin.
 
 ---
 
