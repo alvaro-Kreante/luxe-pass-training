@@ -140,6 +140,33 @@ exige sesión de partner (`RequirePartnerSession`) y usa el lounge elegido
 en su contexto. La consola sigue en su URL propia, fuera del shell de
 `/partner`: ninguna historia pide fusionarla con el dashboard.
 
+### 2.7b El bloqueo tras 5 intentos de login solo lo aplica `/login`
+
+SEC-03 (`docs/audit/seguridad-y-datos.md`), cerrado a medias el 13 oct 2026.
+Supabase Auth no consulta `login_attempts`, así que una llamada directa a
+`/auth/v1/token` con la clave publicable se salta el bloqueo de la Story
+1.2. Lo que ya está cerrado: `reset_login_attempts` solo limpia el
+contador de quien acaba de iniciar sesión con ese email (antes cualquiera,
+sin sesión, podía desbloquear otra cuenta).
+
+Sigue abierto, por decisión de coste:
+
+- **Bloqueo real en el servidor:** requiere el hook "Password Verification
+  Attempt" de Supabase Auth, solo disponible en el plan Team.
+- **Defensa de servidor mientras tanto:** el rate limit de sign-in por IP
+  de Auth. En los proyectos remotos (`luxepass-dev`/`luxepass-prod`) se
+  ajusta en el dashboard (Authentication → Rate Limits); el
+  `sign_in_sign_ups = 200` de `config.toml` es solo local, subido para la
+  suite de tests.
+- **Bloquear la cuenta de otro adrede** (5 fallos con su email) sigue siendo
+  posible: `record_failed_login` tiene que poder llamarse sin sesión. Es el
+  trade-off ya documentado en `supabase/schemas/login_attempts.sql`;
+  CAPTCHA (Turnstile/hCaptcha, verificado por Auth en cualquier plan) lo
+  mitigaría.
+
+**Se resuelve:** pasando a plan Team (hook) o añadiendo CAPTCHA en login y
+signup.
+
 ### 2.8 "Settings" del Partner Dashboard no tiene pantalla propia
 
 El sidebar de `/partner` (patrón 15) fija la nav completa — Today · Guests ·

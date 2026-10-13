@@ -134,6 +134,11 @@ export async function cleanTestData(admin: SupabaseClient): Promise<CleanResult>
   const memberIds = (leftoverMembers ?? []).filter((m) => TEST_EMAIL.test(m.email)).map((m) => m.id as string);
   for (const batch of chunks(memberIds)) await admin.from("partner_members").delete().in("id", batch);
 
+  // Contadores de login fallido de emails de test (Story 1.2), con o sin cuenta.
+  const { data: attempts } = await admin.from("login_attempts").select("email");
+  const attemptEmails = (attempts ?? []).map((a) => a.email as string).filter((email) => TEST_EMAIL.test(email));
+  for (const batch of chunks(attemptEmails)) await admin.from("login_attempts").delete().in("email", batch);
+
   // Las tres FKs a `auth.users` sin cascada; el resto cae solo al borrar la cuenta.
   for (const batch of chunks(testUsers)) {
     await admin.from("support_tickets").update({ assigned_admin_id: null }).in("assigned_admin_id", batch);

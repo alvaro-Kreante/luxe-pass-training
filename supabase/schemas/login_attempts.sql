@@ -7,6 +7,12 @@
 -- acceso 15 min fallando adrede. Es inherente a "lockout tras N intentos"
 -- tal como lo pide el AC; no se resuelve con más infraestructura (IP+email,
 -- captcha) porque el AC no lo pide.
+--
+-- SEC-03 (docs/audit/seguridad-y-datos.md): el bloqueo solo lo aplica
+-- `/login` — Supabase Auth no consulta esta tabla, así que una llamada
+-- directa a `/auth/v1/token` no lo respeta. Cerrarlo en el servidor exige el
+-- hook "Password Verification Attempt" (plan Team); mientras tanto la defensa
+-- de servidor es el rate limit por IP de Auth (ver docs/PENDIENTES.md).
 create table if not exists public.login_attempts (
   email text primary key,
   failed_count int not null default 0,
@@ -70,15 +76,20 @@ begin
 end;
 $$;
 
+-- Solo quien acaba de iniciar sesión con ese email limpia su contador: sin
+-- esta comprobación, cualquiera podía desbloquear otra cuenta (SEC-03).
 create or replace function public.reset_login_attempts(p_email text)
 returns void
 language sql
 security definer
 set search_path = ''
 as $$
-  delete from public.login_attempts where email = lower(trim(p_email));
+  delete from public.login_attempts
+  where email = lower(trim(p_email))
+    and email = lower((select auth.jwt() ->> 'email'));
 $$;
 
 grant execute on function public.check_login_lock(text) to anon, authenticated;
 grant execute on function public.record_failed_login(text) to anon, authenticated;
-grant execute on function public.reset_login_attempts(text) to anon, authenticated;
+revoke execute on function public.reset_login_attempts(text) from public, anon;
+grant execute on function public.reset_login_attempts(text) to authenticated;
