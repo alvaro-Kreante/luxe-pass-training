@@ -1,6 +1,7 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it, vi } from "vitest";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 
 import { bookingReferenceFromId, confirmBooking } from "@/lib/booking";
 import { addDays, today } from "@/lib/availability";
@@ -72,6 +73,8 @@ let guestNoShow: TestGuest;
 let guestSearchA: TestGuest;
 let guestSearchB: TestGuest;
 let guestTomorrow: TestGuest;
+let guestUndoCheckIn: TestGuest;
+let guestUndoNoShow: TestGuest;
 
 beforeAll(async () => {
   const stamp = Date.now();
@@ -99,6 +102,8 @@ beforeAll(async () => {
   guestSearchA = await createTestGuest(`Guest SearchA ${stamp}`, "late", "6:00 PM");
   guestSearchB = await createTestGuest(`Guest SearchB ${stamp}`, "late", "6:00 PM");
   guestTomorrow = await createTestGuest(`Guest Tomorrow ${stamp}`, "afternoon", "1:00 PM", addDays(today(), 1));
+  guestUndoCheckIn = await createTestGuest(`Guest UndoCheckIn ${stamp}`, "afternoon", "3:30 PM");
+  guestUndoNoShow = await createTestGuest(`Guest UndoNoShow ${stamp}`, "late", "6:00 PM");
 
   const partnerSession = createClient();
   await partnerSession.auth.signInWithPassword({
@@ -178,6 +183,63 @@ describe("search/filter guests", () => {
 
     expect(screen.getByText(guestSearchA.name)).toBeVisible();
     expect(screen.queryByText(guestSearchB.name)).not.toBeInTheDocument();
+  });
+});
+
+describe("corregir un error de hoy", () => {
+  const admin = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+
+  async function bookingOf(reference: string) {
+    const { data } = await admin
+      .from("bookings")
+      .select("id, status, no_show, checked_in_at, cancellation_fee_cents")
+      .eq("confirmation_code", reference)
+      .single();
+    return data!;
+  }
+
+  it("deshace un check-in y el invitado vuelve a estar pendiente", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<PartnerTodayPage />);
+
+    await user.click(await screen.findByRole("button", { name: `Mark ${guestUndoCheckIn.name} as arrived` }));
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: `Mark ${guestUndoCheckIn.name} as arrived` })).not.toBeInTheDocument(),
+    );
+
+    await user.click(screen.getByRole("button", { name: `View details for ${guestUndoCheckIn.name}` }));
+    await user.click(await screen.findByRole("button", { name: "Undo check-in" }));
+
+    expect(await screen.findByRole("button", { name: `Mark ${guestUndoCheckIn.name} as arrived` })).toBeInTheDocument();
+    const booking = await bookingOf(guestUndoCheckIn.reference);
+    expect(booking.status).toBe("confirmed");
+    expect(booking.checked_in_at).toBeNull();
+  });
+
+  it("deshace un no-show: borra el fee y lo anota en el caso de soporte", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<PartnerTodayPage />);
+
+    await user.click(await screen.findByRole("button", { name: `View details for ${guestUndoNoShow.name}` }));
+    await user.click(screen.getByRole("button", { name: "No-show" }));
+    await user.click(screen.getByRole("button", { name: "Report no-show" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: `Mark ${guestUndoNoShow.name} as arrived` })).not.toBeInTheDocument(),
+    );
+
+    await user.click(screen.getByRole("button", { name: `View details for ${guestUndoNoShow.name}` }));
+    await user.click(await screen.findByRole("button", { name: "Undo no-show" }));
+
+    expect(await screen.findByRole("button", { name: `Mark ${guestUndoNoShow.name} as arrived` })).toBeInTheDocument();
+    const booking = await bookingOf(guestUndoNoShow.reference);
+    expect(booking.no_show).toBe(false);
+    expect(booking.cancellation_fee_cents).toBeNull();
+    const { data: tickets } = await admin
+      .from("support_tickets")
+      .select("support_ticket_messages(body)")
+      .eq("booking_id", booking.id);
+    const bodies = (tickets ?? []).flatMap((t) => (t.support_ticket_messages as { body: string }[]).map((m) => m.body));
+    expect(bodies.some((body) => /undid the no-show/.test(body))).toBe(true);
   });
 });
 

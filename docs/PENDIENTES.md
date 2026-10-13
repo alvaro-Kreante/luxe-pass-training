@@ -284,6 +284,10 @@ cliente) ya es real. Abierto:
   check-in ni no-show, que se registran el propio día o los corrige el
   admin). Decisión tomada sin consultar al cliente: confirmar que el
   partner no necesita corregir días pasados él mismo.
+- **"Undo check-in" / "Undo no-show" del partner, solo hoy** (decidido con el
+  usuario, 13 oct 2026, `partner_undo_booking_status`). Sin zona horaria en
+  `lounges`, el servidor acepta ayer/hoy/mañana de su reloj y la pantalla lo
+  limita a hoy; si `lounges` gana zona horaria, ajustar la ventana.
 - **El flow de admin no tiene los nodos de la 8.4.**
   `flow-admin-support-experience.md` necesita un segmento "Story 8.4"; la
   historia lo enlaza como pendiente.

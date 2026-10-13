@@ -225,6 +225,28 @@ export function TodayDashboard() {
     fetchGuestList(loungeId);
   }
 
+  async function handleUndo(id: string) {
+    setDetailGuestId(null);
+    const guest = findPartnerGuest(guests, id);
+    if (!guest?.bookingId || !loungeId) return;
+
+    const { error } = await supabase.rpc("partner_undo_booking_status", { p_booking_id: guest.bookingId });
+    if (error) return;
+
+    setActivity((current) => [
+      {
+        id: `undo-${guest.bookingId}-${Date.now()}`,
+        kind: "checked-in",
+        title: guest.status === "no-show" ? "No-show undone" : "Check-in undone",
+        time: nowLabel(),
+        body: `${guest.name} · back to expected.`,
+        read: false,
+      },
+      ...current,
+    ]);
+    fetchGuestList(loungeId);
+  }
+
   async function handleReportNoShow(id: string, reason: NoShowReason) {
     setNoShowGuestId(null);
     setDetailGuestId(null);
@@ -365,6 +387,7 @@ export function TodayDashboard() {
           onReportNoShow={(id) => {
             setNoShowGuestId(id);
           }}
+          onUndo={handleUndo}
           readOnly={!isToday}
         />
       ) : null}
