@@ -16,4 +16,4 @@ As an admin, I want to see every booking across the network by date and lounge s
 - [ ] Only admins can see this list
 
 ## Related Flow
-See [flow-admin-support-experience.md](../flows/flow-admin-support-experience.md) — segment "Story 8.4" (pending: add the nodes to the diagram).
+See [flow-admin-support-experience.md](../flows/flow-admin-support-experience.md) — segment "Story 8.4" (`Bookings overview` → `Change the status`).
