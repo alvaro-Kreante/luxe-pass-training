@@ -1,12 +1,12 @@
 "use client";
 
 import * as React from "react";
-import { BriefcaseBusiness, ChevronLeft, ChevronRight, Info, Search } from "lucide-react";
+import { BriefcaseBusiness, ChevronRight, Info, Search } from "lucide-react";
 
 import { AdminShell } from "@/components/patterns/admin-shell";
 import { RequireAdminSession } from "@/components/admin/require-admin-session";
 import { BookingOverrideDrawer } from "@/components/admin/booking-override-drawer";
-import { DayPickerPopover } from "@/components/admin/day-picker-popover";
+import { DayStepper } from "@/components/patterns/day-stepper";
 import { LoungeCombobox } from "@/components/admin/lounge-combobox";
 import { StatusFilter } from "@/components/admin/status-filter";
 import { Select } from "@/components/ui/select";
@@ -24,7 +24,7 @@ import {
   type BookingsLounge,
   type NetworkBooking,
 } from "@/lib/admin-bookings";
-import { addDays, parseDate, today } from "@/lib/availability";
+import { parseDate, today } from "@/lib/availability";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -136,15 +136,7 @@ function BookingsScreen() {
           <h1 className="mt-2 font-display text-[34px] text-fg">Who is coming</h1>
         </div>
         <div className="flex-1" />
-        <div className="flex items-center gap-2">
-          <DayButton label="Previous day" onClick={() => setDate((d) => addDays(d, -1))}>
-            <ChevronLeft size={17} strokeWidth={1.8} aria-hidden />
-          </DayButton>
-          <DayPickerPopover value={date} todayIso={today()} label={dayLabel(date)} onChange={setDate} />
-          <DayButton label="Next day" onClick={() => setDate((d) => addDays(d, 1))}>
-            <ChevronRight size={17} strokeWidth={1.8} aria-hidden />
-          </DayButton>
-        </div>
+        <DayStepper value={date} todayIso={today()} onChange={setDate} />
       </div>
 
       <div className="mt-4.5 flex flex-wrap items-center gap-2.5">
@@ -353,19 +345,6 @@ function BookingRow({ booking, onOpen }: { booking: NetworkBooking; onOpen: () =
         </StatusChip>
       </span>
       <ChevronRight size={16} strokeWidth={1.8} className="text-fg-subtle" aria-hidden />
-    </button>
-  );
-}
-
-function DayButton({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      onClick={onClick}
-      className="flex size-11 cursor-pointer items-center justify-center rounded-xl border-[1.5px] border-line text-accent transition-colors duration-150 hover:border-accent hover:bg-surface-hover"
-    >
-      {children}
     </button>
   );
 }

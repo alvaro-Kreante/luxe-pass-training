@@ -2,16 +2,57 @@
 
 import * as React from "react";
 import * as Popover from "@radix-ui/react-popover";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { MonthCalendar } from "@/components/ui/date-picker";
+import { addDays } from "@/lib/availability";
 import { addMonths, daysInMonth, startOfMonth, type MonthDay } from "@/lib/booking";
 
 /**
- * Story 8.4 — la fecha de `/admin/bookings` abre un calendario para saltar a
- * un día concreto. Reutiliza el `MonthCalendar` de la Fase 5 (§4 Date
- * picker); aquí todos los días se pueden elegir, también los pasados.
+ * Selector de día de las listas oscuras: ‹ fecha › (Bookings.dc.html, Epic 8
+ * · 29). Pulsar la fecha abre el `MonthCalendar` de §4 (Fase 5) para saltar
+ * a un día concreto; todos los días se pueden elegir, también los pasados.
+ * Lo usan `/admin/bookings` (Story 8.4) y `/partner` (Story 7.1, "filter
+ * guests by date").
  */
+export function DayStepper({
+  value,
+  todayIso,
+  onChange,
+}: {
+  value: string;
+  todayIso: string;
+  onChange: (dateIso: string) => void;
+}) {
+  const label = new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" }).format(
+    new Date(`${value}T00:00:00Z`),
+  );
+
+  return (
+    <div className="flex items-center gap-2">
+      <StepButton label="Previous day" onClick={() => onChange(addDays(value, -1))}>
+        <ChevronLeft size={17} strokeWidth={1.8} aria-hidden />
+      </StepButton>
+      <DayPickerPopover value={value} todayIso={todayIso} label={label} onChange={onChange} />
+      <StepButton label="Next day" onClick={() => onChange(addDays(value, 1))}>
+        <ChevronRight size={17} strokeWidth={1.8} aria-hidden />
+      </StepButton>
+    </div>
+  );
+}
+
+function StepButton({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      onClick={onClick}
+      className="flex size-11 cursor-pointer items-center justify-center rounded-xl border-[1.5px] border-line text-accent transition-colors duration-150 hover:border-accent hover:bg-surface-hover"
+    >
+      {children}
+    </button>
+  );
+}
 function monthDays(monthIso: string, todayIso: string): MonthDay[] {
   const start = startOfMonth(monthIso);
   return Array.from({ length: daysInMonth(start) }, (_, index) => {
@@ -20,7 +61,7 @@ function monthDays(monthIso: string, todayIso: string): MonthDay[] {
   });
 }
 
-export function DayPickerPopover({
+function DayPickerPopover({
   value,
   todayIso,
   label,

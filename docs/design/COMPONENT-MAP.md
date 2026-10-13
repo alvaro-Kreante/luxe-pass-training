@@ -325,7 +325,8 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `app/admin/members/[id]/page.tsx` | Story 8.1 — ficha de miembro: historial, pagos y membresía (`MemberProfile.dc.html`) |
 | `app/admin/bookings/page.tsx` + `lib/admin-bookings.ts` | Story 8.4 — reservas de un día de toda la red: fecha, lounge, estado y búsqueda, agrupadas por hora de llegada; abre `BookingOverrideDrawer` (`Bookings.dc.html`) |
 | `components/admin/lounge-combobox.tsx` | Story 8.4 — filtro de lounge en el que se escribe (combobox + listbox, mismas filas que `CityFilterPopover`); `null` = "All lounges" |
-| `components/admin/day-picker-popover.tsx` | Story 8.4 — la fecha de `/admin/bookings` abre el `MonthCalendar` de §4 en un popover; todos los días elegibles, con "Back to today" |
+| `components/patterns/day-stepper.tsx` | ‹ fecha › de `Bookings.dc.html`: la fecha abre el `MonthCalendar` de §4 en un popover (todos los días elegibles, "Back to today"). Lo usan `/admin/bookings` (8.4) y `/partner` (7.1, "filter guests by date") |
+| `partner/today-dashboard.tsx` — fecha elegible | Story 7.1 "Search/filter guests by name or date": `DayStepper` en la fila de los chips; otro día que no es hoy es de solo lectura (`readOnly` en `GuestListTable`/`GuestDetailDrawer`, casilla sin acción en `AttendanceCheckbox`). Sin artboard: `Main.dc.html` solo dibuja hoy |
 | `lib/admin-analytics.ts` | Story 8.2 — analítica de red, popularidad, datasets de export y reportes programados; los importes cuadran con `lib/partner.ts` (The Ainsworth: 187 reservas, $8,616.50) |
 | `app/admin/analytics/page.tsx` | Story 8.2 — "How the network is doing": reservas, no-shows, miembros e ingresos (`Analytics.dc.html`) |
 | `app/admin/analytics/demand/page.tsx` | Story 8.2 — "Where the demand is": lounges, amenities y ciudades más demandados (`Popularity.dc.html`) |

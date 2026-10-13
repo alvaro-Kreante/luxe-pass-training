@@ -279,10 +279,11 @@ reportes de Epic 8.
 `/admin/bookings` (Story 8.4, historia propuesta por el equipo, no del
 cliente) ya es real. Abierto:
 
-- **El partner sigue sin filtro por fecha.** La Story 7.1 pide "Search/filter
-  guests by name or date" y `/partner` solo enseña hoy, aunque
-  `partner_guest_list` ya recibe `p_date`. Va en la misma rama
-  (`feat/bookings-overview`), a continuación.
+- **Filtro por fecha del partner: resuelto (13 oct 2026).** `/partner` usa
+  el mismo `DayStepper`; un día que no es hoy es de solo lectura (sin
+  check-in ni no-show, que se registran el propio día o los corrige el
+  admin). Decisión tomada sin consultar al cliente: confirmar que el
+  partner no necesita corregir días pasados él mismo.
 - **El flow de admin no tiene los nodos de la 8.4.**
   `flow-admin-support-experience.md` necesita un segmento "Story 8.4"; la
   historia lo enlaza como pendiente.

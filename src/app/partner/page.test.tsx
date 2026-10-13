@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { bookingReferenceFromId, confirmBooking } from "@/lib/booking";
-import { today } from "@/lib/availability";
+import { addDays, today } from "@/lib/availability";
 import type { WeekBandId } from "@/lib/lounge-profile";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -42,7 +42,7 @@ interface TestGuest {
   reference: string;
 }
 
-async function createTestGuest(name: string, band: WeekBandId, slotTime: string): Promise<TestGuest> {
+async function createTestGuest(name: string, band: WeekBandId, slotTime: string, dateIso = today()): Promise<TestGuest> {
   const email = `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}@ensoleil-test.com`;
   const member = createClient();
   await signUpConfirmedMemberAndSignIn(member, email, "EnSoleil!2026", { membership: "annual" });
@@ -54,7 +54,7 @@ async function createTestGuest(name: string, band: WeekBandId, slotTime: string)
 
   const booking = await confirmBooking(member, {
     loungeId: "the-ainsworth",
-    dateIso: today(),
+    dateIso,
     band,
     time: slotTime,
     specialRequests: "",
@@ -71,6 +71,7 @@ let guestCheckIn: TestGuest;
 let guestNoShow: TestGuest;
 let guestSearchA: TestGuest;
 let guestSearchB: TestGuest;
+let guestTomorrow: TestGuest;
 
 beforeAll(async () => {
   const stamp = Date.now();
@@ -97,6 +98,7 @@ beforeAll(async () => {
   guestNoShow = await createTestGuest(`Guest NoShow ${stamp}`, "late", "6:00 PM");
   guestSearchA = await createTestGuest(`Guest SearchA ${stamp}`, "late", "6:00 PM");
   guestSearchB = await createTestGuest(`Guest SearchB ${stamp}`, "late", "6:00 PM");
+  guestTomorrow = await createTestGuest(`Guest Tomorrow ${stamp}`, "afternoon", "1:00 PM", addDays(today(), 1));
 
   const partnerSession = createClient();
   await partnerSession.auth.signInWithPassword({
@@ -176,6 +178,38 @@ describe("search/filter guests", () => {
 
     expect(screen.getByText(guestSearchA.name)).toBeVisible();
     expect(screen.queryByText(guestSearchB.name)).not.toBeInTheDocument();
+  });
+});
+
+describe("search/filter guests by date", () => {
+  it("el día siguiente enseña sus invitados, de solo lectura", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<PartnerTodayPage />);
+
+    await screen.findByText(guestShow.name);
+    await user.click(screen.getByRole("button", { name: "Next day" }));
+
+    expect(await screen.findByText(guestTomorrow.name)).toBeVisible();
+    expect(screen.queryByText(guestShow.name)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: `Mark ${guestTomorrow.name} as arrived` })).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Today's guests" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Previous day" }));
+    expect(await screen.findByText(guestShow.name)).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Today's guests" })).toBeInTheDocument();
+  });
+
+  it("elige un día concreto en el calendario", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<PartnerTodayPage />);
+
+    await screen.findByText(guestShow.name);
+    const tomorrow = addDays(today(), 1);
+    await user.click(screen.getByRole("button", { name: /Choose a date/ }));
+    if (tomorrow.slice(0, 7) !== today().slice(0, 7)) await user.click(screen.getByRole("button", { name: "Next month" }));
+    await user.click(screen.getByRole("button", { name: String(Number(tomorrow.slice(8))) }));
+
+    expect(await screen.findByText(guestTomorrow.name)).toBeVisible();
   });
 });
 

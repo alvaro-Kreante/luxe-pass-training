@@ -19,14 +19,17 @@ export function GuestDetailDrawer({
   guest,
   onMarkArrived,
   onReportNoShow,
+  readOnly = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   guest: PartnerGuest;
   onMarkArrived: (id: string) => void;
   onReportNoShow: (id: string) => void;
+  /** Story 7.1 — otro día que no es hoy: sin "Mark as arrived" ni "No-show". */
+  readOnly?: boolean;
 }) {
-  const actionable = guest.status === "pending" || guest.status === "new-booking";
+  const actionable = !readOnly && (guest.status === "pending" || guest.status === "new-booking");
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange} width={472} dark title={guest.name}>
