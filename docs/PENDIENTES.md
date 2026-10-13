@@ -274,6 +274,23 @@ cron las cierra (p. ej. al expirar la sesión, con
 `checkout.session.expired` en `stripe-webhook`) o si se filtran en los
 reportes de Epic 8.
 
+### 2.14 Vista de reservas: lo que queda tras la Story 8.4 (13 oct 2026)
+
+`/admin/bookings` (Story 8.4, historia propuesta por el equipo, no del
+cliente) ya es real. Abierto:
+
+- **El partner sigue sin filtro por fecha.** La Story 7.1 pide "Search/filter
+  guests by name or date" y `/partner` solo enseña hoy, aunque
+  `partner_guest_list` ya recibe `p_date`. Va en la misma rama
+  (`feat/bookings-overview`), a continuación.
+- **El flow de admin no tiene los nodos de la 8.4.**
+  `flow-admin-support-experience.md` necesita un segmento "Story 8.4"; la
+  historia lo enlaza como pendiente.
+- **"See them in Bookings" del cierre masivo** (desviación de
+  `COMPONENT-MAP.md`) ya tiene pantalla de destino, pero no filtra por un
+  rango de fechas: haría falta abrir `/admin/bookings` en la fecha y el lounge
+  del cierre.
+
 ---
 
 ## 3. Criterios de aceptación cubiertos solo de forma declarativa

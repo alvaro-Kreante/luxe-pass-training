@@ -315,6 +315,60 @@ $$;
 grant execute on function public.admin_member_bookings(uuid) to authenticated;
 
 /* -------------------------------------------------------------------- */
+/* Story 8.4 — Bookings Overview: todas las reservas de un día, de toda */
+/* la red. Filtros y búsqueda se aplican en cliente sobre este día.    */
+/* -------------------------------------------------------------------- */
+
+create or replace function public.admin_bookings_on(p_date date)
+returns table (
+  id uuid,
+  confirmation_code text,
+  member_id uuid,
+  member_name text,
+  lounge_id text,
+  lounge_name text,
+  lounge_area text,
+  date date,
+  band text,
+  slot_time text,
+  status text,
+  no_show boolean,
+  is_day_pass boolean
+)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.has_role('admin') then
+    raise exception 'Not authorized';
+  end if;
+
+  return query
+    select
+      b.id, b.confirmation_code, b.member_id,
+      coalesce(p.full_name, split_part(u.email::text, '@', 1)),
+      b.lounge_id, l.name, l.neighborhood,
+      b.date, b.band, b.slot_time, b.status, b.no_show,
+      exists (
+        select 1 from public.payments pm
+        where pm.booking_id = b.id and pm.status = 'succeeded'
+      )
+    from public.bookings b
+    join public.lounges l on l.id = b.lounge_id
+    join auth.users u on u.id = b.member_id
+    left join public.profiles p on p.id = b.member_id
+    where b.date = p_date
+      and b.status <> 'waitlisted'
+    order by b.created_at;
+end;
+$$;
+
+revoke execute on function public.admin_bookings_on(date) from public, anon;
+grant execute on function public.admin_bookings_on(date) to authenticated;
+
+/* -------------------------------------------------------------------- */
 /* "Payment transaction details"                                        */
 /* -------------------------------------------------------------------- */
 
