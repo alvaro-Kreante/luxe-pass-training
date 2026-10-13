@@ -1,7 +1,5 @@
 SET local check_function_bodies = off;
 
-REVOKE ALL ON FUNCTION "public"."lounge_seats_on"(date) FROM "anon";
-
 REVOKE ALL ON FUNCTION "public"."reset_login_attempts"(text) FROM "anon";
 
 CREATE OR REPLACE FUNCTION public.admin_amenity_demand (
@@ -944,28 +942,6 @@ begin
 end;
 $function$;
 
-CREATE OR REPLACE FUNCTION public.check_login_lock (
-  p_email text
-)
-  RETURNS TABLE (
-    locked       boolean,
-    locked_until timestamp with time zone
-  )
-  LANGUAGE plpgsql
-  SECURITY DEFINER
-  SET search_path TO ''
-  AS $function$
-declare
-  v_locked_until timestamptz;
-begin
-  select la.locked_until into v_locked_until
-  from public.login_attempts la
-  where la.email = lower(trim(p_email));
-
-  return query select (v_locked_until is not null and v_locked_until > now()), v_locked_until;
-end;
-$function$;
-
 CREATE OR REPLACE FUNCTION public.create_referral_from_signup()
   RETURNS TRIGGER
   LANGUAGE plpgsql
@@ -1870,45 +1846,6 @@ begin
   end if;
   update public.partner_members set selected_lounge_id = p_lounge_id, all_lounges = false
   where user_id = (select auth.uid());
-end;
-$function$;
-
-CREATE OR REPLACE FUNCTION public.record_failed_login (
-  p_email text
-)
-  RETURNS TABLE (
-    failed_count integer,
-    locked       boolean,
-    locked_until timestamp with time zone
-  )
-  LANGUAGE plpgsql
-  SECURITY DEFINER
-  SET search_path TO ''
-  AS $function$
-declare
-  v_email text := lower(trim(p_email));
-  v_failed_count int;
-  v_locked_until timestamptz;
-begin
-  insert into public.login_attempts as la (email, failed_count, updated_at)
-  values (v_email, 1, now())
-  on conflict (email) do update
-    set failed_count = case
-          when la.locked_until is not null and la.locked_until > now()
-            then la.failed_count
-          else la.failed_count + 1
-        end,
-        updated_at = now()
-  returning la.failed_count into v_failed_count;
-
-  if v_failed_count >= 5 then
-    update public.login_attempts la
-      set locked_until = coalesce(la.locked_until, now() + interval '15 minutes')
-      where la.email = v_email
-      returning la.locked_until into v_locked_until;
-  end if;
-
-  return query select v_failed_count, (v_locked_until is not null and v_locked_until > now()), v_locked_until;
 end;
 $function$;
 
