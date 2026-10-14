@@ -66,6 +66,9 @@ Deno.serve(async (req) => {
         special_requests: body.specialRequests ?? "",
       },
       return_url: `${Deno.env.get("APP_URL")}/lounges/${body.loungeId}/book/confirmed`,
+      // SEC-02 — el mínimo que admite Stripe: una reserva confirmada con esta
+      // sesión sin llegar a pagarla se cancela al caducar (stripe-webhook).
+      expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
     });
 
     const paymentIntentId =

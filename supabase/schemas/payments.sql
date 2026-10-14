@@ -49,3 +49,64 @@ using ( (select auth.uid()) = member_id );
 -- arranca el pago (service role) y el estado lo actualiza el webhook de
 -- Stripe (service role, bypassa RLS) — un miembro nunca escribe esta tabla
 -- directamente.
+
+-- Story 4.2 — el webhook de Stripe traduce los eventos de una Checkout
+-- Session (tarjeta nueva) a esta función; nadie más la llama.
+--   - PAY-01: al cobrarse guarda el `payment_intent` de la sesión, para que
+--     `stripe-refund-payment` y los eventos `payment_intent.*`/`charge.*`
+--     encuentren la fila.
+--   - Solo sale de 'pending': un evento tardío o repetido no deshace un pago
+--     ya cobrado ni reembolsado.
+create or replace function public.settle_checkout_session(
+  p_session_id text,
+  p_outcome text,
+  p_payment_intent_id text
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if p_outcome not in ('succeeded', 'failed') then
+    raise exception 'Invalid outcome %', p_outcome;
+  end if;
+
+  update public.payments p
+    set status = p_outcome,
+        stripe_payment_intent_id = coalesce(p_payment_intent_id, p.stripe_payment_intent_id),
+        updated_at = now()
+    where p.stripe_checkout_session_id = p_session_id
+      and p.status = 'pending';
+end;
+$$;
+
+revoke execute on function public.settle_checkout_session(text, text, text) from public, anon, authenticated;
+grant execute on function public.settle_checkout_session(text, text, text) to service_role;
+
+-- SEC-02 — `confirm_booking` acepta un pago aún 'pending' (con tarjeta nueva
+-- el webhook puede llegar después de la reserva). Si ese pago acaba
+-- 'failed' (sesión caducada sin pagar, rechazo), la reserva que se confirmó
+-- con él se cancela sin fee: sin esto, reservar sin pagar salía gratis.
+create or replace function public.cancel_booking_of_failed_payment()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  update public.bookings b
+    set status = 'cancelled', cancelled_at = now(), updated_at = now()
+    where b.id = new.booking_id
+      and b.status in ('confirmed', 'waitlisted');
+  return new;
+end;
+$$;
+
+revoke execute on function public.cancel_booking_of_failed_payment() from public, anon, authenticated;
+
+create or replace trigger cancel_booking_of_failed_payment
+after update of status on public.payments
+for each row
+when (new.status = 'failed' and old.status is distinct from 'failed' and new.booking_id is not null)
+execute function public.cancel_booking_of_failed_payment();

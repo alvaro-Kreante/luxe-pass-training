@@ -13,6 +13,11 @@ import { getServiceClient, getStripeClient } from "../_shared/stripe-context.ts"
 
 const webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET") as string;
 
+/** 500 para que Stripe reintente el evento en vez de darlo por procesado. */
+function failed(message: string): Response {
+  return new Response(JSON.stringify({ error: message }), { status: 500 });
+}
+
 Deno.serve(async (req) => {
   const signature = req.headers.get("stripe-signature");
   const payload = await req.text();
@@ -41,23 +46,34 @@ Deno.serve(async (req) => {
   const service = getServiceClient();
 
   switch (event.type) {
+    // Tarjeta nueva — `settle_checkout_session` (payments.sql) guarda el
+    // payment_intent al cobrarse (PAY-01) y, si la sesión caduca o falla,
+    // marca el pago 'failed' y un trigger cancela la reserva hecha con él
+    // (SEC-02).
     case "checkout.session.completed":
     case "checkout.session.async_payment_succeeded": {
       const session = event.data.object as Stripe.Checkout.Session;
       if (session.payment_status !== "unpaid") {
-        await service
-          .from("payments")
-          .update({ status: "succeeded", updated_at: new Date().toISOString() })
-          .eq("stripe_checkout_session_id", session.id);
+        const paymentIntentId =
+          typeof session.payment_intent === "string" ? session.payment_intent : (session.payment_intent?.id ?? null);
+        const { error } = await service.rpc("settle_checkout_session", {
+          p_session_id: session.id,
+          p_outcome: "succeeded",
+          p_payment_intent_id: paymentIntentId,
+        });
+        if (error) return failed(error.message);
       }
       break;
     }
-    case "checkout.session.async_payment_failed": {
+    case "checkout.session.async_payment_failed":
+    case "checkout.session.expired": {
       const session = event.data.object as Stripe.Checkout.Session;
-      await service
-        .from("payments")
-        .update({ status: "failed", updated_at: new Date().toISOString() })
-        .eq("stripe_checkout_session_id", session.id);
+      const { error } = await service.rpc("settle_checkout_session", {
+        p_session_id: session.id,
+        p_outcome: "failed",
+        p_payment_intent_id: null,
+      });
+      if (error) return failed(error.message);
       break;
     }
     case "payment_intent.succeeded": {
