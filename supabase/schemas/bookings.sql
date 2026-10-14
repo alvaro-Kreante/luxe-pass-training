@@ -489,7 +489,10 @@ begin
   end if;
 
   if v_booking.status = 'confirmed' then
-    v_hours_until_arrival := greatest(v_booking.date - p_today, 0) * 24;
+    -- PAY-05: el plazo lo mide el reloj del servidor (hora de Nueva York, la
+    -- de los lounges); `p_today` del cliente se ignora para que una
+    -- cancelación tardía no pase por gratuita (y reembolsable).
+    v_hours_until_arrival := greatest(v_booking.date - (now() at time zone 'America/New_York')::date, 0) * 24;
     if v_hours_until_arrival < 24 then
       v_fee_cents := 3500;
     end if;
