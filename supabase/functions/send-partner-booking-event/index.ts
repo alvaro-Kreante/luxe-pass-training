@@ -60,10 +60,14 @@ Deno.serve(async (req) => {
 
   const [{ data: authUser }, { data: profile }] = await Promise.all([
     service.auth.admin.getUserById(booking.member_id),
-    service.from("profiles").select("full_name").eq("id", booking.member_id).maybeSingle(),
+    service.from("profiles").select("full_name, privacy_share_with_lounge").eq("id", booking.member_id).maybeSingle(),
   ]);
 
-  const guestName = profile?.full_name ?? authUser.user?.email?.split("@")[0] ?? "A guest";
+  // PRIV-01: sin "Share your details with the lounge", el lounge no recibe el nombre.
+  const guestName =
+    profile?.privacy_share_with_lounge === false
+      ? "Private guest"
+      : (profile?.full_name ?? authUser.user?.email?.split("@")[0] ?? "A guest");
 
   const email = renderPartnerBookingEvent({
     type: payload.type,
