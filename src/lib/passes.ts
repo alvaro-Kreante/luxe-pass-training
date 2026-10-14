@@ -413,18 +413,14 @@ export async function fetchPastBookings(supabase: SupabaseClient): Promise<PastB
   return (data as unknown as BookingRow[]).map(fromPastRow);
 }
 
-/** Resultado de `cancel_booking` (`supabase/schemas/bookings.sql`). */
+/** Resultado de la Edge Function `stripe-cancel-booking` (sobre `cancel_booking`). */
 export interface CancelledBooking {
   id: string;
   status: "cancelled";
   /** `null` cuando la cancelación fue gratis (24h+ de antelación). */
   cancellationFeeCents: number | null;
-}
-
-interface CancelBookingRpcRow {
-  id: string;
-  status: string;
-  cancellation_fee_cents: number | null;
+  /** Lo reembolsado en Stripe; `null` si no había pago o llevaba fee. */
+  refundedCents: number | null;
 }
 
 /**
@@ -439,14 +435,16 @@ export async function cancelBooking(
   bookingId: string,
   today: string,
 ): Promise<CancelledBooking> {
-  const { data, error } = await supabase
-    .rpc("cancel_booking", { p_booking_id: bookingId, p_today: today })
-    .single();
+  // E2E-07 / SPEC-04 — la cancelación gratis de un day pass pagado lo
+  // reembolsa en Stripe; por eso pasa por una Edge Function y no por la RPC.
+  const { data, error } = await supabase.functions.invoke("stripe-cancel-booking", {
+    body: { bookingId, today },
+  });
 
   if (error) throw error;
 
-  const row = data as CancelBookingRpcRow;
-  return { id: row.id, status: "cancelled", cancellationFeeCents: row.cancellation_fee_cents };
+  const row = data as { id: string; cancellationFeeCents: number | null; refundedCents: number | null };
+  return { id: row.id, status: "cancelled", cancellationFeeCents: row.cancellationFeeCents, refundedCents: row.refundedCents };
 }
 
 /** "3 of 8" — rail de la pestaña Upcoming (`Main.dc.html`). Story 9.1, sin conectar: dato de muestra. */
