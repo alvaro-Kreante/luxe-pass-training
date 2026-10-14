@@ -1,6 +1,6 @@
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createClient } from "@/lib/supabase/client";
 import { today } from "@/lib/availability";
@@ -47,7 +47,24 @@ beforeAll(async () => {
   );
 });
 
+/**
+ * Mediodía de hoy: pasadas las 11 PM todas las franjas de hoy son "past" y
+ * la card dice "Not available" con razón — el CI corre en UTC y lo veía de
+ * noche. Solo se falsea `Date` (no los timers) para no colgar `waitFor`.
+ */
+function pinClockToMiddayToday() {
+  const midday = new Date();
+  midday.setHours(12, 0, 0, 0);
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(midday);
+}
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 beforeEach(() => {
+  pinClockToMiddayToday();
   params.mockReturnValue({ id: "the-ainsworth" });
   searchParams.mockReturnValue(new URLSearchParams());
 });
