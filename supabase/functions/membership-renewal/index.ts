@@ -184,7 +184,7 @@ async function chargeRenewal(memberId: string): Promise<Response> {
       confirm: true,
       description: `LuxePass ${plan === "annual" ? "Annual" : "Monthly"} membership · renewal`,
       metadata: { kind: "membership_renewal", member_id: memberId, plan },
-    });
+    }, { idempotencyKey: `membership-renewal-${memberId}-${membership.current_period_end}` });
   } catch (error) {
     if (error instanceof Stripe.errors.StripeCardError) {
       paymentIntent = (error.payment_intent as Stripe.PaymentIntent | undefined) ?? null;
