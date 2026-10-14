@@ -401,6 +401,13 @@ begin
   set status = 'expired', updated_at = now()
   where status = 'active' and not auto_renew and current_period_end <= now();
 
+  -- PAY-02: un cobro de renovación que no se resolvió (error de Stripe, de
+  -- red, de Vault…) no deja la membresía activa para siempre. Se reintenta
+  -- una vez al día (abajo) y, pasados 3 días de gracia, se vence.
+  update public.memberships
+  set status = 'expired', updated_at = now()
+  where status = 'active' and current_period_end <= now() - interval '3 days';
+
   select decrypted_secret into v_url
   from vault.decrypted_secrets where name = 'membership_renewal_webhook_url';
   select decrypted_secret into v_secret
@@ -413,7 +420,7 @@ begin
       where m.status = 'active'
         and m.auto_renew
         and m.current_period_end <= now()
-        and m.renewal_attempted_at is null
+        and (m.renewal_attempted_at is null or m.renewal_attempted_at < now() - interval '20 hours')
     loop
       update public.memberships set renewal_attempted_at = now() where member_id = v_membership.member_id;
 
