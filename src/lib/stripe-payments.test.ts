@@ -7,8 +7,11 @@ import {
   removeSavedPaymentMethod,
   type CardChargeRequest,
 } from "./stripe-payments";
+import { confirmBooking, type BookingRequest } from "./booking";
+import { LOUNGES } from "./lounges";
 import { createClient } from "./supabase/client";
 import { signUpConfirmedMemberAndSignIn } from "./testing/confirmed-user";
+import { findPredictedSlot } from "./testing/lounge-fixture";
 import { attachTestCard } from "./testing/stripe-fixture";
 
 /**
@@ -108,13 +111,64 @@ describe("tarjetas guardadas — Customer de Stripe real", () => {
     const customerId = await stripeCustomerIdFor(supabase, userId);
     const paymentMethodId = await attachTestCard(customerId);
 
-    const charge = await chargeSavedPaymentMethod(supabase, { ...request, paymentMethodId });
+    const charge = await chargeSavedPaymentMethod(supabase, { ...request, paymentMethodId, idempotencyKey: crypto.randomUUID() });
 
     expect(charge.status).toBe("succeeded");
     expect(charge.error).toBeNull();
 
     const methods = await listSavedPaymentMethods(supabase);
     expect(methods.some((method) => method.id === paymentMethodId)).toBe(true);
+  });
+
+  it("E2E-01 — el mismo intento repetido (misma idempotencyKey) cobra una sola vez", async () => {
+    const customerId = await stripeCustomerIdFor(supabase, userId);
+    const paymentMethodId = await attachTestCard(customerId);
+    const idempotencyKey = crypto.randomUUID();
+
+    const [first, second] = await Promise.all([
+      chargeSavedPaymentMethod(supabase, { ...request, paymentMethodId, idempotencyKey }),
+      chargeSavedPaymentMethod(supabase, { ...request, paymentMethodId, idempotencyKey }),
+    ]);
+
+    expect(second.paymentId).toBe(first.paymentId);
+    const { data: payment } = await supabase
+      .from("payments")
+      .select("stripe_payment_intent_id")
+      .eq("id", first.paymentId)
+      .single();
+    const { count } = await supabase
+      .from("payments")
+      .select("id", { count: "exact", head: true })
+      .eq("stripe_payment_intent_id", payment!.stripe_payment_intent_id);
+    expect(count).toBe(1);
+  });
+
+  it("E2E-01 — un mismo pago no confirma dos reservas aunque lleguen a la vez", async () => {
+    const customerId = await stripeCustomerIdFor(supabase, userId);
+    const paymentMethodId = await attachTestCard(customerId);
+    const slot = findPredictedSlot(LOUNGES.find((lounge) => lounge.id === "the-ainsworth")!, "available", 5);
+    const charge = await chargeSavedPaymentMethod(supabase, {
+      ...request,
+      dateIso: slot.dateIso,
+      band: slot.band,
+      slotTime: slot.time,
+      paymentMethodId,
+      idempotencyKey: crypto.randomUUID(),
+    });
+    const booking: BookingRequest = {
+      loungeId: "the-ainsworth",
+      dateIso: slot.dateIso,
+      band: slot.band,
+      time: slot.time,
+      specialRequests: "",
+    };
+
+    const results = await Promise.allSettled([
+      confirmBooking(supabase, booking, charge.paymentId),
+      confirmBooking(supabase, booking, charge.paymentId),
+    ]);
+
+    expect(results.filter((result) => result.status === "fulfilled" && result.value)).toHaveLength(1);
   });
 
   it("quitar una tarjeta guardada la retira del listado", async () => {

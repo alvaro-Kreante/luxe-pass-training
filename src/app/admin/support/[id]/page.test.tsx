@@ -282,6 +282,7 @@ describe("Case detail (/admin/support/[id])", () => {
       slotTime: "8:00 AM",
       specialRequests: "",
       paymentMethodId,
+      idempotencyKey: crypto.randomUUID(),
     });
     expect(charge.status).toBe("succeeded");
     await memberClient.auth.signOut();

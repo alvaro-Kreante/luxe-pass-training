@@ -173,12 +173,15 @@ begin
     -- Un pago del propio miembro, de un day pass (no de membresía), que aún
     -- no pague otra reserva. 'pending' vale: con tarjeta nueva el webhook de
     -- Stripe puede llegar después de esta llamada (ver summary/page.tsx).
+    -- `for update`: dos confirmaciones simultáneas con el mismo pago se
+    -- ponen en fila; la segunda ya lo ve con `booking_id` (E2E-01).
     perform 1 from public.payments p
     where p.id = p_payment_id
       and p.member_id = v_member_id
       and p.booking_id is null
       and p.membership_plan is null
-      and p.status in ('pending', 'succeeded');
+      and p.status in ('pending', 'succeeded')
+    for update;
     if not found then
       raise exception 'Invalid payment for this booking';
     end if;

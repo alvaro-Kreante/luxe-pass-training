@@ -117,6 +117,46 @@ describe("camino feliz — tarjeta guardada real", () => {
   }, 15_000);
 });
 
+describe("doble clic en pagar con tarjeta guardada (E2E-01)", () => {
+  it("cobra una sola vez y crea una sola reserva", async () => {
+    const slot = findPredictedSlot(ainsworthMock, "available", 4);
+    const supabase = createClient();
+    const {
+      data: { user: member },
+    } = await supabase.auth.getUser();
+    const countFor = async (table: "bookings" | "payments") => {
+      const { count } = await supabase.from(table).select("id", { count: "exact", head: true }).eq("member_id", member!.id);
+      return count ?? 0;
+    };
+    const bookingsBefore = await countFor("bookings");
+    const paymentsBefore = await countFor("payments");
+
+    render(
+      <BookingProvider
+        lounge={ainsworth}
+        covered={false}
+        initialDraft={{ dateIso: slot.dateIso, time: slot.time, band: slot.band, paymentMethodId: workingCardId }}
+      >
+        <SummaryPage />
+      </BookingProvider>,
+    );
+
+    const user = userEvent.setup({ delay: null });
+    await user.click(screen.getByRole("checkbox", { name: /accept the booking terms/ }));
+    await user.dblClick(screen.getByRole("button", { name: /Confirm and pay/ }));
+
+    await vi.waitFor(
+      () => expect(push).toHaveBeenCalledWith(`/lounges/${ainsworth.id}/book/confirmed`),
+      { timeout: 10_000 },
+    );
+    // Deja terminar un segundo cobro si llegó a salir.
+    await new Promise((resolve) => setTimeout(resolve, 3_000));
+
+    expect(await countFor("payments")).toBe(paymentsBefore + 1);
+    expect(await countFor("bookings")).toBe(bookingsBefore + 1);
+  }, 25_000);
+});
+
 describe("chequeo final — slot completo", () => {
   it("abre la waitlist en vez de confirmar", async () => {
     const slot = findPredictedSlot(ainsworthMock, "full");

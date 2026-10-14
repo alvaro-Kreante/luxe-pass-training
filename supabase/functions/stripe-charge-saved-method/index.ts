@@ -21,6 +21,21 @@ interface RequestBody {
   band: string;
   slotTime: string;
   specialRequests: string;
+  /** Uno por intento de pago: repetirlo devuelve el mismo cobro (E2E-01). */
+  idempotencyKey: string;
+}
+
+/** Stripe responde 409 mientras otra petición con la misma clave sigue en curso. */
+async function withIdempotencyRetry<T>(run: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await run();
+    } catch (error) {
+      const inUse = error instanceof Stripe.errors.StripeError && error.code === "idempotency_key_in_use";
+      if (!inUse || attempt >= 10) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 300));
+    }
+  }
 }
 
 Deno.serve(async (req) => {
@@ -32,7 +47,7 @@ Deno.serve(async (req) => {
     const caller = await requireCaller(req);
     const body = (await req.json()) as RequestBody;
 
-    if (!body.paymentMethodId || !body.loungeId || !body.dateIso || !body.band || !body.slotTime) {
+    if (!body.paymentMethodId || !body.idempotencyKey || !body.loungeId || !body.dateIso || !body.band || !body.slotTime) {
       return new Response(JSON.stringify({ error: "Missing booking details" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -47,7 +62,7 @@ Deno.serve(async (req) => {
     let paymentIntent: Stripe.PaymentIntent;
     let declineMessage: string | null = null;
     try {
-      paymentIntent = await stripe.paymentIntents.create({
+      paymentIntent = await withIdempotencyRetry(() => stripe.paymentIntents.create({
         amount: amountCents,
         currency: "usd",
         customer: customerId,
@@ -68,7 +83,7 @@ Deno.serve(async (req) => {
           slot_time: body.slotTime,
           special_requests: body.specialRequests ?? "",
         },
-      });
+      }, { idempotencyKey: `saved-charge-${caller.id}-${body.idempotencyKey}` }));
     } catch (error) {
       if (error instanceof Stripe.errors.StripeCardError) {
         paymentIntent = error.payment_intent as Stripe.PaymentIntent;
@@ -80,18 +95,27 @@ Deno.serve(async (req) => {
 
     const status = paymentIntent.status === "succeeded" ? "succeeded" : "failed";
 
-    const { data: payment, error: insertError } = await service
+    // Un reintento con la misma clave trae el mismo PaymentIntent: una sola fila.
+    const { error: insertError } = await service
       .from("payments")
-      .insert({
-        member_id: caller.id,
-        stripe_payment_intent_id: paymentIntent.id,
-        amount_cents: amountCents,
-        currency: "usd",
-        status,
-      })
-      .select("id")
-      .single();
+      .upsert(
+        {
+          member_id: caller.id,
+          stripe_payment_intent_id: paymentIntent.id,
+          amount_cents: amountCents,
+          currency: "usd",
+          status,
+        },
+        { onConflict: "stripe_payment_intent_id", ignoreDuplicates: true },
+      );
     if (insertError) throw insertError;
+
+    const { data: payment, error: selectError } = await service
+      .from("payments")
+      .select("id")
+      .eq("stripe_payment_intent_id", paymentIntent.id)
+      .single();
+    if (selectError) throw selectError;
 
     return new Response(
       JSON.stringify({ paymentId: payment.id, status, error: declineMessage }),

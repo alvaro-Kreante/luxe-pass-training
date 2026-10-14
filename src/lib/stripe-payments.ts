@@ -42,7 +42,8 @@ export interface SavedChargeResult {
 /** AC "Payment method storage for future use" — cobra con una tarjeta ya guardada. */
 export async function chargeSavedPaymentMethod(
   supabase: SupabaseClient,
-  request: CardChargeRequest & { paymentMethodId: string },
+  /** `idempotencyKey`: uno por intento de pago — repetirlo devuelve el mismo cobro (E2E-01). */
+  request: CardChargeRequest & { paymentMethodId: string; idempotencyKey: string },
 ): Promise<SavedChargeResult> {
   const { data, error } = await supabase.functions.invoke("stripe-charge-saved-method", {
     body: request,
