@@ -20,7 +20,6 @@ Contexto de alcance: existe `middleware.ts` en la raíz; no hay `src/app/api/`, 
 
 | ID | Sev. | Título |
 |---|---|---|
-| DEP-01 | Medium | `next 15.5.25` con 2 advisories de cache poisoning SSG/ISR (fix 15.5.27, no breaking) |
 | DEP-02 | Medium | `@ducanh2912/next-pwa` abandonado (sin publicar desde sept 2024) y raíz de 9 de las 14 vulns |
 | DEP-03 | Low | `sharp 0.35.4` (librsvg CVE) vía `next` |
 | DEP-04 | Low | `postcss` / `source-map-js` vulnerables (solo build) |
@@ -34,12 +33,6 @@ Contexto de alcance: existe `middleware.ts` en la raíz; no hay `src/app/api/`, 
 
 ---
 
-### DEP-01 · Medium · `next` con cache poisoning SSG/ISR
-- **Evidencia:** `next@15.5.25`; GHSA-4jqv-mc3x-m676 y GHSA-mcj8-r9mp-w47p (`>=15.0.0 <15.5.27`). `npm outdated`: Wanted 15.5.27.
-- **Alcanzabilidad:** baja. Ambas afectan a SSG/ISR en apps *self-hosted*; la app no usa ISR (`revalidate` ausente) y corre en Vercel (Inferred, según el título de los advisories). Runtime. El `via: postcss` de `next` es su `postcss@8.4.31` interna (DEP-04).
-- **Remediación:** `next` → **15.5.27**; patch, sin breaking.
-- **Cierre:** `npm ls next` = 15.5.27 y `npm audit --omit=dev` sin entradas `next`.
-
 ### DEP-02 · Medium · `@ducanh2912/next-pwa` abandonado y origen de la mayoría de vulns
 - **Evidencia:** `time.modified 2024-09-18`; arrastra `workbox-build@7.1.x`, `workbox-webpack-plugin`, `webpack`, `fast-glob→micromatch→braces`, `@rollup/plugin-terser→serialize-javascript`, `ajv→fast-uri@3.1.6`. El "fix" que propone npm es un **downgrade a 6.1.0** (`isSemVerMajor`): no es solución.
 - **Alcanzabilidad:** build-time. `serialize-javascript` (RCE GHSA-5c6j-r48x-rmvq), `fast-uri`, `braces`, `micromatch` solo procesan entradas del propio repo durante `next build` (generación de `sw.js`); no llegan al bundle del navegador. Sí corren en el runner de CI/Vercel que tiene secretos (riesgo de supply chain, no de explotación remota).
@@ -49,7 +42,7 @@ Contexto de alcance: existe `middleware.ts` en la raíz; no hay `src/app/api/`, 
 ### DEP-03 · Low · `sharp` con librsvg vulnerable
 - **Evidencia:** `next@15.5.25 → sharp@0.35.4`; GHSA-wq5f-xc86-pv6w (`<0.35.5`).
 - **Alcanzabilidad:** baja. Solo lo usa el optimizador de `next/image` en self-hosted (`next start`); en Vercel optimiza la plataforma. Requiere SVG de entrada y `dangerouslyAllowSVG` no está activado en `next.config.ts`.
-- **Remediación:** se resuelve con DEP-01 si el rango lo admite; si no, `overrides: { "sharp": "0.35.5" }`.
+- **Remediación:** `next@15.5.27` sigue trayendo `0.35.4` (comprobado al cerrar DEP-01): `overrides: { "sharp": "0.35.5" }`.
 - **Cierre:** `npm ls sharp` ≥ 0.35.5.
 
 ### DEP-04 · Low · `postcss` / `source-map-js` (build)
@@ -109,7 +102,7 @@ Contexto de alcance: existe `middleware.ts` en la raíz; no hay `src/app/api/`, 
 - Recomendación: `npm ci` en CI y `--ignore-scripts` donde no hagan falta.
 
 ## Priorización
-1. DEP-01 (`next` 15.5.27) + `npm audit fix` (DEP-04/05): patches, bajo riesgo.
+1. `npm audit fix` (DEP-04/05): patches, bajo riesgo.
 2. DEP-06 (fijar imports Deno) y DEP-10 (Dependabot + gate).
 3. DEP-02 (migrar a `@serwist/next`): elimina 9 vulns y las deprecadas.
 4. DEP-07 y DEP-08 (limpieza y majors planificadas).

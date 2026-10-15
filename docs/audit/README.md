@@ -16,7 +16,7 @@ Auditorías read-only con el método `engineering:project-audit` de Kreante. Ron
 | [cumplimiento-de-specs.md](cumplimiento-de-specs.md) | Criterios de aceptación (117/154 cumplen en Epics 1–9) | 0 | 1 | 5 | 4 | 1 |
 | [base-de-datos.md](base-de-datos.md) | Índices, rendimiento RLS, crons, Realtime | 0 | 0 | 3 | 6 | 3 |
 | [rendimiento-y-accesibilidad-medidos.md](rendimiento-y-accesibilidad-medidos.md) | Métricas por ruta, axe, teclado, zoom | 0 | 4 | 7 | 5 | 0 |
-| [dependencias-y-supply-chain.md](dependencias-y-supply-chain.md) | npm audit, paquetes, imports de Deno | 0 | 0 | 4 | 5 | 2 |
+| [dependencias-y-supply-chain.md](dependencias-y-supply-chain.md) | npm audit, paquetes, imports de Deno | 0 | 0 | 3 | 5 | 2 |
 
 Scripts y logs de las pruebas: `scripts/playwright/audit-e2e/` y `scripts/playwright/audit-perf-a11y/` (las capturas no se versionan).
 
