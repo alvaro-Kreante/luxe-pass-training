@@ -10,21 +10,69 @@ name: Deploy
 # Así se garantiza el orden: migración de base de datos primero, código
 # nuevo después.
 
+#
+# CI-02 (docs/audit/ci-cd-y-entornos.md): el deploy nunca arranca sin el CI
+# en verde sobre ese mismo commit. Un push a staging/main lo dispara el fin
+# del workflow CI (`workflow_run`), no el push; el lanzamiento manual solo
+# vale desde staging/main y comprueba que el CI de ese SHA pasó.
+
 on:
-  push:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [staging, main]
   workflow_dispatch:
 
 concurrency:
-  group: deploy-${{ github.ref }}
+  group: deploy-${{ github.event.workflow_run.head_branch || github.ref_name }}
   cancel-in-progress: false
 
 permissions:
   contents: read
 
 jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    outputs:
+      branch: ${{ steps.target.outputs.branch }}
+      sha: ${{ steps.target.outputs.sha }}
+    steps:
+      - name: Resolver rama y commit a desplegar (solo con CI en verde)
+        id: target
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          RUN_CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          RUN_EVENT: ${{ github.event.workflow_run.event }}
+          RUN_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          RUN_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          if [ "$EVENT" = "workflow_run" ]; then
+            if [ "$RUN_CONCLUSION" != "success" ] || [ "$RUN_EVENT" != "push" ]; then
+              echo "::notice::CI terminó en '$RUN_CONCLUSION' (evento '$RUN_EVENT'): no se despliega."
+              exit 0
+            fi
+            branch="$RUN_BRANCH"; sha="$RUN_SHA"
+          else
+            branch="$GITHUB_REF_NAME"; sha="$GITHUB_SHA"
+            green=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$sha&status=success" --jq '.total_count')
+            if [ "$green" = "0" ]; then
+              echo "::error::El CI no pasó sobre $sha: no se despliega."
+              exit 1
+            fi
+          fi
+          if [ "$branch" != "staging" ] && [ "$branch" != "main" ]; then
+            echo "::error::Solo se despliega desde staging o main (recibido: $branch)."
+            exit 1
+          fi
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+
   migrate-dev:
-    if: github.ref == 'refs/heads/staging'
+    needs: resolve
+    if: needs.resolve.outputs.branch == 'staging'
     runs-on: ubuntu-latest
     environment: dev
     env:
@@ -36,6 +84,8 @@ jobs:
       SEND_EMAIL_HOOK_SECRET: ${{ secrets.SEND_EMAIL_HOOK_SECRET_DEV }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
       - uses: supabase/setup-cli@v1
         with:
           version: 2.116.0
@@ -132,6 +182,31 @@ jobs:
         run: |
           supabase functions deploy stripe-membership-checkout
           supabase functions deploy membership-renewal --no-verify-jwt
+      # CI-03 — las 4 functions que faltaban. `stripe-refund-payment` (reembolso
+      # del admin, Story 8.1) verifica JWT y usa STRIPE_SECRET_KEY, ya dado de
+      # alta arriba. Las otras tres las llaman Database Webhooks / pg_cron sin
+      # JWT de usuario, con un secreto compartido que debe coincidir con el de
+      # Supabase Vault (docs/ci-cd/VAULT-SECRETS.md). Si el secreto de GitHub
+      # aún no existe, se avisa y no se toca: la function rechaza las llamadas.
+      - name: Configurar secrets de notificaciones a partners y reportes del admin
+        env:
+          PARTNER_NOTIFICATION_WEBHOOK_SECRET: ${{ secrets.PARTNER_NOTIFICATION_WEBHOOK_SECRET_DEV }}
+          PARTNER_DIGEST_WEBHOOK_SECRET: ${{ secrets.PARTNER_DIGEST_WEBHOOK_SECRET_DEV }}
+          ADMIN_REPORT_WEBHOOK_SECRET: ${{ secrets.ADMIN_REPORT_WEBHOOK_SECRET_DEV }}
+        run: |
+          for name in PARTNER_NOTIFICATION_WEBHOOK_SECRET PARTNER_DIGEST_WEBHOOK_SECRET ADMIN_REPORT_WEBHOOK_SECRET; do
+            if [ -n "${!name}" ]; then
+              supabase secrets set "$name=${!name}"
+            else
+              echo "::warning::Falta el secret de GitHub ${name}_DEV: la function que lo usa rechazará las llamadas."
+            fi
+          done
+      - name: Desplegar reembolsos, notificaciones a partners y reportes del admin
+        run: |
+          supabase functions deploy stripe-refund-payment
+          supabase functions deploy send-partner-booking-event --no-verify-jwt
+          supabase functions deploy send-partner-digest --no-verify-jwt
+          supabase functions deploy send-admin-report --no-verify-jwt
       - name: Instalar Vercel CLI
         run: npm install --global vercel@latest
       - name: Descargar configuración del proyecto luxepass-dev
@@ -151,15 +226,20 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_DEV }}
 
   migrate-prod:
-    if: github.ref == 'refs/heads/main'
+    needs: resolve
+    if: needs.resolve.outputs.branch == 'main'
     runs-on: ubuntu-latest
     environment: production
+    permissions:
+      contents: write
     env:
       SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
       SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_PROD_DB_PASSWORD }}
       SEND_EMAIL_HOOK_SECRET: ${{ secrets.SEND_EMAIL_HOOK_SECRET_PROD }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.resolve.outputs.sha }}
       - uses: supabase/setup-cli@v1
         with:
           version: 2.116.0
@@ -222,6 +302,31 @@ jobs:
         run: |
           supabase functions deploy stripe-membership-checkout
           supabase functions deploy membership-renewal --no-verify-jwt
+      # CI-03 — las 4 functions que faltaban. `stripe-refund-payment` (reembolso
+      # del admin, Story 8.1) verifica JWT y usa STRIPE_SECRET_KEY, ya dado de
+      # alta arriba. Las otras tres las llaman Database Webhooks / pg_cron sin
+      # JWT de usuario, con un secreto compartido que debe coincidir con el de
+      # Supabase Vault (docs/ci-cd/VAULT-SECRETS.md). Si el secreto de GitHub
+      # aún no existe, se avisa y no se toca: la function rechaza las llamadas.
+      - name: Configurar secrets de notificaciones a partners y reportes del admin
+        env:
+          PARTNER_NOTIFICATION_WEBHOOK_SECRET: ${{ secrets.PARTNER_NOTIFICATION_WEBHOOK_SECRET_PROD }}
+          PARTNER_DIGEST_WEBHOOK_SECRET: ${{ secrets.PARTNER_DIGEST_WEBHOOK_SECRET_PROD }}
+          ADMIN_REPORT_WEBHOOK_SECRET: ${{ secrets.ADMIN_REPORT_WEBHOOK_SECRET_PROD }}
+        run: |
+          for name in PARTNER_NOTIFICATION_WEBHOOK_SECRET PARTNER_DIGEST_WEBHOOK_SECRET ADMIN_REPORT_WEBHOOK_SECRET; do
+            if [ -n "${!name}" ]; then
+              supabase secrets set "$name=${!name}"
+            else
+              echo "::warning::Falta el secret de GitHub ${name}_PROD: la function que lo usa rechazará las llamadas."
+            fi
+          done
+      - name: Desplegar reembolsos, notificaciones a partners y reportes del admin
+        run: |
+          supabase functions deploy stripe-refund-payment
+          supabase functions deploy send-partner-booking-event --no-verify-jwt
+          supabase functions deploy send-partner-digest --no-verify-jwt
+          supabase functions deploy send-admin-report --no-verify-jwt
       - name: Instalar Vercel CLI
         run: npm install --global vercel@latest
       - name: Descargar configuración del proyecto luxepass-prod
@@ -239,3 +344,12 @@ jobs:
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_PROD }}
+      # CI-05 — cada release a producción queda marcado con un tag, el punto
+      # al que volver según docs/ci-cd/ROLLBACK.md.
+      - name: Etiquetar el release
+        env:
+          SHA: ${{ needs.resolve.outputs.sha }}
+        run: |
+          tag="release-$(date -u +%Y%m%d-%H%M)"
+          git tag "$tag" "$SHA"
+          git push origin "$tag"

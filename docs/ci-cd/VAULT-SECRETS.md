@@ -30,3 +30,15 @@ select vault.create_secret('<valor del .env>', '<nombre_secret>', '<descripción
 | Renovación de membresía (9.1) | `membership-renewal` | `membership_renewal_webhook_url` | `membership_renewal_webhook_secret` | `MEMBERSHIP_RENEWAL_WEBHOOK_SECRET` |
 
 `MEMBERSHIP_RENEWAL_WEBHOOK_SECRET` también va en `.env.local`: los tests invocan el cobro directamente (en CI se genera al vuelo en `ci.yml`).
+
+## Secretos de GitHub que usa `deploy.yml`
+
+`deploy.yml` sube a cada proyecto remoto el lado "Edge Function" de cada secreto compartido desde un secret de GitHub con sufijo de ambiente (`_DEV` para `luxepass-dev`, `_PROD` para `luxepass-prod`). El lado Vault se sigue dando de alta a mano con la plantilla de arriba, y ambos valores deben coincidir.
+
+| Secret de GitHub | Function |
+|---|---|
+| `PARTNER_NOTIFICATION_WEBHOOK_SECRET_DEV` / `_PROD` | `send-partner-booking-event` |
+| `PARTNER_DIGEST_WEBHOOK_SECRET_DEV` / `_PROD` | `send-partner-digest` |
+| `ADMIN_REPORT_WEBHOOK_SECRET_DEV` / `_PROD` | `send-admin-report` |
+
+Si uno de estos tres no existe, el deploy sigue adelante con un warning y la function rechaza todas las llamadas (CI-03, `docs/audit/ci-cd-y-entornos.md`).
