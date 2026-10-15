@@ -61,11 +61,15 @@ class InertWebSocket {
   }
 }
 
-Object.defineProperty(globalThis, "WebSocket", {
-  writable: true,
-  configurable: true,
-  value: InertWebSocket,
-});
+// Solo en jsdom: un test con `@vitest-environment node` usa el `WebSocket`
+// nativo de Node y recibe eventos de Realtime de verdad (DB-01).
+if (typeof window !== "undefined") {
+  Object.defineProperty(globalThis, "WebSocket", {
+    writable: true,
+    configurable: true,
+    value: InertWebSocket,
+  });
+}
 
 /**
  * Story 10.10 — el editor de fotos (`react-easy-crop` + recorte en
@@ -99,10 +103,12 @@ if (typeof globalThis.ResizeObserver === "undefined") {
   });
 }
 
-HTMLCanvasElement.prototype.getContext = function getContext() {
-  return { drawImage() {}, imageSmoothingQuality: "high" } as unknown as CanvasRenderingContext2D;
-} as unknown as typeof HTMLCanvasElement.prototype.getContext;
+if (typeof HTMLCanvasElement !== "undefined") {
+  HTMLCanvasElement.prototype.getContext = function getContext() {
+    return { drawImage() {}, imageSmoothingQuality: "high" } as unknown as CanvasRenderingContext2D;
+  } as unknown as typeof HTMLCanvasElement.prototype.getContext;
 
-HTMLCanvasElement.prototype.toBlob = function toBlob(callback: BlobCallback, type?: string) {
-  callback(new Blob(["jsdom-canvas"], { type: type ?? "image/png" }));
-};
+  HTMLCanvasElement.prototype.toBlob = function toBlob(callback: BlobCallback, type?: string) {
+    callback(new Blob(["jsdom-canvas"], { type: type ?? "image/png" }));
+  };
+}
