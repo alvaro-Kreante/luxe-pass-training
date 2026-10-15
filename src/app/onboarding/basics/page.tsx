@@ -91,7 +91,7 @@ export default function ProfileBasicsPage() {
             </button>
             <p className="m-0 mt-1 text-xs text-fg-subtle">
               {errors.photo ? (
-                <span className="text-accent-strong">{errors.photo}</span>
+                <span role="alert" className="text-accent-strong">{errors.photo}</span>
               ) : (
                 draft.photoName ?? "JPG or PNG, 5MB max"
               )}
@@ -111,11 +111,7 @@ export default function ProfileBasicsPage() {
           label="Full name"
           required
           htmlFor="full-name"
-          hint={
-            errors.fullName ? (
-              <span className="text-accent-strong">{errors.fullName}</span>
-            ) : null
-          }
+          error={errors.fullName}
         >
           <Input
             id="full-name"
@@ -132,11 +128,7 @@ export default function ProfileBasicsPage() {
           label="Phone number"
           required
           htmlFor="phone"
-          hint={
-            errors.phone ? (
-              <span className="text-accent-strong">{errors.phone}</span>
-            ) : null
-          }
+          error={errors.phone}
         >
           <Input
             id="phone"

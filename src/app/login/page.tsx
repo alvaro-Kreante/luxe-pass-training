@@ -150,11 +150,7 @@ export default function LoginPage() {
         <Field
           label="Email address"
           htmlFor="email"
-          hint={
-            fieldErrors.email ? (
-              <span className="text-accent-strong">{fieldErrors.email}</span>
-            ) : null
-          }
+          error={fieldErrors.email}
         >
           <Input
             id="email"
@@ -173,13 +169,7 @@ export default function LoginPage() {
           label="Password"
           htmlFor="password"
           className="mb-5"
-          hint={
-            fieldErrors.password ? (
-              <span className="text-accent-strong">{fieldErrors.password}</span>
-            ) : credentialsError ? (
-              <span className="text-accent-strong">{credentialsError}</span>
-            ) : null
-          }
+          error={fieldErrors.password ?? credentialsError}
         >
           <Input
             id="password"

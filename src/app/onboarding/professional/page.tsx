@@ -110,7 +110,7 @@ export default function ProfileProfessionalPage() {
           label="Industry"
           required
           htmlFor="industry"
-          hint={error ? <span className="text-accent-strong">{error}</span> : null}
+          error={error}
         >
           <Select
             id="industry"

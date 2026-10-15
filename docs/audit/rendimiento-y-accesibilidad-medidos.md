@@ -56,7 +56,6 @@ Imágenes: el único peso relevante es `logo.png` vía `next/image` (7–26 KB).
 | PERF-14 | Low | Rutas > 250 kB First Load JS: `/admin/lounges/[id]`, `/admin/lounges/new`, `/explore` |
 | PERF-15 | Low | Recharts declarado en `components/charts/` pero sin uso (código muerto) |
 | A11Y-10 | High | Contraste insuficiente de los tokens dorado y gris del tema claro (#ad8a5c 3,19:1; #9c8d80 2,95–3,21:1) |
-| A11Y-11 | High | Errores de login no anunciados ni asociados al campo (sin `role="alert"`/`aria-live`, sin `aria-describedby`) |
 | A11Y-12 | Medium | Sin landmark `main` en las pantallas de auth (patrón 1) |
 | A11Y-13 | Medium | Foco no vuelve al disparador al cerrar el modal Terms (Radix) con Escape |
 | A11Y-14 | Medium | Reflow a 200 % roto en `/profile` (308 px) y `/book` (36 px) — WCAG 1.4.10 |
@@ -117,13 +116,6 @@ Verificado sin hallazgo: foco visible en 25 tabulaciones en `/explore`, `/lounge
 - **Impacto:** texto secundario y enlaces ilegibles para baja visión; WCAG 1.4.3 AA.
 - **Remediación:** oscurecer los tokens semánticos de texto (`text-accent`/`text-fg-subtle`) en tema claro a ≥ 4,5:1, actualizando antes `DESIGN-SYSTEM.md` §2 (regla de CLAUDE.md); el dorado puede quedar para fondos y bordes.
 - **Cierre:** 0 `color-contrast` en `measure.mjs`.
-
-### A11Y-11 — High — Errores de formulario no anunciados
-- **Ruta:** `/login` (y por el mismo patrón `Field`, probablemente partner/admin login).
-- **Evidencia:** `a11y-interact.json`: tras credenciales erróneas aparece "We could not find an account… 4 attempts left" (`a11y-login-error.png`), pero hay 0 `role=alert`/`aria-live`; inputs con `aria-invalid="true"` y `aria-describedby=null`. En `/signup` el botón queda deshabilitado sin explicación asociada al campo.
-- **Impacto:** un lector de pantalla no sabe por qué falló el login ni cuántos intentos quedan antes del bloqueo.
-- **Remediación:** en `Field`, enlazar el mensaje de error con `aria-describedby` y un id; contenedor de error de envío con `role="alert"`; texto de ayuda de `/signup` asociado al botón/checkbox.
-- **Cierre:** test de Testing Library que encuentre el error por `getByRole("alert")` y `toHaveAccessibleDescription` en el input.
 
 ### A11Y-12 — Medium — Sin `main` en auth
 - **Ruta:** `/login`, `/signup` (patrón 1).

@@ -107,9 +107,7 @@ function ResetPasswordForm() {
           label="Confirm new password"
           htmlFor="confirm-new-password"
           className="mb-7"
-          hint={
-            error ? <span className="text-accent-strong">{error}</span> : null
-          }
+          error={error}
         >
           <Input
             id="confirm-new-password"

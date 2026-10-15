@@ -133,7 +133,7 @@ export default function ForgotPasswordPage() {
           label="Email address"
           htmlFor="email"
           className="mb-7"
-          hint={error ? <span className="text-accent-strong">{error}</span> : null}
+          error={error}
         >
           <Input
             id="email"

@@ -213,6 +213,33 @@ describe("credenciales incorrectas y bloqueo", () => {
   });
 });
 
+describe("errores anunciados al lector de pantalla", () => {
+  it("anuncia el error de un campo y lo asocia al input", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<LoginPage />);
+
+    await user.type(passwordField(), PASSWORD);
+    await user.click(submitButton());
+
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Enter your email address.",
+    );
+    expect(emailField()).toHaveAccessibleDescription(
+      "Enter your email address.",
+    );
+  });
+
+  it("anuncia las credenciales incorrectas con los intentos que quedan", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<LoginPage />);
+
+    await failLogin(user, `anuncio-${Date.now()}@ensoleil-test.com`, 1);
+
+    expect(screen.getByRole("alert")).toHaveTextContent(/4 attempts left/);
+    expect(passwordField()).toHaveAccessibleDescription(/4 attempts left/);
+  });
+});
+
 describe("mostrar contraseña", () => {
   it("alterna entre ocultar y revelar lo escrito", async () => {
     const user = userEvent.setup({ delay: null });

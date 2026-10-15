@@ -122,11 +122,7 @@ export default function ProfilePersonalPage() {
           required
           htmlFor="city"
           className="mb-5"
-          hint={
-            errors.city ? (
-              <span className="text-accent-strong">{errors.city}</span>
-            ) : null
-          }
+          error={errors.city}
         >
           <Input
             id="city"

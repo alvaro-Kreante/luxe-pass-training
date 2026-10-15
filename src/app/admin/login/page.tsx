@@ -125,7 +125,7 @@ export default function AdminLoginPage() {
               label="Password"
               htmlFor="admin-password"
               className="mb-1"
-              hint={error ? <span className="text-accent-strong">{error}</span> : null}
+              error={error}
             >
               <Input
                 id="admin-password"

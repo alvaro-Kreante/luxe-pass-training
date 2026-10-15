@@ -122,7 +122,7 @@ function PartnerLoginScreen() {
             label="Password"
             htmlFor="partner-password"
             className="mb-1"
-            hint={error ? <span className="text-accent-strong">{error}</span> : null}
+            error={error}
           >
             <Input
               id="partner-password"
