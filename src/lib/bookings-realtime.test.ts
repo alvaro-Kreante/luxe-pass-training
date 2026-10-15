@@ -32,6 +32,9 @@ describe("Realtime de reservas para el partner", () => {
     const { data: session } = await partner.auth.getSession();
     partner.realtime.setAuth(session.session!.access_token);
 
+    // `SUBSCRIBED` solo confirma el canal; con Realtime recién arrancado (el
+    // runner de CI) la lectura de cambios de Postgres tarda unos segundos
+    // más, y la avisa con un mensaje `system` de `postgres_changes`.
     const received: string[] = [];
     await new Promise<void>((resolve, reject) => {
       channel = partner
@@ -39,8 +42,10 @@ describe("Realtime de reservas para el partner", () => {
         .on("postgres_changes", { event: "INSERT", schema: "public", table: "bookings", filter: `lounge_id=eq.${LOUNGE}` }, (change) => {
           received.push((change.new as { id: string }).id);
         })
+        .on("system", {}, (message: { extension?: string; status?: string }) => {
+          if (message.extension === "postgres_changes" && message.status === "ok") resolve();
+        })
         .subscribe((status) => {
-          if (status === "SUBSCRIBED") resolve();
           if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") reject(new Error(status));
         });
     });
