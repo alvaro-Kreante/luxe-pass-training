@@ -74,7 +74,7 @@ qué estado usa qué param está en `docs/PENDIENTES.md` §2.2 (estados de
 
 Flujo: `<prefijo>/*` → `dev` → `staging` → `main`, siempre por PR.
 
-**Nunca trabajar ni hacer `git push` directo sobre `dev`, `staging` ni `main`.** Todo cambio entra por PR (`<prefijo>/*` → `dev`, `dev` → `staging`, `staging` → `main`) con el CI en verde: cada push a `staging`/`main` migra un Supabase remoto al instante. (La protección de ramas en GitHub sigue pendiente, ver `docs/ci-cd/RESUMEN.md` — mientras tanto la regla depende de cumplirla.)
+**Nunca trabajar ni hacer `git push` directo sobre `dev`, `staging` ni `main`.** Todo cambio entra por PR (`<prefijo>/*` → `dev`, `dev` → `staging`, `staging` → `main`) con el CI en verde: cada push a `staging`/`main` migra un Supabase remoto en cuanto su CI termina en verde (`deploy.yml` espera al CI vía `workflow_run`; volver atrás: `docs/ci-cd/ROLLBACK.md`). (La protección de ramas en GitHub sigue pendiente, ver `docs/ci-cd/RESUMEN.md` — mientras tanto la regla depende de cumplirla.)
 
 **Subir a GitHub requiere confirmación explícita.** Commitear en la rama local
 está bien; `git push` (de cualquier rama, también `fix/*`/`feat/*`) y abrir un
