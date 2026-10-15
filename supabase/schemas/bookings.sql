@@ -93,6 +93,11 @@ create index if not exists bookings_date_idx on public.bookings (date);
 
 alter table public.bookings enable row level security;
 
+-- DB-01: Story 7.1 "real-time updates" — sin la tabla en la publicación el
+-- canal `postgres_changes` del Today Dashboard se suscribe pero nunca
+-- recibe nada. Cada evento sigue filtrado por la policy de abajo.
+alter publication supabase_realtime add table public.bookings;
+
 -- Una sola policy (no dos OR'd por Postgres) para evitar el warning de
 -- "multiple permissive policies" de `supabase db advisors`: el miembro
 -- dueño de la reserva, o (Story 7.1) el partner que gestiona ese lounge
