@@ -1,20 +1,26 @@
 import type { Metadata, Viewport } from "next";
-import { Bodoni_Moda, Manrope } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-/* DESIGN-SYSTEM.md §3 — Display: Bodoni Moda · Texto: Manrope */
-const bodoni = Bodoni_Moda({
+/*
+ * DESIGN-SYSTEM.md §3 — Display: Bodoni Moda · Texto: Manrope. Archivos
+ * variables (subset latin, licencia SIL OFL) servidos desde el repo: con
+ * `next/font/google` el build los descargaba de Google y fallaba cuando
+ * Google no respondía. Para el navegador no cambia nada (ya se servían
+ * desde este dominio).
+ */
+const bodoni = localFont({
   variable: "--font-bodoni",
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  style: ["normal", "italic"],
+  src: [
+    { path: "./fonts/bodoni-moda-latin.woff2", weight: "400 600", style: "normal" },
+    { path: "./fonts/bodoni-moda-italic-latin.woff2", weight: "400 600", style: "italic" },
+  ],
   display: "swap",
 });
 
-const manrope = Manrope({
+const manrope = localFont({
   variable: "--font-manrope",
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+  src: [{ path: "./fonts/manrope-latin.woff2", weight: "400 800", style: "normal" }],
   display: "swap",
 });
 
