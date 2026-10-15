@@ -110,3 +110,102 @@ after update of status on public.payments
 for each row
 when (new.status = 'failed' and old.status is distinct from 'failed' and new.booking_id is not null)
 execute function public.cancel_booking_of_failed_payment();
+
+-- Story 4.2 — eventos `payment_intent.*` (tarjeta guardada). SEC-04: igual
+-- que `settle_checkout_session`, solo saca un pago de 'pending'; un evento
+-- tardío o repetido no vuelve a 'succeeded' un pago reembolsado (lo que
+-- además reactivaría `apply_membership_payment`) ni marca 'failed' uno ya
+-- cobrado. Solo la llama `stripe-webhook`.
+create or replace function public.settle_payment_intent(p_payment_intent_id text, p_outcome text)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if p_outcome not in ('succeeded', 'failed') then
+    raise exception 'Invalid outcome %', p_outcome;
+  end if;
+
+  update public.payments p
+    set status = p_outcome, updated_at = now()
+    where p.stripe_payment_intent_id = p_payment_intent_id
+      and p.status = 'pending';
+end;
+$$;
+
+revoke execute on function public.settle_payment_intent(text, text) from public, anon, authenticated;
+grant execute on function public.settle_payment_intent(text, text) to service_role;
+
+-- Story 8.1 — reembolsos (`stripe-refund-payment` y `charge.refunded`).
+-- PAY-04: `p_refunded_total_cents` es el total que dice Stripe
+-- (`charge.amount_refunded`), no una suma local; nunca retrocede, así que
+-- dos reembolsos a la vez o un evento viejo no lo pisan. Pasa a 'refunded'
+-- al cubrir el importe completo. Solo sobre pagos cobrados.
+create or replace function public.record_payment_refund(
+  p_payment_intent_id text,
+  p_refunded_total_cents integer,
+  p_refund_id text default null,
+  p_reason text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  update public.payments p
+    set refunded_amount_cents = greatest(coalesce(p.refunded_amount_cents, 0), p_refunded_total_cents),
+        status = case
+          when greatest(coalesce(p.refunded_amount_cents, 0), p_refunded_total_cents) >= p.amount_cents then 'refunded'
+          else p.status
+        end,
+        refunded_at = now(),
+        refund_reason = coalesce(p_reason, p.refund_reason),
+        stripe_refund_id = coalesce(p_refund_id, p.stripe_refund_id),
+        updated_at = now()
+    where p.stripe_payment_intent_id = p_payment_intent_id
+      and p.status in ('succeeded', 'refunded');
+end;
+$$;
+
+revoke execute on function public.record_payment_refund(text, integer, text, text) from public, anon, authenticated;
+grant execute on function public.record_payment_refund(text, integer, text, text) to service_role;
+
+-- PAY-03 — un reembolso completo deshace lo que el pago compró: la reserva
+-- pagada se cancela sin fee y la membresía comprada con él vence. Un
+-- reembolso parcial (compensación) no toca nada. El premio de referido que
+-- ese pago acreditara queda como está: revertirlo es decisión de producto
+-- (docs/PENDIENTES.md).
+create or replace function public.undo_purchase_of_refunded_payment()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if new.booking_id is not null then
+    update public.bookings b
+      set status = 'cancelled', cancelled_at = now(), cancellation_fee_cents = null, updated_at = now()
+      where b.id = new.booking_id
+        and b.status in ('confirmed', 'waitlisted');
+  end if;
+
+  if new.membership_plan is not null then
+    update public.memberships m
+      set status = 'expired', updated_at = now()
+      where m.member_id = new.member_id
+        and m.status = 'active';
+  end if;
+
+  return new;
+end;
+$$;
+
+revoke execute on function public.undo_purchase_of_refunded_payment() from public, anon, authenticated;
+
+create or replace trigger undo_purchase_of_refunded_payment
+after update of status on public.payments
+for each row
+when (new.status = 'refunded' and old.status is distinct from 'refunded')
+execute function public.undo_purchase_of_refunded_payment();

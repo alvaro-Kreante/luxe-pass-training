@@ -76,20 +76,16 @@ Deno.serve(async (req) => {
       if (error) return failed(error.message);
       break;
     }
-    case "payment_intent.succeeded": {
-      const intent = event.data.object as Stripe.PaymentIntent;
-      await service
-        .from("payments")
-        .update({ status: "succeeded", updated_at: new Date().toISOString() })
-        .eq("stripe_payment_intent_id", intent.id);
-      break;
-    }
+    // SEC-04 — `settle_payment_intent` solo saca un pago de 'pending': un
+    // evento tardío o repetido no deshace un pago cobrado ni reembolsado.
+    case "payment_intent.succeeded":
     case "payment_intent.payment_failed": {
       const intent = event.data.object as Stripe.PaymentIntent;
-      await service
-        .from("payments")
-        .update({ status: "failed", updated_at: new Date().toISOString() })
-        .eq("stripe_payment_intent_id", intent.id);
+      const { error } = await service.rpc("settle_payment_intent", {
+        p_payment_intent_id: intent.id,
+        p_outcome: event.type === "payment_intent.succeeded" ? "succeeded" : "failed",
+      });
+      if (error) return failed(error.message);
       break;
     }
     // Story 8.1 — defensa en profundidad del reembolso que ya escribe
@@ -102,23 +98,13 @@ Deno.serve(async (req) => {
         typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
       if (!intentId) break;
 
-      const { data: payment } = await service
-        .from("payments")
-        .select("amount_cents")
-        .eq("stripe_payment_intent_id", intentId)
-        .single();
-      if (!payment) break;
-
-      const fullyRefunded = charge.amount_refunded >= payment.amount_cents;
-      await service
-        .from("payments")
-        .update({
-          status: fullyRefunded ? "refunded" : "succeeded",
-          refunded_amount_cents: charge.amount_refunded,
-          refunded_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .eq("stripe_payment_intent_id", intentId);
+      // PAY-04 — total de Stripe, que `record_payment_refund` nunca deja
+      // retroceder; el paso a 'refunded' deshace la compra (PAY-03).
+      const { error } = await service.rpc("record_payment_refund", {
+        p_payment_intent_id: intentId,
+        p_refunded_total_cents: charge.amount_refunded,
+      });
+      if (error) return failed(error.message);
       break;
     }
   }
