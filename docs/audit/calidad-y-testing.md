@@ -58,7 +58,7 @@ Gate de entrega (calidad): **NO APTO** mientras siga abierto QA-01 (camino de pa
 - **Ubicación:** `supabase/functions/*` (16 functions; solo `_shared/test-recipient.ts` tiene contraparte en `src/lib/test-recipient.test.ts`).
 - **Estado:** Confirmed.
 - **Evidencia:** sin `*_test.ts`/`deno test`. Algunas se ejercitan indirectamente desde Vitest (stripe-create-checkout-session, stripe-charge-saved-method, stripe-payment-methods, membership-renewal); otras no en absoluto (`stripe-refund-payment`, `send-admin-report`, `send-partner-digest`, `send-partner-booking-event`, `delete-account`, `admin-partners`, `send-email`, recordatorios/recibos).
-- **Impacto:** lógica de servidor con efectos irreversibles (reembolsos, borrado de cuentas, suspensión de partners) sin red de seguridad; agravado porque varias ni se despliegan (ver CI-03).
+- **Impacto:** lógica de servidor con efectos irreversibles (reembolsos, borrado de cuentas, suspensión de partners) sin red de seguridad;
 - **Remediación:** priorizar tests de autorización (secreto compartido/JWT/rol admin) y del camino feliz para `stripe-refund-payment`, `delete-account`, `admin-partners`.
 - **Cierre:** cada function con efecto de escritura tiene al menos un test de rechazo sin credencial y uno de éxito.
 

@@ -27,20 +27,16 @@ Fecha: 12 oct 2026 · Rama: `docs/project-audit` · Ejecución: **solo local**.
 | F2.3 | Miembro | `/lounges/does-not-exist-xyz` | 404 | Página "404 This page could not be found" pero **HTTP 200** | PASS (nota menor E2E-12) | `f2-lounge-404.png` |
 | F2.4 | Miembro | `/explore?map=error` | Estado de error del mapa | Renderiza | PASS | `f2-explore-maperror.png` |
 | F3.1 | Miembro sin plan | Reserva 20 oct, tarjeta nueva 4242 + "Save this card" → Confirm and pay | `/book/confirmed`, pago `succeeded` vía webhook, reserva enlazada | Exacto (build de producción). En `next dev` con recarga HMR durante el pago: **pago `succeeded` y ninguna reserva** (2 veces) | PASS en build / ver E2E-04 | `f3-confirmed.png`, `FAIL-F3.1.png` (dev) |
-| F3.2 | Miembro | Tarjeta 4000…0002 | Modal de error, nada creado | "Your card has been declined. Nothing was charged… slot still held"; sin reserva. La fila `payments` queda `pending` indefinidamente | PASS (alimenta SEC-02/E2E-05) | `f3-declined.png` |
 | F3.3 | Miembro | Doble clic en "Confirm and pay" con tarjeta nueva | Un cobro, una reserva | 1 pago, 1 reserva | PASS | `f3-doubleclick.png` |
-| F3.6b | Miembro con tarjeta guardada | Doble clic en "Confirm and pay" con la tarjeta guardada | Un cobro, una reserva | **2 cobros de $81.66 y 2 reservas** para el mismo slot (28 oct 8:00) | FAIL → E2E-01 | `f3-saved-card-dblclick.png`, `f3c-log.json` |
 | F3.4 | Miembro | Recargar en `/book/payment` y en `/book/summary` | Conserva el borrador o avisa | Vuelve a `/book` paso 1, borrador perdido, sin mensaje | PASS con observación (E2E-04) | `f3-reload-*.png` |
 | F3.5 | Reserva recién pagada | Botón atrás desde `/book/confirmed` y volver a pulsar pagar | No duplica | Vuelve a summary; el segundo intento falla (Stripe 400, sesión ya completada); no se crea otra reserva ni cobro | PASS | `f3-back-after-confirm.png` |
 | F3.6 | Miembro | Marcar "Save this card" y pagar; volver al paso 2 | La tarjeta aparece | Aparece ("VISA", "Use a new card") tras cargar; la primera captura muestra un flash del miembro de muestra "Alexandra Rivas · Annual member" | PASS (E2E-11) | `f3-saved-cards*.png` |
 | F4.1 | Reserva de hoy | `/my-pass` y `/my-pass/LP-…` | Lista + QR | Lista y QR que codifica el LP | PASS | `f4-my-pass-list.png`, `f4-my-pass-qr.png` |
 | F4.2 | Miembro | `/my-pass/LP-000001` (inexistente) | Estado "no encontrado" | Muestra la lista de "My bookings" | PASS | `f4-my-pass-unknown.png` |
-| F4.3 | Navegador **sin sesión** | `/reception` → buscar LP → Check in | Requiere personal autenticado | Sin login: muestra nombre + email del miembro y hace check-in (`in_progress`) | PASS funcional / FAIL de seguridad (SEC-01) | `f4-reception-found.png`, `f4-reception-checked-in.png` |
 | F4.4 | Recepción | LP inexistente | "Not recognised" | "Not recognised · No booking matches…" | PASS | `f4-reception-notfound.png` |
 | F4.5 | Recepción | Mark no-show | `completed`, `no_show`, fee 3500 | Exacto | PASS | `f4-reception-noshow.png` |
 | F4.6 | Ya con check-in | Buscar otra vez | Muestra estado | "Checked in ✓", pero badge "Valid booking" y "Checked in at" como ISO crudo `2026-10-12T21:23:26.399638+00:00` | PASS (E2E-10) | `f4-reception-repeat.png` |
 | F4.7 | Check-in hecho | Miembro abre su pase | Pase "Checked in" (AC "Check-in confirmation to member's app") | Sigue "Your digital pass · **Valid · in 2 days**" para una visita de hoy ya con check-in | FAIL → E2E-06 | `f4-my-pass-after-checkin.png` |
-| F5.1 | Reserva pagada a 14 días | `/my-pass` → Cancel → "Cancel booking" (doble clic) | Cancelada gratis; reembolso | `cancelled`, sin fee; segundo clic → 400 inocuo. **El pago sigue `succeeded`, sin reembolso** | FAIL → E2E-07 | `f5-cancel-modal.png`, `f5-cancelled.png` |
 | F5.1b | Pase individual | Botones "Cancel visit" / "Add to calendar" en `/my-pass/[reference]` | Abren su acción | No hacen nada (botones sin handler) | FAIL → E2E-08 | `FAIL-F5.1.png` |
 | F6.1 | Miembro sin plan | `/profile/membership/plans` → Choose monthly → 4242 → "Pay $249.00 and join" | Plan activo tras el webhook | `memberships` monthly `active`; pago `succeeded` 24900 | PASS | `f6-upgrade-modal.png`, `f6-upgrade-result.png` |
 | F6.2 | Miembro | `insert`/`update` directos a `memberships` | Denegado | insert 42501; update de otro → 0 filas | PASS | `f6-log.json` |
@@ -55,24 +51,13 @@ Fecha: 12 oct 2026 · Rama: `docs/project-audit` · Ejecución: **solo local**.
 | F9.5 | Teclado | `/lounges/…/book`: Tab | Días y franjas alcanzables | Navegación → mes siguiente → días habilitados uno a uno | PASS | `f9-kbd-book-focus.png` |
 | CON | Todos | Errores de consola/red | Ninguno inesperado | Solo 400 esperables (login fallido, Stripe al re-confirmar una sesión ya pagada, 2º `cancel_booking`) y `_rsc` abortados por navegación; ningún `pageerror` en el build | PASS | `*-log.json` |
 
-## Confirmación de SEC-01 / SEC-02
-
-Script `scripts/playwright/audit-e2e/sec-01-02.mjs` (+ `sec-anon-noshow.mjs`), salida en `sec-01-02.log`. Anon key leída de `.env.local`, nunca impresa.
-
-- **SEC-01 — CONFIRMADO.** Con un cliente `anon` sin sesión, `rpc('reception_lookup_booking', {the-ainsworth, 2026-10-15, LP-596559})` devolvió `member_name`, `member_email`, `status`, `special_requests` y los campos de contacto de emergencia (nulos en este caso). `reception_today_summary` también responde a anon. `reception_report_no_show` como anon cerró la reserva en `completed / no_show=true / cancellation_fee_cents=3500`. El código tiene el formato `LP-` + 6 dígitos (10⁶ combinaciones por lounge y fecha). La UI `/reception` hace lo mismo sin login (F4.3).
-- **SEC-02 — CONFIRMADO.** Un miembro sin plan llama a `stripe-create-checkout-session` (crea un pago `pending` de 8166) y, **sin pagar**, `rpc('confirm_booking', … p_payment_id)` → reserva `confirmed` (2026-10-15 morning) y el pago queda `pending` con `booking_id` enlazado. Además, la tarjeta rechazada de F3.2 deja otro pago `pending` reutilizable del mismo modo.
-
 ## Hallazgos
 
 | ID | Severidad | Resumen |
 |---|---|---|
-| E2E-01 | Alta | Doble clic en "Confirm and pay" con tarjeta guardada → 2 cobros y 2 reservas |
-| E2E-02 | Crítica | = SEC-01 confirmado en E2E (recepción anónima: PII + check-in/no-show con cargo) |
-| E2E-03 | Alta | Bloqueo de login solo en cliente: se salta llamando a GoTrue directo; anon puede resetearlo o bloquear cuentas ajenas |
+| E2E-03 | Alta | = SEC-03 (parcial): el bloqueo de login se salta llamando a GoTrue directo |
 | E2E-04 | Media | Cobro sin reserva si la página se recarga entre el cobro y `confirm_booking`; borrador no persiste |
-| E2E-05 | Alta | = SEC-02 confirmado (reserva con pago `pending`; pagos rechazados quedan `pending` para siempre) |
 | E2E-06 | Media | El pase no refleja el check-in y calcula mal "in 2 days" para una visita de hoy |
-| E2E-07 | Alta | Cancelar a tiempo una reserva pagada no reembolsa el cobro |
 | E2E-08 | Media | "Cancel visit" y "Add to calendar" del pase individual no hacen nada |
 | E2E-09 | Baja | Signup revela si un email ya tiene cuenta |
 | E2E-10 | Baja | Recepción: "Valid booking" en una reserva ya con check-in y hora en ISO crudo |
@@ -80,25 +65,9 @@ Script `scripts/playwright/audit-e2e/sec-01-02.mjs` (+ `sec-anon-noshow.mjs`), s
 | E2E-12 | Baja | Lounge inexistente responde HTTP 200 con texto 404; fechas duplicadas en la copy de cancelación |
 | E2E-13 | Media | Desbordamiento horizontal a 390px en 6 pantallas |
 
-### E2E-01 — Doble cobro con tarjeta guardada (Alta)
-- **Ubicación:** `src/app/lounges/[id]/book/summary/page.tsx` (`handleConfirm` sin guarda de "en curso"), `src/components/booking/confirm-payment-rail.tsx` (`disabled={!canConfirm}` no contempla envío en curso), Edge Function `stripe-charge-saved-method` (sin idempotency key).
-- **Repro:** miembro con tarjeta guardada → reservar → paso 2 elegir "VISA ·4242" → summary → aceptar términos → doble clic en "Confirm and pay". Observado: pagos `46ecc264…` y `41a4f902…` (`succeeded`, 8166 cada uno, con 1 s de diferencia) y reservas `b70a986b…` / `90f0fb58…` para 2026-10-28 8:00.
-- **Impacto:** cobro duplicado real al cliente; dos plazas consumidas.
-- **Remediación:** estado `submitting` que deshabilite el botón y haga return temprano en `handleConfirm`; idempotency key en `paymentIntents.create` (p. ej. hash de miembro+lounge+fecha+franja+intento); restricción única en servidor sobre una reserva activa por miembro/lounge/fecha/franja.
-- **Cierre:** test Vitest que dispare dos clics y verifique una sola llamada; repetir F3.6b → 1 pago y 1 reserva.
-
-### E2E-02 — Recepción anónima (Crítica) = SEC-01
-- **Ubicación:** `supabase/schemas/bookings.sql` (`grant execute … to anon` en `reception_lookup_booking`, `reception_checkin_booking`, `reception_report_no_show`, `reception_today_summary`); `src/app/reception/page.tsx` sin login.
-- **Repro:** ver §SEC-01 y F4.3–F4.5.
-- **Impacto:** exposición de PII (nombre, email, contacto de emergencia) y check-in/no-show con fee de $35 sobre reservas ajenas, adivinando un código de 6 dígitos.
-- **Remediación y cierre:** las de SEC-01 en `seguridad-y-datos.md` (revocar `anon`, sesión de personal con rol y pertenencia al lounge). Cierre: el script `sec-01-02.mjs` debe recibir error de permiso en las cuatro RPC.
-
-### E2E-03 — Bloqueo de login evitable y abusable (Alta)
-- **Ubicación:** `src/app/login/page.tsx` (el cliente llama a `check_login_lock`, `record_failed_login` y `reset_login_attempts`); `supabase/schemas/login_attempts.sql:82-84` (las tres con `grant … to anon`).
-- **Repro:** `f1-f2-auth-explore.mjs` F1.3/F1.4: con la cuenta bloqueada, `supabase.auth.signInWithPassword` directo devuelve sesión; `rpc('reset_login_attempts',{p_email})` como anon pone `locked=false`; `rpc('record_failed_login')` ×5 sobre un email ajeno lo bloquea.
-- **Impacto:** no protege contra fuerza bruta (solo la UI respeta el bloqueo); cualquiera puede desbloquear o bloquear cuentas ajenas (DoS a miembros).
-- **Remediación:** mover el contador a servidor (Auth Hook / rate limit de GoTrue / Edge Function de login); revocar `anon` en `reset_login_attempts` y `record_failed_login` o ligarlos a un resultado real de autenticación.
-- **Cierre:** con 5 fallos, `signInWithPassword` directo falla; anon no puede llamar `reset_login_attempts`.
+### E2E-03 — Bloqueo de login evitable (Alta, parcial) = SEC-03
+- **Ya corregido (#52):** un anónimo ya no puede resetear el contador de otra cuenta.
+- **Falta y cierre:** los de SEC-03 en `seguridad-y-datos.md` (con la cuenta bloqueada, `signInWithPassword` directo todavía devuelve sesión).
 
 ### E2E-04 — Cobro sin reserva al recargar durante el pago (Media)
 - **Ubicación:** `src/components/booking/booking-context.tsx` (borrador solo en memoria), `summary/page.tsx` (cobro y `confirm_booking` en dos pasos del cliente), `stripe-webhook` (no crea la reserva).
@@ -107,25 +76,12 @@ Script `scripts/playwright/audit-e2e/sec-01-02.mjs` (+ `sec-anon-noshow.mjs`), s
 - **Remediación:** que el webhook (o una reconciliación) cree/complete la reserva a partir de la metadata de la Checkout Session (`lounge_id`, `date`, `band`, `slot_time` ya están), o reembolse automáticamente los pagos `succeeded` sin `booking_id` tras N minutos.
 - **Cierre:** simular la interrupción (cerrar la página tras `checkout.confirm`) → en <N min existe la reserva o el reembolso.
 
-### E2E-05 — Reserva con pago `pending` (Alta) = SEC-02
-- **Ubicación:** `supabase/schemas/bookings.sql` `confirm_booking` (`p.status in ('pending','succeeded')`).
-- **Repro:** §SEC-02; además F3.2 deja pagos `pending` tras un rechazo (no se pasan nunca a `failed`).
-- **Impacto:** reservas de pago sin cobro.
-- **Remediación/cierre:** las de SEC-02; además marcar como `failed`/`canceled` los pagos rechazados o expirados (`checkout.session.expired`, `payment_intent.payment_failed`). Cierre: `sec-01-02.mjs` recibe `Invalid payment for this booking`.
-
 ### E2E-06 — El pase no refleja el check-in (Media)
 - **Ubicación:** `src/app/my-pass/[reference]/page.tsx:49-51` (estado por `?state=`, no por datos) y el cálculo de "Valid · in N days".
 - **Repro:** reserva de hoy → check-in en `/reception` (DB `in_progress`, `checked_in_at`) → el miembro abre `/my-pass/LP-762554`: "Valid · in 2 days", sin estado Checked in.
 - **Impacto:** incumple el AC "Check-in confirmation to member's app" de la Story 5.2; información de fechas incorrecta.
 - **Remediación:** derivar el estado del pase de `bookings.status/checked_in_at/date` (los query params solo como override de demo) y calcular "in N days" con la misma referencia de "hoy" que la recepción.
 - **Cierre:** tras F4.3 el pase muestra el estado Checked in; una visita de hoy muestra "today".
-
-### E2E-07 — Cancelación a tiempo sin reembolso (Alta)
-- **Ubicación:** `cancel_booking` en `supabase/schemas/bookings.sql`; el reembolso solo existe en el flujo admin (`stripe-refund-payment`, `src/lib/admin.ts:622`).
-- **Repro:** F5.1: reserva de $81.66 a 14 días → modal "Free cancellation… Nothing is charged" → `cancelled`; el pago `99246ebe…`/`80357c93…` sigue `succeeded`, `refunded_amount_cents = null`.
-- **Impacto:** el miembro paga una visita cancelada dentro de plazo; contradice la copy de la UI ("Free cancellation up to 24 hours").
-- **Remediación:** decidir con el cliente (no está en `PENDIENTES.md`) y, si aplica, que la cancelación gratuita de una reserva pagada dispare el reembolso (Edge Function) y lo refleje en la UI.
-- **Cierre:** cancelar >24 h una reserva pagada deja el pago `refunded`, o la copy deja claro que no se reembolsa.
 
 ### E2E-08 — Botones inertes en el pase (Media)
 - **Ubicación:** `src/app/my-pass/[reference]/page.tsx:231-236` (`<button type="button">` sin `onClick` para "Add to calendar" y "Cancel visit").
