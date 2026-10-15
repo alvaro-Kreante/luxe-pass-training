@@ -2,13 +2,12 @@
 
 Revisión **técnica** de solo lectura (código, `supabase/schemas`, Edge Functions y consultas de solo lectura al Supabase local, 12 oct 2026). Método: checklist de auditoría §4 "Clasificar el dato". **No es un dictamen de cumplimiento legal** (GDPR/LOPD/CCPA): señala qué hace el sistema con el dato personal y dónde la conducta no cuadra con lo que la UI promete.
 
-Ya cubierto en `seguridad-y-datos.md` (se referencia, no se duplica): **SEC-01** (RPC de recepción `anon` devuelven nombre/email/contacto de emergencia), **SEC-05** (`email_exists` permite enumerar), SEC-07 (mensajes de error internos al cliente).
+Ya cubierto en `seguridad-y-datos.md` (se referencia, no se duplica): **SEC-05** (`email_exists` permite enumerar), SEC-07 (mensajes de error internos al cliente).
 
 ## Resumen
 
 | ID | Severidad | Título |
 |---|---|---|
-| PRIV-01 | **Alta** | El toggle "Share your details with the lounge" no se aplica en el servidor: el partner ve email, teléfono y contacto de emergencia igualmente |
 | PRIV-02 | **Alta** | El borrado de cuenta deja datos personales fuera de Postgres (foto en Storage, cliente de Stripe) y borra en cascada el historial financiero |
 | PRIV-03 | Media | Preferencias de notificación (push/email/SMS, horas de silencio) solo existen en el estado del navegador; los crons de email no consultan ninguna preferencia |
 | PRIV-04 | Media | `partner_repeat_guests` expone a cada partner el email de todos sus huéspedes históricos sin límite temporal ni ligado a reserva abierta |
@@ -30,18 +29,18 @@ Clasificación: **ID directo** (identifica por sí solo), **Cuasi** (identifica 
 
 | Tabla.columna | Clase | Uso en UI (grep) | Quién lo lee |
 |---|---|---|---|
-| `auth.users.email` | ID directo | login, perfil, partner, admin | propio; partner vía RPC (PRIV-01/04); admin; `anon` vía SEC-01/05 |
+| `auth.users.email` | ID directo | login, perfil, partner, admin | propio; partner vía RPC (PRIV-04); admin; `anon` vía SEC-05 |
 | `profiles.full_name` | ID directo | perfil, partner, recepción, admin | propio (RLS); partner/recepción/admin vía RPC definer |
 | `profiles.phone` | ID directo | perfil, `partner_guest_list`, búsqueda admin | propio; partner (reserva abierta); admin |
 | `profiles.photo_url` + `storage profile-photos/<uid>/…` | ID directo (biométrico débil) | perfil, admin | propio + admin (policy `admin select profile photos`) |
 | `profiles.birth_day/birth_month` | Cuasi | perfil (sin año: minimizado) | propio |
 | `profiles.city`, `travel_cities`, `job_title`, `industry`, `company`, `interests` | Cuasi | onboarding/perfil | propio; admin |
-| `profiles.emergency_contact_name/relation/phone` | **Sensible (dato de tercero)** | recepción y guest detail | propio; partner (reserva abierta); `anon` (SEC-01) |
+| `profiles.emergency_contact_name/relation/phone` | **Sensible (dato de tercero)** | recepción y guest detail | propio; partner (reserva abierta, si el miembro lo comparte) |
 | `profiles.stripe_customer_id` | Seudónimo | servidor | propio; Edge Functions |
 | `profiles.referral_code` | Seudónimo (lleva iniciales) | referidos | propio |
 | `profiles.preferred_amenities`, `privacy_*` | Preferencia | preferencias/privacidad | propio |
 | `profiles.terms_accepted_at`, `deleted_at` | Metadato de consentimiento/estado | — | propio |
-| `bookings.special_requests` | Texto libre (puede contener salud/dieta) | reserva, recepción, partner, emails | propio; partner; `anon` (SEC-01); Brevo |
+| `bookings.special_requests` | Texto libre (puede contener salud/dieta) | reserva, recepción, partner, emails | propio; partner; Brevo |
 | `bookings.*` (lounge, fecha, hora, check-in, no-show) | Cuasi / comportamiento y ubicación | my-pass, partner, admin | propio; partner (su lounge); admin |
 | `payments.stripe_*_id`, importes, plan | Seudónimo financiero | historial, admin | propio; admin |
 | `memberships` | Estado contractual | membership | propio; admin |
@@ -59,14 +58,6 @@ No hay columnas de IP, user-agent ni geolocalización del miembro: la ubicación
 ---
 
 ## 2. Hallazgos
-
-### PRIV-01 — "Share your details with the lounge" no tiene efecto en el servidor (Alta, Confirmado)
-
-- **Dónde:** `src/app/profile/privacy/page.tsx:39-40` (promesa: *"Turn this off and you check in by number only"*); `supabase/schemas/bookings.sql:523-592` (`partner_guest_list`), `bookings.sql:290-343` (`reception_lookup_booking`), `partner_notifications.sql:59` (nombre en eventos al partner).
-- **Evidencia:** `grep privacy_share_with_lounge` solo aparece en `profiles.sql`, la migración y `src/lib/profile.ts`. Ninguna RPC ni Edge Function la lee. `partner_guest_list` devuelve `member_email`, `member_phone` y `emergency_contact` siempre que `status <> 'cancelled'`.
-- **Impacto:** el miembro desactiva el toggle confiando en la copy y su nombre, email, teléfono y contacto de emergencia siguen llegando al partner (y a recepción, que además es anónima — SEC-01). Promesa de privacidad incumplida.
-- **Remediación:** en `partner_guest_list`, `reception_*`, `partner_repeat_guests` y en el payload de `send-partner-booking-event`/digest, enmascarar nombre/email/teléfono/emergencia cuando `p.privacy_share_with_lounge = false` (dejar `confirmation_code`). Decidir con producto si el contacto de emergencia se exceptúa (y decirlo en la copy).
-- **Cierre:** test de integración: miembro con toggle off → `partner_guest_list` devuelve `member_email/phone/emergency_contact = null` y nombre enmascarado; idem en el email al partner.
 
 ### PRIV-02 — Borrado de cuenta incompleto fuera de Postgres y destructivo dentro (Alta, Confirmado)
 
@@ -90,7 +81,7 @@ No hay columnas de IP, user-agent ni geolocalización del miembro: la ubicación
 
 - **Dónde:** `supabase/schemas/partner_analytics.sql:90-133` (`partner_repeat_guests`, `grant … to authenticated`, autorizado por `partner_lounge_ids()`).
 - **Evidencia:** devuelve `member_name` y `u.email` agrupado por miembro sobre todas las reservas, sin filtro de estado ni de antigüedad — contradice la regla de `partner_guest_list` ("contact details are shown while the booking is open").
-- **Impacto:** un partner puede construir una lista de emails de clientes LuxePass (posible uso de marketing propio fuera de la plataforma). Tampoco respeta PRIV-01.
+- **Impacto:** un partner puede construir una lista de emails de clientes LuxePass (posible uso de marketing propio fuera de la plataforma).
 - **Remediación:** devolver solo nombre (o iniciales) + `member_id` seudónimo; si el email es necesario, limitarlo a reservas abiertas y al toggle de privacidad.
 - **Cierre:** test: `partner_repeat_guests` no devuelve email para reservas cerradas/canceladas.
 
@@ -148,7 +139,7 @@ No hay columnas de IP, user-agent ni geolocalización del miembro: la ubicación
 | Punto | Estado |
 |---|---|
 | Inventario y clasificación | Hecho (§1) |
-| Quién lee cada dato (RLS / definer) | Parcial — PRIV-01, PRIV-04, SEC-01 |
+| Quién lee cada dato (RLS / definer) | Parcial — PRIV-04 |
 | Borrado de cuenta | Fallo — PRIV-02, PRIV-08 |
 | PII en logs/emails/errores/terceros | OK con reservas — PRIV-10, PRIV-11, SEC-07 |
 | Consentimiento y preferencias | Parcial — PRIV-03, PRIV-07, PRIV-09 |

@@ -157,7 +157,7 @@ Lectura rápida: el 76 % de los criterios de las 24 historias del cliente se cum
 | 3 | Special requests 100 chars | CUMPLE | Cliente `visit-details-form.tsx:151`; servidor `supabase/schemas/bookings.sql:18` `check (char_length(...) <= 100)` |
 | 4 | Booking summary | CUMPLE | `/lounges/[id]/book/summary` |
 | 5 | Terms and cancellation policy display | CUMPLE | Resumen/pago; ver SPEC-04 sobre el texto contradictorio de la ficha |
-| 6 | One-tap confirmation | CUMPLE | `handleConfirm` en `summary/page.tsx`. Riesgo: doble cobro con tarjeta guardada (E2E-01) |
+| 6 | One-tap confirmation | CUMPLE | `handleConfirm` en `summary/page.tsx` |
 | 7 | Immediate confirmation screen | CUMPLE | `/book/confirmed`; E2E F3.1 |
 | 8 | If full, waitlist | **PARCIAL** (conocido) | `join_waitlist` real; sin promoción automática — `PENDIENTES.md` §2.11 |
 
@@ -165,7 +165,7 @@ Lectura rápida: el 76 % de los criterios de las 24 historias del cliente se cum
 
 | # | Criterio | Estado | Evidencia |
 |---|---|---|---|
-| 1 | Stripe integration | CUMPLE | `supabase/functions/stripe-*`; webhook fuente de verdad. Riesgos: PAY-01, SEC-02/E2E-05, SEC-04 |
+| 1 | Stripe integration | CUMPLE | `supabase/functions/stripe-*`; webhook fuente de verdad |
 | 2 | Major credit/debit cards | CUMPLE | Payment Element; E2E F3.1/F3.2 |
 | 3 | Apple Pay / Google Pay | **NO VERIFICABLE** (conocido) | Requiere dominio verificado — `PENDIENTES.md` §3 (4.2) y §4.4 |
 | 4 | Payment method storage | CUMPLE | `stripe-payment-methods`, "Save this card"; E2E F3.6 |
@@ -204,7 +204,7 @@ Lectura rápida: el 76 % de los criterios de las 24 historias del cliente se cum
 
 | # | Criterio | Estado | Evidencia |
 |---|---|---|---|
-| 1 | Instant validity verification | CUMPLE | `reception_lookup_booking`; partner `partner_checkin_booking`. Seguridad: SEC-01/E2E-02 (Crítica) |
+| 1 | Instant validity verification | CUMPLE | `reception_lookup_booking`; partner `partner_checkin_booking` |
 | 2 | Check-in confirmation to member's app | **NO CUMPLE** (conocido) | El pase no refleja el check-in — E2E-06 |
 | 3 | No-show tracking | CUMPLE | `bookings.no_show`, `reception_report_no_show`/`partner_report_no_show`; E2E F4.5 |
 | 4 | Emergency contact accessible to staff | **PARCIAL** (conocido) | Lectura real, pero el miembro no puede introducirlo ("Edit" inerte en `/profile/privacy`) — `PENDIENTES.md` §3 (5.2) |
@@ -225,9 +225,9 @@ Lectura rápida: el 76 % de los criterios de las 24 historias del cliente se cum
 |---|---|---|---|
 | 1 | My Bookings upcoming/past | CUMPLE | `fetchUpcomingBookings`/`fetchPastBookings` (`src/lib/passes.ts:354`) |
 | 2 | Status Confirmed / In Progress / Completed / Cancelled | CUMPLE | `src/lib/passes.ts:273,297,338`. "Completed" sin no-show no es alcanzable por ningún camino real (`COMPONENT-MAP.md` §Backend real Epic 5) |
-| 3 | Modification: Cancel | CUMPLE | RPC `cancel_booking` desde `/my-pass`. Sin reembolso: E2E-07 / PAY-08 (conocido). "Cancel visit" del pase individual inerte: E2E-08 |
+| 3 | Modification: Cancel | CUMPLE | RPC `cancel_booking` desde `/my-pass`. Sin reembolso si cancela el admin: PAY-08. "Cancel visit" del pase individual inerte: E2E-08 |
 | 4 | No-show policy, flat fee | **PARCIAL** (conocido) | Fee de $35 registrado en `cancellation_fee_cents`, nunca cobrado — `PENDIENTES.md` §3 (6.1), `pagos-y-logica-de-negocio.md` |
-| 5 | 24-hour cancellation notice | CUMPLE | `cancel_booking` (`bookings.sql:438`). Fecha decidida por el cliente: PAY-05 |
+| 5 | 24-hour cancellation notice | CUMPLE | `cancel_booking` (`bookings.sql:438`) |
 | 6 | Booking history | **PARCIAL** | La lista de pasadas es real, pero el rail "Your record" es literal para todos (`src/lib/passes.ts:456-462`: 14 visitas, 11, 2, 1; `my-pass/page.tsx:424-437`) y "Download your booking history · CSV, all 14 visits" (`my-pass/page.tsx:443-450`) no es un botón. **SPEC-05** |
 | 7 | Email per booking with confirmation number | CUMPLE | `send-booking-receipt` (LP# en el email) |
 | 8 | Support contact for booking issues — Admin | **NO CUMPLE** (conocido) | `SupportRow` (`my-pass/page.tsx:414,441,456`) sin enlace ni acción — `PENDIENTES.md` §3 (6.1) |
@@ -252,7 +252,7 @@ Lectura rápida: el 76 % de los criterios de las 24 historias del cliente se cum
 | 3 | Preferred amenities | CUMPLE | `profiles.preferred_amenities`, autoguardado |
 | 4 | Membership status Active/Inactive | CUMPLE | Espejo de `memberships` (`sync_profile_membership_status`) |
 | 5 | Referral code sharing | CUMPLE | `profiles.referral_code`; `referral-share-modal.tsx` |
-| 6 | Privacy settings for data usage | **PARCIAL** (conocido) | Se guardan pero nadie los consume (PRIV-07); "Share your details with the lounge" sin efecto en servidor (PRIV-01) |
+| 6 | Privacy settings for data usage | **PARCIAL** (conocido) | Se guardan pero nadie los consume (PRIV-07) |
 | 7 | Account deletion with confirmation | **PARCIAL** (conocido) | Soft-delete + cron real; borrado incompleto fuera de Postgres (PRIV-02); cron silencioso sin secretos (PRIV-08) |
 | 8 | Export personal data (GDPR) | **PARCIAL** (conocido) | Descarga real pero omite pagos, membresías, referidos, tickets y foto — PRIV-06 |
 
@@ -265,7 +265,7 @@ Lectura rápida: el 76 % de los criterios de las 24 historias del cliente se cum
 | # | Criterio | Estado | Evidencia |
 |---|---|---|---|
 | 1 | Today's guest list | CUMPLE | `partner_guest_list` (`src/components/partner/today-dashboard.tsx:74`) |
-| 2 | Guest name, contact, email | CUMPLE | Mismo RPC; ver PRIV-01 sobre el toggle de privacidad |
+| 2 | Guest name, contact, email | CUMPLE | Mismo RPC |
 | 3 | Real-time updates | CUMPLE | Supabase Realtime `postgres_changes` (`today-dashboard.tsx:110-175`) |
 | 4 | Check-in status per guest | CUMPLE | `partner_checkin_booking` |
 | 5 | No-show reporting | CUMPLE | `partner_report_no_show` (+ ticket automático, Epic 8) |
@@ -304,7 +304,7 @@ Lectura rápida: el 76 % de los criterios de las 24 historias del cliente se cum
 | 4 | Account status and membership level | CUMPLE | Plan real de `memberships` en `/admin/members/[id]` |
 | 5 | Issue tracking and resolution notes | CUMPLE | `support_tickets`/`support_ticket_messages` |
 | 6 | Booking modification | CUMPLE | `admin_reschedule_booking` (`BookingOverrideDrawer`) |
-| 7 | Refund processing interface | **PARCIAL** (conocido) | `stripe-refund-payment` real, pero los pagos con tarjeta nueva no guardan `stripe_payment_intent_id` (PAY-01) y el reembolso no revierte reserva/membresía/referido (PAY-03, PAY-04) |
+| 7 | Refund processing interface | CUMPLE | `stripe-refund-payment` real, con importe validado y efecto sobre reserva, membresía y referido |
 | 8 | Communication log with customer | CUMPLE | Hilo de `support_ticket_messages` en el caso |
 | 9 | Escalation to manager | **PARCIAL** (conocido) | Cambia `status = 'escalated'`; manager `DUTY_MANAGER` fijo, sin bandeja ni aviso — `PENDIENTES.md` §3 (8.1) |
 
@@ -346,7 +346,7 @@ Lectura rápida: el 76 % de los criterios de las 24 historias del cliente se cum
 | 1 | Membership display active/inactive | CUMPLE | `/profile`, `/profile/membership` (`memberships`) |
 | 2 | Benefits explanation | CUMPLE | `src/app/profile/membership/page.tsx` |
 | 3 | Upgrade options and pricing (monthly → yearly) | CUMPLE | `membership_change_quote` + `stripe-membership-checkout`; E2E F6.1. Carrera: PAY-06 |
-| 4 | Renewal date and auto-renewal settings | **PARCIAL** | Fecha real y cron de renovación real; pero `AutoRenewModal` solo existe para el plan anual: con plan mensual "Manage renewal" y el `Switch` quedan inertes (desviación declarada en `COMPONENT-MAP.md`, no en `PENDIENTES.md`). Riesgos de cobro: PAY-02, PAY-09. **SPEC-09** |
+| 4 | Renewal date and auto-renewal settings | **PARCIAL** | Fecha real y cron de renovación real; pero `AutoRenewModal` solo existe para el plan anual: con plan mensual "Manage renewal" y el `Switch` quedan inertes (desviación declarada en `COMPONENT-MAP.md`, no en `PENDIENTES.md`). Riesgos de cobro: PAY-09. **SPEC-09** |
 
 ### Story 9.2 — Referral program
 
@@ -447,15 +447,12 @@ Severidad según el impacto para el cliente. Los PARCIAL/NO CUMPLE marcados "(co
 |---|---|
 | 1.2 lockout | SEC-03, E2E-03 |
 | 1.1 duplicado | SEC-05, E2E-09 |
-| 4.1 one-tap | E2E-01 |
-| 4.2 Stripe / impuestos | PAY-01, PAY-13, SEC-02, E2E-05, SEC-04, SEC-06 |
+| 4.2 Stripe / impuestos | PAY-13, SEC-06 |
 | 4.3 / 6.1 botones del pase | E2E-08 |
 | 5.1 / 5.2 estados del pase | E2E-06 |
-| 5.2 recepción | SEC-01, E2E-02 |
-| 6.1 cancelación / fee | E2E-07, PAY-05, PAY-08 |
+| 6.1 cancelación / fee | PAY-08 |
 | 6.2 preferencias | PRIV-03 |
-| 6.3 privacidad / borrado / export | PRIV-01, PRIV-02, PRIV-06, PRIV-07, PRIV-08 |
-| 7.1 / 7.3 datos de huéspedes | PRIV-01, PRIV-04 |
-| 8.1 reembolso | PAY-01, PAY-03, PAY-04 |
-| 9.1 renovación / upgrade | PAY-02, PAY-06, PAY-09 |
+| 6.3 privacidad / borrado / export | PRIV-02, PRIV-06, PRIV-07, PRIV-08 |
+| 7.1 / 7.3 datos de huéspedes | PRIV-04 |
+| 9.1 renovación / upgrade | PAY-06, PAY-09 |
 | 9.2 referidos | PAY-07, PAY-15 |

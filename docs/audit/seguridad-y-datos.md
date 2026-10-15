@@ -9,10 +9,7 @@
 
 | ID | Severidad | Título |
 |---|---|---|
-| SEC-01 | **Crítica** | RPC de recepción ejecutables por `anon` sin autenticación exponen PII y permiten check-in / no-show con cargo sobre cualquier reserva adivinando un código de 6 dígitos |
-| SEC-02 | **Alta** | `confirm_booking` acepta un pago `pending`: una reserva de pago queda confirmada aunque el cobro nunca se complete o falle |
-| SEC-03 | **Alta** | El bloqueo por intentos fallidos es solo de cliente: `anon` puede resetear el contador de cualquier email o bloquear a cualquier víctima |
-| SEC-04 | Media | `stripe-webhook` sin idempotencia ni orden: un evento reenviado puede revertir un `refunded` a `succeeded`, y los errores de escritura devuelven 200 |
+| SEC-03 | **Alta** | Parcial: `reset_login_attempts` ya solo lo usa el dueño del email (#52), pero el bloqueo sigue siendo de cliente: `signInWithPassword` directo no lo respeta |
 | SEC-05 | Media | `email_exists` permite enumerar cuentas a cualquier anónimo |
 | SEC-06 | Baja | HTML sin escapar en el email de recibo (`special_requests`, nombre) |
 | SEC-07 | Baja | Mensajes de error internos (`error.message` de Postgres/Stripe/Brevo) devueltos al cliente |
@@ -23,38 +20,12 @@
 
 ## Hallazgos
 
-### SEC-01 — RPC de recepción anónimas: PII + acciones con cargo por fuerza bruta (Crítica, Confirmado)
+### SEC-03 — Bloqueo de login solo en el cliente (Alta, parcial)
 
-- **Ubicación:** `supabase/schemas/bookings.sql:343`, `:380`, `:418`, `:436` (`grant execute … to anon, authenticated`); `booking_reference` en `bookings.sql:64-83`; cliente `src/lib/reception.ts`.
-- **Evidencia:** `reception_lookup_booking`, `reception_checkin_booking`, `reception_report_no_show` y `reception_today_summary` son `SECURITY DEFINER`, ejecutables por `anon` (`has_function_privilege('anon',…)=t`) y no comprueban `auth.uid()` ni rol. La única "autorización" es conocer `(lounge_id, fecha, LP-XXXXXX)`. El código es `'LP-' || (100000 + hash % 900000)`: 900 000 valores, determinista, sin rate limit en PostgREST. `lounge_id` es público y `p_date` lo elige quien llama (no se ata a la fecha real).
-- **Dato expuesto (clasificado):** identificadores directos — nombre completo, email; contacto de emergencia (nombre, relación, teléfono de un tercero); `special_requests`. Masivo: se puede recorrer el espacio de códigos por lounge/fecha.
-- **Impacto:** (1) exfiltración de PII de miembros y terceros; (2) `reception_report_no_show` marca la reserva como no-show con `cancellation_fee_cents = 3500` y abre ticket de soporte (trigger `open_support_ticket_for_no_show`); (3) check-in fraudulento invalida el pase real; (4) `reception_today_summary` filtra ocupación de cualquier lounge.
-- **Remediación:** exigir sesión de personal: comprobar en el cuerpo que `p_lounge_id in (select public.partner_lounge_ids())` (como ya hacen `partner_checkin_booking`/`partner_guest_list`) y `revoke execute … from anon`; o, si el kiosco debe ser anónimo, un token de dispositivo por lounge guardado en Vault + rate limit y código con entropía real (≥ 8 caracteres aleatorios, no derivado de hash de 6 dígitos). Fijar `p_date` al rango "hoy" en servidor. Limitar las columnas devueltas a lo que la pantalla de recepción necesita.
-- **Cierre:** `select has_function_privilege('anon','public.reception_lookup_booking(text,date,text)','execute')` = `f`; un test que llama la RPC con un usuario sin rol partner del lounge recibe error.
-
-### SEC-02 — Reserva confirmada con pago `pending` sin reconciliación (Alta, Confirmado)
-
-- **Ubicación:** `supabase/schemas/bookings.sql:166-178` (`confirm_booking`), `supabase/functions/stripe-webhook/index.ts:53-75`.
-- **Evidencia:** `confirm_booking` acepta `p.status in ('pending','succeeded')`. `stripe-create-checkout-session` inserta el `payments` en `pending` antes de cualquier cobro. Cuando llega `payment_failed`/`async_payment_failed` el webhook solo actualiza `payments`; no hay trigger sobre `payments` que cancele la reserva (triggers existentes: `apply_membership_payment`, `credit_referral_on_first_payment`) ni cron que expire pendientes (`cron.job` no tiene ninguno).
-- **Impacto:** un miembro autenticado crea la sesión de checkout, no paga (o usa una tarjeta que falla) y llama `confirm_booking(p_payment_id)` directamente: obtiene una plaza confirmada gratis, consumiendo `seats_left`. Incumple la regla "el webhook es la única fuente de verdad del pago".
-- **Remediación:** al pasar un pago de day pass a `failed` (o al expirar `pending` > N min, vía cron o `checkout.session.expired`), cancelar la reserva enlazada y liberar plaza; o confirmar la reserva solo desde el webhook (`succeeded`) dejándola en `pending_payment` hasta entonces. Recepción no debe aceptar reservas cuyo pago no esté `succeeded`.
-- **Cierre:** test: pago `pending` → `failed` deja la reserva `cancelled`; `reception_checkin_booking` rechaza una reserva sin pago `succeeded`/cobertura.
-
-### SEC-03 — Bloqueo de login solo cosmético y manipulable por anónimos (Alta, Confirmado)
-
-- **Ubicación:** `supabase/schemas/login_attempts.sql:82-84`; `src/app/login/page.tsx:69-110`.
-- **Evidencia:** `check_login_lock`, `record_failed_login` y `reset_login_attempts` son `SECURITY DEFINER` ejecutables por `anon` y reciben un email arbitrario. El chequeo de bloqueo ocurre en el navegador antes de `signInWithPassword`; GoTrue no lo conoce.
-- **Impacto:** (a) fuerza bruta: el atacante llama `/auth/v1/token` directamente y el lockout no aplica (solo el rate limit por IP de Auth, `sign_in_sign_ups = 200`/5 min); además puede llamar `reset_login_attempts(victima)` a voluntad. (b) DoS: `record_failed_login(victima)` ×5 bloquea la UI de login de cualquier usuario 15 min, repetible.
-- **Remediación:** mover el lockout al servidor (Auth Hook / Edge Function que haga el sign-in o `password_verification_attempt` hook de Supabase Auth); revocar `reset_login_attempts` de `anon` y resetear solo para `auth.uid()`'s propio email; captcha/rate limit en Auth.
-- **Cierre:** `reset_login_attempts` no ejecutable por `anon`; un `signInWithPassword` directo tras 5 fallos es rechazado.
-
-### SEC-04 — Webhook de Stripe sin idempotencia ni guarda de transición (Media, Confirmado por lectura)
-
-- **Ubicación:** `supabase/functions/stripe-webhook/index.ts:43-110`.
-- **Evidencia:** firma verificada correctamente (`constructEventAsync`), pero no se registra `event.id`, no se condiciona la transición (`update … set status='succeeded'` sin `where status in ('pending')`) y los `error` de `service.update` se ignoran devolviendo 200.
-- **Impacto:** un reenvío o evento fuera de orden (`checkout.session.completed` tras `charge.refunded`) vuelve un pago reembolsado a `succeeded` y dispara de nuevo `apply_membership_payment`/créditos de referido; un fallo de BD se pierde porque Stripe no reintenta.
-- **Remediación:** tabla `stripe_events(id primary key)` con insert-on-conflict; transiciones con estado origen permitido; devolver 5xx si la escritura falla.
-- **Cierre:** test que reenvía el mismo evento dos veces y uno `completed` tras `refunded` sin cambiar estado.
+- **Ya corregido (#52, 13 oct 2026):** `reset_login_attempts` solo reinicia el contador de quien acaba de iniciar sesión con ese email; un anónimo ya no desbloquea cuentas ajenas.
+- **Falta:** el bloqueo tras 5 fallos se comprueba en el navegador antes de `signInWithPassword`; un atacante que llama a `/auth/v1/token` directamente no lo sufre (solo el rate limit por IP de Auth). `record_failed_login` sigue abierto a `anon`, así que se puede bloquear la UI de una cuenta ajena.
+- **Remediación:** hook `password_verification_attempt` de Supabase Auth (plan Team) o una Edge Function de login que aplique el bloqueo; alternativa sin plan: CAPTCHA tras N fallos y rate limit por IP (`docs/PENDIENTES.md` §2.7b).
+- **Cierre:** tras 5 fallos, un `signInWithPassword` directo es rechazado.
 
 ### SEC-05 — Enumeración de cuentas vía `email_exists` (Media, Confirmado)
 
@@ -97,10 +68,7 @@
 
 | ID | Quién | Necesita | Esfuerzo | Escala |
 |---|---|---|---|---|
-| SEC-01 | Cualquier anónimo | URL + anon key (públicas) y un `lounge_id` | Script trivial, ≤ 900k peticiones por lounge/fecha | Masiva |
-| SEC-02 | Miembro autenticado | Cuenta + llamar `confirm_booking` | Bajo | Ilimitada (cada reserva) |
 | SEC-03 | Anónimo | Email de la víctima | Trivial | Cualquier cuenta |
-| SEC-04 | Stripe (reenvíos) / desorden de eventos | — | No intencional | Puntual |
 | SEC-05 | Anónimo | Lista de emails | Trivial | Masiva |
 | SEC-06..09 | Varios | — | Bajo | Puntual |
 
@@ -125,12 +93,12 @@
 | `supabase status` (local, sin proyecto enlazado) | OK |
 | RLS por tabla (`pg_class.relrowsecurity`) | OK — todas |
 | Policies (`pg_policies`) — TO, USING(true), WITH CHECK | OK con notas |
-| Funciones definer: grants, `search_path`, chequeo de auth | Fallo — SEC-01, SEC-03, SEC-05, SEC-10 |
+| Funciones definer: grants, `search_path`, chequeo de auth | Fallo — SEC-03, SEC-05, SEC-10 |
 | Vistas `security_invoker` | N/A (no hay vistas) |
 | Grants de tabla a `anon` | Presentes por defecto; neutralizados por RLS (sin policies para anon) |
 | Storage buckets/policies | OK |
-| Edge Functions: auth, firma, secreto, CORS, errores | Parcial — SEC-04, 07, 08, 09 |
-| Reglas Stripe de CLAUDE.md | Parcial — importe OK, membresías OK, webhook fuente de verdad roto por SEC-02 |
+| Edge Functions: auth, firma, secreto, CORS, errores | Parcial — SEC-07, 08, 09 |
+| Reglas Stripe de CLAUDE.md | OK — importe, membresías y webhook como fuente de verdad |
 | `NEXT_PUBLIC_*` / service role en cliente | OK |
 | Secretos en historial git | OK (sin coincidencias) |
 | `supabase db advisors --local` | OK (solo perf) |

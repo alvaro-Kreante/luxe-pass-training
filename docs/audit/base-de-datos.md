@@ -2,13 +2,12 @@
 
 Fecha: 2026-10-12 · Alcance: Supabase **local** (`supabase status` → API `http://127.0.0.1:54331`, `linked_project: null`), contenedor `supabase_db_Luxe_Pass`. Solo lectura: consultas a catálogos, `EXPLAIN` (sin `ANALYZE`), `supabase db advisors --local`, `supabase migration list --local`. Sin cambios de schema, sin `db reset`, sin `migration up`, sin `npm test`, sin comandos remotos.
 
-Ya cubierto en otras auditorías (se cita, no se repite): RLS/grants/`SECURITY DEFINER` → `seguridad-y-datos.md` (SEC-01..SEC-11); concurrencia de cupo → PAY-10; idempotencia de webhook/Stripe → SEC-04, PAY-11; unicidad miembro/franja → PAY-14; borrado en cascada de datos financieros → PRIV-02 (`privacidad-y-datos-personales.md`).
+Ya cubierto en otras auditorías (se cita, no se repite): RLS/grants/`SECURITY DEFINER` → `seguridad-y-datos.md` (SEC-*); concurrencia de cupo → PAY-10; idempotencia de Stripe → PAY-11; unicidad miembro/franja → PAY-14; borrado en cascada de datos financieros → PRIV-02 (`privacidad-y-datos-personales.md`).
 
 ## Resumen
 
 | ID | Severidad | Título |
 |---|---|---|
-| DB-01 | **Alta** | `bookings` no está en la publicación `supabase_realtime`: la suscripción del Today Dashboard de partner nunca recibe eventos |
 | DB-02 | Media | FKs y filtros calientes sin índice: `bookings.member_id`, `payments.member_id`, `payments.booking_id`, `notifications.member_id`, `support_tickets.member_id` (17 FKs sin índice en total) |
 | DB-03 | Media | `payments.booking_id` sin índice consultado en subconsultas `EXISTS` por fila (analytics, guest list, cupo mensual) |
 | DB-04 | Media | Fallos de pg_net invisibles: 21 % de las llamadas de cron/webhooks fallan (500/503/timeout) y nada lo vigila; `net._http_response` y `cron.job_run_details` sin purga |
@@ -26,14 +25,6 @@ Controles positivos: dinero en `integer` (`amount_cents`, `refunded_amount_cents
 ---
 
 ## Hallazgos
-
-### DB-01 — `bookings` fuera de la publicación de Realtime (Alta, Confirmado)
-
-- **Ubicación:** `src/components/partner/today-dashboard.tsx:103-160` (`postgres_changes` INSERT/UPDATE sobre `public.bookings` filtrado por `lounge_id`); `supabase/schemas/bookings.sql:93-99` (comentario que asume que Realtime funciona).
-- **Evidencia:** `select * from pg_publication_tables where pubname='supabase_realtime'` → 0 filas (la publicación existe pero está vacía). `grep -r "supabase_realtime\|publication" supabase/schemas supabase/migrations` → sin resultados. `bookings` con `REPLICA IDENTITY DEFAULT`.
-- **Impacto:** el panel de hoy del partner no se actualiza en vivo con reservas nuevas, cancelaciones ni check-ins; el criterio de "tiempo real" de Epic 7 solo se cumple al recargar. La auditoría de frontend (`frontend-rendimiento-y-accesibilidad.md`) solo validó el cleanup del canal, no que reciba eventos. Si en los remotos se añadió a mano desde el Dashboard, es deriva no versionada.
-- **Remediación:** en `supabase/schemas/bookings.sql` añadir `alter publication supabase_realtime add table public.bookings;` (y valorar `replica identity full` si el cliente necesita la fila vieja en UPDATE/DELETE), generar migración con el flujo declarativo. Comprobar en remotos con la misma query.
-- **Cierre:** `pg_publication_tables` lista `public.bookings` en local, dev y prod; prueba manual: insertar reserva y verla aparecer sin recargar.
 
 ### DB-02 — FKs y columnas de filtro frecuentes sin índice (Media, Confirmado)
 
@@ -55,7 +46,7 @@ Controles positivos: dinero en `integer` (`amount_cents`, `refunded_amount_cents
 
 - **Ubicación:** `dispatch_*` (crons) y triggers `notify_*` → `net.http_post`; `cron.job_run_details`, `net._http_response`.
 - **Evidencia:** `net._http_response`: 2.616 filas en ~6 h; 2.064 × 200, **363 × 500, 35 × 503, 115 "Server returned nothing", 5 timeouts de 15 s** (≈21 % fallos). `cron.job_run_details`: 673 filas, todas `succeeded` — el cron marca éxito porque `net.http_post` es asíncrono y el fallo HTTP queda solo en `_http_response`. No hay job que purgue `cron.job_run_details` (pg_net purga `_http_response` por TTL propio, 6 h por defecto). Los dispatchers marcan `reminder_sent_at`/`morning_notification_sent_at` **en la misma transacción que encolan la petición**, antes de saber si la Edge Function respondió 200.
-- **Impacto:** un recordatorio, digest o renovación (`dispatch_membership_renewals`, ver PAY-02/PAY-09) que falla en la Edge Function queda marcado como enviado y no se reintenta; nadie se entera. En local los 500 pueden ser ruido (funciones no servidas), pero en remoto el mecanismo es el mismo. `job_run_details` crece sin límite (≈ 200 filas/h con 3 jobs cada 15–30 min).
+- **Impacto:** un recordatorio, digest o renovación (`dispatch_membership_renewals`, ver PAY-09) que falla en la Edge Function queda marcado como enviado y no se reintenta; nadie se entera. En local los 500 pueden ser ruido (funciones no servidas), pero en remoto el mecanismo es el mismo. `job_run_details` crece sin límite (≈ 200 filas/h con 3 jobs cada 15–30 min).
 - **Remediación:** que la Edge Function marque `*_sent_at` (o una tabla de outbox con estado) tras el envío correcto, o reconciliar leyendo `net._http_response`; alerta (log drain / job que cuente códigos ≥ 400 en la última hora); job semanal `delete from cron.job_run_details where end_time < now() - interval '7 days'`.
 - **Cierre:** un fallo 500 provocado deja la reserva sin `reminder_sent_at` y se reintenta en la siguiente corrida; existe job de purga; existe alerta documentada en `docs/ci-cd/`.
 
