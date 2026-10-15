@@ -106,8 +106,9 @@ begin
   return query
     select
       b.member_id,
-      coalesce(p.full_name, split_part(u.email::text, '@', 1)),
-      u.email::text,
+      -- PRIV-01: sin "Share your details with the lounge", ni nombre ni email.
+      case when coalesce(p.privacy_share_with_lounge, true) then coalesce(p.full_name, split_part(u.email::text, '@', 1)) else 'Private guest' end,
+      case when coalesce(p.privacy_share_with_lounge, true) then u.email::text end,
       count(*)::int,
       min(b.date),
       max(b.date),
@@ -125,7 +126,7 @@ begin
       and (p_lounge_id is null or b.lounge_id = p_lounge_id)
       and b.status <> 'cancelled'
       and b.no_show = false
-    group by b.member_id, p.full_name, u.email
+    group by b.member_id, p.full_name, u.email, p.privacy_share_with_lounge
     order by count(*) desc;
 end;
 $$;

@@ -56,7 +56,9 @@ as $$
         ),
         'guests', coalesce((
           select jsonb_agg(jsonb_build_object(
-            'name', coalesce(prof.full_name, split_part(u.email::text, '@', 1)),
+            -- PRIV-01: sin "Share your details with the lounge", sin nombre.
+            'name', case when coalesce(prof.privacy_share_with_lounge, true)
+              then coalesce(prof.full_name, split_part(u.email::text, '@', 1)) else 'Private guest' end,
             'slot_time', b.slot_time,
             'status', b.status
           ) order by to_timestamp(b.slot_time, 'HH12:MI AM')::time, b.created_at)

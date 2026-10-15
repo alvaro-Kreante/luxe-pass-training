@@ -328,16 +328,18 @@ begin
     select
       v_booking.id,
       v_booking.confirmation_code,
-      coalesce(p.full_name, split_part(u.email::text, '@', 1)),
-      u.email::text,
+      -- PRIV-01: con "Share your details with the lounge" apagado se
+      -- entra solo con el código ("check in by number only").
+      case when coalesce(p.privacy_share_with_lounge, true) then coalesce(p.full_name, split_part(u.email::text, '@', 1)) else 'Private guest' end,
+      case when coalesce(p.privacy_share_with_lounge, true) then u.email::text end,
       v_booking.slot_time,
       v_booking.special_requests,
       v_booking.status,
       v_booking.checked_in_at,
       v_booking.no_show,
-      p.emergency_contact_name,
-      p.emergency_contact_relation,
-      p.emergency_contact_phone
+      case when coalesce(p.privacy_share_with_lounge, true) then p.emergency_contact_name end,
+      case when coalesce(p.privacy_share_with_lounge, true) then p.emergency_contact_relation end,
+      case when coalesce(p.privacy_share_with_lounge, true) then p.emergency_contact_phone end
     from auth.users u
     left join public.profiles p on p.id = u.id
     where u.id = v_booking.member_id;
@@ -566,9 +568,10 @@ begin
     select
       b.id,
       b.confirmation_code,
-      coalesce(p.full_name, split_part(u.email::text, '@', 1)),
-      case when b.status <> 'cancelled' then u.email::text end,
-      case when b.status <> 'cancelled' then p.phone end,
+      -- PRIV-01: sin "Share your details with the lounge", solo el código.
+      case when coalesce(p.privacy_share_with_lounge, true) then coalesce(p.full_name, split_part(u.email::text, '@', 1)) else 'Private guest' end,
+      case when b.status <> 'cancelled' and coalesce(p.privacy_share_with_lounge, true) then u.email::text end,
+      case when b.status <> 'cancelled' and coalesce(p.privacy_share_with_lounge, true) then p.phone end,
       b.band,
       b.slot_time,
       b.status,
@@ -589,7 +592,7 @@ begin
           and b2.date <= b.date
       ),
       case
-        when b.status <> 'cancelled' and p.emergency_contact_name is not null and p.emergency_contact_phone is not null
+        when b.status <> 'cancelled' and coalesce(p.privacy_share_with_lounge, true) and p.emergency_contact_name is not null and p.emergency_contact_phone is not null
           then p.emergency_contact_name
             || coalesce(' · ' || nullif(p.emergency_contact_relation, ''), '')
             || ' · ' || p.emergency_contact_phone
