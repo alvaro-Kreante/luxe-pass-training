@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { bookingReferenceFromId, confirmBooking, type BookingRequest } from "./booking";
-import { today, addDays } from "./availability";
+import { today } from "./availability";
 import { LOUNGES } from "./lounges";
 import {
   AINSWORTH_PASS,
@@ -18,6 +18,7 @@ import {
 import { checkInReceptionBooking, reportReceptionNoShow } from "./reception";
 import { createClient } from "./supabase/client";
 import { signInReceptionStaff, signUpConfirmedMemberAndSignIn } from "./testing/confirmed-user";
+import { findPredictedSlot } from "./testing/lounge-fixture";
 
 /**
  * Story 5.1 (Digital Pass Generation). Criterios en
@@ -122,15 +123,15 @@ describe("fetchDigitalPass", () => {
 
 describe("fetchUpcomingBookings", () => {
   it("lista una reserva recién confirmada como 'confirmed'", async () => {
-    const futureDate = addDays(today(), 3);
-    const { supabase, reference } = await bookAndSignIn("upcoming-1", futureDate, "afternoon", "3:30 PM");
+    const slot = findPredictedSlot(ainsworth, "available", 3);
+    const { supabase, reference } = await bookAndSignIn("upcoming-1", slot.dateIso, slot.band, slot.time);
 
     const upcoming = await fetchUpcomingBookings(supabase);
 
     expect(upcoming).toHaveLength(1);
     expect(upcoming[0]?.reference).toBe(reference);
     expect(upcoming[0]?.status).toBe("confirmed");
-    expect(upcoming[0]?.dateTimeLabel).toContain("arrive 3:30 PM");
+    expect(upcoming[0]?.dateTimeLabel).toContain(`arrive ${slot.time}`);
   });
 
   it("una reserva de hoy con check-in aparece como 'in-progress'", async () => {
@@ -161,8 +162,8 @@ describe("fetchPastBookings", () => {
 
 describe("cancelBooking (Story 6.1)", () => {
   it("AC '24-hour advance notice requirement for cancellation' — cancela sin fee con más de 24h de antelación", async () => {
-    const futureDate = addDays(today(), 3);
-    const { supabase, booking } = await bookAndSignIn("cancel-1", futureDate, "afternoon", "3:30 PM");
+    const slot = findPredictedSlot(ainsworth, "available", 4);
+    const { supabase, booking } = await bookAndSignIn("cancel-1", slot.dateIso, slot.band, slot.time);
 
     const cancelled = await cancelBooking(supabase, booking.id, today());
 
@@ -179,8 +180,8 @@ describe("cancelBooking (Story 6.1)", () => {
   });
 
   it("una reserva cancelada desaparece de fetchUpcomingBookings y aparece en fetchPastBookings", async () => {
-    const futureDate = addDays(today(), 3);
-    const { supabase, booking, reference } = await bookAndSignIn("cancel-3", futureDate, "afternoon", "3:30 PM");
+    const slot = findPredictedSlot(ainsworth, "available", 5);
+    const { supabase, booking, reference } = await bookAndSignIn("cancel-3", slot.dateIso, slot.band, slot.time);
 
     await cancelBooking(supabase, booking.id, today());
 
@@ -194,8 +195,8 @@ describe("cancelBooking (Story 6.1)", () => {
   });
 
   it("no permite cancelar la reserva de otro miembro (RLS)", async () => {
-    const futureDate = addDays(today(), 3);
-    const { booking } = await bookAndSignIn("cancel-4", futureDate, "afternoon", "3:30 PM");
+    const slot = findPredictedSlot(ainsworth, "available", 6);
+    const { booking } = await bookAndSignIn("cancel-4", slot.dateIso, slot.band, slot.time);
     const otherMember = createClient();
     await signUpConfirmedMemberAndSignIn(
       otherMember,

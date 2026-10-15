@@ -30,6 +30,10 @@ export default defineConfig({
     // Story 1.1 — los tests que llaman a Supabase local necesitan las
     // mismas variables que `npm run dev`. Vite no carga `.env.local` en
     // modo "test" por convención, así que se pide con otro modo.
-    env: loadEnv("development", process.cwd(), ""),
+    //
+    // TZ: el "hoy" del servidor es el de Nueva York (`cancel_booking`, PAY-05);
+    // los tests lo calculan con `today()`, que usa el huso del proceso. En el
+    // runner de CI (UTC) ambos discrepaban desde las 8 PM de Nueva York.
+    env: { ...loadEnv("development", process.cwd(), ""), TZ: "America/New_York" },
   },
 });

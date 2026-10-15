@@ -8,7 +8,9 @@ import { fetchVisitsThisMonth } from "@/lib/membership";
 import { LATE_CANCELLATION_FEE_LABEL } from "@/lib/passes";
 import { checkInReceptionBooking, reportReceptionNoShow } from "@/lib/reception";
 import { createClient } from "@/lib/supabase/client";
+import { LOUNGES } from "@/lib/lounges";
 import { signInReceptionStaff, signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
+import { findPredictedSlot } from "@/lib/testing/lounge-fixture";
 
 import MyPassPage from "./page";
 
@@ -62,11 +64,10 @@ beforeAll(async () => {
   if (!withinWindow) throw new Error("No se pudo confirmar la reserva 'dentro de 24h' de prueba");
 
   // Confirmada, más de 24 horas por delante — cancelación gratuita.
+  const freeSlot = findPredictedSlot(LOUNGES.find((lounge) => lounge.id === "aurelia-house")!, "available", 2);
   const free = await confirmBooking(supabase, {
     loungeId: "aurelia-house",
-    dateIso: addDays(today(), 3),
-    band: "morning",
-    time: "8:00 AM",
+    ...freeSlot,
     specialRequests: "",
   });
   if (!free) throw new Error("No se pudo confirmar la reserva 'a más de 24h' de prueba");

@@ -49,12 +49,15 @@ beforeAll(async () => {
 
 /**
  * Mediodía de hoy: pasadas las 11 PM todas las franjas de hoy son "past" y
- * la card dice "Not available" con razón — el CI corre en UTC y lo veía de
- * noche. Solo se falsea `Date` (no los timers) para no colgar `waitFor`.
+ * la card dice "Not available" con razón — el CI lo veía de noche. El reloj
+ * solo se atrasa, nunca se adelanta: adelantarlo deja la sesión de Supabase
+ * (JWT de 1 h) caducada y la página no carga. Solo se falsea `Date` (no los
+ * timers) para no colgar `waitFor`.
  */
 function pinClockToMiddayToday() {
   const midday = new Date();
   midday.setHours(12, 0, 0, 0);
+  if (Date.now() <= midday.getTime()) return;
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(midday);
 }
