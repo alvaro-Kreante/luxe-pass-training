@@ -58,34 +58,44 @@ Deno.serve(async (req) => {
       );
     }
 
+    // PAY-04 — importe entero, positivo y no mayor que lo que queda.
     const alreadyRefunded = payment.refunded_amount_cents ?? 0;
-    const amountCents = body.amountCents ?? payment.amount_cents - alreadyRefunded;
-
-    const stripe = getStripeClient();
-    const refund = await stripe.refunds.create({
-      payment_intent: payment.stripe_payment_intent_id,
-      amount: amountCents,
-      reason: "requested_by_customer",
-      metadata: body.reason ? { admin_reason: body.reason } : undefined,
-    });
-
-    const totalRefunded = alreadyRefunded + amountCents;
-    const fullyRefunded = totalRefunded >= payment.amount_cents;
-
-    if (refund.status === "succeeded") {
-      const { error: updateError } = await service
-        .from("payments")
-        .update({
-          status: fullyRefunded ? "refunded" : "succeeded",
-          refunded_amount_cents: totalRefunded,
-          refunded_at: new Date().toISOString(),
-          refund_reason: body.reason ?? null,
-          stripe_refund_id: refund.id,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", body.paymentId);
-      if (updateError) throw updateError;
+    const remaining = payment.amount_cents - alreadyRefunded;
+    const amountCents = body.amountCents ?? remaining;
+    if (!Number.isInteger(amountCents) || amountCents <= 0 || amountCents > remaining) {
+      return new Response(
+        JSON.stringify({ error: `Refund amount must be between 1 and ${remaining} cents` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
+
+    // La clave sale del estado del pago al pedir el reembolso: dos clics a
+    // la vez sobre el mismo importe son el mismo reembolso para Stripe, y
+    // un reembolso parcial posterior (otro `alreadyRefunded`) es otro.
+    const stripe = getStripeClient();
+    const refund = await stripe.refunds.create(
+      {
+        payment_intent: payment.stripe_payment_intent_id,
+        amount: amountCents,
+        reason: "requested_by_customer",
+        metadata: body.reason ? { admin_reason: body.reason } : undefined,
+      },
+      { idempotencyKey: `admin-refund-${payment.id}-${alreadyRefunded}-${amountCents}` },
+    );
+
+    // El total lo dice Stripe, no una suma local: con reembolsos en
+    // paralelo una suma se quedaría corta. `charge.refunded` lo repite.
+    const intent = await stripe.paymentIntents.retrieve(payment.stripe_payment_intent_id, { expand: ["latest_charge"] });
+    const charge = intent.latest_charge as { amount_refunded: number } | null;
+    const totalRefunded = charge?.amount_refunded ?? alreadyRefunded + amountCents;
+
+    const { error: recordError } = await service.rpc("record_payment_refund", {
+      p_payment_intent_id: payment.stripe_payment_intent_id,
+      p_refunded_total_cents: totalRefunded,
+      p_refund_id: refund.id,
+      p_reason: body.reason ?? null,
+    });
+    if (recordError) throw recordError;
 
     return new Response(
       JSON.stringify({ refundId: refund.id, status: refund.status, amountCents: totalRefunded }),
