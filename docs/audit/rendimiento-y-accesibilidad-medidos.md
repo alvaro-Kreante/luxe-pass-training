@@ -39,7 +39,7 @@ Imágenes: el único peso relevante es `logo.png` vía `next/image` (7–26 KB).
 
 | ID previo | Resultado medido |
 |---|---|
-| PERF-01 | Confirmado para Stripe (PERF-11) y Google Maps (`/explore`, `/admin/lounges/[id]` > 250 kB). Recharts: sin coste (no se usa). |
+| PERF-01 | Confirmado para Google Maps (Stripe resuelto en PERF-11, 19 oct 2026) (`/explore`, `/admin/lounges/[id]` > 250 kB). Recharts: sin coste (no se usa). |
 | PERF-02 | Coherente: FCP ≈ LCP en casi todas las rutas (todo pinta tras hidratar). Sin medición aislada. |
 | PERF-03 | **Confirmado**: `GET /auth/v1/user` ×3 en `/explore`, ×2 en lounge, book y profile → PERF-12. |
 | PERF-04 / A11Y-01 | Sin evidencia nueva (no se sirvieron fotos de lounge). En admin aparece el problema inverso: `image-redundant-alt` (A11Y-17). |
@@ -50,7 +50,6 @@ Imágenes: el único peso relevante es `logo.png` vía `next/image` (7–26 KB).
 | ID | Severidad | Título |
 |---|---|---|
 | PERF-10 | High | CLS 0,797 en `/explore` (miembro) y 0,11–0,34 en dashboards partner/admin |
-| PERF-11 | High | Stripe.js (~289 KB) se carga en todo `/book` desde el paso 1 y también en `/profile` |
 | PERF-12 | Medium | Peticiones Supabase duplicadas por carga (`auth/v1/user` ×3, `partner_context` ×2, `memberships`/`profiles`/`bookings` ×2) |
 | PERF-13 | Medium | TBT ≈ 350–460 ms en `/explore`, `/book` y `/profile` con CPU 4× |
 | PERF-14 | Low | Rutas > 250 kB First Load JS: `/admin/lounges/[id]`, `/admin/lounges/new`, `/explore` |
@@ -75,13 +74,6 @@ Verificado sin hallazgo: foco visible en 25 tabulaciones en `/explore`, `/lounge
 - **Impacto:** la lista/mapa salta cuando llegan los datos (todo client-side, PERF-02); toques erróneos en móvil; Core Web Vital en rojo.
 - **Remediación:** reservar espacio (alto fijo/`aspect-ratio`) para el mapa y las tarjetas de `/explore`; skeletons del mismo tamaño que filas y KPIs en dashboards; no insertar banners encima del contenido tras cargar.
 - **Cierre:** CLS ≤ 0,1 en las cinco rutas con `measure.mjs`.
-
-### PERF-11 — High — Stripe cargado fuera del pago
-- **Ruta:** `/lounges/[id]/book` (paso 1, calendario) y `/profile`.
-- **Evidencia:** 289 KB de `js.stripe.com`/`m.stripe.network` en `/book` (JS total 606 KB frente a 211 kB del build); 21 KB en `/profile`. Causa: `StripeCheckoutBridge` envuelve todo el layout `src/app/lounges/[id]/book/layout.tsx` y llama `getStripe()` al montar.
-- **Impacto:** triplica el JS del flujo de reserva en móvil; carga `load` de 4,9 s frente a ~1,9 s en las demás rutas.
-- **Remediación:** montar el bridge/`loadStripe` solo en `/book/payment` y `/book/summary` (o con `next/dynamic` al llegar al paso de pago); en `/profile`, cargar Stripe solo al abrir el modal de upgrade.
-- **Cierre:** `/book` paso 1 sin peticiones a `*.stripe.com`; JS transferido < 260 KB.
 
 ### PERF-12 — Medium — Peticiones Supabase duplicadas (amplía PERF-03)
 - **Ruta:** `/explore` (`auth/v1/user` ×3), `/lounges/[id]` (`user` ×2, `lounge_seasons` ×2, `lounge_closures` ×2), `/book` (`profiles` ×2, `memberships` ×2), `/my-pass` (`bookings` ×2, `memberships` ×2), `/profile` (`memberships` ×2, `profiles` ×2), `/partner*` (`partner_context` ×2).
