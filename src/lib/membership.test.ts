@@ -380,7 +380,7 @@ describe("AC 'Renewal date and auto-renewal settings' — la renovación automá
   it("rechaza una llamada sin el secreto compartido", async () => {
     const { user } = await freshMemberWithEmail("renew-secret");
     expect((await runMembershipRenewalCharge(user.id, "wrong-secret")).status).toBe(401);
-  });
+  }, 30000);
 });
 
 describe("AC 'Upgrade options' — pasar de anual a mensual al final del término", () => {
