@@ -1,3 +1,4 @@
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 /**
@@ -9,18 +10,24 @@ import { cn } from "@/lib/utils";
  * componente: cambia el fondo a la card de contenido (`bg-surface` con
  * borde y sombra) en vez de `--dark-card`, mismo resto de anatomía. `tone`
  * por defecto es `"dark"` para no tocar los usos ya existentes del Epic 7/8.
+ *
+ * `loading` (PERF-10): la etiqueta es la real y la cifra y la nota son barras
+ * skeleton dentro de sus mismos párrafos, así que el tile mide lo mismo
+ * antes y después de llegar los datos (DESIGN-SYSTEM.md §5 "Estados").
  */
 export function MetricTile({
   label,
   value,
   note,
+  loading = false,
   highlighted = false,
   tone = "dark",
   className,
 }: {
   label: string;
-  value: string;
+  value?: string;
   note?: string;
+  loading?: boolean;
   highlighted?: boolean;
   tone?: "dark" | "light";
   className?: string;
@@ -42,8 +49,16 @@ export function MetricTile({
       >
         {label}
       </p>
-      <p className="m-0 mt-1.5 font-display text-[30px] text-fg">{value}</p>
-      {note ? <p className="m-0 mt-1 text-[11.5px] text-fg-subtle">{note}</p> : null}
+      <p className="m-0 mt-1.5 font-display text-[30px] text-fg">
+        {loading ? <Skeleton className="inline-block h-[0.8em] w-24 align-middle" /> : value}
+      </p>
+      {loading ? (
+        <p className="m-0 mt-1 text-[11.5px] text-fg-subtle">
+          <Skeleton className="inline-block h-[0.9em] w-40 max-w-full align-middle" />
+        </p>
+      ) : note ? (
+        <p className="m-0 mt-1 text-[11.5px] text-fg-subtle">{note}</p>
+      ) : null}
     </div>
   );
 }

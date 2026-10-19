@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { AdminShell } from "@/components/patterns/admin-shell";
 import { RequireAdminSession } from "@/components/admin/require-admin-session";
 import { MetricTile } from "@/components/ui/metric-tile";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Segmented } from "@/components/ui/segmented";
 import { createClient } from "@/lib/supabase/client";
 import { getTicketCounts, type TicketCounts } from "@/lib/admin";
@@ -150,7 +151,13 @@ function AnalyticsScreen() {
           />
           <MetricTile label="Gross revenue" value={formatCurrency(grossRevenueCents / 100)} note="real Stripe charges only" />
         </div>
-      ) : null}
+      ) : (
+        <div aria-hidden className="mt-4.5 grid grid-cols-4 gap-3.5">
+          {["Bookings", "Active members", "No-show rate", "Gross revenue"].map((label) => (
+            <MetricTile key={label} label={label} loading />
+          ))}
+        </div>
+      )}
 
       <div className="mt-4 flex min-h-0 gap-4">
         <div className="flex min-w-0 flex-1 flex-col gap-3.5">
@@ -191,7 +198,13 @@ function AnalyticsScreen() {
                 <AcquisitionTile label="Left" value={String(summary.left)} />
                 <AcquisitionTile label="Net change" value={`${summary.joined - summary.left >= 0 ? "+" : ""}${summary.joined - summary.left}`} highlighted />
               </div>
-            ) : null}
+            ) : (
+              <div aria-hidden className="mt-3.5 grid grid-cols-3 gap-3.5">
+                <AcquisitionTile label="Joined" />
+                <AcquisitionTile label="Left" />
+                <AcquisitionTile label="Net change" highlighted />
+              </div>
+            )}
           </div>
         </div>
 
@@ -229,11 +242,14 @@ function AnalyticsScreen() {
   );
 }
 
-function AcquisitionTile({ label, value, highlighted }: { label: string; value: string; highlighted?: boolean }) {
+/** Sin `value`, la cifra es una barra skeleton en su mismo párrafo (PERF-10). */
+function AcquisitionTile({ label, value, highlighted }: { label: string; value?: string; highlighted?: boolean }) {
   return (
     <div className="rounded-2xl border border-line bg-panel-black px-3.5 py-3">
       <p className="m-0 text-[11px] text-fg-subtle">{label}</p>
-      <p className={`m-0 mt-1.5 text-[19px] font-extrabold ${highlighted ? "text-accent" : "text-fg"}`}>{value}</p>
+      <p className={`m-0 mt-1.5 text-[19px] font-extrabold ${highlighted ? "text-accent" : "text-fg"}`}>
+        {value ?? <Skeleton className="inline-block h-[0.8em] w-10 align-middle" />}
+      </p>
     </div>
   );
 }

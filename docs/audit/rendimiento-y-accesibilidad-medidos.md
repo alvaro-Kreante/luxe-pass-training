@@ -49,7 +49,7 @@ Imágenes: el único peso relevante es `logo.png` vía `next/image` (7–26 KB).
 
 | ID | Severidad | Título |
 |---|---|---|
-| PERF-10 | High | CLS 0,797 en `/explore` (miembro) y 0,11–0,34 en dashboards partner/admin |
+| PERF-10 | High | CLS 0,213 en `/partner/analytics` a 390 px, ligado a A11Y-16 (`/explore` y dashboards admin resueltos) |
 | PERF-12 | Medium | Peticiones Supabase duplicadas por carga (`auth/v1/user` ×3, `partner_context` ×2, `memberships`/`profiles`/`bookings` ×2) |
 | PERF-13 | Medium | TBT ≈ 350–460 ms en `/explore`, `/book` y `/profile` con CPU 4× |
 | PERF-14 | Low | Rutas > 250 kB First Load JS: `/admin/lounges/[id]`, `/admin/lounges/new`, `/explore` |
@@ -69,11 +69,14 @@ Verificado sin hallazgo: foco visible en 25 tabulaciones en `/explore`, `/lounge
 ## Hallazgos
 
 ### PERF-10 — High — Layout shift
-- **Ruta:** `/explore` (miembro) CLS 0,797; `/admin/members` 0,339; `/partner/analytics` 0,214; `/admin/analytics` 0,150; `/admin/lounges/[id]` 0,111. Umbral "bueno" ≤ 0,1.
+- **Ya corregido (19 oct 2026):** `/explore` — el panel de resultados reserva su sitio con skeletons mientras cargan los lounges; CLS 0,616 → 0 (`scripts/playwright/perf-10/cls-sources.mjs`, mismas condiciones que `measure.mjs`).
 - **Evidencia:** `metrics.json`, `layout-shift` sin input reciente; capturas `member-explore.png`, `admin-admin-members.png`.
 - **Impacto:** la lista/mapa salta cuando llegan los datos (todo client-side, PERF-02); toques erróneos en móvil; Core Web Vital en rojo.
 - **Remediación:** reservar espacio (alto fijo/`aspect-ratio`) para el mapa y las tarjetas de `/explore`; skeletons del mismo tamaño que filas y KPIs en dashboards; no insertar banners encima del contenido tras cargar.
-- **Cierre:** CLS ≤ 0,1 en las cinco rutas con `measure.mjs`.
+- **Ya corregido (19 oct 2026):** `/admin/analytics` — KPIs y tiles de "Members" con skeleton (`MetricTile loading`) mientras carga: 0,118 → 0,015 a 390 px y 0,046 → 0 a 1440 px.
+- **Medido sin cambios (19 oct 2026, `cls-sources.mjs`):** `/admin/members` 0,057 (390) / 0,041 (1440) y `/admin/lounges/[id]` 0, ya bajo el umbral.
+- **Falta:** `/partner/analytics` da 0,213 solo a 390 px y 0 a 1440 px: el salto viene del layout de escritorio comprimido en móvil, no de la carga de datos. Se resuelve con el layout móvil del Partner Dashboard (A11Y-16).
+- **Cierre:** CLS ≤ 0,1 en `/partner/analytics` a 390 px tras A11Y-16.
 
 ### PERF-12 — Medium — Peticiones Supabase duplicadas (amplía PERF-03)
 - **Ruta:** `/explore` (`auth/v1/user` ×3), `/lounges/[id]` (`user` ×2, `lounge_seasons` ×2, `lounge_closures` ×2), `/book` (`profiles` ×2, `memberships` ×2), `/my-pass` (`bookings` ×2, `memberships` ×2), `/profile` (`memberships` ×2, `profiles` ×2), `/partner*` (`partner_context` ×2).

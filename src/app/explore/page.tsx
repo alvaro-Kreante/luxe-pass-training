@@ -22,8 +22,8 @@ import { FilterDrawer } from "@/components/explore/filter-drawer";
 import { LoungeCallout } from "@/components/explore/lounge-callout";
 import { LoungeList } from "@/components/explore/lounge-list";
 import { NoResults } from "@/components/explore/no-results";
-import { ResultCard } from "@/components/explore/result-card";
-import { usePagedCount } from "@/components/explore/use-paged-count";
+import { ResultCard, ResultCardSkeleton } from "@/components/explore/result-card";
+import { PAGE_SIZE, usePagedCount } from "@/components/explore/use-paged-count";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { RemovableChip } from "@/components/ui/chip";
@@ -331,11 +331,18 @@ function ExploreScreen() {
           empty || view === "list" ? null : (
           <>
             <div className="px-5.5 pb-3 pt-5">
-              <Eyebrow className="mb-1.5">
-                {offline
-                  ? `${lounges.length} cached lounges`
-                  : `${lounges.length} lounges near you`}
-              </Eyebrow>
+              {allLounges === null ? (
+                <span className="mb-1.5 flex items-center gap-2.5">
+                  <Spinner size={16} />
+                  <Eyebrow>Finding lounges near you</Eyebrow>
+                </span>
+              ) : (
+                <Eyebrow className="mb-1.5">
+                  {offline
+                    ? `${lounges.length} cached lounges`
+                    : `${lounges.length} lounges near you`}
+                </Eyebrow>
+              )}
               <p className="m-0 text-[12.5px] text-fg-subtle">
                 {offline ? (
                   "Distances from your last known location · Live availability unavailable"
@@ -356,6 +363,7 @@ function ExploreScreen() {
             </div>
 
             <PagedResults
+              loading={allLounges === null}
               lounges={lounges}
               unit={unit}
               selectedId={selectedId}
@@ -440,12 +448,14 @@ function ExploreScreen() {
 }
 
 function PagedResults({
+  loading,
   lounges,
   unit,
   selectedId,
   onSelect,
   cachedNote,
 }: {
+  loading: boolean;
   lounges: LoungeWithDistance[];
   unit: DistanceUnit;
   selectedId: string | null;
@@ -453,6 +463,16 @@ function PagedResults({
   cachedNote?: string;
 }) {
   const { shown, hasMore, sentinel } = usePagedCount(lounges.length);
+
+  if (loading) {
+    return (
+      <div aria-hidden className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-hidden px-5.5 pb-5.5">
+        {Array.from({ length: PAGE_SIZE }, (_, index) => (
+          <ResultCardSkeleton key={index} />
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-5.5 pb-5.5">

@@ -291,6 +291,29 @@ describe("el permiso se recuerda durante la sesión", () => {
   });
 });
 
+/**
+ * PERF-10 — mientras llegan los lounges el panel reserva el sitio de las
+ * tarjetas (skeletons) en vez de quedarse vacío: en móvil el panel va encima
+ * del mapa y, al llenarse de golpe, lo empujaba fuera de la pantalla.
+ */
+describe("carga de los resultados", () => {
+  it("mientras cargan, el panel dice que está buscando y no anuncia 0 lounges", async () => {
+    const user = userEvent.setup({ delay: null });
+    const first = render(<ExplorePage />);
+    await allowLocation(user);
+    first.unmount();
+
+    render(<ExplorePage />);
+    const panel = await screen.findByRole("region", { name: "Results" });
+
+    expect(within(panel).getByText("Finding lounges near you")).toBeInTheDocument();
+    expect(within(panel).queryByText(/^0 lounges/)).toBeNull();
+
+    expect(await within(panel).findByText("The Ainsworth")).toBeInTheDocument();
+    expect(within(panel).queryByText("Finding lounges near you")).toBeNull();
+  });
+});
+
 describe("entrada manual de ubicación", () => {
   it("ofrece escribir una ubicación en lugar de usar el GPS", async () => {
     const user = userEvent.setup({ delay: null });
