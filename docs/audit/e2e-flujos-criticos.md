@@ -55,7 +55,7 @@ Fecha: 12 oct 2026 · Rama: `docs/project-audit` · Ejecución: **solo local**.
 
 | ID | Severidad | Resumen |
 |---|---|---|
-| E2E-03 | Alta | = SEC-03 (parcial): el bloqueo de login se salta llamando a GoTrue directo |
+| E2E-03 | Alta | = SEC-03: resuelto en local; en remoto falta activar el hook (plan Team) |
 | E2E-04 | Media | Cobro sin reserva si la página se recarga entre el cobro y `confirm_booking`; borrador no persiste |
 | E2E-06 | Media | El pase no refleja el check-in y calcula mal "in 2 days" para una visita de hoy |
 | E2E-08 | Media | "Cancel visit" y "Add to calendar" del pase individual no hacen nada |
@@ -67,7 +67,7 @@ Fecha: 12 oct 2026 · Rama: `docs/project-audit` · Ejecución: **solo local**.
 
 ### E2E-03 — Bloqueo de login evitable (Alta, parcial) = SEC-03
 - **Ya corregido (#52):** un anónimo ya no puede resetear el contador de otra cuenta.
-- **Falta y cierre:** los de SEC-03 en `seguridad-y-datos.md` (con la cuenta bloqueada, `signInWithPassword` directo todavía devuelve sesión).
+- **Falta y cierre:** los de SEC-03 en `seguridad-y-datos.md`. En local, con la cuenta bloqueada, `signInWithPassword` directo ya es rechazado; en remoto todavía devuelve sesión.
 
 ### E2E-04 — Cobro sin reserva al recargar durante el pago (Media)
 - **Ubicación:** `src/components/booking/booking-context.tsx` (borrador solo en memoria), `summary/page.tsx` (cobro y `confirm_booking` en dos pasos del cliente), `stripe-webhook` (no crea la reserva).

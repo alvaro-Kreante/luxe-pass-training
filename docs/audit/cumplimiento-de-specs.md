@@ -72,7 +72,7 @@ Lectura rápida: el 76 % de los criterios de las 24 historias del cliente se cum
 | 1 | Login email/password | CUMPLE | `src/app/login/page.tsx`; `page.test.tsx`; E2E F1.5 |
 | 2 | Remember me | **PROVISIONAL** (conocido) | Checkbox en `login/page.tsx:35,214` sin efecto en la sesión — `PENDIENTES.md` §3 (1.2) |
 | 3 | Password reset via email, secure token | CUMPLE | `/forgot-password`, `supabase/templates/recovery.html`, `/reset-password` (`updateUser`) |
-| 4 | Lockout after 5 attempts, 15 min | **PARCIAL** (conocido) | `supabase/schemas/login_attempts.sql`; el bloqueo solo lo aplica el cliente — SEC-03 / E2E-03 |
+| 4 | Lockout after 5 attempts, 15 min | **PARCIAL** (conocido) | `supabase/schemas/login_attempts.sql`; en local lo aplica Supabase Auth (hook); en remoto solo el cliente hasta activar el hook (plan Team) — SEC-03 / E2E-03 |
 | 5 | Auto logout after 30 days inactivity | CUMPLE | `config.toml:320-323` `inactivity_timeout = "720h"` |
 | 6 | Clear error messages | CUMPLE | E2E F1.2 ("4…1 attempts left", aviso de bloqueo) |
 

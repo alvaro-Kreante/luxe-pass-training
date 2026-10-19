@@ -292,6 +292,12 @@ enabled = true
 uri = "http://host.docker.internal:54331/functions/v1/send-email"
 secrets = "env(SEND_EMAIL_HOOK_SECRET)"
 
+# SEC-03 — bloqueo tras 5 fallos aplicado por Auth, no por la pantalla
+# (`supabase/schemas/login_attempts.sql`). En remoto es del plan Team.
+[auth.hook.password_verification_attempt]
+enabled = true
+uri = "pg-functions://postgres/public/hook_password_verification_attempt"
+
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
 # enabled = true

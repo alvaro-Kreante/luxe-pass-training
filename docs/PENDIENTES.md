@@ -140,32 +140,31 @@ exige sesión de partner (`RequirePartnerSession`) y usa el lounge elegido
 en su contexto. La consola sigue en su URL propia, fuera del shell de
 `/partner`: ninguna historia pide fusionarla con el dashboard.
 
-### 2.7b El bloqueo tras 5 intentos de login solo lo aplica `/login`
+### 2.7b El bloqueo tras 5 intentos de login en remoto solo lo aplica `/login`
 
-SEC-03 (`docs/audit/seguridad-y-datos.md`), cerrado a medias el 13 oct 2026.
-Supabase Auth no consulta `login_attempts`, así que una llamada directa a
-`/auth/v1/token` con la clave publicable se salta el bloqueo de la Story
-1.2. Lo que ya está cerrado: `reset_login_attempts` solo limpia el
-contador de quien acaba de iniciar sesión con ese email (antes cualquiera,
-sin sesión, podía desbloquear otra cuenta).
+SEC-03 (`docs/audit/seguridad-y-datos.md`). El bloqueo de la Story 1.2 ya
+lo aplica Supabase Auth: `hook_password_verification_attempt`
+(`supabase/schemas/login_attempts.sql`) cuenta cada fallo de contraseña,
+bloquea al quinto y rechaza cualquier login mientras dura el bloqueo,
+también el que llama a `/auth/v1/token` directamente. En local está activo
+(`[auth.hook.password_verification_attempt]` de `config.toml`).
 
 Sigue abierto, por decisión de coste:
 
-- **Bloqueo real en el servidor:** requiere el hook "Password Verification
-  Attempt" de Supabase Auth, solo disponible en el plan Team.
-- **Defensa de servidor mientras tanto:** el rate limit de sign-in por IP
-  de Auth. En los proyectos remotos (`luxepass-dev`/`luxepass-prod`) se
-  ajusta en el dashboard (Authentication → Rate Limits); el
-  `sign_in_sign_ups = 200` de `config.toml` es solo local, subido para la
-  suite de tests.
+- **Activarlo en remoto:** el hook "Password Verification Attempt" es del
+  plan Team. Al subir `luxepass-dev`/`luxepass-prod` de plan, activarlo en
+  Authentication → Hooks → Postgres → `public.hook_password_verification_attempt`
+  (la función ya llega con las migraciones). Hasta entonces, en remoto el
+  bloqueo solo lo aplica `/login` vía `record_failed_login` y la defensa de
+  servidor es el rate limit de sign-in por IP de Auth (dashboard →
+  Authentication → Rate Limits; el `sign_in_sign_ups = 200` de
+  `config.toml` es solo local).
 - **Bloquear la cuenta de otro adrede** (5 fallos con su email) sigue siendo
-  posible: `record_failed_login` tiene que poder llamarse sin sesión. Es el
-  trade-off ya documentado en `supabase/schemas/login_attempts.sql`;
-  CAPTCHA (Turnstile/hCaptcha, verificado por Auth en cualquier plan) lo
-  mitigaría.
+  posible, ahora también vía Auth. Es el trade-off ya documentado en
+  `supabase/schemas/login_attempts.sql`; CAPTCHA (Turnstile/hCaptcha,
+  verificado por Auth en cualquier plan) lo mitigaría.
 
-**Se resuelve:** pasando a plan Team (hook) o añadiendo CAPTCHA en login y
-signup.
+**Se resuelve:** pasando a plan Team y activando el hook.
 
 ### 2.8 "Settings" del Partner Dashboard no tiene pantalla propia
 
