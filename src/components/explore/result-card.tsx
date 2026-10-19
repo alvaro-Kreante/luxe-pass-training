@@ -1,6 +1,7 @@
 "use client";
 
 import { LoungeThumb } from "@/components/lounges/lounge-thumb";
+import { Skeleton } from "@/components/ui/skeleton";
 import { StatusChip } from "@/components/ui/status-chip";
 import { AmenityIcon } from "./amenity-icon";
 import { availabilityLabel } from "@/lib/availability";
@@ -84,5 +85,32 @@ export function ResultCard({
         </span>
       </span>
     </button>
+  );
+}
+
+/**
+ * PERF-10 — la carga de la tarjeta, con su misma caja (borde, `p-3`,
+ * miniatura de 70px) para que el panel no cambie de alto al llegar los
+ * datos. Sin artboard propio: aplica la regla de DESIGN-SYSTEM.md §5
+ * "Estados" (misma geometría que la pieza real); desviación anotada en
+ * COMPONENT-MAP.md.
+ */
+export function ResultCardSkeleton() {
+  return (
+    <div className="flex w-full gap-3 rounded-[14px] border border-line bg-surface p-3">
+      <Skeleton className="size-[70px] shrink-0 rounded-[10px]" />
+
+      <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">
+        <div className="flex items-center justify-between gap-2">
+          <Skeleton className="h-3.5 w-[55%]" />
+          <Skeleton className="h-3 w-10" />
+        </div>
+        <Skeleton className="h-3 w-[70%]" />
+        <div className="flex items-center justify-between gap-2">
+          <Skeleton className="h-3 w-[72px]" />
+          <Skeleton className="h-5 w-[86px] rounded-full" />
+        </div>
+      </div>
+    </div>
   );
 }
