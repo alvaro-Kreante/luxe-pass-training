@@ -774,6 +774,18 @@ de la tarifa de no-show.
 
 ---
 
+### 5.4 Qué se conserva al borrar una cuenta (PRIV-02)
+
+El borrado físico (`delete-account`, Story 6.3) ya limpia la foto de Storage
+y el Customer de Stripe. Lo que queda por decidir con En Soleil es qué
+registros sobreviven: hoy `payments` y `bookings` (incluidos cobros de
+no-show y cancelación), `support_tickets` y el `referrals` del miembro que
+invitó se borran en cascada con `auth.users`. La propuesta de la auditoría
+es conservar `payments`/`bookings` anonimizados (FK `SET NULL`) por
+contabilidad y antifraude, y la fila de `referrals` con `referee_id` a
+`null` para que el referrer no pierda su historial. Pide definir el plazo
+de retención y reflejarlo en la política de privacidad.
+
 ## Resueltos
 
 | Qué | Cuándo | Cómo |
@@ -836,3 +848,4 @@ de la tarifa de no-show.
 | DEP-01: `next@15.5.25` tenía dos advisories de cache poisoning en SSG/ISR self-hosted (GHSA-4jqv-mc3x-m676, GHSA-mcj8-r9mp-w47p) | 15 oct 2026 | `next` → `^15.5.27` (patch). `npm audit --omit=dev` ya no lista `next`; `sharp 0.35.4` sigue llegando por `next` (DEP-03, abierto) |
 | A11Y-11: los errores de formulario (login, signup, onboarding, recuperar/restablecer contraseña, login partner/admin) no se anunciaban al lector de pantalla ni quedaban asociados al campo; el alta deshabilitada no explicaba por qué | 15 oct 2026 | `Field` gana la prop `error` (`role="alert"`) y enlaza hint/error al control con `aria-describedby`; los 10 errores que iban a mano en `hint` pasan a `error`. El botón "Create account" se describe con su texto de ayuda. Tests en `src/app/login/page.test.tsx` y `src/app/signup/page.test.tsx` |
 | QA-01: `stripe-webhook`, única fuente de verdad de `payments.status`, no tenía ningún test; los que decían "el webhook" liquidaban el pago con service role | 19 oct 2026 | `src/lib/stripe-webhook.test.ts` envía eventos firmados (HMAC como Stripe) a la function servida: 400 sin firma, 401 con firma ajena, sesión pagada → `succeeded` + membresía activa, sesión caducada → `failed`, reentrega y fallo tardío sin efectos. CI genera un `STRIPE_WEBHOOK_SECRET` efímero; los tests engañosos se renombraron |
+| PRIV-02 (parte técnica): el borrado de cuenta dejaba la foto en Storage y el Customer de Stripe con email y tarjetas | 19 oct 2026 | `delete-account` borra `profile-photos/<uid>/` y el Customer antes de borrar el usuario; si falla, 500 y reintento del cron. CI genera un `ACCOUNT_DELETION_WEBHOOK_SECRET` efímero. Test en `src/lib/account-deletion.test.ts`. La retención sigue en §5.4 |
