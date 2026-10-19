@@ -28,7 +28,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.37.0",
-    "next": "^15.5.25",
+    "next": "^15.5.27",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-easy-crop": "^6.2.3",
