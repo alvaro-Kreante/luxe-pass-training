@@ -55,3 +55,58 @@ describe("reset_login_attempts", () => {
     expect(await isLocked(email)).toBe(false);
   });
 });
+
+/**
+ * SEC-03: el bloqueo lo aplica Supabase Auth (hook "Password Verification
+ * Attempt"), no la pantalla — quien llama a `/auth/v1/token` directamente
+ * también lo sufre.
+ */
+describe("bloqueo en el servidor", () => {
+  const PASSWORD = "EnSoleil!2026";
+
+  async function confirmedEmail(prefix: string) {
+    const email = `${prefix}-${Date.now()}@ensoleil-test.com`;
+    const client = isolatedClient();
+    await signUpConfirmedMemberAndSignIn(client, email, PASSWORD);
+    await client.auth.signOut();
+    return email;
+  }
+
+  async function failDirectly(email: string, times: number) {
+    for (let attempt = 0; attempt < times; attempt += 1) {
+      await isolatedClient().auth.signInWithPassword({ email, password: "ClaveIncorrecta!1" });
+    }
+  }
+
+  it("tras 5 fallos directos contra Auth, la contraseña correcta tampoco entra", async () => {
+    const email = await confirmedEmail("lockout-direct");
+    await failDirectly(email, 5);
+
+    const { data, error } = await isolatedClient().auth.signInWithPassword({ email, password: PASSWORD });
+
+    expect(data.session).toBeNull();
+    expect(error).not.toBeNull();
+    expect(await isLocked(email)).toBe(true);
+  });
+
+  it("con menos de 5 fallos la contraseña correcta entra y reinicia el contador", async () => {
+    const email = await confirmedEmail("lockout-reset");
+    await failDirectly(email, 4);
+
+    const { data } = await isolatedClient().auth.signInWithPassword({ email, password: PASSWORD });
+    await failDirectly(email, 4);
+
+    expect(data.session).not.toBeNull();
+    expect(await isLocked(email)).toBe(false);
+  });
+
+  it("un fallo que ya contó Auth no lo vuelve a contar la pantalla", async () => {
+    const email = await confirmedEmail("lockout-single-count");
+    const client = isolatedClient();
+
+    await client.auth.signInWithPassword({ email, password: "ClaveIncorrecta!1" });
+    const { data } = await client.rpc("record_failed_login", { p_email: email });
+
+    expect(data?.[0]?.failed_count).toBe(1);
+  });
+});

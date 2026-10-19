@@ -9,7 +9,7 @@
 
 | ID | Severidad | Título |
 |---|---|---|
-| SEC-03 | **Alta** | Parcial: `reset_login_attempts` ya solo lo usa el dueño del email (#52), pero el bloqueo sigue siendo de cliente: `signInWithPassword` directo no lo respeta |
+| SEC-03 | **Alta** | Resuelto en código y en local (hook `password_verification_attempt`); en remoto sigue abierto hasta pasar a plan Team y activar el hook |
 | SEC-05 | Media | `email_exists` permite enumerar cuentas a cualquier anónimo |
 | SEC-06 | Baja | HTML sin escapar en el email de recibo (`special_requests`, nombre) |
 | SEC-07 | Baja | Mensajes de error internos (`error.message` de Postgres/Stripe/Brevo) devueltos al cliente |
@@ -20,12 +20,12 @@
 
 ## Hallazgos
 
-### SEC-03 — Bloqueo de login solo en el cliente (Alta, parcial)
+### SEC-03 — Bloqueo de login solo en el cliente (Alta, abierto solo en remoto)
 
-- **Ya corregido (#52, 13 oct 2026):** `reset_login_attempts` solo reinicia el contador de quien acaba de iniciar sesión con ese email; un anónimo ya no desbloquea cuentas ajenas.
-- **Falta:** el bloqueo tras 5 fallos se comprueba en el navegador antes de `signInWithPassword`; un atacante que llama a `/auth/v1/token` directamente no lo sufre (solo el rate limit por IP de Auth). `record_failed_login` sigue abierto a `anon`, así que se puede bloquear la UI de una cuenta ajena.
-- **Remediación:** hook `password_verification_attempt` de Supabase Auth (plan Team) o una Edge Function de login que aplique el bloqueo; alternativa sin plan: CAPTCHA tras N fallos y rate limit por IP (`docs/PENDIENTES.md` §2.7b).
-- **Cierre:** tras 5 fallos, un `signInWithPassword` directo es rechazado.
+- **Ya corregido (#52, 13 oct 2026):** `reset_login_attempts` solo reinicia el contador de quien acaba de iniciar sesión con ese email.
+- **Ya corregido en código (19 oct 2026):** `hook_password_verification_attempt` (`supabase/schemas/login_attempts.sql`) cuenta cada fallo de contraseña dentro de Supabase Auth, bloquea al quinto y rechaza el login (también con la contraseña correcta) mientras dura el bloqueo. Activo en local vía `config.toml`; test en `src/lib/login-attempts.test.ts`.
+- **Falta:** el hook es del plan Team. En `luxepass-dev`/`luxepass-prod` hay que subir de plan y activarlo en Authentication → Hooks (Postgres, `public.hook_password_verification_attempt`); hasta entonces una llamada directa a `/auth/v1/token` no sufre el bloqueo. `record_failed_login` sigue abierto a `anon` (bloquear una cuenta ajena: trade-off de la Story 1.2).
+- **Cierre:** en remoto, tras 5 fallos un `signInWithPassword` directo es rechazado.
 
 ### SEC-05 — Enumeración de cuentas vía `email_exists` (Media, Confirmado)
 
