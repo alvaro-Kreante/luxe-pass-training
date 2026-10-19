@@ -8,7 +8,7 @@ Ya cubierto en `seguridad-y-datos.md` (se referencia, no se duplica): **SEC-05**
 
 | ID | Severidad | Título |
 |---|---|---|
-| PRIV-02 | **Alta** | El borrado de cuenta deja datos personales fuera de Postgres (foto en Storage, cliente de Stripe) y borra en cascada el historial financiero |
+| PRIV-02 | **Alta** | Parcial: Storage y Stripe ya se limpian; sigue abierto el borrado en cascada del historial financiero (decisión de retención) |
 | PRIV-03 | Media | Preferencias de notificación (push/email/SMS, horas de silencio) solo existen en el estado del navegador; los crons de email no consultan ninguna preferencia |
 | PRIV-04 | Media | `partner_repeat_guests` expone a cada partner el email de todos sus huéspedes históricos sin límite temporal ni ligado a reserva abierta |
 | PRIV-05 | Media | Sin retención ni limpieza: `login_attempts`, tickets de soporte, notificaciones, `referral_shares` crecen indefinidamente |
@@ -59,15 +59,12 @@ No hay columnas de IP, user-agent ni geolocalización del miembro: la ubicación
 
 ## 2. Hallazgos
 
-### PRIV-02 — Borrado de cuenta incompleto fuera de Postgres y destructivo dentro (Alta, Confirmado)
+### PRIV-02 — Borrado de cuenta destructivo dentro de Postgres (Alta, parcial)
 
-- **Dónde:** `supabase/functions/delete-account/index.ts:73` (`auth.admin.deleteUser`), `supabase/schemas/account_deletion.sql`.
-- **Evidencia (FK consultadas en local):** `profiles, bookings, payments, notifications, support_tickets, member_favorite_lounges, user_roles, partner_members → auth.users ON DELETE CASCADE`; `memberships, referrals (ambos lados), referral_shares, day_pass_redemptions → profiles CASCADE`. La función no toca `storage.objects`, ni Stripe, ni Brevo.
-- **Qué queda:** (a) foto en `profile-photos/<uid>/…` huérfana (Storage no tiene FK a `auth.users`); (b) cliente de Stripe con email y métodos de pago guardados (`stripe_customer_id`); (c) contactos/logs transaccionales en Brevo (no se crean contactos explícitos; solo logs de envío).
-- **Qué se pierde de más:** `payments` (incluidos cobros de no-show/cancelación) y `bookings` se borran en cascada → se pierde el registro contable/antifraude que normalmente debe retenerse; `referrals` del **referrer** desaparece cuando el amigo borra su cuenta (pierde historial/premio). `support_tickets` del miembro también desaparecen.
-- **Impacto:** el miembro cree que "your data is erased" pero sus datos siguen en Storage y Stripe; a la vez el negocio pierde registros financieros sin política explícita.
-- **Remediación:** en `delete-account`: borrar `profile-photos/<uid>/` con el cliente service; `stripe.customers.del(stripe_customer_id)` (o anonimizar); cambiar FKs de `payments`/`bookings` a `SET NULL` + anonimizar en lugar de cascada (decisión de retención con el cliente); `referrals.referee_id` a `SET NULL` conservando la fila anonimizada.
-- **Cierre:** test de la función: tras el borrado no hay objetos bajo `<uid>/`, el customer de Stripe test está borrado, y `payments` del miembro persiste anonimizado (o la política escrita dice lo contrario).
+- **Ya corregido (19 oct 2026):** `delete-account` borra, antes de `auth.admin.deleteUser`, la foto en `profile-photos/<uid>/` y el Customer de Stripe (email y tarjetas guardadas); si algo falla responde 500 sin borrar el usuario y el cron reintenta. Test en `src/lib/account-deletion.test.ts`.
+- **Falta (decisión de retención con el cliente, `docs/PENDIENTES.md` §5.4):** `payments` (incluidos cobros de no-show/cancelación) y `bookings` se borran en cascada con `auth.users` → se pierde el registro contable/antifraude; `referrals` del **referrer** desaparece cuando el amigo borra su cuenta; `support_tickets` del miembro también. Brevo conserva logs de envío (no se crean contactos).
+- **Remediación:** cambiar FKs de `payments`/`bookings` a `SET NULL` + anonimizar en lugar de cascada; `referrals.referee_id` a `SET NULL` conservando la fila anonimizada.
+- **Cierre:** `payments` del miembro persiste anonimizado tras el borrado (o la política escrita dice lo contrario).
 
 ### PRIV-03 — Preferencias de notificación no persistidas ni respetadas (Media, Confirmado)
 

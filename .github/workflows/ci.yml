@@ -148,6 +148,11 @@ jobs:
       - name: Generar el secreto del webhook de Stripe (QA-01)
         run: echo "STRIPE_WEBHOOK_SECRET=whsec_$(openssl rand -hex 24)" >> "$GITHUB_ENV"
 
+      # PRIV-02 — `src/lib/account-deletion.test.ts` invoca `delete-account`
+      # con el secreto compartido; efímero por la misma razón.
+      - name: Generar el secreto compartido de delete-account (PRIV-02)
+        run: echo "ACCOUNT_DELETION_WEBHOOK_SECRET=$(openssl rand -hex 24)" >> "$GITHUB_ENV"
+
       - name: Servir las Edge Functions localmente (Story 4.2 — Stripe)
         env:
           STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
@@ -156,6 +161,7 @@ jobs:
             echo "STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY"
             echo "MEMBERSHIP_RENEWAL_WEBHOOK_SECRET=$MEMBERSHIP_RENEWAL_WEBHOOK_SECRET"
             echo "STRIPE_WEBHOOK_SECRET=$STRIPE_WEBHOOK_SECRET"
+            echo "ACCOUNT_DELETION_WEBHOOK_SECRET=$ACCOUNT_DELETION_WEBHOOK_SECRET"
             # No sirve nada de verdad en este runner (no hay npm run dev) —
             # stripe-create-checkout-session solo necesita que sea una URL
             # absoluta válida para el `return_url` que le manda a Stripe.

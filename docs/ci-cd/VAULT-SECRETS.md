@@ -29,7 +29,7 @@ select vault.create_secret('<valor del .env>', '<nombre_secret>', '<descripción
 | Reportes programados (8.2) | `send-admin-report` | `admin_report_webhook_url` | `admin_report_webhook_secret` | `ADMIN_REPORT_WEBHOOK_SECRET` |
 | Renovación de membresía (9.1) | `membership-renewal` | `membership_renewal_webhook_url` | `membership_renewal_webhook_secret` | `MEMBERSHIP_RENEWAL_WEBHOOK_SECRET` |
 
-`MEMBERSHIP_RENEWAL_WEBHOOK_SECRET` también va en `.env.local`: los tests invocan el cobro directamente (en CI se genera al vuelo en `ci.yml`). Igual `STRIPE_WEBHOOK_SECRET` (el mismo valor que en `supabase/functions/.env`): `src/lib/stripe-webhook.test.ts` firma eventos con él (QA-01).
+`MEMBERSHIP_RENEWAL_WEBHOOK_SECRET` también va en `.env.local`: los tests invocan el cobro directamente (en CI se genera al vuelo en `ci.yml`). Igual `STRIPE_WEBHOOK_SECRET` (el mismo valor que en `supabase/functions/.env`): `src/lib/stripe-webhook.test.ts` firma eventos con él (QA-01). Igual `ACCOUNT_DELETION_WEBHOOK_SECRET`: `src/lib/account-deletion.test.ts` invoca `delete-account` (PRIV-02).
 
 ## Secretos de GitHub que usa `deploy.yml`
 

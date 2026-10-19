@@ -253,7 +253,7 @@ Lectura rápida: el 76 % de los criterios de las 24 historias del cliente se cum
 | 4 | Membership status Active/Inactive | CUMPLE | Espejo de `memberships` (`sync_profile_membership_status`) |
 | 5 | Referral code sharing | CUMPLE | `profiles.referral_code`; `referral-share-modal.tsx` |
 | 6 | Privacy settings for data usage | **PARCIAL** (conocido) | Se guardan pero nadie los consume (PRIV-07) |
-| 7 | Account deletion with confirmation | **PARCIAL** (conocido) | Soft-delete + cron real; borrado incompleto fuera de Postgres (PRIV-02); cron silencioso sin secretos (PRIV-08) |
+| 7 | Account deletion with confirmation | **PARCIAL** (conocido) | Soft-delete + cron real; borrado en cascada del historial financiero sin política de retención (PRIV-02); cron silencioso sin secretos (PRIV-08) |
 | 8 | Export personal data (GDPR) | **PARCIAL** (conocido) | Descarga real pero omite pagos, membresías, referidos, tickets y foto — PRIV-06 |
 
 ---
