@@ -137,6 +137,14 @@ describe("aceptación de términos", () => {
     ).toBeVisible();
   });
 
+  it("explica al lector de pantalla por qué el alta está deshabilitada", () => {
+    render(<SignUpPage />);
+
+    expect(submitButton()).toHaveAccessibleDescription(
+      "Disabled until the terms are accepted.",
+    );
+  });
+
   it("habilita el alta al aceptar los dos documentos", async () => {
     const user = userEvent.setup({ delay: null });
     render(<SignUpPage />);

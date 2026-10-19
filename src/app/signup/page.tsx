@@ -127,11 +127,7 @@ function SignUpScreen() {
           <Field
             label="Email address"
             htmlFor="email"
-            hint={
-              errors.email ? (
-                <span className="text-accent-strong">{errors.email}</span>
-              ) : null
-            }
+            error={errors.email}
           >
             <Input
               id="email"
@@ -148,13 +144,8 @@ function SignUpScreen() {
           <Field
             label="Password"
             htmlFor="password"
-            hint={
-              errors.password ? (
-                <span className="text-accent-strong">{errors.password}</span>
-              ) : (
-                "8+ characters, including one special character."
-              )
-            }
+            error={errors.password}
+            hint="8+ characters, including one special character."
           >
             <Input
               id="password"
@@ -186,13 +177,7 @@ function SignUpScreen() {
             label="Confirm password"
             htmlFor="confirm-password"
             className="mb-[22px]"
-            hint={
-              errors.confirmPassword ? (
-                <span className="text-accent-strong">
-                  {errors.confirmPassword}
-                </span>
-              ) : null
-            }
+            error={errors.confirmPassword}
           >
             <Input
               id="confirm-password"
@@ -243,11 +228,20 @@ function SignUpScreen() {
             </button>
           </Checkbox>
 
-          <Button type="submit" block disabled={!acceptance || submitting}>
+          <Button
+            type="submit"
+            block
+            disabled={!acceptance || submitting}
+            aria-describedby="create-account-description"
+          >
             {submitting ? "Creating account…" : "Create account"}
           </Button>
 
-          <p className="m-0 mt-2.5 text-center text-xs text-fg-subtle">
+          <p
+            id="create-account-description"
+            role={errors.terms ? "alert" : undefined}
+            className="m-0 mt-2.5 text-center text-xs text-fg-subtle"
+          >
             {errors.terms ?? "Disabled until the terms are accepted."}
           </p>
         </form>

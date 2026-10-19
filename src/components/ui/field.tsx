@@ -15,6 +15,8 @@ export interface FieldProps {
   /** Junto a la etiqueta, no debajo del control — p. ej. el badge "Verified" de `Profile.dc.html`. */
   labelExtra?: React.ReactNode;
   hint?: React.ReactNode;
+  /** Sustituye al hint, en el color de acento, y se anuncia con `role="alert"`. */
+  error?: React.ReactNode;
   htmlFor?: string;
   className?: string;
   children: React.ReactNode;
@@ -26,10 +28,18 @@ export function Field({
   optional,
   labelExtra,
   hint,
+  error,
   htmlFor,
   className,
   children,
 }: FieldProps) {
+  const description = error || hint;
+  const descriptionId = description && htmlFor ? `${htmlFor}-description` : undefined;
+  const control =
+    descriptionId && React.isValidElement<{ "aria-describedby"?: string }>(children)
+      ? React.cloneElement(children, { "aria-describedby": descriptionId })
+      : children;
+
   return (
     <div className={cn("mb-[18px]", className)}>
       <div className="mb-2 flex items-center gap-2">
@@ -42,9 +52,13 @@ export function Field({
         </label>
         {labelExtra}
       </div>
-      {children}
-      {hint ? (
-        <p className="mt-1.5 text-xs text-fg-subtle">{hint}</p>
+      {control}
+      {error ? (
+        <p id={descriptionId} role="alert" className="mt-1.5 text-xs text-accent-strong">
+          {error}
+        </p>
+      ) : hint ? (
+        <p id={descriptionId} className="mt-1.5 text-xs text-fg-subtle">{hint}</p>
       ) : null}
     </div>
   );
