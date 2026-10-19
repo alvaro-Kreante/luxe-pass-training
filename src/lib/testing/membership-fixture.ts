@@ -49,7 +49,7 @@ export async function grantTestMembership(
   if (error) throw error;
 }
 
-/** Simula lo que el webhook de Stripe hace al liquidarse un pago (`stripe-webhook`): solo cambia `payments.status`. */
+/** Liquida un pago sin pasar por `stripe-webhook` (ese camino lo prueba `src/lib/stripe-webhook.test.ts`): solo cambia `payments.status`. */
 export async function settleTestPayment(paymentId: string) {
   const { error } = await adminClient()
     .from("payments")

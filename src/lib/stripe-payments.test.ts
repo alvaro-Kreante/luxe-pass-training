@@ -107,7 +107,7 @@ describe("tarjetas guardadas — Customer de Stripe real", () => {
     expect(customerId).toMatch(/^cus_/);
   });
 
-  it("cobra con una tarjeta guardada y el webhook confirma el pago", async () => {
+  it("cobra con una tarjeta guardada y Stripe da el cobro por bueno", async () => {
     const customerId = await stripeCustomerIdFor(supabase, userId);
     const paymentMethodId = await attachTestCard(customerId);
 
