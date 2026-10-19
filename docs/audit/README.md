@@ -8,7 +8,7 @@ Auditorías read-only con el método `engineering:project-audit` de Kreante. Ron
 |---|---|---|---|---|---|---|
 | [seguridad-y-datos.md](seguridad-y-datos.md) | Seguridad, RLS, Edge Functions, Stripe | 0 | 1 | 1 | 4 | 2 |
 | [ci-cd-y-entornos.md](ci-cd-y-entornos.md) | GitHub, CI/CD, entornos, operación | 1 | 1 | 4 | 3 | 1 |
-| [calidad-y-testing.md](calidad-y-testing.md) | Calidad de código y tests (+ anexo `npm test`) | 0 | 1 | 3 | 3 | 2 |
+| [calidad-y-testing.md](calidad-y-testing.md) | Calidad de código y tests (+ anexo `npm test`) | 0 | 0 | 3 | 3 | 2 |
 | [frontend-rendimiento-y-accesibilidad.md](frontend-rendimiento-y-accesibilidad.md) | React/Next, bundle, a11y (revisión de código) | 0 | 2 | 2 | 2 | 0 |
 | [e2e-flujos-criticos.md](e2e-flujos-criticos.md) | E2E local de flujos críticos | 0 | 1 | 4 | 4 | 0 |
 | [pagos-y-logica-de-negocio.md](pagos-y-logica-de-negocio.md) | Pagos, reembolsos, membresía, referidos | 0 | 0 | 4 | 5 | 1 |

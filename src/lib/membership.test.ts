@@ -180,7 +180,7 @@ describe("AC 'Upgrade options to monthly subscribers and pricing (monthly → ye
     expect(termDays).toBeLessThanOrEqual(366);
   });
 
-  it("con tarjeta nueva, el plan solo se activa cuando el webhook liquida el pago", async () => {
+  it("con tarjeta nueva, el plan solo se activa cuando el pago se liquida", async () => {
     const { supabase } = await freshMember("session");
 
     const session = await createMembershipCheckoutSession(supabase, { plan: "annual", saveCard: true });

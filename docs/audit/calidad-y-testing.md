@@ -8,12 +8,12 @@ Alcance: solo lectura. **`npm test` no se ejecutó** (Supabase local compartido 
 | Severidad | Nº |
 |---|---|
 | Critical | 0 |
-| High | 1 |
+| High | 0 |
 | Medium | 3 |
 | Low | 3 |
 | Info | 2 |
 
-Gate de entrega (calidad): **NO APTO** mientras siga abierto QA-01 (camino de pago real del webhook sin test) — afecta integridad de datos de pagos/membresías.
+Gate de entrega (calidad): sin hallazgos High abiertos desde QA-01 (19 oct 2026); el cierre se confirma con `src/lib/stripe-webhook.test.ts` en verde en CI.
 
 ## Tabla de checks
 
@@ -26,7 +26,7 @@ Gate de entrega (calidad): **NO APTO** mientras siga abierto QA-01 (camino de pa
 | Tests omitidos (`.skip`/`.todo`/`.only`) | PASS | 0 coincidencias en `src/**/*.test.*` |
 | Tests triviales/placeholder | PASS | sin `expect(true)`; todos los archivos tienen `expect(` |
 | Cobertura signup/login/reset | PASS | `src/app/{signup,login,forgot-password,reset-password,verify-email}/*.test.tsx`, `src/lib/authentication.test.ts` |
-| Cobertura booking + pago | PARTIAL/FAIL | `src/lib/stripe-payments.test.ts`, `components/booking` (12) — webhook no probado (QA-01) |
+| Cobertura booking + pago | PASS | `src/lib/stripe-payments.test.ts`, `src/lib/stripe-webhook.test.ts`, `components/booking` (12) |
 | Cobertura check-in QR | PASS | `src/app/reception/page.test.tsx`, `src/lib/reception.test.ts`, `digital-pass-card.test.tsx` |
 | Cobertura membresía/referidos | PARTIAL | `membership.test.ts`, `referrals.test.ts`, `app/join` — liquidación vía fixture, no webhook |
 | Cobertura partner dashboard | PASS | `app/partner` (10), `components/partner` (5), `lib/partner*.test.ts` |
@@ -45,14 +45,6 @@ Gate de entrega (calidad): **NO APTO** mientras siga abierto QA-01 (camino de pa
 - Positivos: sin tests omitidos; `cleanTestData` en global setup; CI levanta Supabase efímero y sirve Edge Functions para correr la suite completa.
 
 ## Findings
-
-### QA-01 · High · El webhook de Stripe (fuente de verdad del pago) no tiene ningún test
-- **Ubicación:** `supabase/functions/stripe-webhook/index.ts`; `src/lib/testing/membership-fixture.ts:53-59`; `src/lib/membership.test.ts:183-195`; `src/lib/stripe-payments.test.ts:107-118`.
-- **Estado:** Confirmed.
-- **Evidencia:** ningún test referencia `stripe-webhook`, `constructEvent` ni `stripe-signature`. El test "con tarjeta nueva, el plan solo se activa cuando el webhook liquida el pago" llama a `settleTestPayment`, que hace `update payments set status='succeeded'` con service role — se salta el webhook. El test "cobra con una tarjeta guardada y el webhook confirma el pago" solo comprueba `charge.status` devuelto por la function. CI no tiene `STRIPE_WEBHOOK_SECRET` ni `stripe listen`.
-- **Impacto:** la verificación de firma, el mapeo de eventos (`payment_intent.succeeded/failed`, `checkout.session.completed`), la idempotencia ante reentregas y la activación de `memberships` dependen de código sin prueba automatizada. Una regresión puede aceptar eventos sin firma, duplicar membresías o dejar pagos en `pending` sin que CI lo detecte. Los nombres de los tests sugieren cobertura que no existe.
-- **Remediación:** test de integración que firme un payload con `Stripe.webhooks.generateTestHeaderString` y un `STRIPE_WEBHOOK_SECRET` efímero de CI, invoque la function servida y verifique: 400 sin firma/firma inválida, transición `pending→succeeded`, alta de membresía, y reentrega del mismo evento sin efectos dobles. Renombrar los tests que hoy dicen "el webhook".
-- **Cierre:** test en verde en CI que cubra firma inválida, éxito, fallo e idempotencia.
 
 ### QA-02 · Medium · Las 16 Edge Functions no tienen tests propios
 - **Ubicación:** `supabase/functions/*` (16 functions; solo `_shared/test-recipient.ts` tiene contraparte en `src/lib/test-recipient.test.ts`).
