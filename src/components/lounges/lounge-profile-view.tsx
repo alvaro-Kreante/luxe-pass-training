@@ -1,35 +1,19 @@
-"use client";
-
-import * as React from "react";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  ChevronRight,
-  Heart,
-  MapPin,
-  Navigation2,
-  Phone,
-  Share2,
-  Star,
-} from "lucide-react";
+import { ArrowLeft, ChevronRight, MapPin, Phone, Star } from "lucide-react";
 
 import { AmenitiesGrid } from "@/components/lounges/amenities-grid";
-import { AvailabilityCard } from "@/components/lounges/availability-card";
 import { ContactInfo } from "@/components/lounges/contact-info";
 import { ClosureBanner } from "@/components/lounges/closure-banner";
-import { HeroCarousel } from "@/components/lounges/hero-carousel";
+import { LiveAvailabilityCard } from "@/components/lounges/live-availability-card";
+import { LoungeGallery } from "@/components/lounges/lounge-gallery";
+import { LoungeQuickActions } from "@/components/lounges/lounge-quick-actions";
 import { LoungeScheduleSections, toBannerClosure } from "@/components/lounges/lounge-schedule-sections";
 import { OperatingHours } from "@/components/lounges/operating-hours";
-import { PhotoGalleryDialog } from "@/components/lounges/photo-gallery-dialog";
 import { ProfileSkeleton } from "@/components/lounges/profile-skeleton";
-import { ShareDialog } from "@/components/lounges/share-dialog";
 import { AppShell } from "@/components/patterns/app-shell";
 import { today as todayIso } from "@/lib/availability";
-import { fetchTodayAvailability, type LoungeProfileData } from "@/lib/lounge-profile";
+import type { LoungeProfileData } from "@/lib/lounge-profile";
 import { memberSchedule, weekHoursFrom } from "@/lib/lounge-schedule";
-import { addFavoriteLounge, removeFavoriteLounge } from "@/lib/profile";
-import { createClient } from "@/lib/supabase/client";
-import { cn } from "@/lib/utils";
 
 /**
  * Story 3.1 (Detailed Lounge Information) + estado "Not available" de la
@@ -38,62 +22,25 @@ import { cn } from "@/lib/utils";
  * `Share.dc.html`, `NotAvailable.dc.html`, `Loading.dc.html`.
  * DESIGN-SYSTEM.md §5 patrón 7 — Perfil de lounge.
  *
- * PERF-02 — la parte interactiva de `/lounges/[id]`: los datos llegan ya
- * cargados desde el servidor (`loadLoungeProfile`); aquí quedan la galería,
- * compartir, el favorito y el refresco de disponibilidad cada 5 minutos.
- *
- * El botón de favorito (Story 6.3 — "Tap the heart on any lounge profile to
- * save it here", `Preferences.dc.html`) no tiene artboard propio en esta
- * pantalla (`Main.dc.html` de la Fase 4 nunca lo dibujó, gap ya anotado en
- * COMPONENT-MAP): se compone reutilizando el mismo botón de acción rápida
- * que Call/Directions/Share, sin CSS nuevo — desviación consciente,
- * documentada en COMPONENT-MAP.
+ * PERF-02 — se renderiza en el servidor con los datos de `loadLoungeProfile`.
+ * Solo son cliente las tres islas interactivas: `LoungeQuickActions`
+ * (compartir y favorito), `LoungeGallery` (carousel y galería) y
+ * `LiveAvailabilityCard` (refresco cada 5 minutos); el resto no se hidrata.
  */
-const QUICK_ACTION_CLASS =
-  "flex h-10 items-center gap-2 rounded-[11px] border-[1.5px] border-line bg-surface px-4 text-[12.5px] font-bold tracking-[0.06em] text-fg-muted transition-colors duration-150 hover:bg-accent-soft";
-
-const REFRESH_INTERVAL_MS = 5 * 60_000;
 
 export function LoungeProfileView({
   lounge,
   images,
-  today: initialToday,
+  today,
   schedule,
-  favorite: initialFavorite,
+  favorite,
   forceLoading = false,
 }: LoungeProfileData & {
   /** `?loading=1` — el estado de `Loading.dc.html`, alcanzable a propósito. */
   forceLoading?: boolean;
 }) {
-  const [today, setToday] = React.useState(initialToday);
-  const [galleryOpen, setGalleryOpen] = React.useState(false);
-  const [galleryIndex, setGalleryIndex] = React.useState(0);
-  const [shareOpen, setShareOpen] = React.useState(false);
-  const [favorite, setFavorite] = React.useState(initialFavorite);
-  const supabase = React.useMemo(() => createClient(), []);
-
-  React.useEffect(() => {
-    let active = true;
-    const interval = setInterval(async () => {
-      const availability = await fetchTodayAvailability(supabase, lounge);
-      if (active) setToday(availability);
-    }, REFRESH_INTERVAL_MS);
-
-    return () => {
-      active = false;
-      clearInterval(interval);
-    };
-  }, [supabase, lounge]);
-
   const visible = memberSchedule(schedule, todayIso());
   const hoursRows = weekHoursFrom(todayIso(), lounge.usualWeeklyHours, schedule);
-
-  async function toggleFavorite() {
-    const next = !favorite;
-    setFavorite(next);
-    if (next) await addFavoriteLounge(supabase, lounge.id);
-    else await removeFavoriteLounge(supabase, lounge.id);
-  }
 
   return (
     <AppShell padded={false}>
@@ -109,48 +56,7 @@ export function LoungeProfileView({
 
           <div className="flex-1" />
 
-          <div className="flex items-center gap-2.5">
-            <a href={`tel:${lounge.phone.replace(/[^\d+]/g, "")}`} className={QUICK_ACTION_CLASS}>
-              <Phone size={16} strokeWidth={1.8} className="text-gold-600" aria-hidden />
-              Call
-            </a>
-            <a
-              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lounge.address)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={QUICK_ACTION_CLASS}
-            >
-              <Navigation2
-                size={16}
-                strokeWidth={1.8}
-                className="text-gold-600"
-                aria-hidden
-              />
-              Directions
-            </a>
-            <button
-              type="button"
-              onClick={() => setShareOpen(true)}
-              className={QUICK_ACTION_CLASS}
-            >
-              <Share2 size={16} strokeWidth={1.8} className="text-gold-600" aria-hidden />
-              Share
-            </button>
-            <button
-              type="button"
-              onClick={toggleFavorite}
-              aria-pressed={favorite}
-              className={cn(QUICK_ACTION_CLASS, favorite && "border-accent bg-accent-soft text-accent-strong")}
-            >
-              <Heart
-                size={16}
-                strokeWidth={1.8}
-                className={favorite ? "fill-accent-strong text-accent-strong" : "text-gold-600"}
-                aria-hidden
-              />
-              {favorite ? "Saved" : "Save"}
-            </button>
-          </div>
+          <LoungeQuickActions lounge={lounge} favorite={favorite} />
         </div>
 
         {forceLoading ? (
@@ -163,14 +69,7 @@ export function LoungeProfileView({
               </div>
             ) : null}
 
-            <HeroCarousel
-              loungeId={lounge.id}
-              images={images}
-              onOpenGallery={(index) => {
-                setGalleryIndex(index);
-                setGalleryOpen(true);
-              }}
-            />
+            <LoungeGallery loungeId={lounge.id} loungeName={lounge.name} images={images} />
 
             <div className="flex flex-1 gap-7 overflow-y-auto px-8 pb-7 pt-5.5">
               <div className="min-w-0 flex-1">
@@ -227,33 +126,16 @@ export function LoungeProfileView({
                 <LoungeScheduleSections seasons={visible.seasons} closures={visible.closures} />
               </div>
 
-              <AvailabilityCard
-                loungeId={lounge.id}
-                capacity={lounge.capacity}
-                bookingRestrictions={lounge.bookingRestrictions}
+              <LiveAvailabilityCard
+                lounge={lounge}
+                initial={today}
                 hoursToday={hoursRows[0]}
-                available={today.available}
-                todaySeatsLeft={today.seatsLeft}
-                nextAvailable={today.nextAvailable}
-                lastUpdatedAt={today.lastUpdatedAt}
                 closedToday={visible.closedToday}
               />
             </div>
           </>
         )}
       </div>
-
-      {images.length > 0 ? (
-        <PhotoGalleryDialog
-          open={galleryOpen}
-          onOpenChange={setGalleryOpen}
-          loungeId={lounge.id}
-          loungeName={lounge.name}
-          images={images}
-          initialIndex={galleryIndex}
-        />
-      ) : null}
-      <ShareDialog open={shareOpen} onOpenChange={setShareOpen} lounge={lounge} />
     </AppShell>
   );
 }
