@@ -5,14 +5,14 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { bookingReferenceFromId, confirmBooking, joinWaitlist } from "@/lib/booking";
 import { today, addDays } from "@/lib/availability";
 import { fetchVisitsThisMonth } from "@/lib/membership";
-import { LATE_CANCELLATION_FEE_LABEL } from "@/lib/passes";
+import { LATE_CANCELLATION_FEE_LABEL, loadMyPass } from "@/lib/passes";
 import { checkInReceptionBooking, reportReceptionNoShow } from "@/lib/reception";
 import { createClient } from "@/lib/supabase/client";
 import { LOUNGES } from "@/lib/lounges";
 import { signInReceptionStaff, signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
 import { findPredictedSlot } from "@/lib/testing/lounge-fixture";
 
-import MyPassPage from "./page";
+import { MyPassView } from "@/components/passes/my-pass-view";
 
 /**
  * Story 5.1 (Digital Pass Generation) — "Information available from My
@@ -32,6 +32,14 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/my-pass",
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
 }));
+
+/**
+ * PERF-02 — la página es un Server Component que llama a `loadMyPass`; el
+ * test hace lo mismo con la sesión de test y renderiza la vista.
+ */
+async function renderMyPass() {
+  return render(<MyPassView {...await loadMyPass(createClient())} />);
+}
 
 beforeAll(async () => {
   const supabase = createClient();
@@ -95,7 +103,7 @@ beforeAll(async () => {
 
 describe("campana de notificaciones", () => {
   it("está disponible desde My Pass, como fija Main.dc.html", async () => {
-    render(<MyPassPage />);
+    await renderMyPass();
 
     await waitFor(() =>
       expect(screen.getByRole("button", { name: /notifications/i })).toBeInTheDocument(),
@@ -106,7 +114,7 @@ describe("campana de notificaciones", () => {
 describe("Visits this month (Story 9.1, conectada en Epic 9)", () => {
   it("cuenta las visitas reales de membresía del mes, no un número de muestra", async () => {
     const visits = await fetchVisitsThisMonth(createClient());
-    render(<MyPassPage />);
+    await renderMyPass();
 
     const rail = await screen.findByText("Visits this month");
     await waitFor(() =>
@@ -118,7 +126,7 @@ describe("Visits this month (Story 9.1, conectada en Epic 9)", () => {
 
 describe("pestaña Upcoming (por defecto)", () => {
   it("distingue los estados de una reserva: in progress, confirmed y waitlisted", async () => {
-    render(<MyPassPage />);
+    await renderMyPass();
 
     await waitFor(() => expect(screen.getByText("In progress")).toBeInTheDocument());
     expect(screen.getAllByText("Confirmed").length).toBe(2);
@@ -126,7 +134,7 @@ describe("pestaña Upcoming (por defecto)", () => {
   });
 
   it("enlaza al pase digital de una reserva confirmada", async () => {
-    render(<MyPassPage />);
+    await renderMyPass();
 
     await waitFor(() =>
       expect(screen.getAllByRole("link", { name: /view pass/i }).length).toBeGreaterThan(0),
@@ -134,7 +142,7 @@ describe("pestaña Upcoming (por defecto)", () => {
   });
 
   it("no ofrece cancelar una reserva en progreso — ya se hizo el check-in", async () => {
-    render(<MyPassPage />);
+    await renderMyPass();
 
     const row = await screen.findByRole("heading", { name: "The Ainsworth", level: 2 });
     const li = row.closest("li") as HTMLElement;
@@ -145,7 +153,7 @@ describe("pestaña Upcoming (por defecto)", () => {
 describe("cancelar una reserva con más de 24 horas de antelación", () => {
   it("abre el diálogo de cancelación gratuita y, al confirmar, la quita de Upcoming", async () => {
     const user = userEvent.setup({ delay: null });
-    render(<MyPassPage />);
+    await renderMyPass();
 
     const heading = await screen.findByRole("heading", { name: "Aurelia House", level: 2 });
     const row = heading.closest("li") as HTMLElement;
@@ -175,7 +183,7 @@ describe("cancelar una reserva dentro de las 24 horas", () => {
     if (!paid) throw new Error("No se pudo confirmar la reserva 'Rue Lafayette Club' de prueba");
 
     const user = userEvent.setup({ delay: null });
-    render(<MyPassPage />);
+    await renderMyPass();
 
     const heading = await screen.findByRole("heading", { name: "Rue Lafayette Club", level: 2 });
     const row = heading.closest("li") as HTMLElement;
@@ -193,7 +201,7 @@ describe("cancelar una reserva dentro de las 24 horas", () => {
 
   it("mantiene la reserva si el miembro decide no cancelar", async () => {
     const user = userEvent.setup({ delay: null });
-    render(<MyPassPage />);
+    await renderMyPass();
 
     const heading = await screen.findByRole("heading", { name: "Belmont Terrace", level: 2 });
     const row = heading.closest("li") as HTMLElement;
@@ -207,7 +215,7 @@ describe("cancelar una reserva dentro de las 24 horas", () => {
 describe("dejar la lista de espera", () => {
   it("AC 'Modification options: Cancel' — 'Leave' cancela la reserva en waitlist de verdad", async () => {
     const user = userEvent.setup({ delay: null });
-    render(<MyPassPage />);
+    await renderMyPass();
 
     const heading = await screen.findByRole("heading", { name: "The Winslow Club", level: 2 });
     const row = heading.closest("li") as HTMLElement;
@@ -222,7 +230,7 @@ describe("dejar la lista de espera", () => {
 describe("pestaña Past", () => {
   it("AC 'No-show tracking for booking history' — muestra el historial y explica el no-show", async () => {
     const user = userEvent.setup({ delay: null });
-    render(<MyPassPage />);
+    await renderMyPass();
 
     await screen.findByText("In progress");
     await user.click(screen.getByRole("tab", { name: /past/i }));
@@ -234,7 +242,7 @@ describe("pestaña Past", () => {
 
   it("filtra el historial por estado", async () => {
     const user = userEvent.setup({ delay: null });
-    render(<MyPassPage />);
+    await renderMyPass();
 
     await screen.findByText("In progress");
     await user.click(screen.getByRole("tab", { name: /past/i }));

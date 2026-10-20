@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { ADMISSION_COUNT, addMinutesToTime } from "./booking";
 import { today, addDays, formatDateLabel, parseDate } from "./availability";
+import { fetchMembership, fetchVisitsThisMonth, formatMonthYear } from "./membership";
 
 /**
  * Story 5.1 (Digital Pass Generation), 5.3 (Booking Reminder) — backend real
@@ -458,3 +459,31 @@ export const BOOKING_RECORD_SUMMARY = {
   noShows: 1,
   feesCharged: LATE_CANCELLATION_FEE_LABEL,
 };
+
+export interface MyPassData {
+  upcoming: UpcomingBooking[];
+  past: PastBooking[];
+  visits: { used: number; included: number };
+  /** "September 2025" — mes de alta de la membresía, si la hay. */
+  memberSince: string | null;
+}
+
+/**
+ * PERF-02 — todo lo que pinta `/my-pass`, en paralelo. La página (Server
+ * Component) la llama con el cliente de servidor y los tests con el de
+ * navegador: misma RLS.
+ */
+export async function loadMyPass(supabase: SupabaseClient): Promise<MyPassData> {
+  const [upcoming, past, visits, membership] = await Promise.all([
+    fetchUpcomingBookings(supabase),
+    fetchPastBookings(supabase),
+    fetchVisitsThisMonth(supabase),
+    fetchMembership(supabase),
+  ]);
+  return {
+    upcoming,
+    past,
+    visits,
+    memberSince: membership.startedAt ? formatMonthYear(membership.startedAt) : null,
+  };
+}

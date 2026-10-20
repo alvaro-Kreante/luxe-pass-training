@@ -296,6 +296,9 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `app/my-pass/[reference]/reminder/page.tsx` | Story 5.3 — el email de recordatorio (`Reminder.dc.html`) sobre una reserva real; el envío real ya lo manda `send-booking-reminder` vía `pg_cron` |
 | `app/reception/page.tsx` | Story 5.2 — la consola de recepción (patrón 12): búsqueda real por LP#, contacto de emergencia y check-in contra Supabase |
 | `passes/cancel-booking-modal.tsx` | Story 6.1 — el diálogo de cancelar (`Cancel.dc.html` / `CancelFee.dc.html` son sus dos estados, según `isFreeCancellation`) |
+| `passes/my-pass-view.tsx` | PERF-02 — `/my-pass` renderizado en el servidor con los datos de `loadMyPass` (`lib/passes.ts`) |
+| `passes/my-pass-bookings.tsx` | PERF-02 — isla cliente de `/my-pass`: pestañas Upcoming/Past, listas, cancelar/dejar la waitlist y filtro del historial |
+| `passes/my-pass-rails.tsx` | PERF-02 — paneles laterales de `/my-pass` (`UpcomingRail`, `PastRail`), sin estado: se renderizan en el servidor |
 | `lib/notifications.ts` | Story 6.2 — los seis tipos de notificación, el contador de no leídas y los ajustes por canal (`NotificationSettings.dc.html`); `QUIET_HOURS_START_OPTIONS`/`QUIET_HOURS_END_OPTIONS` acotan los dos desplegables de horas de silencio a tarde/noche y madrugada/mañana respectivamente, para que ninguna combinación sea absurda ("10 PM to 3 PM") |
 | `account/notification-bell-menu.tsx` | Story 6.2 — la campana + el panel desplegable (patrón 14), reutilizada en My Pass y en toda la sección de cuenta |
 | `app/notifications/page.tsx` | Story 6.2 — el centro de notificaciones completo, con filtro por categoría (`Notifications.dc.html`) |
