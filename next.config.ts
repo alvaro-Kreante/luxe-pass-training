@@ -44,8 +44,8 @@ export default withPWA({
   workboxOptions: {
     runtimeCaching: [
       {
-        // `/lounges/<id>`, `/my-pass` y `/admin/analytics` (no `/my-pass/<reference>` ni `/admin/analytics/demand`, que siguen en cliente).
-        urlPattern: /^https?:\/\/[^/]+\/(?:lounges\/[^/?#]+|my-pass|admin\/analytics)(?:\?.*)?$/,
+        // `/lounges/<id>`, `/my-pass`, `/admin/analytics` y `/partner/analytics` (no `/my-pass/<reference>` ni `/admin/analytics/demand`, que siguen en cliente).
+        urlPattern: /^https?:\/\/[^/]+\/(?:lounges\/[^/?#]+|my-pass|admin\/analytics|partner\/analytics)(?:\?.*)?$/,
         handler: "NetworkOnly",
         options: { cacheName: "server-rendered-pages" },
       },

@@ -3,11 +3,12 @@ import userEvent from "@testing-library/user-event";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { PartnerAnalyticsView } from "@/components/partner/partner-analytics-view";
 import { today } from "@/lib/availability";
+import { loadPartnerAnalytics } from "@/lib/partner";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedAndSignIn, signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
 
-import PartnerAnalyticsPage from "./analytics/page";
 import PartnerTodayPage from "./page";
 
 /**
@@ -122,7 +123,8 @@ describe("cambiar de lounge", () => {
   it("Analytics ofrece 'All lounges' y lo guarda aparte", async () => {
     const user = userEvent.setup({ delay: null });
     pathname.current = "/partner/analytics";
-    render(<PartnerAnalyticsPage />);
+    // PERF-02 — la página de Analytics es un Server Component: se carga lo mismo y se pinta la vista.
+    render(<PartnerAnalyticsView {...await loadPartnerAnalytics(createClient())} />);
 
     await user.click(await screen.findByRole("button", { name: /^Lounge:/ }));
     await user.click(await screen.findByRole("menuitemradio", { name: /All lounges/ }));
