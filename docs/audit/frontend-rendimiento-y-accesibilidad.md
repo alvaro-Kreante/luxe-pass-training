@@ -6,7 +6,7 @@ Fecha: 2026-10-12 · Rama: `docs/project-audit` · Alcance: `src/app`, `src/comp
 
 | ID | Sev. | Tema |
 |---|---|---|
-| PERF-01 | High | 0 `next/dynamic`: Google Maps, Recharts y Stripe en el bundle inicial |
+| PERF-01 | Low | Google Maps (14 KB gz) en el JS inicial de `/explore` y admin lounges; Recharts y Stripe sin coste real (medido 20 oct 2026) |
 | PERF-02 | High | Las 52 páginas son `"use client"`: sin Server Components |
 | PERF-03 | Medium | `auth.getUser()` (petición de red) repetido en cada helper de `src/lib` |
 | PERF-04 | Low | `<img>` sin `next/image` (5 casos) |
@@ -16,11 +16,11 @@ Fecha: 2026-10-12 · Rama: `docs/project-audit` · Alcance: `src/app`, `src/comp
 
 ## Hallazgos
 
-### PERF-01 — High — `bundle-dynamic-imports`
-- **Evidencia:** `grep "dynamic(" src` → 0 resultados. `src/app/explore/page.tsx:16` importa `CityMap` estáticamente (`@vis.gl/react-google-maps`); `src/components/charts/bar-chart.tsx`, `line-chart.tsx` (Recharts ~100 KB+); `src/components/booking/stripe-checkout-bridge.tsx` y `membership/upgrade-confirm-modal.tsx` (Stripe).
-- **Impacto:** las rutas de miembro y admin cargan librerías pesadas antes de necesitarlas; peor TTI en móvil (PWA).
-- **Fix:** `next/dynamic(() => import(...), { ssr: false, loading })` para mapa, gráficos y checkout/modal de upgrade.
-- **Cierre:** build muestra reducción de First Load JS en `/explore`, `/admin/analytics/*`, `/partner/*`, `/lounges/[id]/book`; los chunks de recharts/maps/stripe no aparecen en el shared bundle.
+### PERF-01 — Low — `bundle-dynamic-imports` (reclasificado de High el 20 oct 2026)
+- **Medido sobre `dev` (build de producción, gzip, `app-build-manifest.json`):** ninguna librería pesada está en el bundle compartido. Recharts: 0 KB (`components/charts/` no se importa en ninguna ruta, ver PERF-15). Google Maps (`@vis.gl/react-google-maps`): un chunk de 14 KB en `/explore`, `/admin/lounges/[id]` y `/admin/lounges/new`. Stripe (`@stripe/react-stripe-js`): chunks de 5–6 KB solo en `/book` y `/profile/membership*`; Stripe.js se descarga solo al pagar desde PERF-11. El peso inicial real es framework (~100 KB, todas las rutas) y supabase-js (~67 KB, todas las rutas): eso es PERF-02, no carga diferida.
+- **Impacto:** ≈ 6 % del JS inicial de `/explore` (14 de 246 KB).
+- **Fix posible:** `next/dynamic` del mapa y del diálogo de ubicación manual de `/explore` (el diálogo comparte módulo con el de permiso, que se abre al entrar: habría que separarlos). No se hace por ahora: el ahorro no compensa tocar el flujo de ubicación.
+- **Cierre:** decidir si se hace el split de 14 KB o se acepta.
 
 ### PERF-02 — High — `server-client-boundary` / `use-client-overuse`
 - **Evidencia:** 52 `page.tsx` con `"use client"` en la primera línea; toda la carga de datos va por `useEffect` + cliente Supabase en navegador.

@@ -39,7 +39,7 @@ Imágenes: el único peso relevante es `logo.png` vía `next/image` (7–26 KB).
 
 | ID previo | Resultado medido |
 |---|---|
-| PERF-01 | Confirmado para Google Maps (Stripe resuelto en PERF-11, 19 oct 2026) (`/explore`, `/admin/lounges/[id]` > 250 kB). Recharts: sin coste (no se usa). |
+| PERF-01 | Reclasificado a Low (20 oct 2026): Google Maps 14 KB gz en `/explore` y admin lounges; Stripe resuelto en PERF-11; Recharts sin coste. Lo que lleva esas rutas a > 250 kB es framework + supabase-js (PERF-02). |
 | PERF-02 | Coherente: FCP ≈ LCP en casi todas las rutas (todo pinta tras hidratar). Sin medición aislada. |
 | PERF-03 | **Confirmado**: `GET /auth/v1/user` ×3 en `/explore`, ×2 en lounge, book y profile → PERF-12. |
 | PERF-04 / A11Y-01 | Sin evidencia nueva (no se sirvieron fotos de lounge). En admin aparece el problema inverso: `image-redundant-alt` (A11Y-17). |
