@@ -1,6 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { amenityLabel } from "./amenities";
+import { listLoungeSchedule, type LoungeSchedule } from "./lounge-schedule";
+import { isFavoriteLounge } from "./profile";
 import { addDays, isPast, minutesNow, parseDate, today, weekdayOf } from "./availability";
 import type { LoungeRow } from "./lounge-directory";
 import type { Lounge } from "./lounges";
@@ -683,4 +685,58 @@ export function weeklyAvailability(
   }
 
   return cells;
+}
+
+/** Story 3.1/3.2 — la card de disponibilidad del perfil: plazas de hoy o el siguiente hueco libre. */
+export interface TodayAvailability {
+  seatsLeft: number;
+  available: boolean;
+  nextAvailable?: { dateIso: string; band: WeekBandId; seatsLeft: number };
+  lastUpdatedAt: string;
+}
+
+export async function fetchTodayAvailability(
+  supabase: SupabaseClient,
+  lounge: LoungeProfile,
+): Promise<TodayAvailability> {
+  const todayIso = today();
+  const cells = await fetchWeeklyAvailability(supabase, lounge, mondayOf(todayIso));
+  const seatsLeft = cells
+    .filter((cell) => cell.dateIso === todayIso && cell.status === "available")
+    .reduce((sum, cell) => sum + (cell.seatsLeft ?? 0), 0);
+  const available = seatsLeft > 0;
+
+  return {
+    seatsLeft,
+    available,
+    nextAvailable: available ? undefined : await fetchNextAvailableSlot(supabase, lounge),
+    lastUpdatedAt: new Date().toISOString(),
+  };
+}
+
+export interface LoungeProfileData {
+  lounge: LoungeProfile;
+  images: LoungeImage[];
+  today: TodayAvailability;
+  schedule: LoungeSchedule;
+  favorite: boolean;
+}
+
+/**
+ * PERF-02 — todo lo que pinta `/lounges/[id]`, en paralelo tras el perfil.
+ * La página (Server Component) la llama con el cliente de servidor y los
+ * tests con el de navegador: mismo resultado, misma RLS. `null` si el
+ * lounge no existe o no es visible para el miembro.
+ */
+export async function loadLoungeProfile(supabase: SupabaseClient, id: string): Promise<LoungeProfileData | null> {
+  const lounge = await fetchLoungeProfile(supabase, id);
+  if (!lounge) return null;
+
+  const [images, today, favorite, schedule] = await Promise.all([
+    fetchLoungeImages(supabase, id),
+    fetchTodayAvailability(supabase, lounge),
+    isFavoriteLounge(supabase, id),
+    listLoungeSchedule(supabase, id),
+  ]);
+  return { lounge, images, today, schedule, favorite };
 }

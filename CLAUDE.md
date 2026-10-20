@@ -280,6 +280,15 @@ específico de este proyecto:
   datos del seed y la cuenta admin real nunca se tocan. Para depurar un
   fallo, `KEEP_TEST_DATA=1 npm test` conserva los datos hasta la próxima
   corrida.
+- **Páginas Server Component** (PERF-02): la página solo comprueba la sesión
+  (`requireSession()`), llama a una función de `src/lib` (`loadLoungeProfile`)
+  y pinta una vista cliente con los datos. No llevan test propio — `cookies()`
+  no existe fuera de una petición y mockear `next/headers` está fuera de la
+  regla —: el test llama a la misma función de `src/lib` con la sesión de test
+  y renderiza la vista (ver `src/app/lounges/[id]/page.test.tsx`). La página
+  se verifica con build + Playwright. Una ruta que pasa a servidor se añade
+  también a la regla `NetworkOnly` de `next.config.ts` (su HTML lleva datos
+  del miembro).
 - Punto de partida para una pantalla nueva: `src/app/login/page.test.tsx` y
   `src/app/signup/page.test.tsx` (este último incluye el patrón para un modal
   de Radix). Los `describe` agrupan por comportamiento, no por componente.
