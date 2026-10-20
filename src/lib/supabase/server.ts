@@ -43,3 +43,17 @@ export async function requireSession() {
   if (!data?.claims) redirect("/login");
   return supabase;
 }
+
+/**
+ * PERF-02 — gemelo de servidor de `RequireAdminSession`: sin sesión o sin el
+ * rol `admin` (`has_role`), a `/admin/login`. Devuelve el cliente ya
+ * autenticado.
+ */
+export async function requireAdmin() {
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getClaims();
+  if (!data?.claims) redirect("/admin/login");
+  const { data: isAdmin } = await supabase.rpc("has_role", { p_role: "admin" });
+  if (!isAdmin) redirect("/admin/login");
+  return supabase;
+}

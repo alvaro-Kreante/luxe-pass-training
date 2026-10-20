@@ -3,13 +3,13 @@ import userEvent from "@testing-library/user-event";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { AdminAnalyticsView } from "@/components/admin/admin-analytics-view";
+import { dateRangeForPeriod, formatDateRangeLabel, loadAdminAnalytics } from "@/lib/admin-analytics";
 import { chargeSavedPaymentMethod, listSavedPaymentMethods } from "@/lib/stripe-payments";
 import { today } from "@/lib/availability";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedAdminAndSignIn, signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
 import { attachTestCard } from "@/lib/testing/stripe-fixture";
-
-import AnalyticsPage from "./page";
 
 /**
  * Story 8.2 — "No-show rate tracking", "Member acquisition and retention
@@ -29,6 +29,15 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/admin/analytics",
   useRouter: () => ({ push, replace: vi.fn() }),
 }));
+
+/**
+ * PERF-02 — la página es un Server Component (`requireAdmin()` +
+ * `loadAdminAnalytics`); el test carga lo mismo con la sesión de admin de
+ * test y renderiza la vista.
+ */
+async function renderPage() {
+  return render(<AdminAnalyticsView {...await loadAdminAnalytics(createClient())} />);
+}
 
 const admin = createAdminClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -99,7 +108,7 @@ afterAll(async () => {
 
 describe("Network analytics (/admin/analytics)", () => {
   it("shows the network summary tiles as real numbers", async () => {
-    render(<AnalyticsPage />);
+    await renderPage();
 
     expect(await screen.findByRole("heading", { name: "How the network is doing" })).toBeInTheDocument();
     expect(await screen.findByText("Active members")).toBeInTheDocument();
@@ -109,14 +118,14 @@ describe("Network analytics (/admin/analytics)", () => {
   });
 
   it("charts the bookings-per-day bars for the 14-day window", async () => {
-    render(<AnalyticsPage />);
+    await renderPage();
 
     await screen.findByRole("heading", { name: "How the network is doing" });
     await waitFor(() => expect(screen.getAllByTestId("daily-bar").length).toBe(14));
   });
 
   it("shows the ephemeral lounge's real Stripe charge in revenue by partner", async () => {
-    render(<AnalyticsPage />);
+    await renderPage();
 
     await screen.findByRole("heading", { name: "How the network is doing" });
     await waitFor(() => expect(screen.getByText(loungeName)).toBeInTheDocument());
@@ -125,7 +134,7 @@ describe("Network analytics (/admin/analytics)", () => {
 
   it("sends revenue export to the export screen with the dataset preselected", async () => {
     const user = userEvent.setup({ delay: null });
-    render(<AnalyticsPage />);
+    await renderPage();
 
     await screen.findByRole("heading", { name: "How the network is doing" });
     await user.click(screen.getByRole("button", { name: "Revenue by partner (CSV)" }));
@@ -135,7 +144,7 @@ describe("Network analytics (/admin/analytics)", () => {
 
   it("sends the acquisition report link to the members dataset", async () => {
     const user = userEvent.setup({ delay: null });
-    render(<AnalyticsPage />);
+    await renderPage();
 
     await screen.findByRole("heading", { name: "How the network is doing" });
     await user.click(screen.getByRole("button", { name: "Open the acquisition report" }));
@@ -145,11 +154,13 @@ describe("Network analytics (/admin/analytics)", () => {
 
   it("lets the period switch between 14 days, month and quarter", async () => {
     const user = userEvent.setup({ delay: null });
-    render(<AnalyticsPage />);
+    await renderPage();
 
     await screen.findByRole("heading", { name: "How the network is doing" });
     expect(screen.getByRole("button", { name: "14 days" })).toHaveAttribute("aria-pressed", "true");
     await user.click(screen.getByRole("button", { name: "Month" }));
     expect(screen.getByRole("button", { name: "Month" })).toHaveAttribute("aria-pressed", "true");
+    const monthLabel = formatDateRangeLabel(dateRangeForPeriod("month"));
+    expect(screen.getAllByText(monthLabel).length).toBeGreaterThan(0);
   });
 });

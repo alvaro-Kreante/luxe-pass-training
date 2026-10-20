@@ -327,6 +327,15 @@ cliente) ya es real. Abierto:
 
 ---
 
+### 2.15 Barras de "Bookings per day" desbordadas con Month en `/admin/analytics`
+
+Con 14 días caben; con "Month" (30 barras) las etiquetas de día se salen por
+la derecha de la tarjeta y se pintan encima de "Revenue by partner" (visto a
+1440 px el 20 oct 2026, igual antes y después de PERF-02). Quarter (90
+barras) no se ha mirado, pero previsiblemente también. `Analytics.dc.html`
+solo dibuja la vista de 14 días: hace falta decidir cómo se resumen 30 y 90
+días (agrupar por semana, etiquetas cada N días…) antes de tocarlo.
+
 ## 3. Criterios de aceptación cubiertos solo de forma declarativa
 
 Criterios que exigen backend y que, siendo este repo solo diseño, se resuelven
@@ -849,6 +858,7 @@ de retención y reflejarlo en la política de privacidad.
 | PERF-10 (`/admin/analytics`): los KPI y los tiles de "Members" no se pintaban hasta llegar los datos y empujaban la vista (CLS 0,118) | 19 oct 2026 | `MetricTile` gana `loading` (etiqueta real, cifra y nota como barras skeleton en sus mismos párrafos); `AcquisitionTile` igual. CLS 0,015 a 390 px y 0 a 1440 px. `/admin/members` y `/admin/lounges/[id]` ya estaban bajo el umbral; `/partner/analytics` queda con A11Y-16 |
 | PERF-02 (piloto `/lounges/[id]`): la ficha cargaba todo en el navegador tras comprobar la sesión (13 peticiones, HTML vacío) | 20 oct 2026 | Server Component: `requireSession()` en `app/lounges/[id]/layout.tsx`, `loadLoungeProfile` en `src/lib/lounge-profile.ts` y la vista en servidor con tres islas cliente (acciones, galería, disponibilidad). Título visible ~2 s → ~0,75 s, 3 peticiones desde el navegador, TBT en rango parecido. La PWA no cachea esa ruta (datos personales en el HTML). Abierto: 404 servido con estado 200 (por `loading.tsx`) y el resto de rutas |
 | PERF-02 (`/my-pass`): la lista de reservas se cargaba en el navegador tras comprobar la sesión (9 peticiones, HTML vacío) | 20 oct 2026 | `loadMyPass` en `src/lib/passes.ts`, `MyPassView` en servidor con la isla `MyPassBookings` y los paneles laterales en servidor. LCP ~1 s → ~0,45 s, 4 peticiones desde el navegador, TBT sin cambio. `/my-pass` va `NetworkOnly` en la PWA |
+| PERF-02 (`/admin/analytics`): la analítica de red se cargaba en el navegador tras dos comprobaciones de sesión y rol (7 peticiones, HTML vacío) | 20 oct 2026 | `requireAdmin()` en `src/lib/supabase/server.ts`, `loadAdminAnalytics` en `src/lib/admin-analytics.ts` y la vista `AdminAnalyticsView`. LCP ~1,1 s → ~0,45 s, 1 petición desde el navegador. `/admin/analytics` va `NetworkOnly` en la PWA |
 | DEP-01: `next@15.5.25` tenía dos advisories de cache poisoning en SSG/ISR self-hosted (GHSA-4jqv-mc3x-m676, GHSA-mcj8-r9mp-w47p) | 15 oct 2026 | `next` → `^15.5.27` (patch). `npm audit --omit=dev` ya no lista `next`; `sharp 0.35.4` sigue llegando por `next` (DEP-03, abierto) |
 | A11Y-11: los errores de formulario (login, signup, onboarding, recuperar/restablecer contraseña, login partner/admin) no se anunciaban al lector de pantalla ni quedaban asociados al campo; el alta deshabilitada no explicaba por qué | 15 oct 2026 | `Field` gana la prop `error` (`role="alert"`) y enlaza hint/error al control con `aria-describedby`; los 10 errores que iban a mano en `hint` pasan a `error`. El botón "Create account" se describe con su texto de ayuda. Tests en `src/app/login/page.test.tsx` y `src/app/signup/page.test.tsx` |
 | QA-01: `stripe-webhook`, única fuente de verdad de `payments.status`, no tenía ningún test; los que decían "el webhook" liquidaban el pago con service role | 19 oct 2026 | `src/lib/stripe-webhook.test.ts` envía eventos firmados (HMAC como Stripe) a la function servida: 400 sin firma, 401 con firma ajena, sesión pagada → `succeeded` + membresía activa, sesión caducada → `failed`, reentrega y fallo tardío sin efectos. CI genera un `STRIPE_WEBHOOK_SECRET` efímero; los tests engañosos se renombraron |

@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { amenityLabel, type AmenityId } from "@/lib/amenities";
 import { today, parseDate } from "@/lib/availability";
-import { formatCurrency } from "@/lib/admin";
+import { formatCurrency, getTicketCounts, type TicketCounts } from "@/lib/admin";
 
 /**
  * Epic 8 — Admin & Support. Story 8.2 (Fase 2, `epic-8-admin-support/`):
@@ -565,4 +565,31 @@ export function cadenceLabel(cadence: ReportCadence): string {
   if (cadence === "daily") return "Every day";
   if (cadence === "weekly") return "Every week";
   return "Every month";
+}
+
+export interface AdminAnalyticsData {
+  period: AnalyticsPeriod;
+  summary: NetworkSummary;
+  byDay: BookingsByDayPoint[];
+  revenue: RevenueByPartnerRow[];
+  counts: TicketCounts;
+}
+
+/**
+ * PERF-02 — lo que pinta `/admin/analytics` para un periodo, en paralelo. La
+ * página (Server Component) la llama con el periodo por defecto; la vista
+ * vuelve a pedir resumen, barras e ingresos al cambiar de periodo.
+ */
+export async function loadAdminAnalytics(
+  supabase: SupabaseClient,
+  period: AnalyticsPeriod = "14d",
+): Promise<AdminAnalyticsData> {
+  const range = dateRangeForPeriod(period);
+  const [summary, byDay, revenue, counts] = await Promise.all([
+    getNetworkSummary(supabase, range),
+    getBookingsByDay(supabase, range),
+    getRevenueByPartner(supabase, range),
+    getTicketCounts(supabase),
+  ]);
+  return { period, summary, byDay, revenue, counts };
 }
