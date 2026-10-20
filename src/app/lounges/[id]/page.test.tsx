@@ -2,12 +2,12 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { LoungeProfileView } from "@/components/lounges/lounge-profile-view";
 import { createClient } from "@/lib/supabase/client";
 import { today } from "@/lib/availability";
+import { loadLoungeProfile } from "@/lib/lounge-profile";
 import { signUpConfirmedAndSignIn } from "@/lib/testing/confirmed-user";
 import { fillSlot } from "@/lib/testing/lounge-fixture";
-
-import LoungeProfilePage from "./page";
 
 /**
  * Story 3.1 — Detailed Lounge Information.
@@ -20,23 +20,22 @@ import LoungeProfilePage from "./page";
  * cubre aquí, con Céleste Rooftop, que la disponibilidad real ya sembrada
  * trae sin plazas hoy (2025-09-09) en las tres franjas que soporta.
  *
- * Backend real (Supabase local): la pantalla exige sesión (`RequireSession`,
- * mismo patrón que `/explore`) y trae el perfil de verdad, así que cada
- * assert va detrás de un `waitFor`.
+ * Backend real (Supabase local). PERF-02: la página es un Server Component
+ * que solo comprueba la sesión y llama a `loadLoungeProfile`; los tests
+ * hacen lo mismo con la sesión de test (Supabase real) y renderizan la
+ * vista con esos datos. La página en sí se verifica con build + Playwright.
  */
 
-const params = vi.fn(() => ({ id: "the-ainsworth" }));
-const searchParams = vi.fn(() => new URLSearchParams());
-
 vi.mock("next/navigation", () => ({
-  useParams: () => params(),
-  useSearchParams: () => searchParams(),
   usePathname: () => "/lounges/the-ainsworth",
-  useRouter: () => ({ replace: vi.fn() }),
-  notFound: () => {
-    throw new Error("NEXT_NOT_FOUND");
-  },
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
 }));
+
+async function renderProfile(id = "the-ainsworth", { loading = false } = {}) {
+  const data = await loadLoungeProfile(createClient(), id);
+  if (!data) throw new Error(`lounge ${id} not found`);
+  return render(<LoungeProfileView {...data} forceLoading={loading} />);
+}
 
 beforeAll(async () => {
   const supabase = createClient();
@@ -68,13 +67,11 @@ afterEach(() => {
 
 beforeEach(() => {
   pinClockToMiddayToday();
-  params.mockReturnValue({ id: "the-ainsworth" });
-  searchParams.mockReturnValue(new URLSearchParams());
 });
 
 describe("información básica del lounge", () => {
   it("muestra el nombre, la dirección y el teléfono", async () => {
-    render(<LoungeProfilePage />);
+    await renderProfile();
 
     await waitFor(() =>
       expect(screen.getByRole("heading", { name: "The Ainsworth" })).toBeInTheDocument(),
@@ -84,7 +81,7 @@ describe("información básica del lounge", () => {
   });
 
   it("enlaza a la lista de resultados", async () => {
-    render(<LoungeProfilePage />);
+    await renderProfile();
 
     await waitFor(() =>
       expect(screen.getByRole("link", { name: "Back to results" })).toHaveAttribute(
@@ -98,7 +95,7 @@ describe("información básica del lounge", () => {
 describe("carousel de fotos", () => {
   it("muestra al menos tres fotos y avanza con la flecha siguiente", async () => {
     const user = userEvent.setup({ delay: null });
-    render(<LoungeProfilePage />);
+    await renderProfile();
 
     await waitFor(() => expect(screen.getByText("1 / 6")).toBeInTheDocument());
 
@@ -109,7 +106,7 @@ describe("carousel de fotos", () => {
 
   it("abre la galería a pantalla completa y se puede cerrar", async () => {
     const user = userEvent.setup({ delay: null });
-    render(<LoungeProfilePage />);
+    await renderProfile();
 
     await waitFor(() =>
       expect(screen.getByRole("button", { name: /View all \d photos/ })).toBeInTheDocument(),
@@ -128,7 +125,7 @@ describe("carousel de fotos", () => {
 describe("compartir el lounge", () => {
   it("abre la hoja de compartir desde las quick actions", async () => {
     const user = userEvent.setup({ delay: null });
-    render(<LoungeProfilePage />);
+    await renderProfile();
 
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Share" })).toBeInTheDocument(),
@@ -147,7 +144,7 @@ describe("compartir el lounge", () => {
       configurable: true,
     });
 
-    render(<LoungeProfilePage />);
+    await renderProfile();
 
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Share" })).toBeInTheDocument(),
@@ -161,7 +158,7 @@ describe("compartir el lounge", () => {
 
 describe("quick actions", () => {
   it("Call marca el teléfono y Directions abre Google Maps", async () => {
-    render(<LoungeProfilePage />);
+    await renderProfile();
 
     await waitFor(() =>
       expect(screen.getByRole("link", { name: "Call" })).toHaveAttribute(
@@ -178,7 +175,7 @@ describe("quick actions", () => {
 
 describe("amenities", () => {
   it("lista cada amenity del lounge con su descripción", async () => {
-    render(<LoungeProfilePage />);
+    await renderProfile();
 
     await waitFor(() => expect(screen.getByText("High-speed WiFi")).toBeInTheDocument());
     expect(screen.getByText("1 Gbps, private member network")).toBeInTheDocument();
@@ -187,7 +184,7 @@ describe("amenities", () => {
 
 describe("horario", () => {
   it("destaca el horario de hoy", async () => {
-    render(<LoungeProfilePage />);
+    await renderProfile();
 
     await waitFor(() => expect(screen.getByText(/· Today$/)).toBeInTheDocument());
   });
@@ -195,7 +192,7 @@ describe("horario", () => {
 
 describe("valoración y reseñas", () => {
   it("enlaza el recuento de reseñas a la pantalla de reseñas", async () => {
-    render(<LoungeProfilePage />);
+    await renderProfile();
 
     await waitFor(() =>
       expect(screen.getByRole("link", { name: "128 reviews" })).toHaveAttribute(
@@ -206,8 +203,7 @@ describe("valoración y reseñas", () => {
   });
 
   it("cuando el lounge no tiene reseñas, lo dice en vez de un recuento", async () => {
-    params.mockReturnValue({ id: "belmont-terrace" });
-    render(<LoungeProfilePage />);
+    await renderProfile("belmont-terrace");
 
     await waitFor(() =>
       expect(screen.getByRole("link", { name: "No reviews yet" })).toHaveAttribute(
@@ -220,14 +216,14 @@ describe("valoración y reseñas", () => {
 
 describe("disponibilidad en tiempo real", () => {
   it("muestra Available y el botón de reserva cuando hay plazas", async () => {
-    render(<LoungeProfilePage />);
+    await renderProfile();
 
     await waitFor(() => expect(screen.getByText("Available")).toBeInTheDocument());
     expect(screen.getByRole("link", { name: "Book now" })).toBeInTheDocument();
   });
 
   it("enlaza la disponibilidad semanal", async () => {
-    render(<LoungeProfilePage />);
+    await renderProfile();
 
     await waitFor(() =>
       expect(
@@ -240,8 +236,7 @@ describe("disponibilidad en tiempo real", () => {
     for (const band of ["morning", "afternoon", "evening", "late"] as const) {
       await fillSlot("celeste-rooftop", today(), band);
     }
-    params.mockReturnValue({ id: "celeste-rooftop" });
-    render(<LoungeProfilePage />);
+    await renderProfile("celeste-rooftop");
 
     await waitFor(() => expect(screen.getByText("Not available")).toBeInTheDocument());
     expect(screen.getByText("Fully booked today")).toBeInTheDocument();
@@ -249,7 +244,7 @@ describe("disponibilidad en tiempo real", () => {
   });
 
   it("muestra el sello de frescura", async () => {
-    render(<LoungeProfilePage />);
+    await renderProfile();
 
     await waitFor(() =>
       expect(screen.getByText(/refreshes every 5 min/)).toBeInTheDocument(),
@@ -257,10 +252,15 @@ describe("disponibilidad en tiempo real", () => {
   });
 });
 
+describe("lounge inexistente", () => {
+  it("no hay ficha que cargar para un id que no existe", async () => {
+    expect(await loadLoungeProfile(createClient(), "test-no-such-lounge")).toBeNull();
+  });
+});
+
 describe("carga", () => {
   it("muestra el estado de carga cuando ?loading=1", async () => {
-    searchParams.mockReturnValue(new URLSearchParams("loading=1"));
-    render(<LoungeProfilePage />);
+    await renderProfile("the-ainsworth", { loading: true });
 
     await waitFor(() =>
       expect(screen.getByText("Checking live availability…")).toBeInTheDocument(),
@@ -272,7 +272,7 @@ describe("carga", () => {
 describe("botón de favorito (Story 6.3)", () => {
   it("AC 'Favorite lounges list' — guardar y quitar de favoritos escribe de verdad en Supabase", async () => {
     const user = userEvent.setup({ delay: null });
-    render(<LoungeProfilePage />);
+    await renderProfile();
 
     await waitFor(() =>
       expect(screen.getByRole("button", { name: /^Save$/ })).toBeInTheDocument(),

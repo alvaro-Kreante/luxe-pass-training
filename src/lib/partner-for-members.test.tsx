@@ -2,11 +2,10 @@ import { createClient as createSupabaseClient, type SupabaseClient } from "@supa
 import { render, screen } from "@testing-library/react";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
-import LoungeProfilePage from "@/app/lounges/[id]/page";
-
+import { LoungeProfileView } from "@/components/lounges/lounge-profile-view";
 import { today } from "@/lib/availability";
 import { fetchLounges } from "@/lib/lounge-directory";
-import { fetchLoungeProfile } from "@/lib/lounge-profile";
+import { fetchLoungeProfile, loadLoungeProfile } from "@/lib/lounge-profile";
 import { fetchDigitalPass, fetchUpcomingBookings } from "@/lib/passes";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
@@ -14,11 +13,6 @@ import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
 vi.mock("next/navigation", () => ({
   usePathname: () => "/lounges/the-pelham-room",
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn() }),
-  useParams: () => ({ id: "the-pelham-room" }),
-  useSearchParams: () => new URLSearchParams(),
-  notFound: () => {
-    throw new Error("NEXT_NOT_FOUND");
-  },
 }));
 
 /**
@@ -97,7 +91,8 @@ describe("la ficha del lounge", () => {
   it("muestra el partner bajo el nombre", async () => {
     await createClient().auth.signInWithPassword({ email: `pelham-member-${stamp}@ensoleil-test.com`, password: "EnSoleil!2026" });
 
-    render(<LoungeProfilePage />);
+    const data = await loadLoungeProfile(createClient(), LOUNGE);
+    render(<LoungeProfileView {...data!} />);
 
     expect(await screen.findByText(partnerName)).toBeInTheDocument();
   });

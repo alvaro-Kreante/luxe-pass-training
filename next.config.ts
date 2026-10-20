@@ -32,4 +32,22 @@ export default withPWA({
   disable: process.env.NODE_ENV === "development",
   register: true,
   reloadOnOnline: true,
+  /**
+   * PERF-02 — las páginas que se renderizan en el servidor llevan datos del
+   * miembro en el HTML (y en su payload RSC), y la caché del service worker
+   * va por URL, no por usuario: en un dispositivo compartido serviría la
+   * página del anterior. Esas rutas van solo por red; el resto sigue con la
+   * caché por defecto (va delante: Workbox aplica la primera que coincide).
+   * Al pasar otra ruta a Server Component, se añade aquí.
+   */
+  extendDefaultRuntimeCaching: true,
+  workboxOptions: {
+    runtimeCaching: [
+      {
+        urlPattern: /^https?:\/\/[^/]+\/lounges\/[^/?#]+(?:\?.*)?$/,
+        handler: "NetworkOnly",
+        options: { cacheName: "server-rendered-pages" },
+      },
+    ],
+  },
 })(nextConfig);
