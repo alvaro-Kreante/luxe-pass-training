@@ -52,6 +52,12 @@ function PartnerLoginScreen() {
   const [error, setError] = React.useState(suspendedOnArrival ? SUSPENDED_MESSAGE : "");
   const [submitting, setSubmitting] = React.useState(false);
 
+  /** Story 10.1 — el guard de servidor (PERF-02) no puede cerrar la sesión al
+   * redirigir a un partner suspendido: se cierra aquí, al llegar. */
+  React.useEffect(() => {
+    if (suspendedOnArrival) supabase.auth.signOut();
+  }, [suspendedOnArrival, supabase]);
+
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     if (submitting) return;

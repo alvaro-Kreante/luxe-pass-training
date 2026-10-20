@@ -116,6 +116,19 @@ describe("acceso de partner", () => {
     expect(await screen.findByText(/access to the Partner Dashboard is suspended/i)).toBeVisible();
   });
 
+  it("al llegar con el acceso suspendido, cierra la sesión que siguiera abierta", async () => {
+    const supabase = createClient();
+    await supabase.auth.signInWithPassword({ email: PARTNER_EMAIL, password: PASSWORD });
+    search.params = new URLSearchParams("suspended=1");
+
+    render(<PartnerLoginPage />);
+
+    await waitFor(async () => {
+      const { data } = await supabase.auth.getSession();
+      expect(data.session).toBeNull();
+    });
+  });
+
   it("un usuario suspendido no entra aunque su contraseña sea correcta", async () => {
     const user = userEvent.setup({ delay: null });
     const service = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);

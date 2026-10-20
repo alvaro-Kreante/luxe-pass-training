@@ -18,12 +18,20 @@ const Context = React.createContext<PartnerContextValue | null>(null);
  * todo /partner (lo monta `RequirePartnerSession`). Cambiar de lounge
  * actualiza la cuenta y todas las pantallas que lo leen.
  */
-export function PartnerContextProvider({ children }: { children: React.ReactNode }) {
+export function PartnerContextProvider({
+  children,
+  initialContext,
+}: {
+  children: React.ReactNode;
+  /** PERF-02 — el contexto ya cargado en el servidor: no se vuelve a pedir. */
+  initialContext?: PartnerContext | null;
+}) {
   const supabase = React.useMemo(() => createClient(), []);
-  const [context, setContext] = React.useState<PartnerContext | null>(null);
-  const [loaded, setLoaded] = React.useState(false);
+  const [context, setContext] = React.useState<PartnerContext | null>(initialContext ?? null);
+  const [loaded, setLoaded] = React.useState(initialContext !== undefined);
 
   React.useEffect(() => {
+    if (initialContext !== undefined) return;
     let active = true;
     loadPartnerContext(supabase).then((next) => {
       if (!active) return;
@@ -33,7 +41,7 @@ export function PartnerContextProvider({ children }: { children: React.ReactNode
     return () => {
       active = false;
     };
-  }, [supabase]);
+  }, [supabase, initialContext]);
 
   const select = React.useCallback(
     async (loungeId: string | null) => {

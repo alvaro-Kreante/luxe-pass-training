@@ -12,6 +12,11 @@
  * pendientes + 1 no-show.
  */
 
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+import { addDays, today } from "./availability";
+import { analyticsLoungeId, loadPartnerContext, type PartnerContext } from "./partner-lounges";
+
 export const PARTNER_VENUE = {
   name: "The Ainsworth",
   staffName: "Dana O.",
@@ -915,3 +920,54 @@ export const REPORT_DELIVERY_OPTIONS = [
     description: "On the 1st, for the month just finished.",
   },
 ] as const;
+
+/** Story 7.3 — la analítica cubre los últimos 90 días hasta hoy. */
+export const PARTNER_ANALYTICS_RANGE_DAYS = 90;
+
+export interface PartnerAnalyticsData {
+  context: PartnerContext | null;
+  /** El lounge cuyos datos se cargaron; `null` = "All lounges". */
+  loungeId: string | null;
+  summary: PartnerAnalyticsSummary;
+  dailySeries: { day: string; bookings: number }[];
+}
+
+const EMPTY_ANALYTICS_SUMMARY: PartnerAnalyticsSummary = {
+  bookings: 0,
+  day_pass_visits: 0,
+  membership_visits: 0,
+  no_shows: 0,
+  cancellations: 0,
+};
+
+/** Resumen y serie diaria de un lounge del partner (o de todos, con `null`). */
+export async function fetchPartnerAnalytics(
+  supabase: SupabaseClient,
+  loungeId: string | null,
+): Promise<Pick<PartnerAnalyticsData, "summary" | "dailySeries">> {
+  const from = addDays(today(), -(PARTNER_ANALYTICS_RANGE_DAYS - 1));
+  const [summaryResult, dailyResult] = await Promise.all([
+    supabase.rpc("partner_analytics_summary", { p_from: from, p_to: today(), p_lounge_id: loungeId }),
+    supabase.rpc("partner_bookings_by_day", { p_from: from, p_to: today(), p_lounge_id: loungeId }),
+  ]);
+  return {
+    summary: (summaryResult.data?.[0] as PartnerAnalyticsSummary | undefined) ?? EMPTY_ANALYTICS_SUMMARY,
+    dailySeries: (dailyResult.data as { day: string; bookings: number }[] | null) ?? [],
+  };
+}
+
+/**
+ * PERF-02 — lo que pinta `/partner/analytics`: el contexto del partner (su
+ * lounge elegido) y los datos de ese lounge. La página (Server Component) la
+ * llama con el cliente de servidor; la vista vuelve a pedir los datos si se
+ * cambia de lounge en la cabecera.
+ */
+export async function loadPartnerAnalytics(
+  supabase: SupabaseClient,
+  /** El contexto si ya se cargó (el guard de servidor lo trae). */
+  knownContext?: PartnerContext | null,
+): Promise<PartnerAnalyticsData> {
+  const context = knownContext !== undefined ? knownContext : await loadPartnerContext(supabase);
+  const loungeId = analyticsLoungeId(context);
+  return { context, loungeId, ...(await fetchPartnerAnalytics(supabase, loungeId)) };
+}

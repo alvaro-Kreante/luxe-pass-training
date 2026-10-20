@@ -323,7 +323,8 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `app/partner/emails/digest/page.tsx` | Story 7.2 — digest matinal de las 6:30 AM (`EmailDigest.dc.html`) |
 | `app/partner/emails/new-booking/page.tsx` | Story 7.2 — email por cada reserva nueva (`EmailNewBooking.dc.html`) |
 | `app/partner/emails/cancellation/page.tsx` | Story 7.2 — cancelación + promoción automática desde waitlist (`EmailCancellation.dc.html`) |
-| `app/partner/analytics/page.tsx` | Story 7.3 — volumen de reservas, atribución de ingresos (`Analytics.dc.html`) |
+| `app/partner/analytics/page.tsx` | Story 7.3 — volumen de reservas, atribución de ingresos (`Analytics.dc.html`). PERF-02: Server Component (`requirePartner()` + `loadPartnerAnalytics`) |
+| `partner/partner-analytics-view.tsx` | PERF-02 — la vista cliente de `/partner/analytics`: arranca con el contexto y los datos del lounge elegido que carga el servidor, y los vuelve a pedir al cambiar de lounge en la cabecera |
 | `app/partner/guests/page.tsx` | Story 7.3 — invitados recurrentes y niveles de lealtad (`RepeatGuests.dc.html`) |
 | `app/partner/reports/page.tsx` | Story 7.3 — centro de seis informes descargables (`Reports.dc.html`) |
 | `lib/admin.ts` | Story 8.1 — casos de soporte (`SUPPORT_CASES`), búsqueda de miembros (`searchMembers`), ficha de miembro (`getMemberProfile`) y caso con log de comunicación (`getCaseDetail`); Camille Duforest/CS-4417 son los únicos literales, el resto se deriva de su id — mismo criterio que `lounge-profile.ts` |
@@ -752,7 +753,7 @@ partner puede gestionar varios lounges, no una FK directa
 | `app/partner/analytics/page.tsx`, `app/partner/guests/page.tsx`, `app/partner/reports/page.tsx` | `RequirePartnerSession` + RPC reales de `partner_analytics.sql`. "Downloaded recently" (`RECENT_DOWNLOADS`) se queda como metadato de muestra — ningún AC pide un historial real de descargas |
 | `scripts/seed-partners.mjs` | Epic 10 — partners de muestra en local (The Ainsworth Collection, Halcyon Hotels, Aurelia House Group activos; Solenne Spa en draft) con sus lounges y usuarios; sustituye a `seed-partner-account.mjs` |
 | `lib/partner-lounges.ts` | Story 10.6 — `loadPartnerContext` (partner, usuario, lounges y elección validada, de `partner_context()`), `selectPartnerLounge` (se guarda en la cuenta; null = "All lounges") y `analyticsLoungeId` |
-| `components/partner/partner-context.tsx` | Story 10.6 — `PartnerContextProvider`/`usePartnerContext`: el contexto del partner para todo /partner, montado por `RequirePartnerSession` |
+| `components/partner/partner-context.tsx` | Story 10.6 — `PartnerContextProvider`/`usePartnerContext`: el contexto del partner para todo /partner, montado por `RequirePartnerSession`. PERF-02: `initialContext` para las páginas que ya lo cargaron en el servidor (no lo vuelve a pedir) |
 | `components/partner/lounge-switcher.tsx` | Story 10.6 — `LoungeSwitcher` (Fase 10 · 13–15): partner como texto fijo y el lounge como botón con su menú; "All lounges" solo con `allowAll` (Analytics, Guests, Reports) |
 
 Desviaciones conscientes de esta parte:
