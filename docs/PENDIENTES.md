@@ -723,6 +723,17 @@ partner-persona por el partner-organización. Antes del primer PR a
 - **`admin-partners` (Story 10.4) es una Edge Function nueva:** ya está en `deploy.yml`, pero necesita `APP_URL` y `BREVO_*` en los remotos, como las demás que envían emails.
 - **Suspender un usuario no invalida su token al instante** (el ban solo impide renovarlo), pero `RequirePartnerSession` y el login comprueban el acceso con `partner_context()`: el usuario sale con la sesión cerrada y el aviso "Your access… is suspended" en cuanto abre o recarga /partner.
 
+### 4.15 Test intermitente de la renovación automática en CI
+
+`src/lib/membership.test.ts` → "rechaza una llamada sin el secreto
+compartido" (AC 'Renewal date and auto-renewal settings') supera a veces su
+timeout de 30 s en CI esperando a la Edge Function de cobro de renovación.
+Visto en los runs `39619948282` y `39691872297` (PR #93); al relanzar el
+job pasa. No es una regresión: el test solo comprueba un 401.
+
+**Se resuelve:** subiéndole el timeout o haciendo que no dependa del
+arranque en frío de la Edge Function en CI.
+
 ## 5. Decisiones abiertas
 
 ### 5.0 Filtro por país en `/admin/lounges`
