@@ -86,6 +86,12 @@ beforeAll(async () => {
   await book(hal, { ...evening, status: "completed", no_show: true, cancellation_fee_cents: 3500 });
   await book(ivy, { ...evening, status: "cancelled", cancelled_at: new Date().toISOString(), cancellation_fee_cents: 3500 });
 
+  const { data: paid } = await admin.from("bookings").select("id, member_id").eq("confirmation_code", refs[ada]).single();
+  const { error: paymentError } = await admin
+    .from("payments")
+    .insert({ member_id: paid!.member_id, booking_id: paid!.id, amount_cents: 8166, status: "succeeded" });
+  if (paymentError) throw paymentError;
+
   await signUpConfirmedAdminAndSignIn(createClient(), `bookings-overview-admin-${stamp}@ensoleil-test.example`, "SupportDesk!24");
 });
 
@@ -144,6 +150,13 @@ function rowOf(name: string) {
 }
 
 describe("the day's bookings", () => {
+  it("shows what the member paid for each booking", async () => {
+    await renderPage();
+
+    expect(within(rowOf(ada)).getByText("$81.66")).toBeInTheDocument();
+    expect(within(rowOf(ben)).queryByText(/\$/)).not.toBeInTheDocument();
+  });
+
   it("opens on today and lists that day's bookings with time, member, reference, lounge and status", async () => {
     await renderPage();
 
