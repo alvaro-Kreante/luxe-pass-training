@@ -3,6 +3,7 @@
 import * as React from "react";
 import { ChevronRight, Download, Search } from "lucide-react";
 
+import { GuestHistoryDrawer } from "@/components/partner/guest-history-drawer";
 import { RequirePartnerSession } from "@/components/partner/require-partner-session";
 import { PartnerShell } from "@/components/patterns/partner-shell";
 import { Segmented } from "@/components/ui/segmented";
@@ -44,6 +45,7 @@ function RepeatGuestsContent() {
   const [guests, setGuests] = React.useState<RepeatGuestRow[]>([]);
   const [query, setQuery] = React.useState("");
   const [filter, setFilter] = React.useState<RepeatGuestFilter>("everyone");
+  const [selected, setSelected] = React.useState<RepeatGuestRow | null>(null);
   // Story 10.6 — el lounge de la cabecera, o todos con "All lounges".
   const loungeId = analyticsLoungeId(usePartnerContext()?.context ?? null);
 
@@ -138,9 +140,11 @@ function RepeatGuestsContent() {
         {filtered.map((guest) => {
           const tier = loyaltyTier(guest.visits);
           return (
-            <div
-              key={guest.email}
-              className="grid grid-cols-[1fr_92px_146px_132px_128px_112px_34px] items-center gap-3 border-b border-[rgba(58,50,42,0.6)] px-5.5 py-2.5 text-[12.5px] last:border-b-0"
+            <button
+              type="button"
+              key={guest.memberId}
+              onClick={() => setSelected(guest)}
+              className="grid w-full cursor-pointer grid-cols-[1fr_92px_146px_132px_128px_112px_34px] items-center gap-3 border-b border-[rgba(58,50,42,0.6)] px-5.5 py-2.5 text-left text-[12.5px] transition-colors duration-150 last:border-b-0 hover:bg-surface-hover"
               style={{ height: 54 }}
             >
               <div className="flex min-w-0 items-center gap-2.5">
@@ -177,10 +181,18 @@ function RepeatGuestsContent() {
               <span className="flex justify-end text-fg-subtle">
                 <ChevronRight size={17} strokeWidth={1.8} />
               </span>
-            </div>
+            </button>
           );
         })}
       </div>
+
+      <GuestHistoryDrawer
+        guest={selected}
+        loungeId={loungeId}
+        onOpenChange={(open) => {
+          if (!open) setSelected(null);
+        }}
+      />
 
       <p className="m-0 mt-3.5 flex items-start gap-2 text-xs leading-[1.55] text-fg-subtle">
         Loyalty is counted at this venue only: <strong className="text-fg-muted">Regular</strong>{" "}

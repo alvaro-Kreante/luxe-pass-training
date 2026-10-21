@@ -744,6 +744,7 @@ export const LOYALTY_TIER_LABEL: Record<LoyaltyTier, string> = {
 };
 
 export interface RepeatGuestRow {
+  memberId: string;
   name: string;
   email: string;
   visits: number;
@@ -772,6 +773,7 @@ function formatShortDate(dateIso: string): string {
 /** Convierte una fila real de `partner_repeat_guests` al `RepeatGuestRow` que ya consume `/partner/guests`. */
 export function mapRepeatGuestRow(row: PartnerRepeatGuestRow): RepeatGuestRow {
   return {
+    memberId: row.member_id,
     name: row.member_name,
     email: row.member_email,
     visits: row.visits,
@@ -956,4 +958,47 @@ export async function loadPartnerAnalytics(
   const context = knownContext !== undefined ? knownContext : await loadPartnerContext(supabase);
   const loungeId = analyticsLoungeId(context);
   return { context, loungeId, ...(await fetchPartnerAnalytics(supabase, loungeId)) };
+}
+
+/** Fila cruda de `partner_guest_history` (`supabase/schemas/partner_analytics.sql`). */
+export interface PartnerGuestHistoryRow {
+  booking_id: string;
+  lounge_name: string;
+  date: string;
+  slot_time: string;
+  status: string;
+  checked_in: boolean;
+  no_show: boolean;
+  paid_cents: number;
+}
+
+export type GuestVisitStatus = "arrived" | "no-show" | "cancelled" | "upcoming" | "not-checked-in" | "waitlisted";
+
+export interface GuestVisit {
+  id: string;
+  loungeName: string;
+  dateLabel: string;
+  slotTime: string;
+  status: GuestVisitStatus;
+  paid: number;
+}
+
+/** El estado de la reserva en el lounge; `todayIso` decide si una reserva sin check-in está por venir o ya pasó. */
+export function guestVisitStatus(row: PartnerGuestHistoryRow, todayIso: string): GuestVisitStatus {
+  if (row.status === "cancelled") return "cancelled";
+  if (row.no_show) return "no-show";
+  if (row.checked_in) return "arrived";
+  if (row.status === "waitlisted") return "waitlisted";
+  return row.date >= todayIso ? "upcoming" : "not-checked-in";
+}
+
+export function mapGuestHistoryRow(row: PartnerGuestHistoryRow, todayIso: string): GuestVisit {
+  return {
+    id: row.booking_id,
+    loungeName: row.lounge_name,
+    dateLabel: formatShortDate(row.date),
+    slotTime: row.slot_time,
+    status: guestVisitStatus(row, todayIso),
+    paid: row.paid_cents / 100,
+  };
 }
