@@ -18,9 +18,13 @@ const BASE = process.env.BASE ?? "http://localhost:3020", PW = "EnSoleil!2026", 
 const runs = Number(process.argv[2] ?? 3);
 const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
-const email = `perf02-${Date.now()}@example.com`;
+// ROLE=member (por defecto) | admin — mismo alta que audit-perf-a11y/measure.mjs.
+const ROLE = process.env.ROLE ?? "member";
+const email = `perf02-${ROLE}-${Date.now()}@example.com`;
 const { data, error } = await admin.auth.admin.createUser({ email, password: PW, email_confirm: true }); if (error) throw error;
-await admin.from("profiles").insert({ id: data.user.id, full_name: "Perf Two", phone: "+15555550100", city: "New York", industry: "Testing", terms_accepted_at: new Date().toISOString() });
+if (ROLE === "member") await admin.from("profiles").insert({ id: data.user.id, full_name: "Perf Two", phone: "+15555550100", city: "New York", industry: "Testing", terms_accepted_at: new Date().toISOString() });
+if (ROLE === "admin") await admin.from("user_roles").insert({ user_id: data.user.id, role: "admin" });
+const LOGIN = ROLE === "admin" ? "/admin/login" : "/login";
 
 const INIT = () => {
   window.__m = { lcp: 0, lt: [] };
@@ -29,13 +33,15 @@ const INIT = () => {
 };
 const browser = await chromium.launch({ headless: true });
 // Sin service worker: la PWA serviría peticiones que Playwright no ve como de la página.
-const ctx = await browser.newContext({ ...devices["Pixel 7"], viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
+// DESKTOP=1 mide a 1440×900 (la consola de admin es de escritorio).
+const device = process.env.DESKTOP ? { viewport: { width: 1440, height: 900 } } : { ...devices["Pixel 7"], viewport: { width: 390, height: 844 } };
+const ctx = await browser.newContext({ ...device, serviceWorkers: "block" });
 await ctx.addInitScript(INIT);
 const results = [];
 try {
   const login = await ctx.newPage();
-  await login.goto(BASE + "/login"); await login.getByLabel("Email address").fill(email);
-  await login.getByLabel("Password", { exact: true }).fill(PW); await login.getByRole("button", { name: "Log in" }).click();
+  await login.goto(BASE + LOGIN); await login.getByLabel(/Email/i).first().fill(email);
+  await login.getByRole("textbox", { name: "Password" }).fill(PW); await login.getByRole("button", { name: /Log in|Sign in/i }).click();
   await login.waitForURL((u) => !u.pathname.endsWith("login"), { timeout: 60000 }); await login.close();
 
   for (let i = 0; i < runs; i++) {
