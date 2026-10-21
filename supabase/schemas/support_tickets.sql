@@ -335,7 +335,8 @@ returns table (
   slot_time text,
   status text,
   no_show boolean,
-  is_day_pass boolean
+  is_day_pass boolean,
+  amount_paid_cents int
 )
 language plpgsql
 stable
@@ -355,6 +356,10 @@ begin
       b.date, b.band, b.slot_time, b.status, b.no_show,
       exists (
         select 1 from public.payments pm
+        where pm.booking_id = b.id and pm.status = 'succeeded'
+      ),
+      (
+        select coalesce(sum(pm.amount_cents), 0)::int from public.payments pm
         where pm.booking_id = b.id and pm.status = 'succeeded'
       )
     from public.bookings b

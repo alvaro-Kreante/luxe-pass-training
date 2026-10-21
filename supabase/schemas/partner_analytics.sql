@@ -20,13 +20,17 @@
 -- `bookings` cuenta TODAS las reservas del rango (cualquier estado): igual
 -- que `ANALYTICS_SUMMARY` en `src/lib/partner.ts`, day_pass_visits +
 -- membership_visits + no_shows + cancellations debe sumar `bookings`.
+-- Los ingresos son lo cobrado de verdad: pagos `succeeded` de las visitas
+-- y la tarifa de no-show registrada en la reserva.
 create or replace function public.partner_analytics_summary(p_from date, p_to date, p_lounge_id text default null)
 returns table (
   bookings int,
   day_pass_visits int,
   membership_visits int,
   no_shows int,
-  cancellations int
+  cancellations int,
+  day_pass_revenue_cents int,
+  no_show_fee_cents int
 )
 language plpgsql
 security definer
@@ -45,7 +49,11 @@ begin
           and not exists (select 1 from public.payments pm where pm.booking_id = b.id and pm.status = 'succeeded')
       )::int,
       count(*) filter (where b.no_show = true)::int,
-      count(*) filter (where b.status = 'cancelled')::int
+      count(*) filter (where b.status = 'cancelled')::int,
+      coalesce(sum(
+        (select sum(pm.amount_cents) from public.payments pm where pm.booking_id = b.id and pm.status = 'succeeded')
+      ) filter (where b.status <> 'cancelled' and b.no_show = false), 0)::int,
+      coalesce(sum(b.cancellation_fee_cents) filter (where b.no_show = true), 0)::int
     from public.bookings b
     where b.lounge_id in (select public.partner_lounge_ids())
       and (p_lounge_id is null or b.lounge_id = p_lounge_id)
@@ -84,10 +92,9 @@ grant execute on function public.partner_bookings_by_day(date, date, text) to au
 -- Toda la historia del member en los lounges del partner (no acotado a un
 -- rango de fechas: "repeat guest" es un hecho acumulado, no del periodo
 -- elegido en Analytics). Solo cuentan visitas reales: ni canceladas ni
--- no-shows. `attributed` reutiliza las mismas tarifas que
--- `DAY_PASS_PARTNER_RATE`/`MEMBERSHIP_VISIT_PARTNER_RATE` de
--- `src/lib/partner.ts` — **deben coincidir** (mismo criterio que
--- `booking_reference`, duplicado a propósito entre SQL/TS).
+-- no-shows. `attributed` es lo que el miembro pagó de verdad: la suma de
+-- sus pagos `succeeded` de esas reservas (una visita de membresía sin
+-- cobro suma 0; un pago `pending` o `refunded` no cuenta).
 create or replace function public.partner_repeat_guests(p_lounge_id text default null)
 returns table (
   member_id uuid,
@@ -112,13 +119,9 @@ begin
       count(*)::int,
       min(b.date),
       max(b.date),
-      sum(
-        case
-          when exists (select 1 from public.payments pm where pm.booking_id = b.id and pm.status = 'succeeded')
-            then 75.00
-          else 38.00
-        end
-      )::numeric(10, 2)
+      coalesce(sum(
+        (select sum(pm.amount_cents) from public.payments pm where pm.booking_id = b.id and pm.status = 'succeeded')
+      ), 0)::numeric(10, 2) / 100
     from public.bookings b
     join auth.users u on u.id = b.member_id
     left join public.profiles p on p.id = b.member_id

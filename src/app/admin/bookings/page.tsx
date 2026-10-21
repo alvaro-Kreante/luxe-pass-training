@@ -11,7 +11,7 @@ import { LoungeCombobox } from "@/components/admin/lounge-combobox";
 import { StatusFilter } from "@/components/admin/status-filter";
 import { Select } from "@/components/ui/select";
 import { StatusChip } from "@/components/ui/status-chip";
-import { getTicketCounts, type TicketCounts } from "@/lib/admin";
+import { formatCurrency, getTicketCounts, type TicketCounts } from "@/lib/admin";
 import {
   BOOKING_STATES,
   bandOccupancy,
@@ -45,7 +45,7 @@ export default function AdminBookingsPage() {
   );
 }
 
-const GRID = "grid-cols-[1fr_112px_170px_128px_24px]";
+const GRID = "grid-cols-[1fr_112px_170px_88px_128px_24px]";
 
 function dayLabel(iso: string) {
   return new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "UTC" }).format(
@@ -197,11 +197,12 @@ function BookingsScreen() {
 
       <div className="mt-4 flex min-h-0 flex-col gap-4 lg:flex-row">
         <div className="min-w-0 flex-1 overflow-x-auto rounded-content border border-line bg-dark-card">
-          <div className="min-w-[640px]">
+          <div className="min-w-[740px]">
             <div className={cn("grid h-10 items-center gap-3.5 border-b border-line px-5.5", GRID)}>
               <Th>Member</Th>
               <Th>Reference</Th>
               <Th>Lounge</Th>
+              <Th className="text-right">Paid</Th>
               <Th>Status</Th>
               <span />
             </div>
@@ -334,6 +335,9 @@ function BookingRow({ booking, onOpen }: { booking: NetworkBooking; onOpen: () =
         {booking.reference}
       </span>
       <span className={cn("truncate text-[12.5px]", cancelled ? "text-fg-subtle" : "text-fg-muted")}>{booking.loungeName}</span>
+      <span className={cn("text-right text-[12.5px] font-bold", cancelled ? "text-fg-subtle" : "text-fg")}>
+        {booking.amountPaid > 0 ? formatCurrency(booking.amountPaid) : "—"}
+      </span>
       <span>
         <StatusChip
           available={booking.state === "checked-in"}
@@ -349,8 +353,8 @@ function BookingRow({ booking, onOpen }: { booking: NetworkBooking; onOpen: () =
   );
 }
 
-function Th({ children }: { children: React.ReactNode }) {
-  return <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">{children}</p>;
+function Th({ children, className }: { children: React.ReactNode; className?: string }) {
+  return <p className={cn("m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle", className)}>{children}</p>;
 }
 
 function RailCard({ title, children }: { title: string; children: React.ReactNode }) {

@@ -23,6 +23,7 @@ export interface NetworkBooking {
   slotTime: string;
   state: BookingState;
   isDayPass: boolean;
+  amountPaid: number;
 }
 
 export interface BookingsLounge {
@@ -48,6 +49,7 @@ interface AdminBookingRow {
   status: string;
   no_show: boolean;
   is_day_pass: boolean;
+  amount_paid_cents: number;
 }
 
 export const BOOKING_STATES: { id: BookingState; label: string }[] = [
@@ -82,6 +84,7 @@ export async function fetchBookingsOn(supabase: SupabaseClient, date: string): P
     slotTime: row.slot_time,
     state: bookingState(row.status, row.no_show),
     isDayPass: row.is_day_pass,
+    amountPaid: row.amount_paid_cents / 100,
   }));
 }
 

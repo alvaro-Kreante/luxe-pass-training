@@ -174,19 +174,27 @@ describe("bookedAgoLabel", () => {
 });
 
 describe("Story 7.3 — revenueBreakdownFor / totalRevenueAttributed (backend real)", () => {
-  const summary = { bookings: 187, day_pass_visits: 53, membership_visits: 118, no_shows: 9, cancellations: 7 };
+  const summary = {
+    bookings: 187,
+    day_pass_visits: 53,
+    membership_visits: 118,
+    no_shows: 9,
+    cancellations: 7,
+    day_pass_revenue_cents: 432798,
+    no_show_fee_cents: 31500,
+  };
 
-  it("aplica las tarifas de partner a cada categoría", () => {
+  it("usa lo cobrado de verdad, no una tarifa por visita", () => {
     const breakdown = revenueBreakdownFor(summary);
 
-    expect(breakdown.dayPasses).toBe(3975);
-    expect(breakdown.membershipVisits).toBe(4484);
-    expect(breakdown.noShowFees).toBe(157.5);
+    expect(breakdown.dayPasses).toBe(4327.98);
+    expect(breakdown.membershipVisits).toBe(0);
+    expect(breakdown.noShowFees).toBe(315);
   });
 
   it("el total es la suma de las tres partidas", () => {
     const breakdown = revenueBreakdownFor(summary);
-    expect(formatCurrency(totalRevenueAttributed(breakdown))).toBe("$8,616.50");
+    expect(formatCurrency(totalRevenueAttributed(breakdown))).toBe("$4,642.98");
   });
 });
 
@@ -250,22 +258,24 @@ describe("bookingsForRange", () => {
 });
 
 describe("revenueBreakdownToCsv", () => {
-  it("incluye las tres partidas y el total", () => {
+  it("incluye las tres partidas con lo cobrado y el total", () => {
     const csv = revenueBreakdownToCsv({
       bookings: 187,
       day_pass_visits: 53,
       membership_visits: 118,
       no_shows: 9,
       cancellations: 7,
+      day_pass_revenue_cents: 432798,
+      no_show_fee_cents: 31500,
     });
 
     expect(csv).toContain("Day passes");
-    expect(csv).toContain("$3,975.00");
+    expect(csv).toContain("$4,327.98");
     expect(csv).toContain("Membership visits");
-    expect(csv).toContain("$4,484.00");
-    expect(csv).toContain("Shared no-show fees");
-    expect(csv).toContain("$157.50");
-    expect(csv).toContain("$8,616.50");
+    expect(csv).toContain("$0.00");
+    expect(csv).toContain("No-show fees");
+    expect(csv).toContain("$315.00");
+    expect(csv).toContain("$4,642.98");
   });
 });
 
