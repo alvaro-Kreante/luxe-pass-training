@@ -1,10 +1,16 @@
 name: CI
 
+# Ahorro de minutos de Actions: el push a dev no corre (ese commit ya pasó el
+# CI en su PR), y un PR que solo toca documentación tampoco. El push a
+# staging/main sí corre siempre: deploy.yml se dispara al terminar este CI.
 on:
   pull_request:
     branches: [dev, staging, main]
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
   push:
-    branches: [dev, staging, main]
+    branches: [staging, main]
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}

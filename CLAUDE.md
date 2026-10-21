@@ -70,7 +70,7 @@ qué estado usa qué param está en `docs/PENDIENTES.md` §2.2 (estados de
 |---|---|
 | `main` | Producción. Un push aquí dispara CI/CD: migra `supabase/migrations` a `luxepass-prod` (`.github/workflows/deploy.yml`) |
 | `staging` | Pre-producción. Un push aquí migra `luxepass-dev`. Se promueve a `main` con un PR `staging` → `main` cuando se decide un release |
-| `dev` | Desarrollo. Toda rama de trabajo sale de aquí y vuelve aquí por PR. Corre el CI pero no despliega nada. Se promueve a `staging` con un PR `dev` → `staging` |
+| `dev` | Desarrollo. Toda rama de trabajo sale de aquí y vuelve aquí por PR. El CI corre en el PR hacia `dev` (no en el push tras el merge, ni en PR solo de docs/`*.md`) y no despliega nada. Se promueve a `staging` con un PR `dev` → `staging` |
 
 Flujo: `<prefijo>/*` → `dev` → `staging` → `main`, siempre por PR.
 
