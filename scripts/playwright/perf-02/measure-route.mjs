@@ -18,13 +18,21 @@ const BASE = process.env.BASE ?? "http://localhost:3020", PW = "EnSoleil!2026", 
 const runs = Number(process.argv[2] ?? 3);
 const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false } });
 
-// ROLE=member (por defecto) | admin — mismo alta que audit-perf-a11y/measure.mjs.
+// ROLE=member (por defecto) | admin | partner — mismo alta que audit-perf-a11y/measure.mjs.
 const ROLE = process.env.ROLE ?? "member";
 const email = `perf02-${ROLE}-${Date.now()}@example.com`;
+if (ROLE === "partner") { // partner_members antes que la cuenta de Auth (trigger "already in use")
+  const partnerId = (await admin.from("lounges").select("partner_id").not("partner_id", "is", null).limit(1).single()).data.partner_id;
+  const r = await admin.from("partner_members").insert({ partner_id: partnerId, first_name: "Perf", last_name: "Two", email }); if (r.error) throw r.error;
+}
 const { data, error } = await admin.auth.admin.createUser({ email, password: PW, email_confirm: true }); if (error) throw error;
+if (ROLE === "partner") {
+  await admin.from("partner_members").update({ user_id: data.user.id }).eq("email", email);
+  await admin.from("user_roles").insert({ user_id: data.user.id, role: "partner" });
+}
 if (ROLE === "member") await admin.from("profiles").insert({ id: data.user.id, full_name: "Perf Two", phone: "+15555550100", city: "New York", industry: "Testing", terms_accepted_at: new Date().toISOString() });
 if (ROLE === "admin") await admin.from("user_roles").insert({ user_id: data.user.id, role: "admin" });
-const LOGIN = ROLE === "admin" ? "/admin/login" : "/login";
+const LOGIN = { member: "/login", admin: "/admin/login", partner: "/partner/login" }[ROLE];
 
 const INIT = () => {
   window.__m = { lcp: 0, lt: [] };
@@ -64,5 +72,9 @@ try {
     results.push({ htmlHasData: html.replace(/<!-- -->/g, "").includes(DATA), headingMs, lcp: Math.round(m.lcp), tbt: Math.round(m.lt.reduce((a, d) => a + Math.max(0, d - 50), 0)), supabaseRequests });
     await page.close();
   }
-} finally { await browser.close(); await admin.auth.admin.deleteUser(data.user.id); }
+} finally {
+  await browser.close();
+  if (ROLE === "partner") await admin.from("partner_members").delete().eq("email", email);
+  await admin.auth.admin.deleteUser(data.user.id);
+}
 for (const r of results) console.log(JSON.stringify(r));

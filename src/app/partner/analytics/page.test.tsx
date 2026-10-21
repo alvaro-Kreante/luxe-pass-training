@@ -3,11 +3,12 @@ import userEvent from "@testing-library/user-event";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { PartnerAnalyticsView } from "@/components/partner/partner-analytics-view";
 import { today } from "@/lib/availability";
+import { loadPartnerAnalytics } from "@/lib/partner";
+import { selectPartnerLounge } from "@/lib/partner-lounges";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedMemberAndSignIn, signUpConfirmedPartnerAndSignIn } from "@/lib/testing/confirmed-user";
-
-import AnalyticsPage from "./page";
 
 /**
  * Story 7.3 — "Weekly/monthly booking volume reports" y "revenue attribution
@@ -39,6 +40,17 @@ beforeEach(() => {
 });
 
 let loungeId: string;
+let emptyLoungeId: string;
+const EMPTY_LOUNGE_NAME = "Analytics Empty Lounge";
+
+/**
+ * PERF-02 — la página es un Server Component (`requirePartner()` +
+ * `loadPartnerAnalytics`); el test carga lo mismo con la sesión de partner de
+ * test y renderiza la vista.
+ */
+async function renderPage() {
+  return render(<PartnerAnalyticsView {...await loadPartnerAnalytics(createClient())} />);
+}
 const admin = createAdminClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -49,6 +61,7 @@ afterAll(async () => {
   // (`public.lounges`) — sin borrarlo, `lounge-directory.test.ts` (que
   // cuenta el catálogo completo) ve una fila de más y falla. `on delete
   // cascade` en `bookings` limpia el resto solo.
+  if (emptyLoungeId) await admin.from("lounges").delete().eq("id", emptyLoungeId);
   if (!loungeId) return;
   // Story 10.1 — el lounge efímero trae su propio partner de test: se borra con él.
   const { data: lounge } = await admin.from("lounges").select("partner_id").eq("id", loungeId).maybeSingle();
@@ -71,6 +84,19 @@ beforeAll(async () => {
     hours: "Open 24 hours",
   });
   if (loungeError) throw loungeError;
+
+  emptyLoungeId = `test-lounge-analytics-empty-${stamp}`;
+  const { error: emptyError } = await admin.from("lounges").insert({
+    id: emptyLoungeId,
+    name: EMPTY_LOUNGE_NAME,
+    neighborhood: "Test",
+    city: "Test City",
+    city_id: "test-city",
+    lat: 0,
+    lng: 0,
+    hours: "Open 24 hours",
+  });
+  if (emptyError) throw emptyError;
 
   const memberEmail = `analytics-member-${stamp}@ensoleil-test.example`;
   const member = createClient();
@@ -109,13 +135,14 @@ beforeAll(async () => {
   const partner = createClient();
   await signUpConfirmedPartnerAndSignIn(partner, `analytics-partner-${stamp}@theainsworth-test.example`, "AinsworthFOH!24", {
     businessName: "Analytics Test Venue",
-    loungeIds: [loungeId],
+    loungeIds: [loungeId, emptyLoungeId],
   });
+  await selectPartnerLounge(partner, loungeId);
 });
 
 describe("Analytics.dc.html", () => {
   it("muestra los cuatro tiles de métrica del lounge real (5 reservas: 2 membresía, 1 day pass, 1 no-show, 1 cancelada)", async () => {
-    render(<AnalyticsPage />);
+    await renderPage();
 
     await waitFor(() =>
       expect(within(screen.getByText("Bookings").parentElement!).getByText("5")).toBeVisible(),
@@ -129,7 +156,7 @@ describe("Analytics.dc.html", () => {
   });
 
   it("el desglose de ingresos cuadra con el total atribuido", async () => {
-    render(<AnalyticsPage />);
+    await renderPage();
 
     await waitFor(() => expect(screen.getByText("$75.00")).toBeVisible());
     expect(screen.getByText("$76.00")).toBeVisible();
@@ -138,7 +165,7 @@ describe("Analytics.dc.html", () => {
 
   it('cambiar a "Week" reduce el gráfico diario a 7 barras', async () => {
     const user = userEvent.setup({ delay: null });
-    render(<AnalyticsPage />);
+    await renderPage();
 
     await waitFor(() => expect(screen.getAllByTestId("daily-bar").length).toBeGreaterThan(7));
 
@@ -149,7 +176,7 @@ describe("Analytics.dc.html", () => {
 
   it('"Download revenue CSV" descarga el desglose de ingresos real', async () => {
     const user = userEvent.setup({ delay: null });
-    render(<AnalyticsPage />);
+    await renderPage();
 
     await waitFor(() => expect(screen.getAllByText("$168.50").length).toBeGreaterThan(0));
     await user.click(screen.getByRole("button", { name: "Download revenue CSV" }));
@@ -158,5 +185,20 @@ describe("Analytics.dc.html", () => {
     const [filename, csv] = vi.mocked(downloadTextFile).mock.calls[0];
     expect(filename).toMatch(/\.csv$/);
     expect(csv).toContain("$168.50");
+  });
+
+  it("al elegir otro lounge en la cabecera, las métricas pasan a ese lounge", async () => {
+    const user = userEvent.setup({ delay: null });
+    await renderPage();
+    await waitFor(() =>
+      expect(within(screen.getByText("Bookings").parentElement!).getByText("5")).toBeVisible(),
+    );
+
+    await user.click(screen.getByRole("button", { name: /^Lounge:/ }));
+    await user.click(await screen.findByRole("menuitemradio", { name: new RegExp(EMPTY_LOUNGE_NAME) }));
+
+    await waitFor(() =>
+      expect(within(screen.getByText("Bookings").parentElement!).getByText("0")).toBeVisible(),
+    );
   });
 });
