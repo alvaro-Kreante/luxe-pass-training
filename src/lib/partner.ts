@@ -844,8 +844,8 @@ export const PARTNER_REPORTS: PartnerReport[] = [
     id: "daily-guest-list",
     title: "Daily guest list",
     description:
-      "Who was expected, who arrived, who did not — one row per guest, for any day or range of days.",
-    formats: "CSV · PDF",
+      "Who is expected today, who arrived, who did not — one row per guest.",
+    formats: "CSV",
   },
   {
     id: "weekly-booking-volume",
@@ -863,7 +863,7 @@ export const PARTNER_REPORTS: PartnerReport[] = [
     id: "revenue-attribution",
     title: "Revenue attribution",
     description:
-      "Day passes, membership visits and shared no-show fees, month by month, against the statements you were paid.",
+      "Day passes, membership visits and no-show fees, month by month.",
     formats: "CSV",
   },
   {
@@ -875,35 +875,19 @@ export const PARTNER_REPORTS: PartnerReport[] = [
   {
     id: "no-show-log",
     title: "No-show log",
-    description: "Every reported no-show with the reason recorded and the note left with it.",
+    description: "Every reported no-show with the reason recorded and the fee.",
     formats: "CSV",
   },
 ];
 
 export const DEFAULT_REPORT_ID: PartnerReport["id"] = "monthly-booking-volume";
 
-export interface RecentDownload {
-  filename: string;
-  meta: string;
-}
-
-export const RECENT_DOWNLOADS: RecentDownload[] = [
-  { filename: "ainsworth-guest-list-2026-09-13.csv", meta: "Yesterday, 11:04 PM · by Dana O. · 14 rows" },
-  { filename: "ainsworth-revenue-august.csv", meta: "September 5 · by Marisol T. · 31 rows" },
-  { filename: "ainsworth-repeat-guests-q3.csv", meta: "September 1 · by Marisol T. · 412 rows" },
-];
-
 export const REPORT_DELIVERY_OPTIONS = [
   { value: "download", label: "Download now", description: "Straight to this computer as a CSV file." },
   {
     value: "email-team",
     label: "Email it to the team",
-    description: "To everyone on the notification list for this venue.",
-  },
-  {
-    value: "monthly",
-    label: "Send it every month",
-    description: "On the 1st, for the month just finished.",
+    description: "As a CSV attachment, to everyone on your team.",
   },
 ] as const;
 
