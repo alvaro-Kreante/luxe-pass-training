@@ -15,10 +15,14 @@ import {
   LOCKOUT_MINUTES,
   MAX_FAILED_ATTEMPTS,
   REMEMBER_ME_DAYS,
+  resolveLoginDestination,
 } from "@/lib/authentication";
 import { isEmailShapeValid } from "@/lib/registration";
 import { reactivateAccountIfDeleted } from "@/lib/profile";
 import { createClient } from "@/lib/supabase/client";
+
+const PARTNER_SUSPENDED_MESSAGE =
+  "Your access to the Partner Dashboard is suspended. Contact En Soleil if you think this is a mistake.";
 
 /**
  * Story 1.2 — User Login & Authentication.
@@ -85,7 +89,13 @@ export default function LoginPage() {
         // (`DeleteAccount.dc.html`): deshace el soft-delete si la cuenta
         // seguía en su periodo de gracia de 30 días.
         await reactivateAccountIfDeleted(supabase);
-        router.push("/");
+        const destination = await resolveLoginDestination(supabase);
+        if (destination === "suspended") {
+          await supabase.auth.signOut();
+          setCredentialsError(PARTNER_SUSPENDED_MESSAGE);
+          return;
+        }
+        router.push(destination);
         return;
       }
 
