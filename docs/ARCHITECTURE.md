@@ -389,6 +389,16 @@ la misma tabla cuando se conecte.
   `partner_members.selected_lounge_id`/`all_lounges`. Today usa siempre un
   lounge concreto; las RPC de analítica aceptan `p_lounge_id` (null = todos).
 - Datos de muestra en local: `scripts/seed-partners.mjs`.
+- **Aislamiento por rol (middleware).** `src/middleware.ts` →
+  `lib/supabase/middleware.ts`: con sesión, lee `user_roles` y aplica
+  `lib/role-zones.ts`. Miembro solo en la app (`/`, `/explore`…), partner
+  solo en `/partner` y `/reception`, admin solo en `/admin` (con ambos roles
+  elevados, admin). Quien pisa un espacio ajeno va al inicio del suyo (`/`,
+  `/partner`, `/admin/support`). Logins, `/auth`, `/signup`, `/join`,
+  `/partner/welcome`… quedan abiertos. Sin sesión decide cada
+  `Require*Session`. Hasta este cambio el middleware vivía en la raíz del
+  repo y Next no lo cargaba (con `src/app` lo busca en `src/`), así que el
+  refresco de sesión de Story 1.1 tampoco corría.
 
 ## Notificaciones al partner reales (Database Webhook + pg_cron)
 
