@@ -207,6 +207,8 @@ jobs:
           supabase functions deploy send-partner-booking-event --no-verify-jwt
           supabase functions deploy send-partner-digest --no-verify-jwt
           supabase functions deploy send-admin-report --no-verify-jwt
+          # Reports.dc.html — "Email it to the team": la llama el partner con su sesión (verifica JWT), usa BREVO_*.
+          supabase functions deploy send-partner-report
       - name: Instalar Vercel CLI
         run: npm install --global vercel@latest
       - name: Descargar configuración del proyecto luxepass-dev
@@ -327,6 +329,8 @@ jobs:
           supabase functions deploy send-partner-booking-event --no-verify-jwt
           supabase functions deploy send-partner-digest --no-verify-jwt
           supabase functions deploy send-admin-report --no-verify-jwt
+          # Reports.dc.html — "Email it to the team": la llama el partner con su sesión (verifica JWT), usa BREVO_*.
+          supabase functions deploy send-partner-report
       - name: Instalar Vercel CLI
         run: npm install --global vercel@latest
       - name: Descargar configuración del proyecto luxepass-prod
