@@ -110,7 +110,7 @@ beforeAll(async () => {
     { band: "morning", slot_time: "8:00 AM", status: "confirmed", no_show: false }, // membership visit
     { band: "morning", slot_time: "10:30 AM", status: "confirmed", no_show: false }, // membership visit
     { band: "morning", slot_time: "1:00 PM", status: "confirmed", no_show: false }, // day pass (pago abajo)
-    { band: "morning", slot_time: "3:30 PM", status: "completed", no_show: true }, // no-show
+    { band: "morning", slot_time: "3:30 PM", status: "completed", no_show: true, cancellation_fee_cents: 3500 }, // no-show
     { band: "morning", slot_time: "6:00 PM", status: "cancelled", no_show: false }, // cancelada
   ].map((row) => ({
     member_id: memberUser!.id,
@@ -152,15 +152,15 @@ describe("Analytics.dc.html", () => {
     ).toBeVisible(); // 2 membership + 1 day pass
     const noShowTile = screen.getByText("No-shows").parentElement!;
     expect(within(noShowTile).getByText("1")).toBeVisible();
-    expect(screen.getAllByText("$168.50").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("$115.25").length).toBeGreaterThan(0);
   });
 
   it("el desglose de ingresos cuadra con el total atribuido", async () => {
     await renderPage();
 
-    await waitFor(() => expect(screen.getByText("$75.00")).toBeVisible());
-    expect(screen.getByText("$76.00")).toBeVisible();
-    expect(screen.getByText("$17.50")).toBeVisible();
+    await waitFor(() => expect(screen.getByText("$80.25")).toBeVisible());
+    expect(screen.getByText("$0.00")).toBeVisible();
+    expect(screen.getByText("$35.00")).toBeVisible();
   });
 
   it('cambiar a "Week" reduce el gráfico diario a 7 barras', async () => {
@@ -178,13 +178,13 @@ describe("Analytics.dc.html", () => {
     const user = userEvent.setup({ delay: null });
     await renderPage();
 
-    await waitFor(() => expect(screen.getAllByText("$168.50").length).toBeGreaterThan(0));
+    await waitFor(() => expect(screen.getAllByText("$115.25").length).toBeGreaterThan(0));
     await user.click(screen.getByRole("button", { name: "Download revenue CSV" }));
 
     expect(downloadTextFile).toHaveBeenCalledTimes(1);
     const [filename, csv] = vi.mocked(downloadTextFile).mock.calls[0];
     expect(filename).toMatch(/\.csv$/);
-    expect(csv).toContain("$168.50");
+    expect(csv).toContain("$115.25");
   });
 
   it("al elegir otro lounge en la cabecera, las métricas pasan a ese lounge", async () => {

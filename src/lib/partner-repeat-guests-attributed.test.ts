@@ -71,3 +71,16 @@ describe("partner_repeat_guests — attributed es el importe cobrado", () => {
     expect(await attributedFor(email)).toBe(0);
   });
 });
+
+describe("partner_analytics_summary — ingresos cobrados", () => {
+  it("suma el importe real de los day passes del periodo", async () => {
+    const range = { p_from: today(), p_to: today(), p_lounge_id: LOUNGE };
+    const before = await staff.rpc("partner_analytics_summary", range);
+    const cents = (before.data as { day_pass_revenue_cents: number }[])[0].day_pass_revenue_cents;
+
+    await bookedMember("analytics", { amountCents: 8166, status: "succeeded" });
+
+    const { data } = await staff.rpc("partner_analytics_summary", range);
+    expect((data as { day_pass_revenue_cents: number }[])[0].day_pass_revenue_cents).toBe(cents + 8166);
+  });
+});

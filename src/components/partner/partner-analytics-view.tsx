@@ -197,17 +197,17 @@ function AnalyticsContent({
 
           <RevenueRow
             label="Day passes"
-            note={`${summary.day_pass_visits} visits · $75.00 each`}
+            note={`${summary.day_pass_visits} visits · as charged`}
             amount={formatCurrency(revenueBreakdown.dayPasses)}
           />
           <RevenueRow
             label="Membership visits"
-            note={`${summary.membership_visits} visits · $38.00 partner rate`}
+            note={`${summary.membership_visits} visits · covered by membership`}
             amount={formatCurrency(revenueBreakdown.membershipVisits)}
           />
           <RevenueRow
-            label="Shared no-show fees"
-            note={`${summary.no_shows} no-shows · half of $35.00`}
+            label="No-show fees"
+            note={`${summary.no_shows} no-shows · fees recorded`}
             amount={formatCurrency(revenueBreakdown.noShowFees)}
             last
           />
@@ -224,8 +224,8 @@ function AnalyticsContent({
           </div>
 
           <p className="m-0 mt-4 text-[11.5px] leading-[1.6] text-fg-subtle">
-            The partner rate for a membership visit and the split on no-show fees are the ones in
-            your agreement with En Soleil. Statements are issued on the 5th for the month before.
+            Amounts are what guests were actually charged. Statements are issued on the 5th for the
+            month before.
           </p>
 
           <button

@@ -82,6 +82,8 @@ async function reportToCsv(
       membership_visits: 0,
       no_shows: 0,
       cancellations: 0,
+      day_pass_revenue_cents: 0,
+      no_show_fee_cents: 0,
     };
     return revenueBreakdownToCsv(summary);
   }

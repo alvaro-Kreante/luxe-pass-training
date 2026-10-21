@@ -1,10 +1,8 @@
 SET local check_function_bodies = off;
 
-REVOKE ALL ON FUNCTION "public"."hook_password_verification_attempt"(jsonb) FROM "anon";
-
-REVOKE ALL ON FUNCTION "public"."hook_password_verification_attempt"(jsonb) FROM "authenticated";
-
 DROP FUNCTION "public"."admin_bookings_on"(date);
+
+DROP FUNCTION "public"."partner_analytics_summary"(date, date, text);
 
 CREATE OR REPLACE FUNCTION public.admin_amenity_demand (
   p_from date,
@@ -1751,6 +1749,49 @@ begin
 end;
 $function$;
 
+CREATE OR REPLACE FUNCTION public.partner_analytics_summary (
+  p_from      date,
+  p_to        date,
+  p_lounge_id text DEFAULT NULL::text
+)
+  RETURNS TABLE (
+    bookings               integer,
+    day_pass_visits        integer,
+    membership_visits      integer,
+    no_shows               integer,
+    cancellations          integer,
+    day_pass_revenue_cents integer,
+    no_show_fee_cents      integer
+  )
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  SET search_path TO ''
+  AS $function$
+begin
+  return query
+    select
+      count(*)::int,
+      count(*) filter (
+        where b.status <> 'cancelled' and b.no_show = false
+          and exists (select 1 from public.payments pm where pm.booking_id = b.id and pm.status = 'succeeded')
+      )::int,
+      count(*) filter (
+        where b.status <> 'cancelled' and b.no_show = false
+          and not exists (select 1 from public.payments pm where pm.booking_id = b.id and pm.status = 'succeeded')
+      )::int,
+      count(*) filter (where b.no_show = true)::int,
+      count(*) filter (where b.status = 'cancelled')::int,
+      coalesce(sum(
+        (select sum(pm.amount_cents) from public.payments pm where pm.booking_id = b.id and pm.status = 'succeeded')
+      ) filter (where b.status <> 'cancelled' and b.no_show = false), 0)::int,
+      coalesce(sum(b.cancellation_fee_cents) filter (where b.no_show = true), 0)::int
+    from public.bookings b
+    where b.lounge_id in (select public.partner_lounge_ids())
+      and (p_lounge_id is null or b.lounge_id = p_lounge_id)
+      and b.date between p_from and p_to;
+end;
+$function$;
+
 CREATE OR REPLACE FUNCTION public.partner_context()
   RETURNS jsonb
   LANGUAGE plpgsql
@@ -2142,3 +2183,5 @@ $function$;
 REVOKE ALL ON FUNCTION "public"."admin_bookings_on"(date) FROM PUBLIC;
 
 GRANT EXECUTE ON FUNCTION "public"."admin_bookings_on"(date) TO "authenticated", "postgres", "service_role";
+
+GRANT EXECUTE ON FUNCTION "public"."partner_analytics_summary"(date, date, text) TO PUBLIC, "anon", "authenticated", "postgres", "service_role";

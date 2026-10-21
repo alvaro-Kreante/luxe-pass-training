@@ -637,17 +637,6 @@ export function guestListToCsv(
 /* Story 7.3 — Partner Analytics (`Analytics.dc.html`)                 */
 /* ------------------------------------------------------------------ */
 
-/**
- * Economía de partner asumida en la Fase 2 (a confirmar con En Soleil):
- * day pass a $75.00 (Fase 5), visita de membresía a tarifa de partner de
- * $38.00, y la mitad de la tarifa de no-show de $35.00 ($17.50) para el
- * partner.
- */
-export const DAY_PASS_PARTNER_RATE = 75;
-export const MEMBERSHIP_VISIT_PARTNER_RATE = 38;
-export const NO_SHOW_FEE = 35;
-export const NO_SHOW_PARTNER_SHARE = NO_SHOW_FEE / 2;
-
 /** Fila cruda de `partner_analytics_summary` (`supabase/schemas/partner_analytics.sql`). */
 export interface PartnerAnalyticsSummary {
   bookings: number;
@@ -655,7 +644,12 @@ export interface PartnerAnalyticsSummary {
   membership_visits: number;
   no_shows: number;
   cancellations: number;
+  day_pass_revenue_cents: number;
+  no_show_fee_cents: number;
 }
+
+/** Tarifa de no-show que `partner_report_no_show` registra en la reserva (`cancellation_fee_cents = 3500`). */
+export const NO_SHOW_FEE = 35;
 
 export interface RevenueBreakdown {
   dayPasses: number;
@@ -663,12 +657,12 @@ export interface RevenueBreakdown {
   noShowFees: number;
 }
 
-/** "Where the money comes from" — reutiliza las mismas tarifas asumidas de arriba, sobre cifras reales. */
+/** "Where the money comes from" — lo cobrado de verdad; una visita de membresía no genera cobro. */
 export function revenueBreakdownFor(summary: PartnerAnalyticsSummary): RevenueBreakdown {
   return {
-    dayPasses: summary.day_pass_visits * DAY_PASS_PARTNER_RATE,
-    membershipVisits: summary.membership_visits * MEMBERSHIP_VISIT_PARTNER_RATE,
-    noShowFees: summary.no_shows * NO_SHOW_PARTNER_SHARE,
+    dayPasses: summary.day_pass_revenue_cents / 100,
+    membershipVisits: 0,
+    noShowFees: summary.no_show_fee_cents / 100,
   };
 }
 
@@ -721,23 +715,13 @@ export function bookingsByWeekday(
 export function revenueBreakdownToCsv(summary: PartnerAnalyticsSummary): string {
   const breakdown = revenueBreakdownFor(summary);
   const rows = [
-    ["Day passes", String(summary.day_pass_visits), formatCurrency(DAY_PASS_PARTNER_RATE), formatCurrency(breakdown.dayPasses)],
-    [
-      "Membership visits",
-      String(summary.membership_visits),
-      formatCurrency(MEMBERSHIP_VISIT_PARTNER_RATE),
-      formatCurrency(breakdown.membershipVisits),
-    ],
-    [
-      "Shared no-show fees",
-      String(summary.no_shows),
-      formatCurrency(NO_SHOW_PARTNER_SHARE),
-      formatCurrency(breakdown.noShowFees),
-    ],
-    ["Total", "", "", formatCurrency(totalRevenueAttributed(breakdown))],
+    ["Day passes", String(summary.day_pass_visits), formatCurrency(breakdown.dayPasses)],
+    ["Membership visits", String(summary.membership_visits), formatCurrency(breakdown.membershipVisits)],
+    ["No-show fees", String(summary.no_shows), formatCurrency(breakdown.noShowFees)],
+    ["Total", "", formatCurrency(totalRevenueAttributed(breakdown))],
   ];
 
-  const header = "Category,Visits,Rate,Amount";
+  const header = "Category,Visits,Amount";
   return [header, ...rows.map((row) => row.map((cell) => `"${cell}"`).join(","))].join("\n");
 }
 
@@ -938,6 +922,8 @@ const EMPTY_ANALYTICS_SUMMARY: PartnerAnalyticsSummary = {
   membership_visits: 0,
   no_shows: 0,
   cancellations: 0,
+  day_pass_revenue_cents: 0,
+  no_show_fee_cents: 0,
 };
 
 /** Resumen y serie diaria de un lounge del partner (o de todos, con `null`). */

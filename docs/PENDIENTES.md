@@ -779,12 +779,16 @@ asumida, no validada con En Soleil, que `lib/partner.ts` implementa tal cual:
   fija esos números: la 7.3 solo pide "revenue attribution". Si el acuerdo real
   es otro, cambian esas constantes y los importes de `Analytics.dc.html` /
   `RepeatGuests.dc.html` / `NoShow.dc.html`, no la estructura.
-  **Excepción (21 oct 2026, decisión del usuario):** la columna "Attributed" de
-  `/partner/guests` (y del CSV de Reports) ya no usa estas tarifas: muestra lo
-  que el miembro pagó de verdad (suma de pagos `succeeded` en
-  `partner_repeat_guests`; visita de membresía sin cobro = $0). El desglose de
-  ingresos de `/partner/analytics` sigue con las tarifas fijas — si debe pasar
-  también al importe real, queda abierto.
+  **Resuelto (21 oct 2026, decisión del usuario): se muestra lo cobrado real,
+  no tarifas.** "Attributed" de `/partner/guests` suma los pagos `succeeded`
+  (`partner_repeat_guests`), y "Where the money comes from" de
+  `/partner/analytics` (y su CSV) usa `day_pass_revenue_cents`/
+  `no_show_fee_cents` de `partner_analytics_summary`: day passes = lo cobrado,
+  visitas de membresía = $0, no-shows = la tarifa completa registrada en la
+  reserva ($35). Las constantes `DAY_PASS_PARTNER_RATE`/
+  `MEMBERSHIP_VISIT_PARTNER_RATE`/`NO_SHOW_PARTNER_SHARE` se retiraron. Si
+  algún día hay que mostrar la parte del lounge según el acuerdo con En
+  Soleil, falta ese dato.
 - **Los niveles de lealtad** (Regular ≥5 visitas, Returning 2–4, First visit 1)
   se cuentan solo en el local de The Ainsworth — el flow habla de "loyalty
   trackers" sin definirlos, y contarlos por local es lo único que el partner
