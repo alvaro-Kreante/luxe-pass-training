@@ -75,7 +75,7 @@ beforeAll(async () => {
   firstVisitName = `Elena FirstVisit ${stamp}`;
 
   async function createMemberWithVisits(name: string, visitCount: number) {
-    const email = `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}@ensoleil-test.com`;
+    const email = `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}@ensoleil-test.example`;
     const member = createClient();
     await signUpConfirmedMemberAndSignIn(member, email, "EnSoleil!2026");
     const {
@@ -103,7 +103,7 @@ beforeAll(async () => {
   await createMemberWithVisits(firstVisitName, 1);
 
   const partner = createClient();
-  await signUpConfirmedPartnerAndSignIn(partner, `guests-partner-${stamp}@theainsworth-test.com`, "AinsworthFOH!24", {
+  await signUpConfirmedPartnerAndSignIn(partner, `guests-partner-${stamp}@theainsworth-test.example`, "AinsworthFOH!24", {
     businessName: "Guests Test Venue",
     loungeIds: [loungeId],
   });

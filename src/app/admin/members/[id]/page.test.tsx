@@ -79,7 +79,7 @@ beforeAll(async () => {
   const memberClient = createClient();
   const member = await signUpConfirmedMemberAndSignIn(
     memberClient,
-    `member-profile-${stamp}@ensoleil-test.com`,
+    `member-profile-${stamp}@ensoleil-test.example`,
     "EnSoleil!2026",
   );
   memberId = member.id;
@@ -142,7 +142,7 @@ beforeAll(async () => {
   ]);
   if (bookingsError) throw bookingsError;
 
-  adminEmail = `member-profile-admin-${stamp}@ensoleil-test.com`;
+  adminEmail = `member-profile-admin-${stamp}@ensoleil-test.example`;
   const adminClient = createClient();
   await signUpConfirmedAdminAndSignIn(adminClient, adminEmail, ADMIN_PASSWORD);
 
@@ -214,7 +214,7 @@ describe("Member profile (/admin/members/[id])", () => {
   it("hides Modify booking for a member without an upcoming confirmed visit", async () => {
     const stamp = Date.now();
     const { data: created, error: createError } = await admin.auth.admin.createUser({
-      email: `no-upcoming-${stamp}@ensoleil-test.com`,
+      email: `no-upcoming-${stamp}@ensoleil-test.example`,
       password: "EnSoleil!2026",
       email_confirm: true,
     });

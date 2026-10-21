@@ -25,7 +25,7 @@ const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
 const { launchBrowser, navigateTo, takeScreenshot, waitForServer } = require('../../utils/browser');
 
-const EMAIL = `stripe-flow-${Date.now()}@ensoleil-test.com`;
+const EMAIL = `stripe-flow-${Date.now()}@ensoleil-test.example`;
 const PASSWORD = 'EnSoleil!2026';
 
 async function createConfirmedMember() {

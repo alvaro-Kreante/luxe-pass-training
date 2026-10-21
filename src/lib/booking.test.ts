@@ -288,7 +288,7 @@ describe("confirmBooking / joinWaitlist — chequeo final de disponibilidad (Sup
   beforeAll(async () => {
     await signUpConfirmedMemberAndSignIn(
       supabase,
-      `booking-actions-${Date.now()}@ensoleil-test.com`,
+      `booking-actions-${Date.now()}@ensoleil-test.example`,
       "EnSoleil!2026",
       { membership: "annual" },
     );

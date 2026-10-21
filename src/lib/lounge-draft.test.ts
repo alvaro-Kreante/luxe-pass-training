@@ -64,7 +64,7 @@ describe("publishChecklist — antes de poder publicar", () => {
   const complete: LoungeDraftInput = {
     name: "The Larkspur",
     phone: "+1 212 555 0148",
-    email: "hello@thelarkspur.com",
+    email: "hello@thelarkspur.example",
     website: "",
     location: {
       address: "27 Bond Street",

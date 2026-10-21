@@ -47,7 +47,7 @@ async function createMember(name: string) {
   const client = createClient();
   const user = await signUpConfirmedMemberAndSignIn(
     client,
-    `bookings-overview-${name.split(" ")[0].toLowerCase()}-${stamp}@ensoleil-test.com`,
+    `bookings-overview-${name.split(" ")[0].toLowerCase()}-${stamp}@ensoleil-test.example`,
     "EnSoleil!2026",
     { fullName: name },
   );
@@ -86,7 +86,7 @@ beforeAll(async () => {
   await book(hal, { ...evening, status: "completed", no_show: true, cancellation_fee_cents: 3500 });
   await book(ivy, { ...evening, status: "cancelled", cancelled_at: new Date().toISOString(), cancellation_fee_cents: 3500 });
 
-  await signUpConfirmedAdminAndSignIn(createClient(), `bookings-overview-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
+  await signUpConfirmedAdminAndSignIn(createClient(), `bookings-overview-admin-${stamp}@ensoleil-test.example`, "SupportDesk!24");
 });
 
 afterAll(async () => {
@@ -383,11 +383,11 @@ describe("a booking that no longer exists", () => {
 describe("access", () => {
   it("refuses the bookings list to a member", async () => {
     const client = createClient();
-    await signUpConfirmedMemberAndSignIn(client, `bookings-overview-intruder-${stamp}@ensoleil-test.com`, "EnSoleil!2026");
+    await signUpConfirmedMemberAndSignIn(client, `bookings-overview-intruder-${stamp}@ensoleil-test.example`, "EnSoleil!2026");
 
     const { error } = await client.rpc("admin_bookings_on", { p_date: day });
     expect(error?.message).toMatch(/Not authorized/);
 
-    await client.auth.signInWithPassword({ email: `bookings-overview-admin-${stamp}@ensoleil-test.com`, password: "SupportDesk!24" });
+    await client.auth.signInWithPassword({ email: `bookings-overview-admin-${stamp}@ensoleil-test.example`, password: "SupportDesk!24" });
   });
 });

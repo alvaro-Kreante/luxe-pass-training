@@ -23,8 +23,8 @@ vi.mock("next/navigation", () => ({
 type User = ReturnType<typeof userEvent.setup>;
 
 const PASSWORD = "EnSoleil!2026";
-const CONFIRMED_EMAIL = `login-${Date.now()}@ensoleil-test.com`;
-const UNCONFIRMED_EMAIL = `sin-confirmar-${Date.now()}@ensoleil-test.com`;
+const CONFIRMED_EMAIL = `login-${Date.now()}@ensoleil-test.example`;
+const UNCONFIRMED_EMAIL = `sin-confirmar-${Date.now()}@ensoleil-test.example`;
 
 beforeAll(async () => {
   const admin = createClient();
@@ -184,7 +184,7 @@ describe("credenciales incorrectas y bloqueo", () => {
     const user = userEvent.setup({ delay: null });
     render(<LoginPage />);
 
-    await failLogin(user, `intentos-${Date.now()}@ensoleil-test.com`, 1);
+    await failLogin(user, `intentos-${Date.now()}@ensoleil-test.example`, 1);
 
     expect(screen.getByText(/4 attempts left/)).toBeVisible();
   });
@@ -192,7 +192,7 @@ describe("credenciales incorrectas y bloqueo", () => {
   it("bloquea la cuenta tras el quinto intento fallido y deshabilita el formulario", async () => {
     const user = userEvent.setup({ delay: null });
     render(<LoginPage />);
-    const email = `bloqueo-${Date.now()}@ensoleil-test.com`;
+    const email = `bloqueo-${Date.now()}@ensoleil-test.example`;
 
     await failLogin(user, email, 5);
 
@@ -233,7 +233,7 @@ describe("errores anunciados al lector de pantalla", () => {
     const user = userEvent.setup({ delay: null });
     render(<LoginPage />);
 
-    await failLogin(user, `anuncio-${Date.now()}@ensoleil-test.com`, 1);
+    await failLogin(user, `anuncio-${Date.now()}@ensoleil-test.example`, 1);
 
     expect(screen.getByRole("alert")).toHaveTextContent(/4 attempts left/);
     expect(passwordField()).toHaveAccessibleDescription(/4 attempts left/);

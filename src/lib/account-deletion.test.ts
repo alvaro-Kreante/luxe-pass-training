@@ -17,7 +17,7 @@ import { isolatedClient } from "./testing/partner-invite-fixture";
 const admin = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 
 async function memberPastGracePeriod(prefix: string) {
-  const email = `${prefix}-${Date.now()}@ensoleil-test.com`;
+  const email = `${prefix}-${Date.now()}@ensoleil-test.example`;
   const member = isolatedClient();
   await signUpConfirmedMemberAndSignIn(member, email, "EnSoleil!2026");
   const {

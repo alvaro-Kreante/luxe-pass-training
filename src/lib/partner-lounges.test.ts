@@ -13,7 +13,7 @@ import { signUpConfirmedAndSignIn } from "@/lib/testing/confirmed-user";
 
 const service = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-const email = `switcher-${stamp}@halcyon-test.com`;
+const email = `switcher-${stamp}@halcyon-test.example`;
 const password = "HalcyonFOH!24";
 const partnerIds: string[] = [];
 const loungeIds: string[] = [];
@@ -161,7 +161,7 @@ describe("la analítica por lounge o de todos", () => {
 
   it("un partner sin lounges tiene contexto, sin lounge elegido", async () => {
     const lonely = await partner(`Lonely ${stamp}`);
-    const lonelyEmail = `lonely-${stamp}@halcyon-test.com`;
+    const lonelyEmail = `lonely-${stamp}@halcyon-test.example`;
     await service.from("partner_members").insert({ partner_id: lonely, first_name: "Noor", last_name: "Haddad", email: lonelyEmail });
     const client = isolatedClient();
     await signUpConfirmedAndSignIn(client, lonelyEmail, password);

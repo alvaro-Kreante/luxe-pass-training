@@ -24,7 +24,7 @@ if (!/127\.0\.0\.1|localhost/.test(url)) throw new Error(`Solo contra Supabase l
 
 const shot = (name) => path.join(__dirname, `../../screenshots/admin/${name}.png`);
 const stamp = Date.now();
-const ADMIN = { email: `lounge-visual-admin-${stamp}@ensoleil-test.com`, password: 'SupportDesk!24' };
+const ADMIN = { email: `lounge-visual-admin-${stamp}@ensoleil-test.example`, password: 'SupportDesk!24' };
 const LOUNGE_ID = `test-lounge-visual-${stamp}`;
 const PHOTO = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800';
 
@@ -42,8 +42,8 @@ async function seed(service) {
     city_id: 'new-york',
     address: '27 Bond Street',
     phone: '+1 212 555 0148',
-    email: 'hello@thelarkspur.com',
-    website: 'thelarkspur.com',
+    email: 'hello@thelarkspur.example',
+    website: 'thelarkspur.example',
     lat: 40.7262,
     lng: -73.9936,
     hours: '8 AM – 9 PM',
@@ -56,7 +56,7 @@ async function seed(service) {
   await service.from('lounge_images').insert({ lounge_id: LOUNGE_ID, url: PHOTO, caption: 'Main room', position: 0 });
 
   for (const [first, last, state] of [['Camille', 'Duarte', 'active'], ['Julian', 'Mercer', 'invited']]) {
-    const email = `${first.toLowerCase()}-${stamp}@thelarkspur-test.com`;
+    const email = `${first.toLowerCase()}-${stamp}@thelarkspur-test.example`;
     const { data } =
       state === 'active'
         ? await service.auth.admin.createUser({ email, password: 'Larkspur2026', email_confirm: true })
@@ -113,7 +113,7 @@ async function seed(service) {
     await page.getByRole('button', { name: 'Add partner' }).click();
     await page.getByRole('dialog').getByLabel('First name').fill('Rafael');
     await page.getByRole('dialog').getByLabel('Last name').fill('Ortiz');
-    await page.getByRole('dialog').getByLabel('Work email').fill('rafael.ortiz@thelarkspur.com');
+    await page.getByRole('dialog').getByLabel('Work email').fill('rafael.ortiz@thelarkspur.example');
     await takeScreenshot(page, shot('lounge-20-add-partner'));
     await page.getByRole('button', { name: 'Cancel' }).click();
 

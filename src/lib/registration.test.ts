@@ -17,7 +17,7 @@ import {
 
 function signUp(overrides: Partial<SignUpValues> = {}): SignUpValues {
   return {
-    email: "nueva.socia@email.com",
+    email: "nueva.socia@example.com",
     password: "EnSoleil!2026",
     confirmPassword: "EnSoleil!2026",
     termsAcceptedAt: "2026-08-31T10:00:00.000Z",
@@ -48,11 +48,11 @@ describe("checkPassword", () => {
 
 describe("isEmailShapeValid", () => {
   it("acepta una dirección con forma válida", () => {
-    expect(isEmailShapeValid("nueva.socia@email.com")).toBe(true);
+    expect(isEmailShapeValid("nueva.socia@example.com")).toBe(true);
   });
 
   it("rechaza una dirección sin arroba", () => {
-    expect(isEmailShapeValid("nueva.socia.email.com")).toBe(false);
+    expect(isEmailShapeValid("nueva.socia.example.com")).toBe(false);
   });
 
   it("rechaza una dirección sin dominio", () => {
@@ -60,7 +60,7 @@ describe("isEmailShapeValid", () => {
   });
 
   it("ignora los espacios alrededor", () => {
-    expect(isEmailShapeValid("  nueva.socia@email.com  ")).toBe(true);
+    expect(isEmailShapeValid("  nueva.socia@example.com  ")).toBe(true);
   });
 });
 
@@ -68,7 +68,7 @@ describe("emailExists", () => {
   const supabase = createClient();
 
   it("encuentra una cuenta ya registrada", async () => {
-    const email = `ya-existe-${Date.now()}@ensoleil-test.com`;
+    const email = `ya-existe-${Date.now()}@ensoleil-test.example`;
     await supabase.auth.signUp({ email, password: "EnSoleil!2026" });
 
     await expect(emailExists(supabase, email)).resolves.toBe(true);
@@ -78,7 +78,7 @@ describe("emailExists", () => {
   });
 
   it("no encuentra una dirección desconocida", async () => {
-    const email = `nadie-${Date.now()}@ensoleil-test.com`;
+    const email = `nadie-${Date.now()}@ensoleil-test.example`;
 
     await expect(emailExists(supabase, email)).resolves.toBe(false);
   });

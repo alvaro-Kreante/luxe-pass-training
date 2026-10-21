@@ -33,7 +33,7 @@ let count = 0;
 
 const complete = {
   phone: "+1 212 555 0100",
-  email: "hello@ainsworth-test.com",
+  email: "hello@ainsworth-test.example",
   address: "1 Main St",
   capacity: 20,
   weekly_hours: Array(7).fill("8 AM – 10 PM"),
@@ -44,7 +44,7 @@ async function partnerWithLounges() {
   count += 1;
   const { data: partner, error } = await service
     .from("partners")
-    .insert({ name: `Ainsworth Collection ${stamp} ${count}`, status: "active", contact_email: "hello@ainsworth-test.com" })
+    .insert({ name: `Ainsworth Collection ${stamp} ${count}`, status: "active", contact_email: "hello@ainsworth-test.example" })
     .select("id")
     .single();
   if (error) throw error;
@@ -83,7 +83,7 @@ async function status(id: string) {
 }
 
 beforeAll(async () => {
-  await signUpConfirmedAdminAndSignIn(createClient(), `bulk-ui-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
+  await signUpConfirmedAdminAndSignIn(createClient(), `bulk-ui-admin-${stamp}@ensoleil-test.example`, "SupportDesk!24");
 });
 
 afterAll(async () => {
@@ -211,7 +211,7 @@ describe("el mismo cierre", () => {
   it("avisa de las reservas confirmadas de cada lounge y lo añade a todos", async () => {
     const user = userEvent.setup({ delay: null });
     const { id } = await partnerWithLounges();
-    const { data: member } = await service.auth.admin.createUser({ email: `bulk-ui-member-${stamp}-${count}@ensoleil-test.com`, email_confirm: true });
+    const { data: member } = await service.auth.admin.createUser({ email: `bulk-ui-member-${stamp}-${count}@ensoleil-test.example`, email_confirm: true });
     await service.from("profiles").insert({ id: member.user!.id, full_name: "Alexandra Rivas", phone: "+15555550100", city: "New York", industry: "Testing", terms_accepted_at: new Date().toISOString() });
     await service.from("bookings").insert({ member_id: member.user!.id, lounge_id: id("ainsworth"), date: "2025-09-12", band: "morning", slot_time: "10:30 AM" });
     await select(user, "The Ainsworth", "Ainsworth Tribeca");

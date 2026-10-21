@@ -22,7 +22,7 @@ const FIXTURE = path.resolve(__dirname, '../../../../public/logo.png');
   await page.goto(`${BASE}/admin/lounges/new`, { waitUntil: 'networkidle' });
   await page.getByLabel('Lounge name').fill('The Larkspur');
   await page.getByLabel('Phone').fill('+1 212 555 0148');
-  await page.locator('#lounge-email').fill('hello@thelarkspur.com');
+  await page.locator('#lounge-email').fill('hello@thelarkspur.example');
   await page.getByRole('combobox', { name: 'Address' }).pressSequentially('27 Bond Street New', { delay: 30 }); // ('27 Bond Street New York');
   await page.getByRole('listbox', { name: 'Address suggestions' }).waitFor({ timeout: 10000 }).catch(() => console.log('no suggestions'));
   await page.screenshot({ path: path.join(OUT_DIR, 'add-lounge-suggestions.png') });

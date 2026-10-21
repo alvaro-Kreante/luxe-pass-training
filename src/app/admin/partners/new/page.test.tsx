@@ -22,7 +22,7 @@ vi.mock("next/navigation", () => ({
 
 const service = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
 const stamp = `${Date.now()}`;
-const adminEmail = `new-partner-admin-${stamp}@ensoleil-test.com`;
+const adminEmail = `new-partner-admin-${stamp}@ensoleil-test.example`;
 
 beforeAll(async () => {
   await signUpConfirmedAdminAndSignIn(createClient(), adminEmail, "SupportDesk!24");
@@ -38,7 +38,7 @@ afterAll(async () => {
 
 async function fillDetails(user: ReturnType<typeof userEvent.setup>, name: string) {
   await user.type(await screen.findByLabelText("Partner name"), name);
-  await user.type(screen.getByLabelText("Contact email"), "hello@solenne.com");
+  await user.type(screen.getByLabelText("Contact email"), "hello@solenne.example");
   await user.type(screen.getByLabelText("Street address"), "1200 Collins Avenue");
   await user.type(screen.getByLabelText("City"), "Miami Beach");
   await user.type(screen.getByLabelText("Country"), "United States");
@@ -84,7 +84,7 @@ describe("guardar el borrador", () => {
     render(<NewPartnerPage />);
     const name = `Solenne ${stamp}`;
     await fillDetails(user, name);
-    await fillUser(user, `noor-${stamp}@solenne-test.com`);
+    await fillUser(user, `noor-${stamp}@solenne-test.example`);
 
     await user.click(screen.getByRole("button", { name: "Save draft" }));
 
@@ -94,7 +94,7 @@ describe("guardar el borrador", () => {
       .select("id, status, city, representative:partner_members!partners_representative_fkey(email)")
       .eq("name", name)
       .single();
-    expect(data).toMatchObject({ status: "draft", city: "Miami Beach", representative: { email: `noor-${stamp}@solenne-test.com` } });
+    expect(data).toMatchObject({ status: "draft", city: "Miami Beach", representative: { email: `noor-${stamp}@solenne-test.example` } });
     expect(router.replace).toHaveBeenCalledWith(`/admin/partners/${data!.id}`);
   });
 

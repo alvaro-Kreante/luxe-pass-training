@@ -32,7 +32,7 @@ async function freshReferrer(label: string) {
   const supabase = createClient();
   await signUpConfirmedMemberAndSignIn(
     supabase,
-    `referrals-page-${Date.now()}-${label}@ensoleil-test.com`,
+    `referrals-page-${Date.now()}-${label}@ensoleil-test.example`,
     "EnSoleil!2026",
     { fullName: "Alexandra Rivas" },
   );
@@ -43,7 +43,7 @@ async function freshReferrer(label: string) {
 async function friendJoinsWithCode(code: string, fullName = "Daniel Okonjo") {
   const service = admin();
   const { data, error } = await service.auth.admin.createUser({
-    email: `friend-page-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@ensoleil-test.com`,
+    email: `friend-page-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@ensoleil-test.example`,
     password: "EnSoleil!2026",
     email_confirm: true,
     user_metadata: { referral_code: code },

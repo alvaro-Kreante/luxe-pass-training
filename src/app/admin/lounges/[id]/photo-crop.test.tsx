@@ -68,7 +68,7 @@ async function storedImages(id: string) {
 }
 
 beforeAll(async () => {
-  await signUpConfirmedAdminAndSignIn(createClient(), `photo-crop-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
+  await signUpConfirmedAdminAndSignIn(createClient(), `photo-crop-admin-${stamp}@ensoleil-test.example`, "SupportDesk!24");
 });
 
 afterAll(async () => {

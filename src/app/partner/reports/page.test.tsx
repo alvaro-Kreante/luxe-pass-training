@@ -31,7 +31,7 @@ beforeAll(async () => {
   const partner = createClient();
   await signUpConfirmedPartnerAndSignIn(
     partner,
-    `reports-partner-${Date.now()}@theainsworth-test.com`,
+    `reports-partner-${Date.now()}@theainsworth-test.example`,
     "AinsworthFOH!24",
     { businessName: "The Ainsworth", loungeIds: ["the-ainsworth"] },
   );

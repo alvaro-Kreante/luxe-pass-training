@@ -50,7 +50,7 @@ beforeAll(async () => {
   const supabase = createClient();
   const user = await signUpConfirmedMemberAndSignIn(
     supabase,
-    `book-summary-${Date.now()}@ensoleil-test.com`,
+    `book-summary-${Date.now()}@ensoleil-test.example`,
     "EnSoleil!2026",
   );
   ainsworth = await fetchAinsworthProfile(supabase);
@@ -244,7 +244,7 @@ describe("el servidor manda sobre quién paga (Epic 9)", () => {
     // cubierta — p. ej. las 8 visitas se agotaron en otra pestaña.
     await signUpConfirmedMemberAndSignIn(
       createClient(),
-      `book-summary-uncovered-${Date.now()}@ensoleil-test.com`,
+      `book-summary-uncovered-${Date.now()}@ensoleil-test.example`,
       "EnSoleil!2026",
     );
     const slot = findPredictedSlot(ainsworthMock, "available", 3);

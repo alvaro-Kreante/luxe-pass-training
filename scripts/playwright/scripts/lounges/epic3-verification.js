@@ -24,7 +24,7 @@ async function shot(page, name) {
 }
 
 (async () => {
-  const email = `epic3-verify-${Date.now()}@ensoleil-test.com`;
+  const email = `epic3-verify-${Date.now()}@ensoleil-test.example`;
   const password = 'EnSoleil!2026';
 
   const admin = createClient(

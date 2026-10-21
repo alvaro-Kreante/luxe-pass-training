@@ -24,10 +24,10 @@ async function shot(page, name) {
 async function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
   const { data: partner, error } = await service.from('partners')
-    .insert({ name: `Ainsworth Collection (visual ${stamp})`, status: 'active', contact_email: 'reservations@ainsworth-test.com', address_line1: '120 E 56th St', city: 'New York' })
+    .insert({ name: `Ainsworth Collection (visual ${stamp})`, status: 'active', contact_email: 'reservations@ainsworth-test.example', address_line1: '120 E 56th St', city: 'New York' })
     .select('id').single();
   if (error) throw error;
-  const complete = { phone: '+1 212 555 0100', email: 'hello@ainsworth-test.com', address: '1 Main St', weekly_hours: Array(7).fill('8 AM – 10 PM') };
+  const complete = { phone: '+1 212 555 0100', email: 'hello@ainsworth-test.example', address: '1 Main St', weekly_hours: Array(7).fill('8 AM – 10 PM') };
   const base = { city: 'New York', city_id: 'new-york', lat: 0, lng: 0, hours: 'Open', bands: ['morning'], partner_id: partner.id };
   const id = (slug) => `test-lounge-bulk-visual-${stamp}-${slug}`;
   const { error: loungeError } = await service.from('lounges').insert([

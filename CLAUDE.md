@@ -274,7 +274,7 @@ específico de este proyecto:
   cuentas de test con todo lo que cuelga de ellas, los partners/lounges que
   crearon (`created_by`), lounges `test-…`, partners de test y los archivos
   de Storage huérfanos. Un test nuevo debe crear sus datos de forma que esa
-  limpieza los reconozca: emails de los dominios de test (`…-test.com`,
+  limpieza los reconozca: emails de los dominios de test (`…-test.example`,
   `example.com`), ids `test-…`, nombres con sello `Date.now()`. Si crea un
   tipo de registro nuevo, se amplía `cleanTestData` en el mismo cambio. Los
   datos del seed y la cuenta admin real nunca se tocan. Para depurar un

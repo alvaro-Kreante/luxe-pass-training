@@ -27,7 +27,7 @@ beforeEach(() => {
 });
 
 let ainsworth: LoungeProfile;
-const memberEmail = `book-receipt-${Date.now()}@ensoleil-test.com`;
+const memberEmail = `book-receipt-${Date.now()}@ensoleil-test.example`;
 
 beforeAll(async () => {
   const supabase = createClient();

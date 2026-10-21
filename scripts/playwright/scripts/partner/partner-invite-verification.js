@@ -20,8 +20,8 @@ if (!/127\.0\.0\.1|localhost/.test(url)) throw new Error(`Solo contra Supabase l
 
 const shot = (name) => path.join(__dirname, `../../screenshots/partner/${name}.png`);
 const stamp = Date.now();
-const ADMIN = { email: `invite-visual-admin-${stamp}@ensoleil-test.com`, password: 'SupportDesk!24' };
-const PARTNER_EMAIL = `camille.duarte-${stamp}@thelarkspur-test.com`;
+const ADMIN = { email: `invite-visual-admin-${stamp}@ensoleil-test.example`, password: 'SupportDesk!24' };
+const PARTNER_EMAIL = `camille.duarte-${stamp}@thelarkspur-test.example`;
 
 async function invitePartner() {
   const service = createClient(url, env.SUPABASE_SERVICE_ROLE_KEY);
@@ -35,8 +35,8 @@ async function invitePartner() {
       id_base: `the-larkspur-${stamp}`,
       name: 'The Larkspur',
       phone: '+1 212 555 0148',
-      email: 'hello@thelarkspur.com',
-      website: 'thelarkspur.com',
+      email: 'hello@thelarkspur.example',
+      website: 'thelarkspur.example',
       address: '27 Bond Street',
       neighborhood: 'NoHo',
       city: 'New York',
@@ -101,7 +101,7 @@ async function invitePartner() {
     await navigateTo(page, '/admin/lounges/new');
     await page.getByLabel('First name').fill('Camille');
     await page.getByLabel('Last name').fill('Duarte');
-    await page.getByLabel('Work email').fill('camille.duarte@thelarkspur.com');
+    await page.getByLabel('Work email').fill('camille.duarte@thelarkspur.example');
     await page.getByLabel('Mobile').fill('+1 917 555 0163');
     await takeScreenshot(page, shot('invite-04-admin-new-lounge'));
 

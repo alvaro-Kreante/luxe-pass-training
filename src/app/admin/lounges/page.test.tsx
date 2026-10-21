@@ -80,7 +80,7 @@ beforeAll(async () => {
   await admin.from("lounges").update({ partner_id: partnerId }).eq("id", loungeBId);
 
   const adminClient = createClient();
-  await signUpConfirmedAdminAndSignIn(adminClient, `lounges-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
+  await signUpConfirmedAdminAndSignIn(adminClient, `lounges-admin-${stamp}@ensoleil-test.example`, "SupportDesk!24");
 });
 
 afterAll(async () => {

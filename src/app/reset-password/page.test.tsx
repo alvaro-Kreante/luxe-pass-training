@@ -29,7 +29,7 @@ beforeEach(() => {
 
 async function signedInSession() {
   const supabase = createClient();
-  const email = `reset-password-${Date.now()}@ensoleil-test.com`;
+  const email = `reset-password-${Date.now()}@ensoleil-test.example`;
   await signUpConfirmedAndSignIn(supabase, email, "EnSoleil!2026");
   return supabase;
 }

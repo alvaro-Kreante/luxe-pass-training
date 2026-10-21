@@ -24,7 +24,7 @@ async function isLocked(email: string): Promise<boolean> {
 
 describe("reset_login_attempts", () => {
   it("sin sesión no puede reiniciar el bloqueo de una cuenta", async () => {
-    const email = `lockout-anon-${Date.now()}@ensoleil-test.com`;
+    const email = `lockout-anon-${Date.now()}@ensoleil-test.example`;
     await lockEmail(email);
 
     await isolatedClient().rpc("reset_login_attempts", { p_email: email });
@@ -33,10 +33,10 @@ describe("reset_login_attempts", () => {
   });
 
   it("un miembro con sesión no puede reiniciar el bloqueo de otra cuenta", async () => {
-    const victim = `lockout-victim-${Date.now()}@ensoleil-test.com`;
+    const victim = `lockout-victim-${Date.now()}@ensoleil-test.example`;
     await lockEmail(victim);
     const attacker = isolatedClient();
-    await signUpConfirmedMemberAndSignIn(attacker, `lockout-attacker-${Date.now()}@ensoleil-test.com`, "EnSoleil!2026");
+    await signUpConfirmedMemberAndSignIn(attacker, `lockout-attacker-${Date.now()}@ensoleil-test.example`, "EnSoleil!2026");
 
     await attacker.rpc("reset_login_attempts", { p_email: victim });
 
@@ -44,7 +44,7 @@ describe("reset_login_attempts", () => {
   });
 
   it("quien inicia sesión con ese email reinicia su propio contador", async () => {
-    const email = `lockout-owner-${Date.now()}@ensoleil-test.com`;
+    const email = `lockout-owner-${Date.now()}@ensoleil-test.example`;
     const owner = isolatedClient();
     await signUpConfirmedMemberAndSignIn(owner, email, "EnSoleil!2026");
     await lockEmail(email);
@@ -65,7 +65,7 @@ describe("bloqueo en el servidor", () => {
   const PASSWORD = "EnSoleil!2026";
 
   async function confirmedEmail(prefix: string) {
-    const email = `${prefix}-${Date.now()}@ensoleil-test.com`;
+    const email = `${prefix}-${Date.now()}@ensoleil-test.example`;
     const client = isolatedClient();
     await signUpConfirmedMemberAndSignIn(client, email, PASSWORD);
     await client.auth.signOut();

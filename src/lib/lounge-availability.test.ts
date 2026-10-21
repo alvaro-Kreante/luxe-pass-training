@@ -45,7 +45,7 @@ async function insertBooking(member: string, date: string, band: string, status:
 
 async function createOtherMember(suffix: string) {
   const { data, error } = await admin.auth.admin.createUser({
-    email: `live-other-${suffix}-${stamp}@ensoleil-test.com`,
+    email: `live-other-${suffix}-${stamp}@ensoleil-test.example`,
     password: "EnSoleil!2026",
     email_confirm: true,
   });
@@ -77,7 +77,7 @@ beforeAll(async () => {
 
   await signUpConfirmedMemberAndSignIn(
     supabase,
-    `live-member-${stamp}@ensoleil-test.com`,
+    `live-member-${stamp}@ensoleil-test.example`,
     "EnSoleil!2026",
     { membership: "annual" },
   );

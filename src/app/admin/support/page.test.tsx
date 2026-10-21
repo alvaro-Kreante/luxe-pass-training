@@ -35,7 +35,7 @@ const stamp = Date.now();
 beforeAll(async () => {
 
   const { data: created, error } = await admin.auth.admin.createUser({
-    email: `support-desk-member-${stamp}@ensoleil-test.com`,
+    email: `support-desk-member-${stamp}@ensoleil-test.example`,
     password: "EnSoleil!2026",
     email_confirm: true,
   });
@@ -66,7 +66,7 @@ beforeAll(async () => {
   caseNumber = ticket.case_number;
 
   const adminClient = createClient();
-  await signUpConfirmedAdminAndSignIn(adminClient, `support-desk-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
+  await signUpConfirmedAdminAndSignIn(adminClient, `support-desk-admin-${stamp}@ensoleil-test.example`, "SupportDesk!24");
 });
 
 describe("Support desk (/admin/support)", () => {

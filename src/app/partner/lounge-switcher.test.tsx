@@ -31,7 +31,7 @@ const userIds: string[] = [];
 const towerA = `test-lounge-switch-ui-a-${stamp}`;
 const towerB = `test-lounge-switch-ui-b-${stamp}`;
 const partnerName = `Halcyon Switch ${stamp}`;
-const partnerEmail = `switch-ui-${stamp}@halcyon-test.com`;
+const partnerEmail = `switch-ui-${stamp}@halcyon-test.example`;
 
 async function lounge(id: string, name: string, partnerId: string) {
   await service.from("lounges").insert({ id, name, neighborhood: "Midtown East", city: "New York", city_id: "new-york", lat: 0, lng: 0, hours: "Open", partner_id: partnerId });
@@ -40,7 +40,7 @@ async function lounge(id: string, name: string, partnerId: string) {
 
 async function guestAt(loungeId: string, name: string) {
   const client = createClient();
-  const email = `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${stamp}@ensoleil-test.com`;
+  const email = `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${stamp}@ensoleil-test.example`;
   const user = await signUpConfirmedMemberAndSignIn(client, email, "EnSoleil!2026", { fullName: name });
   userIds.push(user.id);
   await client.auth.signOut();
@@ -136,7 +136,7 @@ describe("un partner sin lounges", () => {
   it("ve un estado vacío en lugar de un error", async () => {
     const { data: lonely } = await service.from("partners").insert({ name: `Lonely ${stamp}`, status: "active" }).select("id").single();
     partnerIds.push(lonely!.id);
-    await signInPartnerUser(lonely!.id, `lonely-ui-${stamp}@halcyon-test.com`, "Noor");
+    await signInPartnerUser(lonely!.id, `lonely-ui-${stamp}@halcyon-test.example`, "Noor");
     pathname.current = "/partner";
     render(<PartnerTodayPage />);
 

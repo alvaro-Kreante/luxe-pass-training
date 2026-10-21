@@ -28,7 +28,7 @@ async function account(email: string) {
 }
 
 async function member(partnerId: string, first: string, options: { account?: boolean; suspended?: boolean } = {}) {
-  const email = `${first.toLowerCase()}-${stamp}@halcyon-test.com`;
+  const email = `${first.toLowerCase()}-${stamp}@halcyon-test.example`;
   await service.from("partner_members").insert({ partner_id: partnerId, first_name: first, last_name: "Duarte", email });
   if (options.account !== false) {
     const userId = await account(email);
@@ -48,7 +48,7 @@ async function lounge(partnerId: string, label: string) {
 }
 
 async function guestBooking(loungeId: string, name: string, slot: string) {
-  const userId = await account(`${name.toLowerCase().replace(/\s+/g, "-")}-${stamp}@ensoleil-test.com`);
+  const userId = await account(`${name.toLowerCase().replace(/\s+/g, "-")}-${stamp}@ensoleil-test.example`);
   await service.from("profiles").insert({ id: userId, full_name: name, phone: "+15555550100", city: "New York", industry: "Testing", terms_accepted_at: new Date().toISOString() });
   const { error } = await service.from("bookings").insert({ member_id: userId, lounge_id: loungeId, date: DIGEST_DATE, band: "morning", slot_time: slot, status: "confirmed", special_requests: "" });
   if (error) throw error;

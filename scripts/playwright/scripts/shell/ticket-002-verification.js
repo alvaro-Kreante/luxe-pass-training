@@ -55,7 +55,7 @@ async function hoverFirstRow(page, viewName) {
   // Partner
   page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   await page.goto(`${BASE}/partner/login`, { waitUntil: 'networkidle' });
-  await page.getByLabel('Work email').fill('dana.okafor@theainsworth.com');
+  await page.getByLabel('Work email').fill('dana.okafor@theainsworth.example');
   await page.getByLabel('Password').fill('AinsworthFOH!24');
   await page.getByRole('button', { name: /sign in/i }).click();
   await page.waitForURL(/\/partner(?!\/login)/, { timeout: 15000 });

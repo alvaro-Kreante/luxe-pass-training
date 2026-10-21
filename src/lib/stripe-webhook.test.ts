@@ -50,7 +50,7 @@ function deliver(body: string, signature: string | null = sign(body)) {
 /** Un miembro con una Checkout Session real de membresía, aún sin pagar. */
 async function memberWithPendingMembership(prefix: string) {
   const member = isolatedClient();
-  await signUpConfirmedMemberAndSignIn(member, `${prefix}-${Date.now()}@ensoleil-test.com`, "EnSoleil!2026");
+  await signUpConfirmedMemberAndSignIn(member, `${prefix}-${Date.now()}@ensoleil-test.example`, "EnSoleil!2026");
   const session = await createMembershipCheckoutSession(member, { plan: "annual", saveCard: false });
   const { data } = await admin
     .from("payments")

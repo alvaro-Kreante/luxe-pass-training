@@ -38,7 +38,7 @@ beforeAll(async () => {
   originalPartner = lounge?.partner_id ?? null;
   const { data: partner } = await service
     .from("partners")
-    .insert({ name: partnerName, status: "active", contact_email: `secret-${stamp}@pelham-test.com` })
+    .insert({ name: partnerName, status: "active", contact_email: `secret-${stamp}@pelham-test.example` })
     .select("id")
     .single();
   partnerId = partner!.id;
@@ -47,7 +47,7 @@ beforeAll(async () => {
   member = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
     auth: { persistSession: false },
   });
-  const user = await signUpConfirmedMemberAndSignIn(member, `pelham-member-${stamp}@ensoleil-test.com`, "EnSoleil!2026");
+  const user = await signUpConfirmedMemberAndSignIn(member, `pelham-member-${stamp}@ensoleil-test.example`, "EnSoleil!2026");
   memberId = user.id;
   const { data: booking, error } = await service
     .from("bookings")
@@ -89,7 +89,7 @@ describe("el nombre del partner llega al miembro", () => {
 
 describe("la ficha del lounge", () => {
   it("muestra el partner bajo el nombre", async () => {
-    await createClient().auth.signInWithPassword({ email: `pelham-member-${stamp}@ensoleil-test.com`, password: "EnSoleil!2026" });
+    await createClient().auth.signInWithPassword({ email: `pelham-member-${stamp}@ensoleil-test.example`, password: "EnSoleil!2026" });
 
     const data = await loadLoungeProfile(createClient(), LOUNGE);
     render(<LoungeProfileView {...data!} />);

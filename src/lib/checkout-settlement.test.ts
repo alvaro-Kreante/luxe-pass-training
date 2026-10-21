@@ -26,7 +26,7 @@ const ainsworth = LOUNGES.find((lounge) => lounge.id === "the-ainsworth")!;
 const member = isolatedClient();
 
 beforeAll(async () => {
-  await signUpConfirmedMemberAndSignIn(member, `checkout-settle-${Date.now()}@ensoleil-test.com`, "EnSoleil!2026");
+  await signUpConfirmedMemberAndSignIn(member, `checkout-settle-${Date.now()}@ensoleil-test.example`, "EnSoleil!2026");
 });
 
 async function bookWithUnpaidSession(occurrence: number) {

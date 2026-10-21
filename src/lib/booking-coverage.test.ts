@@ -25,7 +25,7 @@ async function freshMember(label: string, options: { birthMonth?: number } = {})
   const supabase = createClient();
   const user = await signUpConfirmedMemberAndSignIn(
     supabase,
-    `coverage-${Date.now()}-${label}@ensoleil-test.com`,
+    `coverage-${Date.now()}-${label}@ensoleil-test.example`,
     "EnSoleil!2026",
   );
   if (options.birthMonth) {
@@ -55,7 +55,7 @@ async function seedVisits(memberId: string, dates: string[]) {
 async function seedCreditedReferral(referrerId: string) {
   const service = admin();
   const { data, error } = await service.auth.admin.createUser({
-    email: `coverage-friend-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@ensoleil-test.com`,
+    email: `coverage-friend-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@ensoleil-test.example`,
     password: "EnSoleil!2026",
     email_confirm: true,
   });

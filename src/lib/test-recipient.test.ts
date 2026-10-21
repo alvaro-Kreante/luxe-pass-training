@@ -8,16 +8,16 @@ import { emailSkipReason, isTestRecipient } from "../../supabase/functions/_shar
  */
 describe("isTestRecipient", () => {
   it("reconoce los dominios que usan los tests", () => {
-    expect(isTestRecipient("draft-admin-1@ensoleil-test.com")).toBe(true);
-    expect(isTestRecipient("dana@theainsworth-test.com")).toBe(true);
+    expect(isTestRecipient("draft-admin-1@ensoleil-test.example")).toBe(true);
+    expect(isTestRecipient("dana@theainsworth-test.example")).toBe(true);
     expect(isTestRecipient("someone@example.com")).toBe(true);
-    expect(isTestRecipient("camille@email.com")).toBe(true);
+    expect(isTestRecipient("camille@example.com")).toBe(true);
   });
 
   it("no confunde un email real con uno de test", () => {
     expect(isTestRecipient("dev02@kreante.co")).toBe(false);
-    expect(isTestRecipient("hello@test.com.co")).toBe(false);
-    expect(isTestRecipient("owner@contest.com")).toBe(false);
+    expect(isTestRecipient("hello@test.example.co")).toBe(false);
+    expect(isTestRecipient("owner@contest.example")).toBe(false);
   });
 });
 
@@ -29,17 +29,17 @@ describe("isTestRecipient", () => {
 describe("emailSkipReason", () => {
   it("sin ambiente (CI de GitHub) no se envía nada", () => {
     expect(emailSkipReason(undefined, "dev02@kreante.co")).toBe("no-environment");
-    expect(emailSkipReason("", "camille@thelarkspur-test.com")).toBe("no-environment");
+    expect(emailSkipReason("", "camille@thelarkspur-test.example")).toBe("no-environment");
   });
 
   it("en local se omiten los destinatarios de test y se envía al resto", () => {
-    expect(emailSkipReason("LOCAL", "camille@thelarkspur-test.com")).toBe("test-recipient");
+    expect(emailSkipReason("LOCAL", "camille@thelarkspur-test.example")).toBe("test-recipient");
     expect(emailSkipReason("LOCAL", "dev02@kreante.co")).toBeNull();
   });
 
   it("en local, mientras corre la suite no sale ningún email, tampoco a buzones reales", () => {
-    expect(emailSkipReason("LOCAL", "dana.okafor@theainsworth.com", { testsRunning: true })).toBe("tests-running");
-    expect(emailSkipReason("LOCAL", "dana.okafor@theainsworth.com", { testsRunning: false })).toBeNull();
+    expect(emailSkipReason("LOCAL", "dana.okafor@theainsworth.example", { testsRunning: true })).toBe("tests-running");
+    expect(emailSkipReason("LOCAL", "dana.okafor@theainsworth.example", { testsRunning: false })).toBeNull();
   });
 
   it("la pausa de la suite local no afecta a staging ni a producción", () => {
@@ -47,7 +47,7 @@ describe("emailSkipReason", () => {
   });
 
   it("en staging y producción se envía siempre", () => {
-    expect(emailSkipReason("STAGING", "camille@thelarkspur-test.com")).toBeNull();
+    expect(emailSkipReason("STAGING", "camille@thelarkspur-test.example")).toBeNull();
     expect(emailSkipReason("PROD", "dev02@kreante.co")).toBeNull();
   });
 });

@@ -27,7 +27,7 @@ simulado de Supabase (Inbucket/Mailpit) — Auth llama al Hook `send_email`
 - **En `LOCAL`, los destinatarios de test no reciben email.** La suite
   completa agotaba la cuota diaria de Brevo (25 sept 2026):
   `_shared/brevo.ts` no envía cuando `APP_ENV=LOCAL` y el destinatario es
-  de un dominio de test (`*-test.com`, `example.*`, `email.com`,
+  de un dominio de test (`*-test.example`, `example.*`,
   `_shared/test-recipient.ts`) — solo lo registra en el log de la
   function. Un email real en local sí se envía; en staging/prod, siempre.
 - **Sin `APP_ENV`, nada sale (29 sept 2026).** El runner de GitHub Actions

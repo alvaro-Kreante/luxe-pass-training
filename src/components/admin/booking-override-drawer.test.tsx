@@ -67,7 +67,7 @@ beforeAll(async () => {
 
   const memberClient = createClient();
   const { data: created, error: createError } = await admin.auth.admin.createUser({
-    email: `override-member-${stamp}@ensoleil-test.com`,
+    email: `override-member-${stamp}@ensoleil-test.example`,
     password: "EnSoleil!2026",
     email_confirm: true,
   });
@@ -76,7 +76,7 @@ beforeAll(async () => {
   await memberClient.auth.signOut();
 
   const adminClient = createClient();
-  await signUpConfirmedAdminAndSignIn(adminClient, `override-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
+  await signUpConfirmedAdminAndSignIn(adminClient, `override-admin-${stamp}@ensoleil-test.example`, "SupportDesk!24");
 });
 
 afterAll(async () => {

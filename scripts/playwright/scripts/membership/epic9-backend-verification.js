@@ -43,7 +43,7 @@ async function adminFetch(env, pathname, body, method = 'POST') {
   try {
     await waitForServer();
     const env = readEnv();
-    const email = `epic9-visual-${Date.now()}@ensoleil-test.com`;
+    const email = `epic9-visual-${Date.now()}@ensoleil-test.example`;
     const password = 'EnSoleil!2026';
 
     const user = await adminFetch(env, '/auth/v1/admin/users', { email, password, email_confirm: true });

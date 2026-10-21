@@ -180,7 +180,7 @@ export async function signInReceptionStaff(loungeId: string): Promise<SupabaseCl
   });
   await signUpConfirmedPartnerAndSignIn(
     staff,
-    `reception-staff-${loungeId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@ensoleil-test.com`,
+    `reception-staff-${loungeId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@ensoleil-test.example`,
     "EnSoleil!2026",
     { businessName: `Reception ${loungeId}`, loungeIds: [loungeId] },
   );

@@ -26,14 +26,14 @@ const ainsworth = LOUNGES.find((lounge) => lounge.id === "the-ainsworth")!;
 const adminUser = isolatedClient();
 
 beforeAll(async () => {
-  await signUpConfirmedAdminAndSignIn(adminUser, `refund-admin-${Date.now()}@ensoleil-test.com`, "EnSoleil!2026");
+  await signUpConfirmedAdminAndSignIn(adminUser, `refund-admin-${Date.now()}@ensoleil-test.example`, "EnSoleil!2026");
 });
 
 async function newMember(label: string, membership?: "annual") {
   const supabase = isolatedClient();
   const user = await signUpConfirmedMemberAndSignIn(
     supabase,
-    `refund-${label}-${Date.now()}@ensoleil-test.com`,
+    `refund-${label}-${Date.now()}@ensoleil-test.example`,
     "EnSoleil!2026",
     membership ? { membership } : undefined,
   );

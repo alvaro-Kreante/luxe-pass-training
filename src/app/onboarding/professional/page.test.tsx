@@ -38,7 +38,7 @@ function Harness() {
 
 async function renderReadyPage() {
   const supabase = createClient();
-  const email = `perfil-${Date.now()}@ensoleil-test.com`;
+  const email = `perfil-${Date.now()}@ensoleil-test.example`;
   await signUpConfirmedAndSignIn(supabase, email, "EnSoleil!2026");
 
   render(

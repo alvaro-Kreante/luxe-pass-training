@@ -44,7 +44,7 @@ interface TestGuest {
 }
 
 async function createTestGuest(name: string, band: WeekBandId, slotTime: string, dateIso = today()): Promise<TestGuest> {
-  const email = `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}@ensoleil-test.com`;
+  const email = `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}@ensoleil-test.example`;
   const member = createClient();
   await signUpConfirmedMemberAndSignIn(member, email, "EnSoleil!2026", { membership: "annual" });
 
@@ -82,7 +82,7 @@ beforeAll(async () => {
   const partner = createClient();
   await signUpConfirmedPartnerAndSignIn(
     partner,
-    `partner-today-${stamp}@theainsworth-test.com`,
+    `partner-today-${stamp}@theainsworth-test.example`,
     "AinsworthFOH!24",
     { businessName: "The Ainsworth", loungeIds: ["the-ainsworth"] },
   );
@@ -107,7 +107,7 @@ beforeAll(async () => {
 
   const partnerSession = createClient();
   await partnerSession.auth.signInWithPassword({
-    email: `partner-today-${stamp}@theainsworth-test.com`,
+    email: `partner-today-${stamp}@theainsworth-test.example`,
     password: "AinsworthFOH!24",
   });
 });

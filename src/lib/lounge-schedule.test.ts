@@ -69,7 +69,7 @@ function memberClient() {
 }
 
 beforeAll(async () => {
-  await signUpConfirmedAdminAndSignIn(admin, `schedule-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
+  await signUpConfirmedAdminAndSignIn(admin, `schedule-admin-${stamp}@ensoleil-test.example`, "SupportDesk!24");
 });
 
 describe("temporadas", () => {
@@ -170,7 +170,7 @@ describe("cierres especiales", () => {
   it("lista las reservas confirmadas que caen en el periodo antes de guardarlo", async () => {
     const loungeId = await lounge();
     const member = memberClient();
-    const { id: memberId } = await signUpConfirmedMemberAndSignIn(member, `schedule-member-${stamp}@ensoleil-test.com`, "LoungeTime!24", { fullName: "Alexandra Rivas" });
+    const { id: memberId } = await signUpConfirmedMemberAndSignIn(member, `schedule-member-${stamp}@ensoleil-test.example`, "LoungeTime!24", { fullName: "Alexandra Rivas" });
     const booking = { member_id: memberId, lounge_id: loungeId, band: "morning", slot_time: "8:00 AM" };
     const { error } = await service.from("bookings").insert([
       { ...booking, date: "2025-09-16", status: "confirmed" },
@@ -206,7 +206,7 @@ describe("quién puede escribir", () => {
     const loungeId = await lounge();
     await saveLoungeSeason(admin, loungeId, { name: "Summer", startsOn: "2025-06-01", endsOn: "2025-08-31", weeklyHours: SUMMER });
     const member = memberClient();
-    await signUpConfirmedMemberAndSignIn(member, `schedule-reader-${stamp}@ensoleil-test.com`, "LoungeTime!24");
+    await signUpConfirmedMemberAndSignIn(member, `schedule-reader-${stamp}@ensoleil-test.example`, "LoungeTime!24");
 
     expect((await listLoungeSchedule(member, loungeId)).seasons).toHaveLength(1);
     await expect(

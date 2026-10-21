@@ -24,8 +24,8 @@ vi.mock("next/navigation", () => ({
 }));
 
 const PASSWORD = "AinsworthFOH!24";
-const PARTNER_EMAIL = `partner-login-${Date.now()}@theainsworth-test.com`;
-const MEMBER_EMAIL = `not-a-partner-${Date.now()}@ensoleil-test.com`;
+const PARTNER_EMAIL = `partner-login-${Date.now()}@theainsworth-test.example`;
+const MEMBER_EMAIL = `not-a-partner-${Date.now()}@ensoleil-test.example`;
 
 beforeAll(async () => {
   const admin = createClient();

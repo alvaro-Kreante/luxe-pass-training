@@ -14,7 +14,7 @@ const OUT_DIR = path.resolve(__dirname, '../../screenshots/partner');
   const shot = async (name) => { await page.screenshot({ path: path.join(OUT_DIR, name) }); console.log('shot', name); };
 
   await page.goto(BASE + '/partner/login', { waitUntil: 'networkidle' });
-  await page.getByLabel(/email/i).fill('camille.duarte@halcyonhotels.com');
+  await page.getByLabel(/email/i).fill('camille.duarte@halcyonhotels.example');
   await page.getByLabel(/password/i).first().fill('HalcyonFOH!24');
   await page.getByRole('button', { name: /sign in/i }).click();
   await page.waitForURL(/\/partner(?!\/login)/, { timeout: 15000 });

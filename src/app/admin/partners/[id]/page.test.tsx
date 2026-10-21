@@ -35,12 +35,12 @@ async function draftPartner() {
   count += 1;
   const { data: partner, error } = await service
     .from("partners")
-    .insert({ name: `Halcyon ${stamp} ${count}`, contact_email: "reservations@halcyon.com", address_line1: "445 Park Avenue", city: "New York" })
+    .insert({ name: `Halcyon ${stamp} ${count}`, contact_email: "reservations@halcyon.example", address_line1: "445 Park Avenue", city: "New York" })
     .select("id")
     .single();
   if (error) throw error;
-  await service.from("partner_members").insert({ partner_id: partner.id, first_name: "Camille", last_name: "Duarte", email: `camille-${stamp}-${count}@halcyon-test.com`, mobile: "+1 212 555 0148" });
-  await service.from("partner_members").insert({ partner_id: partner.id, first_name: "Julian", last_name: "Mercer", email: `julian-${stamp}-${count}@halcyon-test.com` });
+  await service.from("partner_members").insert({ partner_id: partner.id, first_name: "Camille", last_name: "Duarte", email: `camille-${stamp}-${count}@halcyon-test.example`, mobile: "+1 212 555 0148" });
+  await service.from("partner_members").insert({ partner_id: partner.id, first_name: "Julian", last_name: "Mercer", email: `julian-${stamp}-${count}@halcyon-test.example` });
   const loungeId = `test-lounge-partner-detail-${stamp}-${count}`;
   await service.from("lounges").insert({
     id: loungeId,
@@ -76,7 +76,7 @@ function userRow(name: string) {
 }
 
 beforeAll(async () => {
-  await signUpConfirmedAdminAndSignIn(createClient(), `partner-detail-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
+  await signUpConfirmedAdminAndSignIn(createClient(), `partner-detail-admin-${stamp}@ensoleil-test.example`, "SupportDesk!24");
 });
 
 afterAll(async () => {
@@ -122,7 +122,7 @@ describe("la tabla de usuarios", () => {
     await draftPartner();
 
     const camille = userRow("Camille Duarte");
-    expect(within(camille).getByText(`camille-${stamp}-${count}@halcyon-test.com`)).toBeInTheDocument();
+    expect(within(camille).getByText(`camille-${stamp}-${count}@halcyon-test.example`)).toBeInTheDocument();
     expect(within(camille).getByText("+1 212 555 0148")).toBeInTheDocument();
     expect(within(camille).getByText("On activation")).toBeInTheDocument();
     expect(within(camille).getByText("Representative")).toBeInTheDocument();
@@ -135,7 +135,7 @@ describe("la tabla de usuarios", () => {
     await user.click(screen.getByRole("button", { name: "Add user" }));
     await user.type(screen.getByLabelText("First name"), "Rafael");
     await user.type(screen.getByLabelText("Last name"), "Ortiz");
-    await user.type(screen.getByLabelText("Work email"), `rafael-${stamp}-${count}@halcyon-test.com`);
+    await user.type(screen.getByLabelText("Work email"), `rafael-${stamp}-${count}@halcyon-test.example`);
     await user.click(screen.getByRole("button", { name: "Save user" }));
 
     expect(await within(usersTable()).findByRole("row", { name: /Rafael Ortiz/ })).toBeInTheDocument();
@@ -286,8 +286,8 @@ describe("activar el partner", () => {
     await chooseStatus(user, "Active");
 
     const dialog = await findDialog({ name: "Activate this partner?" });
-    expect(within(dialog).getByText(`camille-${stamp}-${count}@halcyon-test.com`)).toBeInTheDocument();
-    expect(within(dialog).getByText(`julian-${stamp}-${count}@halcyon-test.com`)).toBeInTheDocument();
+    expect(within(dialog).getByText(`camille-${stamp}-${count}@halcyon-test.example`)).toBeInTheDocument();
+    expect(within(dialog).getByText(`julian-${stamp}-${count}@halcyon-test.example`)).toBeInTheDocument();
   }, 90_000);
 
   it("al confirmar, el partner queda activo y sus usuarios invitados", async () => {

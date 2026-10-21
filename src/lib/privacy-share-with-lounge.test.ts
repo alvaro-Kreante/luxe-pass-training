@@ -19,7 +19,7 @@ const LOUNGE = "the-ainsworth";
 const staff = isolatedClient();
 
 beforeAll(async () => {
-  await signUpConfirmedPartnerAndSignIn(staff, `privacy-staff-${Date.now()}@ensoleil-test.com`, "EnSoleil!2026", {
+  await signUpConfirmedPartnerAndSignIn(staff, `privacy-staff-${Date.now()}@ensoleil-test.example`, "EnSoleil!2026", {
     businessName: "Ainsworth Hospitality",
     loungeIds: [LOUNGE],
   });
@@ -27,7 +27,7 @@ beforeAll(async () => {
 
 async function bookedMember(label: string, shareWithLounge: boolean) {
   const supabase = isolatedClient();
-  const email = `privacy-${label}-${Date.now()}@ensoleil-test.com`;
+  const email = `privacy-${label}-${Date.now()}@ensoleil-test.example`;
   const user = await signUpConfirmedMemberAndSignIn(supabase, email, "EnSoleil!2026", { membership: "annual" });
   await admin
     .from("profiles")

@@ -48,7 +48,7 @@ vi.mock("next/navigation", () => ({
  * dependen de qué camino tomó el test. */
 const NY_ORIGIN = { latitude: 40.7595, longitude: -73.97 };
 
-const EMAIL = `explora-${Date.now()}@ensoleil-test.com`;
+const EMAIL = `explora-${Date.now()}@ensoleil-test.example`;
 const PASSWORD = "EnSoleil!2026";
 
 beforeAll(async () => {

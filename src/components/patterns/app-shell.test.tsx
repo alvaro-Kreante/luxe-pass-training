@@ -108,7 +108,7 @@ describe("bloque de usuario de la sidebar", () => {
     const supabase = createClient();
     await signUpConfirmedMemberAndSignIn(
       supabase,
-      `app-shell-${Date.now()}@ensoleil-test.com`,
+      `app-shell-${Date.now()}@ensoleil-test.example`,
       "EnSoleil!2026",
     );
 
@@ -125,7 +125,7 @@ describe("bloque de usuario de la sidebar", () => {
     const supabase = createClient();
     const user = await signUpConfirmedMemberAndSignIn(
       supabase,
-      `app-shell-photo-${Date.now()}@ensoleil-test.com`,
+      `app-shell-photo-${Date.now()}@ensoleil-test.example`,
       "EnSoleil!2026",
     );
     const path = await uploadProfilePhoto(supabase, new File(["x"], "me.png", { type: "image/png" }));

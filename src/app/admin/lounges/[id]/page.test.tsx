@@ -45,7 +45,7 @@ async function createLounge(name: string, extra: Record<string, unknown> = {}) {
     city_id: "new-york",
     address: "27 Bond Street",
     phone: "+1 212 555 0148",
-    email: "hello@thelarkspur.com",
+    email: "hello@thelarkspur.example",
     lat: 40.7262,
     lng: -73.9936,
     hours: "8 AM – 9 PM",
@@ -98,7 +98,7 @@ async function contentStatus(id: string) {
 }
 
 beforeAll(async () => {
-  await signUpConfirmedAdminAndSignIn(createClient(), `lounge-edit-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
+  await signUpConfirmedAdminAndSignIn(createClient(), `lounge-edit-admin-${stamp}@ensoleil-test.example`, "SupportDesk!24");
 });
 
 afterAll(async () => {
@@ -282,7 +282,7 @@ describe("el partner del lounge (Story 10.5)", () => {
 
   it("un lounge live muestra su partner en solo lectura y enlaza a su detalle", async () => {
     const partnerId = await partnerNamed(`Halcyon Owner ${stamp}`, "active");
-    await admin.from("partner_members").insert({ partner_id: partnerId, first_name: "Camille", last_name: "Duarte", email: `owner-rep-${stamp}@halcyon-test.com` });
+    await admin.from("partner_members").insert({ partner_id: partnerId, first_name: "Camille", last_name: "Duarte", email: `owner-rep-${stamp}@halcyon-test.example` });
     await createLounge(`Live Lounge ${Date.now()}`, { partner_id: partnerId });
     render(<LoungeEditPage />);
 

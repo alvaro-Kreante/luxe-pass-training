@@ -13,7 +13,7 @@ const env = Object.fromEntries(
 
 (async () => {
   const service = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
-  const email = `visual-member-${Date.now()}@ensoleil-test.com`;
+  const email = `visual-member-${Date.now()}@ensoleil-test.example`;
   const { data: created } = await service.auth.admin.createUser({ email, password: 'EnSoleil!2026', email_confirm: true });
   await service.from('profiles').insert({ id: created.user.id, full_name: 'Visual Member', phone: '+15555550100', city: 'New York', industry: 'Testing', terms_accepted_at: new Date().toISOString() });
 

@@ -27,7 +27,7 @@ describe("cerrar sesión", () => {
     const supabase = createClient();
     await signUpConfirmedMemberAndSignIn(
       supabase,
-      `logout-${Date.now()}@ensoleil-test.com`,
+      `logout-${Date.now()}@ensoleil-test.example`,
       "EnSoleil!2026",
     );
     const user = userEvent.setup({ delay: null });

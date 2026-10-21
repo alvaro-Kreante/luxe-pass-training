@@ -66,7 +66,7 @@ async function bookAndSignIn(label: string, dateIso: string, band: BookingReques
   const supabase = createClient();
   await signUpConfirmedMemberAndSignIn(
     supabase,
-    `passes-${Date.now()}-${label}@ensoleil-test.com`,
+    `passes-${Date.now()}-${label}@ensoleil-test.example`,
     "EnSoleil!2026",
     { membership: "annual" },
   );
@@ -110,7 +110,7 @@ describe("fetchDigitalPass", () => {
     const otherMember = createClient();
     await signUpConfirmedMemberAndSignIn(
       otherMember,
-      `passes-${Date.now()}-digital-3-other@ensoleil-test.com`,
+      `passes-${Date.now()}-digital-3-other@ensoleil-test.example`,
       "EnSoleil!2026",
       { membership: "annual" },
     );
@@ -200,7 +200,7 @@ describe("cancelBooking (Story 6.1)", () => {
     const otherMember = createClient();
     await signUpConfirmedMemberAndSignIn(
       otherMember,
-      `passes-${Date.now()}-cancel-4-other@ensoleil-test.com`,
+      `passes-${Date.now()}-cancel-4-other@ensoleil-test.example`,
       "EnSoleil!2026",
       { membership: "annual" },
     );

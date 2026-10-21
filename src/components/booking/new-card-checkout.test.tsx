@@ -29,7 +29,7 @@ beforeAll(async () => {
 async function freshMember(label: string) {
   return signUpConfirmedMemberAndSignIn(
     createClient(),
-    `new-card-${Date.now()}-${label}@ensoleil-test.com`,
+    `new-card-${Date.now()}-${label}@ensoleil-test.example`,
     "EnSoleil!2026",
   );
 }

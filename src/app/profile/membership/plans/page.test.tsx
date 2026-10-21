@@ -36,7 +36,7 @@ function admin() {
 
 async function freshMember(label: string) {
   const supabase = createClient();
-  const email = `plans-page-${Date.now()}-${label}@ensoleil-test.com`;
+  const email = `plans-page-${Date.now()}-${label}@ensoleil-test.example`;
   const user = await signUpConfirmedMemberAndSignIn(supabase, email, "EnSoleil!2026");
   return { supabase, user, email };
 }

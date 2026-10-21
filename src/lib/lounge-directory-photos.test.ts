@@ -24,7 +24,7 @@ async function mainPhotoOf(loungeId: string): Promise<string> {
 describe("foto principal en el catálogo", () => {
   it("fetchLounges trae la foto principal de cada lounge", async () => {
     const supabase = createClient();
-    await signUpConfirmedAndSignIn(supabase, `fotos-${Date.now()}@ensoleil-test.com`, "EnSoleil!2026");
+    await signUpConfirmedAndSignIn(supabase, `fotos-${Date.now()}@ensoleil-test.example`, "EnSoleil!2026");
 
     const lounges = await fetchLounges(supabase);
 
@@ -34,7 +34,7 @@ describe("foto principal en el catálogo", () => {
 
   it("searchLounges también la trae", async () => {
     const supabase = createClient();
-    await signUpConfirmedAndSignIn(supabase, `fotos-busca-${Date.now()}@ensoleil-test.com`, "EnSoleil!2026");
+    await signUpConfirmedAndSignIn(supabase, `fotos-busca-${Date.now()}@ensoleil-test.example`, "EnSoleil!2026");
 
     const [ainsworth] = await searchLounges(supabase, "Ainsworth");
 
