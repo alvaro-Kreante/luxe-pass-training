@@ -84,10 +84,9 @@ grant execute on function public.partner_bookings_by_day(date, date, text) to au
 -- Toda la historia del member en los lounges del partner (no acotado a un
 -- rango de fechas: "repeat guest" es un hecho acumulado, no del periodo
 -- elegido en Analytics). Solo cuentan visitas reales: ni canceladas ni
--- no-shows. `attributed` reutiliza las mismas tarifas que
--- `DAY_PASS_PARTNER_RATE`/`MEMBERSHIP_VISIT_PARTNER_RATE` de
--- `src/lib/partner.ts` — **deben coincidir** (mismo criterio que
--- `booking_reference`, duplicado a propósito entre SQL/TS).
+-- no-shows. `attributed` es lo que el miembro pagó de verdad: la suma de
+-- sus pagos `succeeded` de esas reservas (una visita de membresía sin
+-- cobro suma 0; un pago `pending` o `refunded` no cuenta).
 create or replace function public.partner_repeat_guests(p_lounge_id text default null)
 returns table (
   member_id uuid,
@@ -112,13 +111,9 @@ begin
       count(*)::int,
       min(b.date),
       max(b.date),
-      sum(
-        case
-          when exists (select 1 from public.payments pm where pm.booking_id = b.id and pm.status = 'succeeded')
-            then 75.00
-          else 38.00
-        end
-      )::numeric(10, 2)
+      coalesce(sum(
+        (select sum(pm.amount_cents) from public.payments pm where pm.booking_id = b.id and pm.status = 'succeeded')
+      ), 0)::numeric(10, 2) / 100
     from public.bookings b
     join auth.users u on u.id = b.member_id
     left join public.profiles p on p.id = b.member_id

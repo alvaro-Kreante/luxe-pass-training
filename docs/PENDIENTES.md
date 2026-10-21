@@ -779,6 +779,12 @@ asumida, no validada con En Soleil, que `lib/partner.ts` implementa tal cual:
   fija esos números: la 7.3 solo pide "revenue attribution". Si el acuerdo real
   es otro, cambian esas constantes y los importes de `Analytics.dc.html` /
   `RepeatGuests.dc.html` / `NoShow.dc.html`, no la estructura.
+  **Excepción (21 oct 2026, decisión del usuario):** la columna "Attributed" de
+  `/partner/guests` (y del CSV de Reports) ya no usa estas tarifas: muestra lo
+  que el miembro pagó de verdad (suma de pagos `succeeded` en
+  `partner_repeat_guests`; visita de membresía sin cobro = $0). El desglose de
+  ingresos de `/partner/analytics` sigue con las tarifas fijas — si debe pasar
+  también al importe real, queda abierto.
 - **Los niveles de lealtad** (Regular ≥5 visitas, Returning 2–4, First visit 1)
   se cuentan solo en el local de The Ainsworth — el flow habla de "loyalty
   trackers" sin definirlos, y contarlos por local es lo único que el partner
