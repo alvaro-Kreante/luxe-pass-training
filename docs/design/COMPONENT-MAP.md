@@ -133,6 +133,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 |---|---|---|
 | `GuestDetailDrawer` | Drawer oscuro (patrón 18, 472px) | Story 7.1 — ficha del invitado (`GuestDetail.dc.html`): datos de la reserva, contacto, peticiones especiales, contacto de emergencia y las acciones "Mark as arrived"/"No-show" cuando aún está pendiente |
 | `NoShowModal` | Modal oscuro (patrón 18, 620px) | Story 7.1 — motivo del no-show (`NoShow.dc.html`), reutiliza `PaymentOptionRow` para las tres alternativas |
+| `GuestHistoryDrawer` | Drawer oscuro (patrón 18, 472px) | `/partner/guests` — ficha del invitado al pulsar una fila: datos del visitante (visitas, lealtad, primera/última visita, atribuido, email si comparte datos) y "Visit history" con cada reserva en los lounges del partner (lounge, fecha, importe cobrado real, estado Arrived/No-show/Cancelled/Upcoming/Not checked in). RPC `partner_guest_history` |
 | `ExportGuestListPopover` | — | Story 7.1 — exportación a CSV que sigue los filtros de pantalla (`Export.dc.html`), Radix Popover con selección de columnas real |
 | `GuestListTable` | §4 Fila de datos (oscura) + §5 patrón 16 | Story 7.1 — la lista del día (`Main.dc.html`). Inline, no primitivo — igual que `RepeatGuests` (Story 7.3) dibuja su propia fila de datos: **la fila de datos oscura sigue sin ser un primitivo compartido**, ver "Pendiente de implementar" |
 | `PartnerWelcomeForm` | Tarjeta de 580px sobre `PartnerAuthSplit` | Epic 7 · `SetPassword.dc.html` — datos que escribió el admin (email en solo lectura), foto, contraseña con sus tres reglas |
@@ -309,6 +310,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `app/profile/notifications/page.tsx` | Story 6.2 — ajustes de notificación por canal y horas de silencio (`NotificationSettings.dc.html`) |
 | `app/profile/privacy/page.tsx` | Story 6.3 — uso de datos, contacto de emergencia, exportar/descargar datos (`Privacy.dc.html`) |
 | `account/delete-account-modal.tsx` | Story 6.3 — borrar la cuenta con confirmación por casilla + escribir DELETE (`DeleteAccount.dc.html`) |
+| `supabase/schemas/partner_analytics.sql` — `partner_guest_history` (RPC) | Historial de un miembro en los lounges del partner (`partner_lounge_ids()`, `p_lounge_id` null = todos), importe = pagos `succeeded` |
 | `lib/partner.ts` | Story 7.1 / 7.2 / 7.3 — el turno de muestra de The Ainsworth (14→15 invitados, la reserva en vivo, la cancelación+promoción de waitlist), Analytics, invitados recurrentes y los seis informes de `Reports.dc.html` |
 | `lib/download.ts` | Descarga real de CSV (`downloadTextFile`), compartida por los cuatro CSV del Epic 7 — mismo criterio que `downloadIcsFile` (Story 4.3) |
 | `partner/guest-detail-drawer.tsx` | Story 7.1 — ficha del invitado (`GuestDetail.dc.html`) |
@@ -336,6 +338,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `components/admin/lounge-combobox.tsx` | Story 8.4 — filtro de lounge en el que se escribe (combobox + listbox, mismas filas que `CityFilterPopover`); `null` = "All lounges" |
 | `components/patterns/day-stepper.tsx` | ‹ fecha › de `Bookings.dc.html`: la fecha abre el `MonthCalendar` de §4 en un popover (todos los días elegibles, "Back to today"). Lo usan `/admin/bookings` (8.4) y `/partner` (7.1, "filter guests by date") |
 | `partner/today-dashboard.tsx` — fecha elegible | Story 7.1 "Search/filter guests by name or date": `DayStepper` en la fila de los chips; otro día que no es hoy es de solo lectura (`readOnly` en `GuestListTable`/`GuestDetailDrawer`, casilla sin acción en `AttendanceCheckbox`). Sin artboard: `Main.dc.html` solo dibuja hoy |
+| `partner/guest-history-drawer.tsx` (`/partner/guests`) | Sin artboard propio: reutiliza la cabecera de `GuestDetail.dc.html` (patrón 18) y añade la lista "Visit history". `RepeatGuests.dc.html` dibuja el chevron de la fila pero no qué abre. Con "All lounges" muestra las reservas de todos los lounges del partner; nunca de lounges ajenos |
 | `partner/guest-detail-drawer.tsx` — "Undo check-in" / "Undo no-show" | Story 7.1 — el partner corrige su error del día (`partner_undo_booking_status`, `support_tickets.sql`): vuelve a confirmed, deshacer un no-show borra el fee y lo anota en el caso. Botón ghost bajo la ficha, sin artboard (`GuestDetail.dc.html` solo dibuja un pendiente) |
 | `lib/admin-analytics.ts` | Story 8.2 — analítica de red, popularidad, datasets de export y reportes programados; los importes cuadran con `lib/partner.ts` (The Ainsworth: 187 reservas, $8,616.50) |
 | `app/admin/analytics/page.tsx` | Story 8.2 — "How the network is doing": reservas, no-shows, miembros e ingresos (`Analytics.dc.html`). PERF-02: Server Component (`requireAdmin()` + `loadAdminAnalytics`) |

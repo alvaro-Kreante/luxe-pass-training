@@ -17,14 +17,15 @@ import {
   matchesGuestQuery,
   repeatGuestsSummary,
   repeatGuestsToCsv,
+  guestVisitStatus,
   revenueBreakdownFor,
   revenueBreakdownToCsv,
   totalRevenueAttributed,
 } from "./partner";
 
 const SAMPLE_REPEAT_GUESTS: RepeatGuestRow[] = [
-  { name: "Alexandra Rivas", email: "alexandra.rivas@example.com", visits: 12, lastVisitLabel: "Sep 9, 2025", firstVisitLabel: "Mar 1, 2024", attributed: 456 },
-  { name: "Elena Vasquez", email: "elena.vasquez@example.com", visits: 1, lastVisitLabel: "Sep 9, 2025", firstVisitLabel: "Sep 9, 2025", attributed: 75 },
+  { memberId: "m-1", name: "Alexandra Rivas", email: "alexandra.rivas@example.com", visits: 12, lastVisitLabel: "Sep 9, 2025", firstVisitLabel: "Mar 1, 2024", attributed: 456 },
+  { memberId: "m-2", name: "Elena Vasquez", email: "elena.vasquez@example.com", visits: 1, lastVisitLabel: "Sep 9, 2025", firstVisitLabel: "Sep 9, 2025", attributed: 75 },
 ];
 
 /**
@@ -326,5 +327,20 @@ describe("repeatGuestsSummary", () => {
       returnRate: 0,
       averageVisits: 0,
     });
+  });
+});
+
+describe("guestVisitStatus — estado de cada reserva en la ficha del invitado", () => {
+  const base = { booking_id: "b", lounge_name: "L", slot_time: "8:00 AM", status: "confirmed", checked_in: false, no_show: false, paid_cents: 0 };
+
+  it("distingue arrived, no-show y cancelled", () => {
+    expect(guestVisitStatus({ ...base, date: "2026-10-01", checked_in: true, status: "in_progress" }, "2026-10-21")).toBe("arrived");
+    expect(guestVisitStatus({ ...base, date: "2026-10-01", no_show: true, status: "completed" }, "2026-10-21")).toBe("no-show");
+    expect(guestVisitStatus({ ...base, date: "2026-10-01", status: "cancelled" }, "2026-10-21")).toBe("cancelled");
+  });
+
+  it("una reserva sin check-in está por venir hasta que pasa su fecha", () => {
+    expect(guestVisitStatus({ ...base, date: "2026-10-21" }, "2026-10-21")).toBe("upcoming");
+    expect(guestVisitStatus({ ...base, date: "2026-10-20" }, "2026-10-21")).toBe("not-checked-in");
   });
 });

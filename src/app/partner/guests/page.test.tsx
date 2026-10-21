@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -94,12 +94,29 @@ beforeAll(async () => {
       no_show: false,
       special_requests: "",
     }));
-    const { error } = await admin.from("bookings").insert(rows);
+    const { data, error } = await admin.from("bookings").insert(rows).select("id, date");
     if (error) throw error;
+    return { memberId: user!.id, bookings: data! };
   }
 
   await createMemberWithVisits(regularName, 5);
-  await createMemberWithVisits(returningName, 2);
+  const returning = await createMemberWithVisits(returningName, 2);
+
+  // Historial del drawer: un pase cobrado, un check-in, un no-show y una cancelación.
+  const [paid, arrived] = returning.bookings;
+  await admin.from("bookings").update({ checked_in_at: new Date().toISOString(), status: "in_progress" }).eq("id", arrived.id);
+  const { error: paymentError } = await admin.from("payments").insert({
+    member_id: returning.memberId,
+    booking_id: paid.id,
+    amount_cents: 8025,
+    status: "succeeded",
+  });
+  if (paymentError) throw paymentError;
+  const { error: extraError } = await admin.from("bookings").insert([
+    { member_id: returning.memberId, lounge_id: loungeId, date: addDays(today(), -10), band: "morning", slot_time: "10:30 AM", status: "completed", no_show: true, special_requests: "" },
+    { member_id: returning.memberId, lounge_id: loungeId, date: addDays(today(), -20), band: "morning", slot_time: "8:00 AM", status: "cancelled", no_show: false, special_requests: "" },
+  ]);
+  if (extraError) throw extraError;
   await createMemberWithVisits(firstVisitName, 1);
 
   const partner = createClient();
@@ -159,5 +176,24 @@ describe("RepeatGuests.dc.html", () => {
     expect(downloadTextFile).toHaveBeenCalledTimes(1);
     const [filename] = vi.mocked(downloadTextFile).mock.calls[0];
     expect(filename).toMatch(/\.csv$/);
+  });
+});
+
+describe("Ficha del invitado (GuestDetail.dc.html reutilizado)", () => {
+  it("al pulsar un invitado muestra su historial: lounge, importe cobrado y estado", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<RepeatGuestsPage />);
+
+    await user.click(await screen.findByRole("button", { name: new RegExp(returningName) }));
+
+    const drawer = await screen.findByRole("dialog", { name: returningName });
+    const history = await within(drawer).findByRole("list", { name: "Visit history" });
+    const items = within(history).getAllByRole("listitem");
+    expect(items).toHaveLength(4);
+    expect(within(history).getAllByText("Guests Test Lounge")).toHaveLength(4);
+    expect(within(history).getByText("$80.25")).toBeVisible();
+    expect(within(history).getByText("Arrived")).toBeVisible();
+    expect(within(history).getByText("No-show")).toBeVisible();
+    expect(within(history).getByText("Cancelled")).toBeVisible();
   });
 });

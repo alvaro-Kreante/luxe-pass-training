@@ -135,3 +135,44 @@ end;
 $$;
 
 grant execute on function public.partner_repeat_guests(text) to authenticated;
+
+-- Ficha del invitado en "Guests" (GuestDetail.dc.html reutilizado): cada
+-- reserva del miembro en los lounges del partner, con lo cobrado de verdad
+-- (pagos `succeeded`) y el estado en el lounge. Nunca reservas de lounges
+-- ajenos. `p_lounge_id` null = "All lounges".
+create or replace function public.partner_guest_history(p_member_id uuid, p_lounge_id text default null)
+returns table (
+  booking_id uuid,
+  lounge_name text,
+  date date,
+  slot_time text,
+  status text,
+  checked_in boolean,
+  no_show boolean,
+  paid_cents int
+)
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  return query
+    select
+      b.id,
+      l.name,
+      b.date,
+      b.slot_time,
+      b.status,
+      b.checked_in_at is not null,
+      b.no_show,
+      coalesce((select sum(pm.amount_cents) from public.payments pm where pm.booking_id = b.id and pm.status = 'succeeded'), 0)::int
+    from public.bookings b
+    join public.lounges l on l.id = b.lounge_id
+    where b.member_id = p_member_id
+      and b.lounge_id in (select public.partner_lounge_ids())
+      and (p_lounge_id is null or b.lounge_id = p_lounge_id)
+    order by b.date desc, b.slot_time;
+end;
+$$;
+
+grant execute on function public.partner_guest_history(uuid, text) to authenticated;
