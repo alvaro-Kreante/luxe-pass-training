@@ -4,7 +4,12 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LOCKOUT_MINUTES } from "@/lib/authentication";
 import { createClient } from "@/lib/supabase/client";
-import { signUpConfirmedAndSignIn } from "@/lib/testing/confirmed-user";
+import { createClient as createAdminClient } from "@supabase/supabase-js";
+import {
+  signUpConfirmedAdminAndSignIn,
+  signUpConfirmedAndSignIn,
+  signUpConfirmedPartnerAndSignIn,
+} from "@/lib/testing/confirmed-user";
 
 import LoginPage from "./page";
 
@@ -24,12 +29,25 @@ type User = ReturnType<typeof userEvent.setup>;
 
 const PASSWORD = "EnSoleil!2026";
 const CONFIRMED_EMAIL = `login-${Date.now()}@ensoleil-test.example`;
+const PARTNER_EMAIL = `login-partner-${Date.now()}@theainsworth-test.example`;
+const ADMIN_EMAIL = `login-admin-${Date.now()}@ensoleil-test.example`;
 const UNCONFIRMED_EMAIL = `sin-confirmar-${Date.now()}@ensoleil-test.example`;
 
 beforeAll(async () => {
   const admin = createClient();
   await signUpConfirmedAndSignIn(admin, CONFIRMED_EMAIL, PASSWORD);
   await admin.auth.signOut();
+
+  const partner = createClient();
+  await signUpConfirmedPartnerAndSignIn(partner, PARTNER_EMAIL, PASSWORD, {
+    businessName: "The Ainsworth",
+    loungeIds: ["the-ainsworth"],
+  });
+  await partner.auth.signOut();
+
+  const adminAccount = createClient();
+  await signUpConfirmedAdminAndSignIn(adminAccount, ADMIN_EMAIL, PASSWORD);
+  await adminAccount.auth.signOut();
 
   const plain = createClient();
   await plain.auth.signUp({ email: UNCONFIRMED_EMAIL, password: PASSWORD });
@@ -252,5 +270,51 @@ describe("mostrar contraseña", () => {
 
     await user.click(screen.getByRole("button", { name: "Hide password" }));
     expect(passwordField()).toHaveAttribute("type", "password");
+  });
+});
+
+/* Login unificado — partner y admin también entran por /login y van a su dashboard. */
+describe("redirección según el rol", () => {
+  async function logIn(email: string) {
+    const user = userEvent.setup({ delay: null });
+    render(<LoginPage />);
+    await user.type(emailField(), email);
+    await user.type(passwordField(), PASSWORD);
+    await user.click(submitButton());
+  }
+
+  it("un partner va al Partner Dashboard", async () => {
+    await logIn(PARTNER_EMAIL);
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/partner"));
+  });
+
+  it("un admin va al panel de admin", async () => {
+    await logIn(ADMIN_EMAIL);
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/admin/support"));
+  });
+
+  it("un partner suspendido no entra y la sesión se cierra", async () => {
+    const service = createAdminClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
+    await service
+      .from("partner_members")
+      .update({ suspended_at: new Date().toISOString() })
+      .eq("email", PARTNER_EMAIL.toLowerCase());
+    try {
+      await logIn(PARTNER_EMAIL);
+      expect(
+        await screen.findByText(/access to the Partner Dashboard is suspended/i),
+      ).toBeVisible();
+      expect(push).not.toHaveBeenCalled();
+      const { data } = await createClient().auth.getSession();
+      expect(data.session).toBeNull();
+    } finally {
+      await service
+        .from("partner_members")
+        .update({ suspended_at: null })
+        .eq("email", PARTNER_EMAIL.toLowerCase());
+    }
   });
 });
