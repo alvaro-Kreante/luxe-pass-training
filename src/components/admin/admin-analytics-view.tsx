@@ -79,6 +79,7 @@ export function AdminAnalyticsView({
   }, [supabase, range, period]);
 
   const maxDay = Math.max(...byDay.map((d) => d.count), 1);
+  const labelStep = Math.ceil(byDay.length / 14);
   const grossRevenueCents = totalGrossRevenueCents(revenue);
   const topPartners = [...revenue].sort((a, b) => b.grossRevenueCents - a.grossRevenueCents).slice(0, 5);
 
@@ -146,18 +147,26 @@ export function AdminAnalyticsView({
           <div className="rounded-content border border-line bg-dark-card px-5.5 py-5">
             <p className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">Bookings per day</p>
 
-            <div className="mt-4 flex h-[158px] items-end gap-2.5">
-              {byDay.map((day) => (
-                <div key={day.label} className="flex flex-1 flex-col items-center justify-end">
-                  <p className="m-0 mb-1.5 text-[11px] font-bold text-fg-subtle">{day.count}</p>
-                  <div
-                    data-testid="daily-bar"
-                    style={{ height: `${(day.count / maxDay) * 130}px` }}
-                    className="w-full rounded-t-[6px] rounded-b-[3px] bg-accent"
-                  />
-                  <p className="m-0 mt-1.5 text-[10.5px] text-fg-subtle">{day.label}</p>
-                </div>
-              ))}
+            <div className={`mt-4 flex h-[158px] items-end ${byDay.length > 31 ? "gap-0.5" : "gap-2.5"}`}>
+              {byDay.map((day, i) => {
+                const showLabel = i % labelStep === 0;
+                return (
+                  <div key={day.label} className="flex min-w-0 flex-1 flex-col items-center justify-end">
+                    <p className={`m-0 mb-1.5 whitespace-nowrap text-[11px] font-bold text-fg-subtle ${labelStep > 1 ? "invisible" : ""}`}>
+                      {day.count}
+                    </p>
+                    <div
+                      data-testid="daily-bar"
+                      title={`${day.label}: ${day.count}`}
+                      style={{ height: `${(day.count / maxDay) * 130}px` }}
+                      className="w-full rounded-t-[6px] rounded-b-[3px] bg-accent"
+                    />
+                    <p className={`m-0 mt-1.5 whitespace-nowrap text-[10.5px] text-fg-subtle ${showLabel ? "" : "invisible"}`}>
+                      {day.label}
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
