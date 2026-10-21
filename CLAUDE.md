@@ -169,6 +169,7 @@ Los nombres de carpeta coinciden **salvo en el Epic 1**:
 | 7 | `epic-7-partner-dashboard` | idem | 2 |
 | 8 | `epic-8-admin-support` | idem | 8 |
 | 9 | `epic-9-membership-referrals` | idem | 9 |
+| 10 | `epic-10-partner-organizations` | idem | 10 |
 
 ### Qué NO tocar
 
