@@ -11,8 +11,8 @@ import VerifyEmailPage from "./page";
  * segmento "Waiting for verification, resend option available" del flow.
  */
 
-const EMAIL = `verificar-${Date.now()}@ensoleil-test.com`;
-const EMAIL_FROM_LOGIN = `verificar-login-${Date.now()}@ensoleil-test.com`;
+const EMAIL = `verificar-${Date.now()}@ensoleil-test.example`;
+const EMAIL_FROM_LOGIN = `verificar-login-${Date.now()}@ensoleil-test.example`;
 // Auth rechaza (429) un segundo correo al mismo email antes de
 // `max_frequency` (1s en config.toml) — el signup ya mandó el primero.
 const AUTH_EMAIL_MAX_FREQUENCY_MS = 1100;

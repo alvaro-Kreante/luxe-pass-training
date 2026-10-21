@@ -18,7 +18,7 @@ beforeAll(async () => {
   const supabase = createClient();
   await signUpConfirmedAndSignIn(
     supabase,
-    `payment-summary-rail-${Date.now()}@ensoleil-test.com`,
+    `payment-summary-rail-${Date.now()}@ensoleil-test.example`,
     "EnSoleil!2026",
   );
   ainsworth = await fetchAinsworthProfile(supabase);

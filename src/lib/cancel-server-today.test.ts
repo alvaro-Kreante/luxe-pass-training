@@ -15,7 +15,7 @@ import { isolatedClient } from "./testing/partner-invite-fixture";
 describe("cancel_booking mide el plazo con el reloj del servidor", () => {
   it("una reserva de hoy paga el fee aunque el cliente diga que hoy es otro día", async () => {
     const supabase = isolatedClient();
-    await signUpConfirmedMemberAndSignIn(supabase, `cancel-today-${Date.now()}@ensoleil-test.com`, "EnSoleil!2026", {
+    await signUpConfirmedMemberAndSignIn(supabase, `cancel-today-${Date.now()}@ensoleil-test.example`, "EnSoleil!2026", {
       membership: "annual",
     });
     const booking = await confirmBooking(supabase, {

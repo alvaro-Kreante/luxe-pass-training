@@ -23,7 +23,7 @@ describe("fetchLounges (Supabase local)", () => {
     const supabase = createClient();
     await signUpConfirmedAndSignIn(
       supabase,
-      `explora-${Date.now()}@ensoleil-test.com`,
+      `explora-${Date.now()}@ensoleil-test.example`,
       "EnSoleil!2026",
     );
 
@@ -55,7 +55,7 @@ describe("fetchLounges (Supabase local)", () => {
     const supabase = createClient();
     await signUpConfirmedAndSignIn(
       supabase,
-      `plazas-${Date.now()}@ensoleil-test.com`,
+      `plazas-${Date.now()}@ensoleil-test.example`,
       "EnSoleil!2026",
     );
 
@@ -93,7 +93,7 @@ describe("searchLounges (Supabase local)", () => {
     const supabase = createClient();
     await signUpConfirmedAndSignIn(
       supabase,
-      `busca-${Date.now()}@ensoleil-test.com`,
+      `busca-${Date.now()}@ensoleil-test.example`,
       "EnSoleil!2026",
     );
     return supabase;
@@ -205,7 +205,7 @@ describe("un lounge en borrador no está en el catálogo", () => {
       content_status: "draft",
     });
     const supabase = createClient();
-    await signUpConfirmedAndSignIn(supabase, `draft-booker-${Date.now()}@ensoleil-test.com`, "EnSoleil!2026");
+    await signUpConfirmedAndSignIn(supabase, `draft-booker-${Date.now()}@ensoleil-test.example`, "EnSoleil!2026");
     const {
       data: { user },
     } = await supabase.auth.getUser();

@@ -110,7 +110,7 @@ function PartnerLoginScreen() {
               type="email"
               autoComplete="email"
               inputSize="compact"
-              placeholder="you@yourvenue.com"
+              placeholder="you@yourvenue.example"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={submitting}

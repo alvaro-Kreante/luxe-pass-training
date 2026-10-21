@@ -36,7 +36,7 @@ describe("RequireSession", () => {
 
   it("muestra el contenido cuando hay una sesión activa", async () => {
     const supabase = createClient();
-    const email = `sesion-${Date.now()}@ensoleil-test.com`;
+    const email = `sesion-${Date.now()}@ensoleil-test.example`;
     await signUpConfirmedAndSignIn(supabase, email, "EnSoleil!2026");
 
     render(

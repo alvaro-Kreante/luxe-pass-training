@@ -29,7 +29,7 @@ if (!supabaseUrl.includes("127.0.0.1") && !supabaseUrl.includes("localhost")) {
 const PARTNERS = [
   {
     name: "The Ainsworth Collection",
-    contact_email: "contact@theainsworth.com",
+    contact_email: "contact@theainsworth.example",
     address_line1: "126 East 56th Street",
     city: "New York",
     region: "NY",
@@ -37,11 +37,11 @@ const PARTNERS = [
     country: "United States",
     status: "active",
     lounges: ["the-ainsworth"],
-    users: [{ first_name: "Dana", last_name: "Okafor", email: "dana.okafor@theainsworth.com", mobile: "+1 212 555 0101", password: "AinsworthFOH!24" }],
+    users: [{ first_name: "Dana", last_name: "Okafor", email: "dana.okafor@theainsworth.example", mobile: "+1 212 555 0101", password: "AinsworthFOH!24" }],
   },
   {
     name: "Halcyon Hotels",
-    contact_email: "reservations@halcyonhotels.com",
+    contact_email: "reservations@halcyonhotels.example",
     address_line1: "445 Park Avenue",
     city: "New York",
     region: "NY",
@@ -50,13 +50,13 @@ const PARTNERS = [
     status: "active",
     lounges: ["halcyon-reading-room", "the-cordelia", "the-ellery-room"],
     users: [
-      { first_name: "Camille", last_name: "Duarte", email: "camille.duarte@halcyonhotels.com", mobile: "+1 212 555 0148", password: "HalcyonFOH!24" },
-      { first_name: "Julian", last_name: "Mercer", email: "julian.mercer@halcyonhotels.com", mobile: "+1 917 555 0133", password: "HalcyonFOH!24" },
+      { first_name: "Camille", last_name: "Duarte", email: "camille.duarte@halcyonhotels.example", mobile: "+1 212 555 0148", password: "HalcyonFOH!24" },
+      { first_name: "Julian", last_name: "Mercer", email: "julian.mercer@halcyonhotels.example", mobile: "+1 917 555 0133", password: "HalcyonFOH!24" },
     ],
   },
   {
     name: "Aurelia House Group",
-    contact_email: "partners@aureliahouse.com",
+    contact_email: "partners@aureliahouse.example",
     address_line1: "30 West 26th Street",
     city: "New York",
     region: "NY",
@@ -64,11 +64,11 @@ const PARTNERS = [
     country: "United States",
     status: "active",
     lounges: ["aurelia-house", "celeste-rooftop"],
-    users: [{ first_name: "Inés", last_name: "Varga", email: "ines.varga@aureliahouse.com", mobile: "", password: "AureliaFOH!24" }],
+    users: [{ first_name: "Inés", last_name: "Varga", email: "ines.varga@aureliahouse.example", mobile: "", password: "AureliaFOH!24" }],
   },
   {
     name: "Solenne Spa & Baths",
-    contact_email: "hello@solenne.com",
+    contact_email: "hello@solenne.example",
     address_line1: "1200 Collins Avenue",
     city: "Miami Beach",
     region: "FL",
@@ -76,7 +76,7 @@ const PARTNERS = [
     country: "United States",
     status: "draft",
     lounges: [],
-    users: [{ first_name: "Noor", last_name: "Haddad", email: "noor.haddad@solenne.com", mobile: "+1 305 555 0110" }],
+    users: [{ first_name: "Noor", last_name: "Haddad", email: "noor.haddad@solenne.example", mobile: "+1 305 555 0110" }],
   },
 ];
 

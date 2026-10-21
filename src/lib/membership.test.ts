@@ -41,7 +41,7 @@ async function freshMember(label: string) {
   const supabase = createClient();
   const user = await signUpConfirmedMemberAndSignIn(
     supabase,
-    `membership-${Date.now()}-${label}@ensoleil-test.com`,
+    `membership-${Date.now()}-${label}@ensoleil-test.example`,
     "EnSoleil!2026",
   );
   return { supabase, user };
@@ -49,7 +49,7 @@ async function freshMember(label: string) {
 
 async function freshMemberWithEmail(label: string) {
   const supabase = createClient();
-  const email = `membership-${Date.now()}-${label}@ensoleil-test.com`;
+  const email = `membership-${Date.now()}-${label}@ensoleil-test.example`;
   const user = await signUpConfirmedMemberAndSignIn(supabase, email, "EnSoleil!2026");
   return { supabase, user, email };
 }

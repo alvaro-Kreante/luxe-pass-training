@@ -79,11 +79,11 @@ beforeAll(async () => {
   await addLounge(halcyonId, "tower-a");
   await addLounge(halcyonId, "tower-b");
   await service.from("partner_members").insert([
-    { partner_id: halcyonId, first_name: "Camille", last_name: "Duarte", email: `camille-${stamp}@halcyon-test.com` },
-    { partner_id: halcyonId, first_name: "Julian", last_name: "Mercer", email: `julian-${stamp}@halcyon-test.com` },
+    { partner_id: halcyonId, first_name: "Camille", last_name: "Duarte", email: `camille-${stamp}@halcyon-test.example` },
+    { partner_id: halcyonId, first_name: "Julian", last_name: "Mercer", email: `julian-${stamp}@halcyon-test.example` },
   ]);
 
-  await signUpConfirmedAdminAndSignIn(createClient(), `partners-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
+  await signUpConfirmedAdminAndSignIn(createClient(), `partners-admin-${stamp}@ensoleil-test.example`, "SupportDesk!24");
 });
 
 beforeEach(() => {
@@ -112,7 +112,7 @@ describe("el listado", () => {
     expect(within(row).getByText("Active")).toBeInTheDocument();
     expect(within(row).getByRole("cell", { name: "2" })).toBeInTheDocument();
     expect(within(row).getByText("Camille Duarte")).toBeInTheDocument();
-    expect(within(row).getByText(`camille-${stamp}@halcyon-test.com`)).toBeInTheDocument();
+    expect(within(row).getByText(`camille-${stamp}@halcyon-test.example`)).toBeInTheDocument();
     expect(within(row).getByText("New York")).toBeInTheDocument();
   });
 
@@ -203,7 +203,7 @@ describe("quién puede listar partners", () => {
     const member = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
       auth: { persistSession: false },
     });
-    await signUpConfirmedMemberAndSignIn(member, `partners-member-${stamp}@ensoleil-test.com`, "EnSoleil!2026");
+    await signUpConfirmedMemberAndSignIn(member, `partners-member-${stamp}@ensoleil-test.example`, "EnSoleil!2026");
 
     await expect(listAdminPartners(member)).rejects.toThrow(/Not authorized/);
   });

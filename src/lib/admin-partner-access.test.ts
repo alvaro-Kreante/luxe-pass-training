@@ -22,7 +22,7 @@ import { signUpConfirmedAdminAndSignIn, signUpConfirmedMemberAndSignIn } from "@
  * Story 10.4 — activar, suspender y gestionar el acceso de un partner. Las
  * cuentas de Auth las crea y banea la Edge Function `admin-partners`
  * (necesita `supabase functions serve`); el estado de partner y lounges, las
- * RPC de `admin_partners.sql`. Los emails van a dominios `*-test.com`, que
+ * RPC de `admin_partners.sql`. Los emails van a dominios `*-test.example`, que
  * Brevo nunca recibe en local (`_shared/test-recipient.ts`).
  */
 
@@ -41,7 +41,7 @@ function isolatedClient() {
 
 function person(first: string): PartnerMemberInput {
   emails += 1;
-  return { firstName: first, lastName: "Duarte", email: `${first.toLowerCase()}-${stamp}-${emails}@halcyon-test.com`, mobile: "" };
+  return { firstName: first, lastName: "Duarte", email: `${first.toLowerCase()}-${stamp}-${emails}@halcyon-test.example`, mobile: "" };
 }
 
 async function draft(users: PartnerMemberInput[] = []) {
@@ -97,7 +97,7 @@ function isBanned(account: { banned_until?: string | null } | null) {
 
 beforeAll(async () => {
   admin = isolatedClient();
-  await signUpConfirmedAdminAndSignIn(admin, `access-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
+  await signUpConfirmedAdminAndSignIn(admin, `access-admin-${stamp}@ensoleil-test.example`, "SupportDesk!24");
 });
 
 afterAll(async () => {
@@ -148,7 +148,7 @@ describe("activar un partner", () => {
   it("un miembro no puede activar partners", async () => {
     const id = await draft([person("Camille")]);
     const member = isolatedClient();
-    await signUpConfirmedMemberAndSignIn(member, `access-member-${stamp}@ensoleil-test.com`, "EnSoleil!2026");
+    await signUpConfirmedMemberAndSignIn(member, `access-member-${stamp}@ensoleil-test.example`, "EnSoleil!2026");
 
     await expect(activatePartner(member, id)).rejects.toThrow(/Not authorized/i);
   });
@@ -272,7 +272,7 @@ describe("suspender un lounge suelto", () => {
     await activatePartner(admin, id);
     const loungeId = await lounge(id, "single", "live");
     const member = isolatedClient();
-    await signUpConfirmedMemberAndSignIn(member, `access-booker-${stamp}@ensoleil-test.com`, "EnSoleil!2026", { membership: "annual" });
+    await signUpConfirmedMemberAndSignIn(member, `access-booker-${stamp}@ensoleil-test.example`, "EnSoleil!2026", { membership: "annual" });
 
     await suspendLounge(admin, loungeId);
 

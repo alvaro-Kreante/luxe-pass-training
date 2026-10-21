@@ -40,8 +40,8 @@ beforeAll(async () => {
   const { data, error } = await admin
     .from("scheduled_reports")
     .insert([
-      { name: dailyReportName, dataset: "bookings", recipients: ["ops@ensoleil-test.com"], cadence: "daily", enabled: true },
-      { name: pausedReportName, dataset: "revenue-by-partner", recipients: ["finance@ensoleil-test.com"], cadence: "monthly", enabled: false },
+      { name: dailyReportName, dataset: "bookings", recipients: ["ops@ensoleil-test.example"], cadence: "daily", enabled: true },
+      { name: pausedReportName, dataset: "revenue-by-partner", recipients: ["finance@ensoleil-test.example"], cadence: "monthly", enabled: false },
     ])
     .select("id, name");
   if (error) throw error;
@@ -49,7 +49,7 @@ beforeAll(async () => {
   pausedReportId = data.find((r) => r.name === pausedReportName)!.id;
 
   const adminClient = createClient();
-  await signUpConfirmedAdminAndSignIn(adminClient, `scheduled-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
+  await signUpConfirmedAdminAndSignIn(adminClient, `scheduled-admin-${stamp}@ensoleil-test.example`, "SupportDesk!24");
 });
 
 afterAll(async () => {

@@ -285,7 +285,7 @@ con el suyo. En local es `APP_ENV=LOCAL` en `supabase/functions/.env`.
    `supabase start`. Se decidió con el usuario (16 sept 2026) **no** mandar
    emails reales por Brevo en cada corrida de CI (riesgo de bounces contra
    la reputación del remitente compartido con producción, direcciones
-   `@ensoleil-test.com` que no existen) — en vez de eso, `ci.yml` desactiva
+   `@ensoleil-test.example` que no existen) — en vez de eso, `ci.yml` desactiva
    el hook (`enabled = false`) solo en la copia efímera del checkout del
    runner, vía un `awk` que reescribe `supabase/config.toml` antes de
    `supabase start` (nunca toca el archivo real del repo). Con el hook

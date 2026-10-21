@@ -97,7 +97,7 @@ export async function fillSlot(loungeId: string, dateIso: string, band: WeekBand
   if (seatsLeft === 0) return;
 
   const { data: filler, error: userError } = await admin.auth.admin.createUser({
-    email: `slot-filler-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@ensoleil-test.com`,
+    email: `slot-filler-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@ensoleil-test.example`,
     password: "EnSoleil!2026",
     email_confirm: true,
   });

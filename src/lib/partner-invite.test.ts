@@ -81,7 +81,7 @@ describe("crear la contraseña", () => {
     const client = isolatedClient();
     await acceptPartnerInvite(client, invited.token);
 
-    const { error } = await client.from("partner_members").update({ email: "other@elsewhere-test.com" }).eq("user_id", invited.userId);
+    const { error } = await client.from("partner_members").update({ email: "other@elsewhere-test.example" }).eq("user_id", invited.userId);
 
     expect(error?.message).toMatch(/cannot be changed/i);
   });

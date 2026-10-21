@@ -19,7 +19,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * - fotos de perfil de cuentas que ya no existen y fotos de lounge que no
  *   usa ningún lounge.
  */
-export const TEST_EMAIL = /@([a-z0-9-]+-test\.com|example\.(com|org|net)|email\.com)$/i;
+export const TEST_EMAIL = /@([a-z0-9-]+-test\.example|example\.(com|org|net))$/i;
 const TEST_STAMP = /\d{13}/;
 
 function chunks<T>(items: T[], size = 200): T[][] {

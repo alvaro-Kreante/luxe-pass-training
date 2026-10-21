@@ -36,7 +36,7 @@ async function freshMember(label: string) {
   const supabase = createClient();
   return signUpConfirmedMemberAndSignIn(
     supabase,
-    `book-layout-${Date.now()}-${label}@ensoleil-test.com`,
+    `book-layout-${Date.now()}-${label}@ensoleil-test.example`,
     "EnSoleil!2026",
   );
 }

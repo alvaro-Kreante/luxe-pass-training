@@ -61,7 +61,7 @@ async function unusedLast4(client: ReturnType<typeof createClient>) {
 
 async function createMember(name: string, phone: string, photoPath: string | null = null) {
   const { data: created, error } = await admin.auth.admin.createUser({
-    email: `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}@ensoleil-test.com`,
+    email: `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}@ensoleil-test.example`,
     password: "EnSoleil!2026",
     email_confirm: true,
   });
@@ -89,7 +89,7 @@ async function createMember(name: string, phone: string, photoPath: string | nul
 
 beforeAll(async () => {
   const adminClient = createClient();
-  await signUpConfirmedAdminAndSignIn(adminClient, `members-search-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
+  await signUpConfirmedAdminAndSignIn(adminClient, `members-search-admin-${stamp}@ensoleil-test.example`, "SupportDesk!24");
   phoneLast4 = await unusedLast4(adminClient);
 
   camilleId = await createMember(camilleName, `+1555668${phoneLast4}`, "{id}/avatar.png");

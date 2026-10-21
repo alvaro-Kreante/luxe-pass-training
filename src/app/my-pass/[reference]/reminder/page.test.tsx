@@ -30,7 +30,7 @@ beforeAll(async () => {
   const supabase = createClient();
   await signUpConfirmedMemberAndSignIn(
     supabase,
-    `reminder-page-${Date.now()}@ensoleil-test.com`,
+    `reminder-page-${Date.now()}@ensoleil-test.example`,
     "EnSoleil!2026",
     { membership: "annual" },
   );

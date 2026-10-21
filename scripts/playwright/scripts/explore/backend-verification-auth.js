@@ -15,7 +15,7 @@ const { chromium } = require('playwright');
   const page = await context.newPage();
 
   await page.goto('http://localhost:3001/login', { waitUntil: 'networkidle', timeout: 10000 });
-  await page.getByLabel('Email').fill('playwright-explore@ensoleil-test.com');
+  await page.getByLabel('Email').fill('playwright-explore@ensoleil-test.example');
   await page.getByRole('textbox', { name: 'Password' }).fill('EnSoleil!2026');
   await page.getByRole('button', { name: 'Log in' }).click();
   await page.waitForURL('**/', { timeout: 10000 });

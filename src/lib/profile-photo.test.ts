@@ -13,7 +13,7 @@ async function signUpFreshMember(label: string) {
   const supabase = createClient();
   await signUpConfirmedMemberAndSignIn(
     supabase,
-    `profile-photo-${Date.now()}-${label}@ensoleil-test.com`,
+    `profile-photo-${Date.now()}-${label}@ensoleil-test.example`,
     "EnSoleil!2026",
   );
   return { supabase };

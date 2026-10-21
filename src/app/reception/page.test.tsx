@@ -35,7 +35,7 @@ beforeAll(async () => {
   const member = isolatedClient();
   await signUpConfirmedMemberAndSignIn(
     member,
-    `reception-page-${Date.now()}@ensoleil-test.com`,
+    `reception-page-${Date.now()}@ensoleil-test.example`,
     "EnSoleil!2026",
     { membership: "annual" },
   );
@@ -66,7 +66,7 @@ beforeAll(async () => {
 
   await signUpConfirmedPartnerAndSignIn(
     createClient(),
-    `reception-page-staff-${Date.now()}@ensoleil-test.com`,
+    `reception-page-staff-${Date.now()}@ensoleil-test.example`,
     "EnSoleil!2026",
     { businessName: "Ainsworth Hospitality", loungeIds: ["the-ainsworth"] },
   );

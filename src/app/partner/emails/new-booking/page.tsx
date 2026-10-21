@@ -33,7 +33,7 @@ export default function NewBookingEmailPage() {
               <span className="font-medium text-fg-subtle">&lt;partners@luxepass.co&gt;</span>
             </p>
             <p className="m-0 mt-0.5 text-xs text-fg-subtle">
-              to frontdesk@theainsworth.com · Sep 14, {LIVE_BOOKING_TIME_LABEL}
+              to frontdesk@theainsworth.example · Sep 14, {LIVE_BOOKING_TIME_LABEL}
             </p>
           </div>
           <span className="shrink-0 rounded-pill bg-accent-soft px-2.5 py-1 text-[11px] font-bold text-fg">

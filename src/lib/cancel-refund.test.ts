@@ -45,7 +45,7 @@ async function paidBooking(label: string, slot: Slot) {
   const supabase = isolatedClient();
   const user = await signUpConfirmedMemberAndSignIn(
     supabase,
-    `cancel-refund-${label}-${Date.now()}@ensoleil-test.com`,
+    `cancel-refund-${label}-${Date.now()}@ensoleil-test.example`,
     "EnSoleil!2026",
   );
   await listSavedPaymentMethods(supabase);
@@ -94,7 +94,7 @@ describe("cancelar una reserva pagada", () => {
   it("otro miembro no puede cancelar (ni reembolsar) la reserva", async () => {
     const { bookingId, paymentId } = await paidBooking("owner", freeCancellationSlot(11));
     const other = isolatedClient();
-    await signUpConfirmedMemberAndSignIn(other, `cancel-refund-other-${Date.now()}@ensoleil-test.com`, "EnSoleil!2026");
+    await signUpConfirmedMemberAndSignIn(other, `cancel-refund-other-${Date.now()}@ensoleil-test.example`, "EnSoleil!2026");
 
     await expect(cancelBooking(other, bookingId, today())).rejects.toThrow();
     expect((await paymentOf(paymentId)).status).toBe("succeeded");

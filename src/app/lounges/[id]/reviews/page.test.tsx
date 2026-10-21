@@ -26,7 +26,7 @@ beforeAll(async () => {
   const supabase = createClient();
   await signUpConfirmedAndSignIn(
     supabase,
-    `lounge-reviews-${Date.now()}@ensoleil-test.com`,
+    `lounge-reviews-${Date.now()}@ensoleil-test.example`,
     "EnSoleil!2026",
   );
 });

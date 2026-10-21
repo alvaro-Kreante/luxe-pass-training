@@ -3,7 +3,7 @@
  * (22 sept 2026) — login real, dashboard con datos reales (aunque vacíos),
  * sin errores de consola (en particular, que el canal de Supabase Realtime
  * conecte de verdad en un navegador real, a diferencia de jsdom en los
- * tests). Cuenta de partner real: dana.okafor@theainsworth.com / AinsworthFOH!24
+ * tests). Cuenta de partner real: dana.okafor@theainsworth.example / AinsworthFOH!24
  * (sembrada por scripts/seed-partner-account.mjs).
  * Uso: node scripts/playwright/scripts/partner/epic7-backend-real-verification.js
  */
@@ -28,7 +28,7 @@ const shot = (name) => path.join(__dirname, `../../screenshots/partner/${name}.p
     await navigateTo(page, '/partner/login');
     await takeScreenshot(page, shot('real-01-login'));
 
-    await page.getByLabel('Work email').fill('dana.okafor@theainsworth.com');
+    await page.getByLabel('Work email').fill('dana.okafor@theainsworth.example');
     await page.getByLabel('Password').fill('AinsworthFOH!24');
     await page.getByRole('button', { name: 'Sign in' }).click();
     // El primer signInWithPassword en frío puede tardar unos segundos.

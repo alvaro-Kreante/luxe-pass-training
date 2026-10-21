@@ -22,8 +22,8 @@ vi.mock("next/navigation", () => ({
 
 type User = ReturnType<typeof userEvent.setup>;
 
-const NEW_EMAIL = `nueva.socia-${Date.now()}@ensoleil-test.com`;
-const DUPLICATE_EMAIL = `ya-existe-${Date.now()}@ensoleil-test.com`;
+const NEW_EMAIL = `nueva.socia-${Date.now()}@ensoleil-test.example`;
+const DUPLICATE_EMAIL = `ya-existe-${Date.now()}@ensoleil-test.example`;
 const VALID_PASSWORD = "EnSoleil!2026";
 
 beforeAll(async () => {
@@ -311,7 +311,7 @@ describe("mostrar contraseña", () => {
 describe("Story 9.2 — llegada desde /join/[code]", () => {
   it("guarda el código de ?ref= en los metadatos del alta", async () => {
     query = new URLSearchParams({ ref: "AR-SOLEIL-24" });
-    const email = `referida-${Date.now()}@ensoleil-test.com`;
+    const email = `referida-${Date.now()}@ensoleil-test.example`;
     const user = userEvent.setup({ delay: null });
     render(<SignUpPage />);
 
@@ -324,7 +324,7 @@ describe("Story 9.2 — llegada desde /join/[code]", () => {
   });
 
   it("sin ?ref=, el alta no lleva código", async () => {
-    const email = `sin-codigo-${Date.now()}@ensoleil-test.com`;
+    const email = `sin-codigo-${Date.now()}@ensoleil-test.example`;
     const user = userEvent.setup({ delay: null });
     render(<SignUpPage />);
 

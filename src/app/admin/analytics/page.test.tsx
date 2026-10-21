@@ -64,7 +64,7 @@ beforeAll(async () => {
   });
 
   const memberClient = createClient();
-  await signUpConfirmedMemberAndSignIn(memberClient, `analytics-payer-${stamp}@ensoleil-test.com`, "EnSoleil!2026");
+  await signUpConfirmedMemberAndSignIn(memberClient, `analytics-payer-${stamp}@ensoleil-test.example`, "EnSoleil!2026");
   const {
     data: { user },
   } = await memberClient.auth.getUser();
@@ -99,7 +99,7 @@ beforeAll(async () => {
   await admin.from("payments").update({ booking_id: booking!.id }).eq("id", charge.paymentId);
 
   const adminClient = createClient();
-  await signUpConfirmedAdminAndSignIn(adminClient, `analytics-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
+  await signUpConfirmedAdminAndSignIn(adminClient, `analytics-admin-${stamp}@ensoleil-test.example`, "SupportDesk!24");
 }, 20000);
 
 afterAll(async () => {

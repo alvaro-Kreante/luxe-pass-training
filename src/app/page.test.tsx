@@ -31,7 +31,7 @@ beforeEach(async () => {
 async function signInMember() {
   await signUpConfirmedMemberAndSignIn(
     createClient(),
-    `home-${Date.now()}@ensoleil-test.com`,
+    `home-${Date.now()}@ensoleil-test.example`,
     "EnSoleil!2026",
   );
 }
@@ -47,7 +47,7 @@ describe("acceso al home", () => {
   it("manda a completar el onboarding cuando hay sesión pero no perfil", async () => {
     await signUpConfirmedAndSignIn(
       createClient(),
-      `home-sin-perfil-${Date.now()}@ensoleil-test.com`,
+      `home-sin-perfil-${Date.now()}@ensoleil-test.example`,
       "EnSoleil!2026",
     );
 

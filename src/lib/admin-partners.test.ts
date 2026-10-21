@@ -32,7 +32,7 @@ function isolatedClient() {
 function details(overrides: Partial<PartnerDetailsInput> = {}): PartnerDetailsInput {
   return {
     name: `Solenne Spa ${stamp} ${created.length}`,
-    contactEmail: "hello@solenne.com",
+    contactEmail: "hello@solenne.example",
     addressLine1: "1200 Collins Avenue",
     addressLine2: "",
     city: "Miami Beach",
@@ -52,12 +52,12 @@ async function create(overrides: Partial<PartnerDetailsInput> = {}) {
 let emailCount = 0;
 function user(first: string) {
   emailCount += 1;
-  return { firstName: first, lastName: "Haddad", email: `${first.toLowerCase()}-${stamp}-${emailCount}@solenne-test.com`, mobile: "+1 305 555 0110" };
+  return { firstName: first, lastName: "Haddad", email: `${first.toLowerCase()}-${stamp}-${emailCount}@solenne-test.example`, mobile: "+1 305 555 0110" };
 }
 
 beforeAll(async () => {
   admin = isolatedClient();
-  await signUpConfirmedAdminAndSignIn(admin, `partner-crud-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
+  await signUpConfirmedAdminAndSignIn(admin, `partner-crud-admin-${stamp}@ensoleil-test.example`, "SupportDesk!24");
 });
 
 afterAll(async () => {
@@ -72,7 +72,7 @@ describe("crear un partner", () => {
     expect(partner).toMatchObject({
       name: `Draft Partner ${stamp}`,
       status: "draft",
-      contactEmail: "hello@solenne.com",
+      contactEmail: "hello@solenne.example",
       addressLine1: "1200 Collins Avenue",
       city: "Miami Beach",
       users: [],
@@ -91,7 +91,7 @@ describe("crear un partner", () => {
   it("si su primer usuario no vale, no queda ningún partner a medias", async () => {
     const name = `Half Partner ${stamp}`;
     await expect(
-      createPartnerDraft(admin, details({ name }), [{ ...user("Taken"), email: `partner-crud-admin-${stamp}@ensoleil-test.com` }]),
+      createPartnerDraft(admin, details({ name }), [{ ...user("Taken"), email: `partner-crud-admin-${stamp}@ensoleil-test.example` }]),
     ).rejects.toThrow(/already in use/i);
 
     const { data } = await service.from("partners").select("id").eq("name", name);
@@ -104,7 +104,7 @@ describe("crear un partner", () => {
 
   it("un miembro no puede crear partners", async () => {
     const member = isolatedClient();
-    await signUpConfirmedMemberAndSignIn(member, `partner-crud-member-${stamp}@ensoleil-test.com`, "EnSoleil!2026");
+    await signUpConfirmedMemberAndSignIn(member, `partner-crud-member-${stamp}@ensoleil-test.example`, "EnSoleil!2026");
 
     await expect(createPartnerDraft(member, details())).rejects.toThrow(/Not authorized/);
   });
@@ -162,7 +162,7 @@ describe("sus usuarios", () => {
   it("un email que ya tiene cuenta (miembro, partner o admin) se rechaza", async () => {
     const id = await create();
 
-    await expect(addPartnerMember(admin, id, { ...user("Taken"), email: `partner-crud-admin-${stamp}@ensoleil-test.com` })).rejects.toThrow(
+    await expect(addPartnerMember(admin, id, { ...user("Taken"), email: `partner-crud-admin-${stamp}@ensoleil-test.example` })).rejects.toThrow(
       /already in use/i,
     );
   });

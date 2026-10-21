@@ -61,13 +61,13 @@ const admin = createClient();
 let partnerId = "";
 
 beforeAll(async () => {
-  await signUpConfirmedAdminAndSignIn(admin, `bulk-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
+  await signUpConfirmedAdminAndSignIn(admin, `bulk-admin-${stamp}@ensoleil-test.example`, "SupportDesk!24");
   const { data, error } = await service.from("partners").insert({ name: `Bulk Partner ${stamp}`, status: "active" }).select("id").single();
   if (error) throw error;
   partnerId = data.id;
   const base = { neighborhood: "Tribeca", city: "New York", city_id: "new-york", lat: 0, lng: 0, hours: "Open", partner_id: partnerId };
   const { error: loungeError } = await service.from("lounges").insert([
-    { ...base, id: `test-lounge-bulk-${stamp}-ready`, name: `Ready ${stamp}`, phone: "+1 212 555 0100", email: "a@ainsworth-test.com", address: "1 Main St", capacity: 20, weekly_hours: Array(7).fill("8 AM – 9 PM"), content_status: "draft" },
+    { ...base, id: `test-lounge-bulk-${stamp}-ready`, name: `Ready ${stamp}`, phone: "+1 212 555 0100", email: "a@ainsworth-test.example", address: "1 Main St", capacity: 20, weekly_hours: Array(7).fill("8 AM – 9 PM"), content_status: "draft" },
     { ...base, id: `test-lounge-bulk-${stamp}-bare`, name: `Bare ${stamp}`, phone: "", email: "", address: "", capacity: 0, weekly_hours: Array(7).fill("Closed"), content_status: "live" },
   ]);
   if (loungeError) throw loungeError;
@@ -100,7 +100,7 @@ describe("el mismo horario para varios lounges", () => {
     const member = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
       auth: { persistSession: false, autoRefreshToken: false },
     });
-    await signUpConfirmedMemberAndSignIn(member, `bulk-member-${stamp}@ensoleil-test.com`, "LoungeTime!24");
+    await signUpConfirmedMemberAndSignIn(member, `bulk-member-${stamp}@ensoleil-test.example`, "LoungeTime!24");
     await expect(setLoungeHours(member, `test-lounge-bulk-${stamp}-ready`, Array(7).fill("Closed"))).rejects.toThrow(/not authorized/i);
   });
 });

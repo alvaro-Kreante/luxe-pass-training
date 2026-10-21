@@ -139,7 +139,7 @@ export default function ForgotPasswordPage() {
             id="email"
             type="email"
             autoComplete="email"
-            placeholder="you@email.com"
+            placeholder="you@example.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             aria-invalid={Boolean(error)}

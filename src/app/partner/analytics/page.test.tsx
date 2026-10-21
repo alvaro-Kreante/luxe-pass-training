@@ -72,7 +72,7 @@ beforeAll(async () => {
   });
   if (loungeError) throw loungeError;
 
-  const memberEmail = `analytics-member-${stamp}@ensoleil-test.com`;
+  const memberEmail = `analytics-member-${stamp}@ensoleil-test.example`;
   const member = createClient();
   await signUpConfirmedMemberAndSignIn(member, memberEmail, "EnSoleil!2026", { membership: "annual" });
   const {
@@ -107,7 +107,7 @@ beforeAll(async () => {
   if (paymentError) throw paymentError;
 
   const partner = createClient();
-  await signUpConfirmedPartnerAndSignIn(partner, `analytics-partner-${stamp}@theainsworth-test.com`, "AinsworthFOH!24", {
+  await signUpConfirmedPartnerAndSignIn(partner, `analytics-partner-${stamp}@theainsworth-test.example`, "AinsworthFOH!24", {
     businessName: "Analytics Test Venue",
     loungeIds: [loungeId],
   });

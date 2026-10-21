@@ -18,7 +18,7 @@ const DAY = 24 * 60 * 60 * 1000;
 async function stuckMembership(label: string, daysOverdue: number) {
   const user = await signUpConfirmedMemberAndSignIn(
     isolatedClient(),
-    `renewal-stuck-${label}-${Date.now()}@ensoleil-test.com`,
+    `renewal-stuck-${label}-${Date.now()}@ensoleil-test.example`,
     "EnSoleil!2026",
   );
   const periodEnd = new Date(Date.now() - daysOverdue * DAY);

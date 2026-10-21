@@ -30,8 +30,8 @@ function draftInput(overrides: Partial<LoungeDraftInput> = {}): LoungeDraftInput
   return {
     name: `Test Lounge Draft ${stamp} ${created.length}`,
     phone: "+1 212 555 0148",
-    email: "hello@thelarkspur.com",
-    website: "thelarkspur.com",
+    email: "hello@thelarkspur.example",
+    website: "thelarkspur.example",
     location: { address: "27 Bond Street", neighborhood: "NoHo", city: "New York", lat: 40.7262, lng: -73.9936 },
     weeklyHours: ["Closed", "8 AM – 9 PM", "8 AM – 9 PM", "8 AM – 9 PM", "8 AM – 9 PM", "8 AM – 9 PM", "9 AM – 6 PM"],
     amenities: ["wifi", "co-working"],
@@ -70,14 +70,14 @@ async function memberClient() {
   const client = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!, {
     auth: { persistSession: false },
   });
-  const email = `draft-member-${stamp}-${Math.random().toString(36).slice(2, 7)}@ensoleil-test.com`;
+  const email = `draft-member-${stamp}-${Math.random().toString(36).slice(2, 7)}@ensoleil-test.example`;
   await service.auth.admin.createUser({ email, password: "EnSoleil!2026", email_confirm: true });
   await client.auth.signInWithPassword({ email, password: "EnSoleil!2026" });
   return client;
 }
 
 beforeAll(async () => {
-  await signUpConfirmedAdminAndSignIn(supabase, `draft-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
+  await signUpConfirmedAdminAndSignIn(supabase, `draft-admin-${stamp}@ensoleil-test.example`, "SupportDesk!24");
   activePartnerId = await createPartner("active");
 });
 
@@ -94,7 +94,7 @@ describe("dar de alta un lounge", () => {
     expect(detail).toMatchObject({
       contentStatus: "draft",
       phone: "+1 212 555 0148",
-      email: "hello@thelarkspur.com",
+      email: "hello@thelarkspur.example",
       address: "27 Bond Street",
       neighborhood: "NoHo",
       city: "New York",
@@ -229,7 +229,7 @@ describe("el partner del lounge (Story 10.5)", () => {
       partner_id: activePartnerId,
       first_name: "Camille",
       last_name: "Duarte",
-      email: `lounge-rep-${stamp}@halcyon-test.com`,
+      email: `lounge-rep-${stamp}@halcyon-test.example`,
     });
     const id = await create({ partnerId: activePartnerId }, null);
 
@@ -239,7 +239,7 @@ describe("el partner del lounge (Story 10.5)", () => {
       id: activePartnerId,
       name: `Draft Test Partner active ${stamp}`,
       status: "active",
-      representative: { name: "Camille Duarte", email: `lounge-rep-${stamp}@halcyon-test.com` },
+      representative: { name: "Camille Duarte", email: `lounge-rep-${stamp}@halcyon-test.example` },
     });
   });
 

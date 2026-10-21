@@ -48,7 +48,7 @@ async function signUpFreshMember(label: string) {
   const supabase = createClient();
   const user = await signUpConfirmedMemberAndSignIn(
     supabase,
-    `notifications-page-${Date.now()}-${label}@ensoleil-test.com`,
+    `notifications-page-${Date.now()}-${label}@ensoleil-test.example`,
     "EnSoleil!2026",
     { membership: "annual" },
   );

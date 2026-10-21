@@ -29,7 +29,7 @@ vi.mock("next/navigation", () => ({
 
 async function freshMember(label: string) {
   const supabase = createClient();
-  const email = `membership-page-${Date.now()}-${label}@ensoleil-test.com`;
+  const email = `membership-page-${Date.now()}-${label}@ensoleil-test.example`;
   const user = await signUpConfirmedMemberAndSignIn(supabase, email, "EnSoleil!2026", { fullName: "Naomi Feldstein" });
   return { supabase, user, email };
 }

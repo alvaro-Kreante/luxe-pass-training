@@ -58,7 +58,7 @@ describe("createCheckoutSession — tarjeta nueva", () => {
   beforeAll(async () => {
     await signUpConfirmedMemberAndSignIn(
       supabase,
-      `stripe-checkout-${Date.now()}@ensoleil-test.com`,
+      `stripe-checkout-${Date.now()}@ensoleil-test.example`,
       "EnSoleil!2026",
     );
   });
@@ -89,7 +89,7 @@ describe("tarjetas guardadas — Customer de Stripe real", () => {
   beforeAll(async () => {
     const user = await signUpConfirmedMemberAndSignIn(
       supabase,
-      `stripe-saved-cards-${Date.now()}@ensoleil-test.com`,
+      `stripe-saved-cards-${Date.now()}@ensoleil-test.example`,
       "EnSoleil!2026",
     );
     userId = user.id;

@@ -28,7 +28,7 @@ import {
  */
 
 let supabase: SupabaseClient;
-const email = `lounge-profile-${Date.now()}@ensoleil-test.com`;
+const email = `lounge-profile-${Date.now()}@ensoleil-test.example`;
 const password = "EnSoleil!2026";
 
 beforeAll(async () => {

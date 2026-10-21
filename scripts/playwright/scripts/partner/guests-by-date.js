@@ -13,7 +13,7 @@ const OUT_DIR = path.resolve(__dirname, '../../screenshots/partner');
   page.on('console', (msg) => { if (msg.type() === 'error') console.log('console', msg.text().slice(0, 300)); });
 
   await page.goto(`${BASE}/partner/login`, { waitUntil: 'networkidle' });
-  await page.getByLabel('Email').fill('dana.okafor@theainsworth.com');
+  await page.getByLabel('Email').fill('dana.okafor@theainsworth.example');
   await page.getByLabel('Password').fill('AinsworthFOH!24');
   await page.getByRole('button', { name: /sign in/i }).click();
   await page.waitForURL(/\/partner(?!\/login)/, { timeout: 15000 });

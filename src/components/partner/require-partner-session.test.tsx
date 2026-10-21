@@ -41,7 +41,7 @@ describe("RequirePartnerSession", () => {
 
   it("manda a /partner/login cuando la sesión es de un miembro sin rol de partner", async () => {
     const supabase = createClient();
-    const email = `miembro-${Date.now()}@ensoleil-test.com`;
+    const email = `miembro-${Date.now()}@ensoleil-test.example`;
     await signUpConfirmedMemberAndSignIn(supabase, email, "EnSoleil!2026");
 
     render(
@@ -58,7 +58,7 @@ describe("RequirePartnerSession", () => {
 
   it("muestra el contenido con una sesión de partner real", async () => {
     const supabase = createClient();
-    const email = `partner-guard-${Date.now()}@theainsworth-test.com`;
+    const email = `partner-guard-${Date.now()}@theainsworth-test.example`;
     await signUpConfirmedPartnerAndSignIn(supabase, email, "AinsworthFOH!24", {
       businessName: "The Ainsworth",
       loungeIds: ["the-ainsworth"],
@@ -84,13 +84,13 @@ describe("RequirePartnerSession", () => {
     const loungeId = `test-lounge-guard-${label}-${stamp}`;
     await service.from("lounges").insert({ id: loungeId, name: "Guard Lounge", neighborhood: "Test", city: "Test City", city_id: "test-city", lat: 0, lng: 0, hours: "Open", content_status: "draft", partner_id: partner!.id });
     const supabase = createClient();
-    await signUpConfirmedPartnerAndSignIn(supabase, `guard-${label}-${stamp}@halcyon-test.com`, "HalcyonFOH!24", { businessName: "unused", loungeIds: [loungeId] });
+    await signUpConfirmedPartnerAndSignIn(supabase, `guard-${label}-${stamp}@halcyon-test.example`, "HalcyonFOH!24", { businessName: "unused", loungeIds: [loungeId] });
     const cleanup = async () => {
       await supabase.auth.signOut();
       await service.from("lounges").delete().eq("id", loungeId);
       await service.from("partners").delete().eq("id", partner!.id);
     };
-    return { service, partnerId: partner!.id as string, email: `guard-${label}-${stamp}@halcyon-test.com`, cleanup };
+    return { service, partnerId: partner!.id as string, email: `guard-${label}-${stamp}@halcyon-test.example`, cleanup };
   }
 
   it("manda a /partner/login si su partner está suspendido", async () => {

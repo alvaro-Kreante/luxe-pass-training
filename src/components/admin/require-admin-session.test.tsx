@@ -40,7 +40,7 @@ describe("RequireAdminSession", () => {
 
   it("manda a /admin/login cuando la sesión es de un miembro sin rol de admin", async () => {
     const supabase = createClient();
-    const email = `miembro-${Date.now()}@ensoleil-test.com`;
+    const email = `miembro-${Date.now()}@ensoleil-test.example`;
     await signUpConfirmedMemberAndSignIn(supabase, email, "EnSoleil!2026");
 
     render(
@@ -57,7 +57,7 @@ describe("RequireAdminSession", () => {
 
   it("muestra el contenido con una sesión de admin real", async () => {
     const supabase = createClient();
-    const email = `admin-guard-${Date.now()}@ensoleil-test.com`;
+    const email = `admin-guard-${Date.now()}@ensoleil-test.example`;
     await signUpConfirmedAdminAndSignIn(supabase, email, "SupportDesk!24");
 
     render(

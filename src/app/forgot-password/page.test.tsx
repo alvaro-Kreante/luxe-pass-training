@@ -30,7 +30,7 @@ describe("forgot-password", () => {
 
   it("pide el reset de verdad contra Supabase y muestra el acuse de envío", async () => {
     const user = userEvent.setup({ delay: null });
-    const email = `reset-${Date.now()}@ensoleil-test.com`;
+    const email = `reset-${Date.now()}@ensoleil-test.example`;
     const supabase = createClient();
     await signUpConfirmedAndSignIn(supabase, email, "EnSoleil!2026");
     await supabase.auth.signOut();
@@ -46,7 +46,7 @@ describe("forgot-password", () => {
 
   it("funciona igual para un email que no tiene cuenta (anti-enumeración)", async () => {
     const user = userEvent.setup({ delay: null });
-    const email = `no-existe-${Date.now()}@ensoleil-test.com`;
+    const email = `no-existe-${Date.now()}@ensoleil-test.example`;
     render(<ForgotPasswordPage />);
 
     await user.type(screen.getByLabelText("Email address"), email);

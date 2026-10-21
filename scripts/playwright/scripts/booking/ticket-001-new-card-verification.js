@@ -46,7 +46,7 @@ async function stripeApi(pathname, params) {
 }
 
 async function createMember(label, withSavedCard) {
-  const email = `ticket001-${label}-${Date.now()}@ensoleil-test.com`;
+  const email = `ticket001-${label}-${Date.now()}@ensoleil-test.example`;
   const { data, error } = await admin.auth.admin.createUser({ email, password: PASSWORD, email_confirm: true });
   if (error) throw error;
   const profile = {

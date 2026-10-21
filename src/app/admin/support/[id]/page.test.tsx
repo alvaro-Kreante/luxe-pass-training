@@ -93,13 +93,13 @@ beforeAll(async () => {
   const memberClient = createClient();
   const member = await signUpConfirmedMemberAndSignIn(
     memberClient,
-    `case-detail-member-${stamp}@ensoleil-test.com`,
+    `case-detail-member-${stamp}@ensoleil-test.example`,
     "EnSoleil!2026",
   );
   memberId = member.id;
   await memberClient.auth.signOut();
 
-  adminEmail = `case-detail-admin-${stamp}@ensoleil-test.com`;
+  adminEmail = `case-detail-admin-${stamp}@ensoleil-test.example`;
   const adminClient = createClient();
   await signUpConfirmedAdminAndSignIn(adminClient, adminEmail, ADMIN_PASSWORD);
 });
@@ -266,7 +266,7 @@ describe("Case detail (/admin/support/[id])", () => {
 
   it("refunds a real Stripe charge and marks the payment refunded", async () => {
     const memberClient = createClient();
-    await signUpConfirmedMemberAndSignIn(memberClient, `case-detail-payer-${Date.now()}@ensoleil-test.com`, "EnSoleil!2026");
+    await signUpConfirmedMemberAndSignIn(memberClient, `case-detail-payer-${Date.now()}@ensoleil-test.example`, "EnSoleil!2026");
     const {
       data: { user },
     } = await memberClient.auth.getUser();

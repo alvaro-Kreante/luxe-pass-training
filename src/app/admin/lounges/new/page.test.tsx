@@ -22,7 +22,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 beforeAll(async () => {
-  await signUpConfirmedAdminAndSignIn(createClient(), `new-lounge-admin-${Date.now()}@ensoleil-test.com`, "SupportDesk!24");
+  await signUpConfirmedAdminAndSignIn(createClient(), `new-lounge-admin-${Date.now()}@ensoleil-test.example`, "SupportDesk!24");
 });
 
 function image(name: string) {
@@ -141,7 +141,7 @@ describe("antes de poder guardar o publicar", () => {
 
     await user.type(await screen.findByLabelText("Lounge name"), "The Larkspur");
     await user.type(screen.getByLabelText("Phone"), "+1 212 555 0148");
-    await user.type(screen.getByLabelText("Email"), "hello@thelarkspur.com");
+    await user.type(screen.getByLabelText("Email"), "hello@thelarkspur.example");
 
     const checklist = screen.getByRole("list", { name: "Before it can be published" });
     expect(within(checklist).getByRole("listitem", { name: /Name and contact · done/ })).toBeInTheDocument();

@@ -31,7 +31,7 @@ export async function invitePartnerForTest(label: string): Promise<InvitedPartne
   const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   const loungeId = `test-lounge-${label}-${stamp}`;
   const loungeName = `Test Lounge ${label} ${stamp}`;
-  const email = `${label}-${stamp}@thelarkspur-test.com`;
+  const email = `${label}-${stamp}@thelarkspur-test.example`;
   let partnerId: string | null = null;
   let userId: string | null = null;
 
@@ -44,7 +44,7 @@ export async function invitePartnerForTest(label: string): Promise<InvitedPartne
   try {
     const { data: partner, error: partnerError } = await service
       .from("partners")
-      .insert({ name: `Test Partner ${label} ${stamp}`, contact_email: "hello@thelarkspur.com", status: "active" })
+      .insert({ name: `Test Partner ${label} ${stamp}`, contact_email: "hello@thelarkspur.example", status: "active" })
       .select("id")
       .single();
     if (partnerError) throw partnerError;

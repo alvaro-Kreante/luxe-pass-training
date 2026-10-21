@@ -60,7 +60,7 @@ async function addMember(partnerId: string, label: string, userId: string | null
       user_id: userId,
       first_name: "Test",
       last_name: label,
-      email: `${label}-${stamp}@partner-test.com`,
+      email: `${label}-${stamp}@partner-test.example`,
     })
     .select("id")
     .single();
@@ -71,7 +71,7 @@ async function addMember(partnerId: string, label: string, userId: string | null
 /** Un usuario partner con sesión: cuenta de Auth + rol + fila en `partner_members`. */
 async function signInAsMemberOf(partnerId: string, label: string) {
   const client = isolatedClient();
-  await signUpConfirmedAndSignIn(client, `${label}-${stamp}@partner-test.com`, "PartnerOrg!24");
+  await signUpConfirmedAndSignIn(client, `${label}-${stamp}@partner-test.example`, "PartnerOrg!24");
   const {
     data: { user },
   } = await client.auth.getUser();
@@ -80,7 +80,7 @@ async function signInAsMemberOf(partnerId: string, label: string) {
   const { error } = await service
     .from("partner_members")
     .update({ user_id: user!.id })
-    .eq("email", `${label}-${stamp}@partner-test.com`);
+    .eq("email", `${label}-${stamp}@partner-test.example`);
   if (error) throw error;
   return { client, userId: user!.id };
 }
@@ -146,7 +146,7 @@ describe("partner users", () => {
 
     const { error } = await service
       .from("partner_members")
-      .insert({ partner_id: second.id, user_id: userId, first_name: "Test", last_name: "Twice", email: `twice-${stamp}@partner-test.com` });
+      .insert({ partner_id: second.id, user_id: userId, first_name: "Test", last_name: "Twice", email: `twice-${stamp}@partner-test.example` });
 
     expect(error).not.toBeNull();
   });
@@ -160,7 +160,7 @@ describe("partner users", () => {
       partner_id: second.id,
       first_name: "Test",
       last_name: "Same",
-      email: `SAME-EMAIL-${stamp}@partner-test.com`,
+      email: `SAME-EMAIL-${stamp}@partner-test.example`,
     });
 
     expect(error).not.toBeNull();
@@ -169,7 +169,7 @@ describe("partner users", () => {
   it("refuses an email that already belongs to any account, member or admin", async () => {
     const partner = await createPartner(`Taken email ${stamp}`);
     const member = isolatedClient();
-    const memberEmail = `existing-member-${stamp}@ensoleil-test.com`;
+    const memberEmail = `existing-member-${stamp}@ensoleil-test.example`;
     const user = await signUpConfirmedMemberAndSignIn(member, memberEmail, "EnSoleil!2026");
     userIds.push(user.id);
 
@@ -295,8 +295,8 @@ describe("what a partner user can see", () => {
   });
 
   it("can correct its own name but not its email", async () => {
-    const { error: nameError } = await session.from("partner_members").update({ first_name: "Renamed" }).eq("email", `sees-all-${stamp}@partner-test.com`);
-    const { error: emailError } = await session.from("partner_members").update({ email: `hijack-${stamp}@partner-test.com` }).eq("email", `sees-all-${stamp}@partner-test.com`);
+    const { error: nameError } = await session.from("partner_members").update({ first_name: "Renamed" }).eq("email", `sees-all-${stamp}@partner-test.example`);
+    const { error: emailError } = await session.from("partner_members").update({ email: `hijack-${stamp}@partner-test.example` }).eq("email", `sees-all-${stamp}@partner-test.example`);
 
     expect(nameError).toBeNull();
     expect(emailError).not.toBeNull();
@@ -313,7 +313,7 @@ describe("what a member can see", () => {
     liveLounge = await createLounge("member-visible", partnerId, "live");
     await addMember(partnerId, "member-cant-see");
     member = isolatedClient();
-    const user = await signUpConfirmedMemberAndSignIn(member, `partner-org-member-${stamp}@ensoleil-test.com`, "EnSoleil!2026");
+    const user = await signUpConfirmedMemberAndSignIn(member, `partner-org-member-${stamp}@ensoleil-test.example`, "EnSoleil!2026");
     userIds.push(user.id);
   });
 

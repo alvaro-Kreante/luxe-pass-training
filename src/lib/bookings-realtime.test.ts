@@ -25,7 +25,7 @@ afterEach(async () => {
 describe("Realtime de reservas para el partner", () => {
   it("el partner recibe en vivo una reserva nueva de su lounge", async () => {
     const partner = isolatedClient();
-    await signUpConfirmedPartnerAndSignIn(partner, `realtime-staff-${Date.now()}@ensoleil-test.com`, "EnSoleil!2026", {
+    await signUpConfirmedPartnerAndSignIn(partner, `realtime-staff-${Date.now()}@ensoleil-test.example`, "EnSoleil!2026", {
       businessName: "Ainsworth Hospitality",
       loungeIds: [LOUNGE],
     });
@@ -51,7 +51,7 @@ describe("Realtime de reservas para el partner", () => {
     });
 
     const member = isolatedClient();
-    await signUpConfirmedMemberAndSignIn(member, `realtime-member-${Date.now()}@ensoleil-test.com`, "EnSoleil!2026", {
+    await signUpConfirmedMemberAndSignIn(member, `realtime-member-${Date.now()}@ensoleil-test.example`, "EnSoleil!2026", {
       membership: "annual",
     });
     const booking = await confirmBooking(member, {

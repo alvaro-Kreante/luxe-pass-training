@@ -7,7 +7,7 @@ const fs = require('fs');
 // el admin crea un partner con dos usuarios, edita, cambia el representante,
 // lo activa, le asigna un lounge y lo publica; la usuaria crea su contraseña
 // desde el enlace y entra al dashboard; el admin suspende y reactiva el
-// partner; un miembro ve el partner en la ficha. Emails `*-test.com` (Brevo
+// partner; un miembro ve el partner en la ficha. Emails `*-test.example` (Brevo
 // no envía nada en local) y al final se deja todo como estaba.
 const BASE = process.env.LUXEPASS_BASE_URL || 'http://localhost:3000';
 const LOUNGE = process.env.LOUNGE_ID || 'passaic-house';
@@ -20,9 +20,9 @@ const service = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_
 
 const stamp = Date.now();
 const PARTNER = `Riverside Spa ${stamp}`;
-const LEILA = `leila-${stamp}@riverside-test.com`;
-const OMAR = `omar-${stamp}@riverside-test.com`;
-const MEMBER = `flow-member-${stamp}@ensoleil-test.com`;
+const LEILA = `leila-${stamp}@riverside-test.example`;
+const OMAR = `omar-${stamp}@riverside-test.example`;
+const MEMBER = `flow-member-${stamp}@ensoleil-test.example`;
 let step = 0;
 
 async function shot(page, name) {
@@ -81,7 +81,7 @@ async function publishOrFallback(page, label) {
     await admin.goto(BASE + '/admin/partners', { waitUntil: 'networkidle' });
     await admin.getByRole('link', { name: /Add partner/ }).click();
     await admin.getByLabel('Partner name').fill(PARTNER);
-    await admin.getByLabel('Contact email').fill('hello@riverside-test.com');
+    await admin.getByLabel('Contact email').fill('hello@riverside-test.example');
     await admin.getByLabel('Street address').fill('40 River Road');
     await admin.getByLabel('City').fill('Newark');
     await admin.getByLabel('Country').fill('United States');

@@ -41,8 +41,10 @@ async function openLounge(status: "live" | "draft" = "live") {
     city: "New York",
     city_id: "new-york",
     address: "122 E 45th St",
-    lat: 40.75,
-    lng: -73.97,
+    // Lejos de los orígenes de /explore: un lounge live a <1 mi del centro de
+    // Nueva York descuadra el conteo de explore/page.test.tsx si corren a la vez.
+    lat: 0,
+    lng: 0,
     hours: "Open until 10 PM",
     bands: ["morning", "afternoon", "evening"],
     amenities: ["wifi"],
@@ -80,7 +82,7 @@ async function contentStatus(id: string) {
 }
 
 beforeAll(async () => {
-  await signUpConfirmedAdminAndSignIn(createClient(), `schedule-ui-admin-${stamp}@ensoleil-test.com`, "SupportDesk!24");
+  await signUpConfirmedAdminAndSignIn(createClient(), `schedule-ui-admin-${stamp}@ensoleil-test.example`, "SupportDesk!24");
 });
 
 afterAll(async () => {
@@ -191,7 +193,7 @@ describe("cierres especiales", () => {
   it("si cae sobre reservas confirmadas, avisa con la lista y solo guarda al confirmar", async () => {
     const user = userEvent.setup({ delay: null });
     const id = await openLounge();
-    const { data: member } = await service.auth.admin.createUser({ email: `schedule-ui-member-${stamp}@ensoleil-test.com`, email_confirm: true });
+    const { data: member } = await service.auth.admin.createUser({ email: `schedule-ui-member-${stamp}@ensoleil-test.example`, email_confirm: true });
     await service.from("profiles").insert({ id: member.user!.id, full_name: "Marcus Bell", phone: "+15555550100", city: "New York", industry: "Testing", terms_accepted_at: new Date().toISOString() });
     await service.from("bookings").insert({ member_id: member.user!.id, lounge_id: id, date: "2025-09-12", band: "afternoon", slot_time: "3:30 PM" });
     await renderLounge();

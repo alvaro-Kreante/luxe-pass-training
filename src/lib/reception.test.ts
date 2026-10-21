@@ -25,7 +25,7 @@ const ainsworth = LOUNGES.find((lounge) => lounge.id === "the-ainsworth")!;
 const kiosk = isolatedClient();
 
 beforeAll(async () => {
-  await signUpConfirmedPartnerAndSignIn(kiosk, `reception-staff-${Date.now()}@ensoleil-test.com`, "EnSoleil!2026", {
+  await signUpConfirmedPartnerAndSignIn(kiosk, `reception-staff-${Date.now()}@ensoleil-test.example`, "EnSoleil!2026", {
     businessName: "Ainsworth Hospitality",
     loungeIds: [ainsworth.id],
   });
@@ -49,7 +49,7 @@ async function bookTodayForReception(label: number) {
   const memberSupabase = isolatedClient();
   const member = await signUpConfirmedMemberAndSignIn(
     memberSupabase,
-    `reception-${Date.now()}-${label}@ensoleil-test.com`,
+    `reception-${Date.now()}-${label}@ensoleil-test.example`,
     "EnSoleil!2026",
     { membership: "annual" },
   );
@@ -191,7 +191,7 @@ describe("SEC-01 — solo el personal del lounge usa la recepción", () => {
   it("un miembro con sesión no ve las reservas de otros", async () => {
     const { reference } = await bookTodayForReception(22);
     const otherMember = isolatedClient();
-    await signUpConfirmedMemberAndSignIn(otherMember, `reception-other-${Date.now()}@ensoleil-test.com`, "EnSoleil!2026");
+    await signUpConfirmedMemberAndSignIn(otherMember, `reception-other-${Date.now()}@ensoleil-test.example`, "EnSoleil!2026");
 
     expect(await lookupReceptionBooking(otherMember, ainsworth.id, today(), reference)).toBeNull();
     await expect(checkInReceptionBooking(otherMember, ainsworth.id, today(), reference)).rejects.toThrow();
@@ -200,7 +200,7 @@ describe("SEC-01 — solo el personal del lounge usa la recepción", () => {
   it("el personal de otro lounge no ve ni toca las reservas de este", async () => {
     const { reference } = await bookTodayForReception(23);
     const otherStaff = isolatedClient();
-    await signUpConfirmedPartnerAndSignIn(otherStaff, `reception-cordelia-${Date.now()}@ensoleil-test.com`, "EnSoleil!2026", {
+    await signUpConfirmedPartnerAndSignIn(otherStaff, `reception-cordelia-${Date.now()}@ensoleil-test.example`, "EnSoleil!2026", {
       businessName: "Cordelia Group",
       loungeIds: ["the-cordelia"],
     });

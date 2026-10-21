@@ -15,7 +15,7 @@ for (const line of fs.readFileSync(path.resolve(__dirname, '../../../../.env.loc
 const BASE = 'http://localhost:3000';
 
 (async () => {
-  const email = `view-details-verify-${Date.now()}@ensoleil-test.com`;
+  const email = `view-details-verify-${Date.now()}@ensoleil-test.example`;
   const password = 'EnSoleil!2026';
   const admin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
   const { error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });

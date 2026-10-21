@@ -16,7 +16,7 @@ const env = Object.fromEntries(
 const service = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 const stamp = Date.now();
 const LOUNGE = `test-lounge-seasons-visual-${stamp}`;
-const MEMBER = `seasons-visual-${stamp}@ensoleil-test.com`;
+const MEMBER = `seasons-visual-${stamp}@ensoleil-test.example`;
 
 async function shot(page, name) {
   await page.screenshot({ path: path.join(OUT_DIR, `${name}.png`), fullPage: true });

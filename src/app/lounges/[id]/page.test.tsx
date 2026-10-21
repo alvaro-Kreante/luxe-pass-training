@@ -41,7 +41,7 @@ beforeAll(async () => {
   const supabase = createClient();
   await signUpConfirmedAndSignIn(
     supabase,
-    `lounge-page-${Date.now()}@ensoleil-test.com`,
+    `lounge-page-${Date.now()}@ensoleil-test.example`,
     "EnSoleil!2026",
   );
 });

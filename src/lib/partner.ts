@@ -26,7 +26,7 @@ export const PARTNER_VENUE = {
  * backend real): `/partner/login` usa Supabase Auth de verdad.
  */
 export const PARTNER_ACCOUNT = {
-  email: "dana.okafor@theainsworth.com",
+  email: "dana.okafor@theainsworth.example",
   password: "AinsworthFOH!24",
 };
 
