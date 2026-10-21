@@ -41,8 +41,10 @@ async function openLounge(status: "live" | "draft" = "live") {
     city: "New York",
     city_id: "new-york",
     address: "122 E 45th St",
-    lat: 40.75,
-    lng: -73.97,
+    // Lejos de los orígenes de /explore: un lounge live a <1 mi del centro de
+    // Nueva York descuadra el conteo de explore/page.test.tsx si corren a la vez.
+    lat: 0,
+    lng: 0,
     hours: "Open until 10 PM",
     bands: ["morning", "afternoon", "evening"],
     amenities: ["wifi"],
