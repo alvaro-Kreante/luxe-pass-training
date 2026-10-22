@@ -124,10 +124,13 @@ async function allowLocation(user: ReturnType<typeof userEvent.setup>) {
 /**
  * La respuesta al permiso se guarda en Supabase Auth sin bloquear la
  * pantalla; se espera a que llegue para que no aterrice en el test siguiente.
+ * Con GPS hay una segunda escritura (la posición obtenida): también se espera.
  */
 async function waitForRememberedLocation() {
   await waitFor(async () => {
-    expect(await rememberedLocation(createClient())).not.toBeNull();
+    const choice = await rememberedLocation(createClient());
+    expect(choice).not.toBeNull();
+    if (choice?.mode === "gps") expect(choice.coords).toBeDefined();
   });
 }
 
@@ -239,6 +242,40 @@ describe("el permiso se recuerda durante la sesión", () => {
     expect(
       screen.queryByRole("heading", { name: "Let LuxePass use your location" }),
     ).toBeNull();
+  });
+
+  /**
+   * Bug: al volver a Explore con GPS concedido, el mapa mostraba Nueva York
+   * (ciudad por defecto) durante los segundos que tarda el fix nuevo.
+   */
+  it("al volver, parte de la última posición GPS mientras llega la nueva", async () => {
+    const user = userEvent.setup({ delay: null });
+    const first = render(<ExplorePage />);
+    await allowLocation(user);
+    expect(await rememberedLocation(createClient())).toMatchObject({
+      coords: { lat: NY_ORIGIN.latitude, lng: NY_ORIGIN.longitude },
+    });
+    first.unmount();
+
+    Object.defineProperty(navigator, "geolocation", {
+      configurable: true,
+      value: { getCurrentPosition: vi.fn() },
+    });
+    render(<ExplorePage />);
+
+    expect(
+      await screen.findByText(/Sorted by distance · Your location/),
+    ).toBeInTheDocument();
+  });
+
+  it("acepta una posición reciente del navegador en vez de exigir un fix nuevo", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<ExplorePage />);
+    await allowLocation(user);
+
+    const options = vi.mocked(navigator.geolocation.getCurrentPosition).mock
+      .calls[0][2];
+    expect(options?.maximumAge).toBeGreaterThan(0);
   });
 
   it("recuerda también la ciudad elegida a mano", async () => {

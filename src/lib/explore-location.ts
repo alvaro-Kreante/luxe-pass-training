@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import type { Coordinates } from "./distance";
 import type { Place } from "./place-search";
 
 /**
@@ -11,10 +12,16 @@ import type { Place } from "./place-search";
  * (sesión nueva, `session_id` nuevo). Vive en Supabase Auth, no en storage
  * del navegador.
  *
+ * Con GPS se guarda también la última posición conocida (`coords`): al volver
+ * a Explore sirve de origen provisional mientras el navegador da la nueva, en
+ * vez de la ciudad por defecto.
+ *
  * La última ubicación escrita a mano (`explore_recent_place`) no caduca con
  * la sesión: es la que ManualLocation.dc.html propone bajo "Recent".
  */
-export type LocationChoice = { mode: "gps" } | { mode: "place"; place: Place };
+export type LocationChoice =
+  | { mode: "gps"; coords?: Coordinates }
+  | { mode: "place"; place: Place };
 
 type StoredChoice = LocationChoice & { sessionId: string };
 
@@ -41,7 +48,8 @@ export async function rememberedLocation(
   if (!stored || stored.sessionId !== sessionId) return null;
 
   if (stored.mode === "place") return { mode: "place", place: stored.place };
-  return stored.mode === "gps" ? { mode: "gps" } : null;
+  if (stored.mode !== "gps") return null;
+  return stored.coords ? { mode: "gps", coords: stored.coords } : { mode: "gps" };
 }
 
 export async function recentPlace(supabase: SupabaseClient): Promise<Place | null> {

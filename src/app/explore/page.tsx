@@ -31,7 +31,11 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import { Input } from "@/components/ui/input";
 import { Segmented } from "@/components/ui/segmented";
-import { formatDistanceBand, type DistanceUnit } from "@/lib/distance";
+import {
+  formatDistanceBand,
+  type Coordinates,
+  type DistanceUnit,
+} from "@/lib/distance";
 import {
   EMPTY_FILTERS,
   activeFilterChips,
@@ -76,6 +80,9 @@ import { createClient } from "@/lib/supabase/client";
 const CACHED_LOUNGE_COUNT = 6;
 
 const SEARCH_DEBOUNCE_MS = 250;
+
+/** Una posición de hace menos de 5 min vale: el navegador la da al instante. */
+const GPS_OPTIONS: PositionOptions = { maximumAge: 5 * 60_000 };
 
 /** "checking": se mira si el miembro ya respondió al permiso en esta sesión. */
 type LocationStep = "checking" | "asking" | "manual" | "located";
@@ -162,7 +169,7 @@ function ExploreScreen() {
     rememberedLocation(supabase).then((choice) => {
       if (!active) return;
       if (choice === null) setStep("asking");
-      else if (choice.mode === "gps") locateWithGps();
+      else if (choice.mode === "gps") locateWithGps(choice.coords);
       else applyPlace(choice.place);
     });
 
@@ -208,17 +215,26 @@ function ExploreScreen() {
    * varios segundos incluso ya concedido el permiso, y esperarlo (`await`)
    * antes de cambiar de paso dejaba el diálogo abierto todo ese tiempo. El
    * mapa se muestra ya con la ciudad por defecto como origen provisional;
-   * `origin` se corrige en cuanto llega la posición real.
+   * `origin` se corrige en cuanto llega la posición real. Si hay una
+   * posición anterior (`lastCoords`) se parte de ella, y se acepta una
+   * posición reciente que el navegador ya tenga (`maximumAge`) en vez de
+   * forzar un fix nuevo.
    */
-  function locateWithGps() {
+  function locateWithGps(lastCoords?: Coordinates) {
     setStep("located");
+    if (lastCoords) setOrigin({ label: "Your location", ...lastCoords });
 
-    getCurrentPosition().then((result: LocationResult) => {
+    getCurrentPosition(GPS_OPTIONS).then((result: LocationResult) => {
       if (result.status === "granted") {
         setOrigin({ label: "Your location", ...result.coords });
+        const moved =
+          result.coords.lat !== lastCoords?.lat ||
+          result.coords.lng !== lastCoords?.lng;
+        if (moved) remember({ mode: "gps", coords: result.coords });
         return;
       }
 
+      remember({ mode: "gps" });
       /** AC "Fallback to manual location entry if GPS unavailable". */
       setStep("manual");
     });
@@ -228,8 +244,9 @@ function ExploreScreen() {
     void rememberLocation(supabase, choice);
   }
 
+  /** La elección se guarda al resolver el GPS (con la posición si la hay):
+   * una sola escritura, sin carrera entre dos `updateUser`. */
   function handleAllow() {
-    remember({ mode: "gps" });
     locateWithGps();
   }
 
