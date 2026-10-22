@@ -160,3 +160,16 @@ describe("AC 'Renewal date and auto-renewal settings'", () => {
     await waitFor(async () => expect((await fetchMembership(supabase)).autoRenew).toBe(true));
   });
 });
+
+describe("Billing — 'Invoices and receipts'", () => {
+  it("lleva a la lista de recibos", async () => {
+    const { user } = await freshMember("receipts-link");
+    await grantTestMembership(user.id, "annual");
+    render(<MembershipPage />);
+
+    expect(await screen.findByRole("link", { name: /Invoices and receipts/ }, LOAD)).toHaveAttribute(
+      "href",
+      "/profile/membership/receipts",
+    );
+  });
+});

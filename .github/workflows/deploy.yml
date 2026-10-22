@@ -132,6 +132,7 @@ jobs:
           supabase functions deploy stripe-create-checkout-session
           supabase functions deploy stripe-charge-saved-method
           supabase functions deploy stripe-payment-methods
+          supabase functions deploy stripe-billing
           supabase functions deploy stripe-cancel-booking
           supabase functions deploy stripe-webhook --no-verify-jwt
           supabase functions deploy send-booking-receipt --no-verify-jwt
@@ -275,6 +276,7 @@ jobs:
           supabase functions deploy stripe-create-checkout-session
           supabase functions deploy stripe-charge-saved-method
           supabase functions deploy stripe-payment-methods
+          supabase functions deploy stripe-billing
           supabase functions deploy stripe-cancel-booking
           supabase functions deploy stripe-webhook --no-verify-jwt
           supabase functions deploy send-booking-receipt --no-verify-jwt
