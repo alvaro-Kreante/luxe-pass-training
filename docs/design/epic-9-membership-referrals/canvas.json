@@ -8,7 +8,8 @@
     { "file": "Referrals.dc.html", "x": 3080, "y": 1050, "w": 1440, "h": 900, "title": "6. Referrals — code, tracking and rewards" },
     { "file": "Share.dc.html", "x": 0, "y": 2100, "w": 1440, "h": 900, "title": "7. Share your code" },
     { "file": "RewardCredited.dc.html", "x": 1540, "y": 2100, "w": 1440, "h": 900, "title": "8. A friend joined — the reward is credited" },
-    { "file": "Terms.dc.html", "x": 3080, "y": 2100, "w": 1440, "h": 900, "title": "9. Referral terms and conditions" }
+    { "file": "Terms.dc.html", "x": 3080, "y": 2100, "w": 1440, "h": 900, "title": "9. Referral terms and conditions" },
+    { "file": "Receipts.dc.html", "x": 0, "y": 3150, "w": 1440, "h": 900, "title": "10. Invoices and receipts — every charge, with its Stripe receipt" }
   ],
   "annotations": [
     { "id": "phase-note", "x": 0, "y": -170, "w": 960, "text": "LuxePass — Epic 9: Membership & Referrals\nSame light design system and app shell as Phases 1, 3, 4, 5, 6 and 7. UI copy in English.\nPhase 7 left the Account sub-nav pointing here: \"Plan, invoices and referral rewards are managed in Membership.\" This phase builds that view out — the plan and what it costs, then the code and what it earns. Thursday 12 September, the same day as Epic 6." },
