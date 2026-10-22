@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ensureReferralCode, fetchReferralOverview } from "@/lib/referrals";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
-import { insertSucceededTestPayment } from "@/lib/testing/membership-fixture";
+import { grantTestMembership, insertSucceededTestPayment } from "@/lib/testing/membership-fixture";
 
 import ReferralsPage from "./page";
 
@@ -139,5 +139,62 @@ describe("AC 'Referral bonus terms and conditions'", () => {
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText("48 hours")).toBeInTheDocument();
     expect(within(dialog).getByText("1. What you both get")).toBeInTheDocument();
+  });
+});
+
+describe("Usar un day pass (Terms §4)", () => {
+  async function referrerWithCreditedFriend(label: string) {
+    const supabase = await freshReferrer(label);
+    const friendId = await friendJoinsWithCode(await ensureReferralCode(supabase));
+    await insertSucceededTestPayment(friendId);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    return { supabase, userId: user!.id };
+  }
+
+  it("con membresía activa, 'Use a day pass' lleva a elegir lounge", async () => {
+    const { userId } = await referrerWithCreditedFriend("use-active");
+    await grantTestMembership(userId, "annual");
+    render(<ReferralsPage />);
+
+    const link = await screen.findByRole("link", { name: "Use a day pass" }, LOAD);
+    expect(link).toHaveAttribute("href", "/explore");
+  });
+
+  it("sin membresía activa, avisa de que hay que activarla y lleva a Membership", async () => {
+    await referrerWithCreditedFriend("use-inactive");
+    render(<ReferralsPage />);
+
+    const link = await screen.findByRole("link", { name: "Activate membership" }, LOAD);
+    expect(link).toHaveAttribute("href", "/profile/membership");
+    expect(screen.getByText(/activate your membership to use your day passes/i)).toBeInTheDocument();
+  });
+
+  it("un day pass ya gastado en una reserva deja de contar como listo", async () => {
+    const { supabase, userId } = await referrerWithCreditedFriend("use-spent");
+    const service = admin();
+    const { data: booking, error } = await service
+      .from("bookings")
+      .insert({
+        member_id: userId,
+        lounge_id: "the-ainsworth",
+        date: "2026-12-10",
+        band: "late",
+        slot_time: "6:00 PM",
+        status: "confirmed",
+      })
+      .select("id")
+      .single();
+    if (error) throw error;
+    const { error: redemptionError } = await service
+      .from("day_pass_redemptions")
+      .insert({ member_id: userId, booking_id: booking.id, source: "referral" });
+    if (redemptionError) throw redemptionError;
+
+    const overview = await fetchReferralOverview(supabase);
+    expect(overview.dayPasses.find((entry) => entry.id === "referral")).toBeUndefined();
+    expect(overview.readyDayPassCount).toBe(0);
+    expect(overview.stats.earnedCount).toBe(1);
   });
 });

@@ -96,6 +96,7 @@ function ReferralsScreen() {
   }
 
   const { invitations, stats, dayPasses, readyDayPassCount, recentlyCredited } = overview;
+  const membershipActive = membership?.status === "active";
   const memberFirstName = (memberName ?? "").split(" ")[0] ?? "";
   const tier =
     membership?.status === "active" ? (membership.plan === "annual" ? "Annual member" : "Monthly member") : "Member";
@@ -209,13 +210,26 @@ function ReferralsScreen() {
 
             <div className="my-4 h-px bg-line" />
 
-            <p className="m-0 text-xs leading-[1.55] text-fg-muted">
-              Day passes sit on top of your 8 included visits and last as long as your membership does.
-            </p>
-
-            <button type="button" className={cn(buttonSecondaryClass)}>
-              Use a day pass
-            </button>
+            {/* Sin artboard para el estado sin membresía: mismo bloque, otro copy y destino (Terms §4). */}
+            {membershipActive ? (
+              <>
+                <p className="m-0 text-xs leading-[1.55] text-fg-muted">
+                  Day passes sit on top of your 8 included visits and last as long as your membership does.
+                </p>
+                <Link href="/explore" className={cn(buttonSecondaryClass)}>
+                  Use a day pass
+                </Link>
+              </>
+            ) : (
+              <>
+                <p className="m-0 text-xs leading-[1.55] text-fg-muted">
+                  Activate your membership to use your day passes. They are applied automatically when you book.
+                </p>
+                <Link href="/profile/membership" className={cn(buttonSecondaryClass)}>
+                  Activate membership
+                </Link>
+              </>
+            )}
           </div>
 
           <button

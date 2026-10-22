@@ -558,7 +558,8 @@ returns table (
   created_at timestamptz,
   is_day_pass boolean,
   visit_number integer,
-  emergency_contact text
+  emergency_contact text,
+  visit_type text
 )
 language plpgsql
 security definer
@@ -602,7 +603,8 @@ begin
             || coalesce(' · ' || nullif(p.emergency_contact_relation, ''), '')
             || ' · ' || p.emergency_contact_phone
         else null
-      end
+      end,
+      public.booking_visit_type(b.id)
     from public.bookings b
     join auth.users u on u.id = b.member_id
     left join public.profiles p on p.id = b.member_id

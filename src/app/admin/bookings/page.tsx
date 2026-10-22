@@ -328,7 +328,7 @@ function BookingRow({ booking, onOpen }: { booking: NetworkBooking; onOpen: () =
           <span className={cn("block truncate text-[13.5px] font-bold", cancelled ? "text-fg-muted" : "text-fg")}>
             {booking.memberName}
           </span>
-          <span className="mt-0.5 block text-[11.5px] text-fg-subtle">{booking.isDayPass ? "Day pass" : "Membership"}</span>
+          <span className="mt-0.5 block text-[11.5px] text-fg-subtle">{booking.visitLabel}</span>
         </span>
       </span>
       <span className={cn("text-[12.5px] font-bold tracking-[0.02em]", cancelled ? "text-fg-subtle" : "text-fg")}>

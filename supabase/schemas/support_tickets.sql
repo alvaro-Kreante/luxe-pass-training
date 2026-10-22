@@ -336,7 +336,8 @@ returns table (
   status text,
   no_show boolean,
   is_day_pass boolean,
-  amount_paid_cents int
+  amount_paid_cents int,
+  visit_type text
 )
 language plpgsql
 stable
@@ -361,7 +362,8 @@ begin
       (
         select coalesce(sum(pm.amount_cents), 0)::int from public.payments pm
         where pm.booking_id = b.id and pm.status = 'succeeded'
-      )
+      ),
+      public.booking_visit_type(b.id)
     from public.bookings b
     join public.lounges l on l.id = b.lounge_id
     join auth.users u on u.id = b.member_id

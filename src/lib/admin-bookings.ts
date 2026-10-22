@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { SLOT_DEFS } from "@/lib/booking";
+import { visitTypeLabel, type VisitType } from "@/lib/partner";
 
 /**
  * Story 8.4 — Bookings Overview. Un día de reservas de toda la red
@@ -23,6 +24,8 @@ export interface NetworkBooking {
   slotTime: string;
   state: BookingState;
   isDayPass: boolean;
+  /** "Day pass" · "Complimentary day pass" · "Annual member"… — `visitTypeLabel`. */
+  visitLabel: string;
   amountPaid: number;
 }
 
@@ -50,6 +53,7 @@ interface AdminBookingRow {
   no_show: boolean;
   is_day_pass: boolean;
   amount_paid_cents: number;
+  visit_type: VisitType;
 }
 
 export const BOOKING_STATES: { id: BookingState; label: string }[] = [
@@ -84,6 +88,7 @@ export async function fetchBookingsOn(supabase: SupabaseClient, date: string): P
     slotTime: row.slot_time,
     state: bookingState(row.status, row.no_show),
     isDayPass: row.is_day_pass,
+    visitLabel: visitTypeLabel(row.visit_type),
     amountPaid: row.amount_paid_cents / 100,
   }));
 }

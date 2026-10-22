@@ -206,6 +206,11 @@ function AnalyticsContent({
             amount={formatCurrency(revenueBreakdown.membershipVisits)}
           />
           <RevenueRow
+            label="Complimentary day passes"
+            note={`${summary.complimentary_visits} visits · referral or birthday gift`}
+            amount={formatCurrency(0)}
+          />
+          <RevenueRow
             label="No-show fees"
             note={`${summary.no_shows} no-shows · fees recorded`}
             amount={formatCurrency(revenueBreakdown.noShowFees)}

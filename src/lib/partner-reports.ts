@@ -81,6 +81,7 @@ export interface PartnerBookingVolumeRow {
   membership_visits: number;
   day_pass_revenue_cents: number;
   no_show_fee_cents: number;
+  complimentary_visits: number;
 }
 
 export interface PartnerNoShowLogRow {
@@ -115,7 +116,7 @@ export function bookingVolumeToCsv(rows: PartnerBookingVolumeRow[], grain: "week
   if (columns.includes("bookings")) header.push("Bookings made");
   if (columns.includes("arrived")) header.push("Guests who arrived");
   if (columns.includes("no-shows")) header.push("No-shows", "Cancellations");
-  if (columns.includes("visit-type")) header.push("Day passes", "Membership visits");
+  if (columns.includes("visit-type")) header.push("Day passes", "Membership visits", "Complimentary day passes");
   if (columns.includes("revenue")) header.push("Attributed revenue");
 
   const body = rows.map((row) => {
@@ -123,7 +124,7 @@ export function bookingVolumeToCsv(rows: PartnerBookingVolumeRow[], grain: "week
     if (columns.includes("bookings")) cells.push(row.bookings);
     if (columns.includes("arrived")) cells.push(row.arrived);
     if (columns.includes("no-shows")) cells.push(row.no_shows, row.cancellations);
-    if (columns.includes("visit-type")) cells.push(row.day_pass_visits, row.membership_visits);
+    if (columns.includes("visit-type")) cells.push(row.day_pass_visits, row.membership_visits, row.complimentary_visits);
     if (columns.includes("revenue")) cells.push(formatCurrency((row.day_pass_revenue_cents + row.no_show_fee_cents) / 100));
     return cells;
   });
@@ -132,12 +133,13 @@ export function bookingVolumeToCsv(rows: PartnerBookingVolumeRow[], grain: "week
 
 export function revenueByMonthToCsv(rows: PartnerBookingVolumeRow[]): string {
   return toCsv(
-    ["Month", "Day passes", "Day pass revenue", "Membership visits", "No-shows", "No-show fees", "Total"],
+    ["Month", "Day passes", "Day pass revenue", "Membership visits", "Complimentary day passes", "No-shows", "No-show fees", "Total"],
     rows.map((row) => [
       periodLabel(row.period_start, "month"),
       row.day_pass_visits,
       formatCurrency(row.day_pass_revenue_cents / 100),
       row.membership_visits,
+      row.complimentary_visits,
       row.no_shows,
       formatCurrency(row.no_show_fee_cents / 100),
       formatCurrency((row.day_pass_revenue_cents + row.no_show_fee_cents) / 100),

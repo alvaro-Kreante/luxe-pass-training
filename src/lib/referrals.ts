@@ -141,8 +141,8 @@ const RECENT_MS = 48 * 60 * 60 * 1000;
  * passes: uno por referido acreditado (como referidor, o como amigo que
  * llegó con un código — "you each get a complimentary day pass") y el del
  * mes de cumpleaños (`profiles.birth_month`, contra el "hoy" de mockup).
- * Gastarlos al reservar no está conectado (ver PENDIENTES), así que no se
- * descuentan.
+ * Los ya gastados en una reserva no cancelada (`day_pass_redemptions`, misma
+ * cuenta que `booking_coverage_for`) se descuentan de los listos.
  */
 export async function fetchReferralOverview(
   supabase: SupabaseClient,
@@ -153,17 +153,19 @@ export async function fetchReferralOverview(
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  const [referralsResult, sharesResult, profileResult] = await Promise.all([
+  const [referralsResult, sharesResult, profileResult, redemptionsResult] = await Promise.all([
     supabase
       .from("referrals")
       .select("id, referrer_id, referee_id, referee_name, referee_email, status, joined_at, credited_at")
       .order("joined_at", { ascending: false }),
     supabase.from("referral_shares").select("id", { count: "exact", head: true }).eq("member_id", user.id),
     supabase.from("profiles").select("birth_month").eq("id", user.id).single(),
+    supabase.from("day_pass_redemptions").select("source, bookings!inner(date, status)").eq("member_id", user.id),
   ]);
   if (referralsResult.error) throw referralsResult.error;
   if (sharesResult.error) throw sharesResult.error;
   if (profileResult.error) throw profileResult.error;
+  if (redemptionsResult.error) throw redemptionsResult.error;
 
   const rows = referralsResult.data as ReferralRow[];
   const mine = rows.filter((row) => row.referrer_id === user.id);
@@ -196,10 +198,17 @@ export async function fetchReferralOverview(
 
   const birthMonth = (profileResult.data as { birth_month: number | null }).birth_month;
   const today = new Date(`${todayIso}T00:00:00Z`);
-  const hasBirthdayPass = birthMonth === today.getUTCMonth() + 1;
+  const redemptions = (
+    redemptionsResult.data as unknown as { source: "referral" | "birthday"; bookings: { date: string; status: string } }[]
+  ).filter((row) => row.bookings.status !== "cancelled");
+  const birthdayUsed = redemptions.some(
+    (row) => row.source === "birthday" && row.bookings.date.slice(0, 4) === todayIso.slice(0, 4),
+  );
+  const referralUsed = redemptions.filter((row) => row.source === "referral").length;
+  const hasBirthdayPass = birthMonth === today.getUTCMonth() + 1 && !birthdayUsed;
   const monthName = new Intl.DateTimeFormat("en-US", { month: "long", timeZone: "UTC" }).format(today);
 
-  const referralPassCount = credited.length + (welcome ? 1 : 0);
+  const referralPassCount = Math.max(0, credited.length + (welcome ? 1 : 0) - referralUsed);
   const referralSources = [...credited.map((row) => firstName(row.referee_name)), ...(welcome ? ["your welcome"] : [])];
 
   const dayPasses: DayPassEntry[] = [];
@@ -207,7 +216,7 @@ export async function fetchReferralOverview(
     dayPasses.push({
       id: "referral",
       title: referralPassCount === 1 ? "1 referral day pass" : `${referralPassCount} referral day passes`,
-      subtitle: `From ${listNames(referralSources)} · ready to use`,
+      subtitle: referralUsed === 0 ? `From ${listNames(referralSources)} · ready to use` : "Ready to use",
       icon: "referral",
     });
   }

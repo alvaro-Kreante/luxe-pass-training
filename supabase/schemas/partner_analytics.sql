@@ -19,7 +19,9 @@
 
 -- `bookings` cuenta TODAS las reservas del rango (cualquier estado): igual
 -- que `ANALYTICS_SUMMARY` en `src/lib/partner.ts`, day_pass_visits +
--- membership_visits + no_shows + cancellations debe sumar `bookings`.
+-- membership_visits + complimentary_visits + no_shows + cancellations debe
+-- sumar `bookings`. `complimentary_visits`: pagadas con un day pass de
+-- regalo (`day_pass_redemptions`), sin cobro.
 -- Los ingresos son lo cobrado de verdad: pagos `succeeded` de las visitas
 -- y la tarifa de no-show registrada en la reserva.
 create or replace function public.partner_analytics_summary(p_from date, p_to date, p_lounge_id text default null)
@@ -30,7 +32,8 @@ returns table (
   no_shows int,
   cancellations int,
   day_pass_revenue_cents int,
-  no_show_fee_cents int
+  no_show_fee_cents int,
+  complimentary_visits int
 )
 language plpgsql
 security definer
@@ -47,13 +50,19 @@ begin
       count(*) filter (
         where b.status <> 'cancelled' and b.no_show = false
           and not exists (select 1 from public.payments pm where pm.booking_id = b.id and pm.status = 'succeeded')
+          and not exists (select 1 from public.day_pass_redemptions r where r.booking_id = b.id)
       )::int,
       count(*) filter (where b.no_show = true)::int,
       count(*) filter (where b.status = 'cancelled')::int,
       coalesce(sum(
         (select sum(pm.amount_cents) from public.payments pm where pm.booking_id = b.id and pm.status = 'succeeded')
       ) filter (where b.status <> 'cancelled' and b.no_show = false), 0)::int,
-      coalesce(sum(b.cancellation_fee_cents) filter (where b.no_show = true), 0)::int
+      coalesce(sum(b.cancellation_fee_cents) filter (where b.no_show = true), 0)::int,
+      count(*) filter (
+        where b.status <> 'cancelled' and b.no_show = false
+          and not exists (select 1 from public.payments pm where pm.booking_id = b.id and pm.status = 'succeeded')
+          and exists (select 1 from public.day_pass_redemptions r where r.booking_id = b.id)
+      )::int
     from public.bookings b
     where b.lounge_id in (select public.partner_lounge_ids())
       and (p_lounge_id is null or b.lounge_id = p_lounge_id)

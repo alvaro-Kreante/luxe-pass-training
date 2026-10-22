@@ -159,7 +159,7 @@ describe("Analytics.dc.html", () => {
     await renderPage();
 
     await waitFor(() => expect(screen.getByText("$80.25")).toBeVisible());
-    expect(screen.getByText("$0.00")).toBeVisible();
+    expect(screen.getAllByText("$0.00")).toHaveLength(2);
     expect(screen.getByText("$35.00")).toBeVisible();
   });
 
