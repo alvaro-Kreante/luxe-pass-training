@@ -26,7 +26,8 @@ returns table (
   day_pass_visits int,
   membership_visits int,
   day_pass_revenue_cents int,
-  no_show_fee_cents int
+  no_show_fee_cents int,
+  complimentary_visits int
 )
 language plpgsql
 security definer
@@ -42,7 +43,8 @@ begin
       select
         b.*,
         date_trunc(p_grain, b.date)::date as period,
-        coalesce((select sum(pm.amount_cents) from public.payments pm where pm.booking_id = b.id and pm.status = 'succeeded'), 0) as paid
+        coalesce((select sum(pm.amount_cents) from public.payments pm where pm.booking_id = b.id and pm.status = 'succeeded'), 0) as paid,
+        exists (select 1 from public.day_pass_redemptions r where r.booking_id = b.id) as complimentary
       from public.bookings b
       where b.lounge_id in (select public.partner_lounge_ids())
         and (p_lounge_id is null or b.lounge_id = p_lounge_id)
@@ -55,9 +57,10 @@ begin
       count(s.id) filter (where s.no_show = true)::int,
       count(s.id) filter (where s.status = 'cancelled')::int,
       count(s.id) filter (where s.status <> 'cancelled' and s.no_show = false and s.paid > 0)::int,
-      count(s.id) filter (where s.status <> 'cancelled' and s.no_show = false and s.paid = 0)::int,
+      count(s.id) filter (where s.status <> 'cancelled' and s.no_show = false and s.paid = 0 and not s.complimentary)::int,
       coalesce(sum(s.paid) filter (where s.status <> 'cancelled' and s.no_show = false), 0)::int,
-      coalesce(sum(s.cancellation_fee_cents) filter (where s.no_show = true), 0)::int
+      coalesce(sum(s.cancellation_fee_cents) filter (where s.no_show = true), 0)::int,
+      count(s.id) filter (where s.status <> 'cancelled' and s.no_show = false and s.paid = 0 and s.complimentary)::int
     from generate_series(date_trunc(p_grain, p_from), date_trunc(p_grain, p_to), ('1 ' || p_grain)::interval) as p(period)
     left join scoped s on s.period = p.period::date
     group by p.period

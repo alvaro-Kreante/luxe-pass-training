@@ -378,6 +378,29 @@ export interface PartnerGuestRow {
   is_day_pass: boolean;
   visit_number: number;
   emergency_contact: string | null;
+  visit_type: VisitType;
+}
+
+/**
+ * `booking_visit_type` (`supabase/schemas/booking_coverage.sql`): day pass
+ * cobrado, day pass de regalo (referido/cumpleaños, sin cobro) o el plan
+ * real del miembro. Lo comparten partner y admin.
+ */
+export type VisitType = "day_pass" | "complimentary" | "annual" | "monthly" | "membership";
+
+export function visitTypeLabel(type: VisitType): string {
+  switch (type) {
+    case "day_pass":
+      return "Day pass";
+    case "complimentary":
+      return "Complimentary day pass";
+    case "annual":
+      return "Annual member";
+    case "monthly":
+      return "Monthly member";
+    default:
+      return "Member";
+  }
 }
 
 function ordinal(n: number): string {
@@ -466,7 +489,7 @@ export function mapGuestRow(
     bookingId: row.id,
     name: row.member_name,
     initials: initialsFromName(row.member_name),
-    membershipLabel: row.is_day_pass ? "Day pass" : "Annual member",
+    membershipLabel: visitTypeLabel(row.visit_type),
     visitLabel: `${ordinal(row.visit_number)} visit here`,
     arrivalTime: row.slot_time,
     status,
@@ -646,6 +669,8 @@ export interface PartnerAnalyticsSummary {
   cancellations: number;
   day_pass_revenue_cents: number;
   no_show_fee_cents: number;
+  /** Visitas pagadas con un day pass de regalo (`day_pass_redemptions`): sin cobro. */
+  complimentary_visits: number;
 }
 
 /** Tarifa de no-show que `partner_report_no_show` registra en la reserva (`cancellation_fee_cents = 3500`). */
@@ -717,6 +742,7 @@ export function revenueBreakdownToCsv(summary: PartnerAnalyticsSummary): string 
   const rows = [
     ["Day passes", String(summary.day_pass_visits), formatCurrency(breakdown.dayPasses)],
     ["Membership visits", String(summary.membership_visits), formatCurrency(breakdown.membershipVisits)],
+    ["Complimentary day passes", String(summary.complimentary_visits), formatCurrency(0)],
     ["No-show fees", String(summary.no_shows), formatCurrency(breakdown.noShowFees)],
     ["Total", "", formatCurrency(totalRevenueAttributed(breakdown))],
   ];
@@ -910,6 +936,7 @@ const EMPTY_ANALYTICS_SUMMARY: PartnerAnalyticsSummary = {
   cancellations: 0,
   day_pass_revenue_cents: 0,
   no_show_fee_cents: 0,
+  complimentary_visits: 0,
 };
 
 /** Resumen y serie diaria de un lounge del partner (o de todos, con `null`). */

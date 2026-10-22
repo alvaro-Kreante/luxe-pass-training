@@ -150,3 +150,33 @@ $$;
 
 revoke execute on function public.booking_coverage(date) from public, anon;
 grant execute on function public.booking_coverage(date) to authenticated;
+
+-- Tipo real de una visita, para partner y admin: `day_pass` si hay un pago
+-- `succeeded`, `complimentary` si la pagó un day pass de regalo
+-- (`day_pass_redemptions`, sin cobro), y si no el plan del miembro
+-- (`annual`/`monthly`; `membership` si ya no tiene plan activo).
+create or replace function public.booking_visit_type(p_booking_id uuid)
+returns text
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  if exists (select 1 from public.payments pm where pm.booking_id = p_booking_id and pm.status = 'succeeded') then
+    return 'day_pass';
+  end if;
+  if exists (select 1 from public.day_pass_redemptions r where r.booking_id = p_booking_id) then
+    return 'complimentary';
+  end if;
+  return coalesce(
+    (select m.plan from public.bookings b
+     join public.memberships m on m.member_id = b.member_id and m.status = 'active'
+     where b.id = p_booking_id),
+    'membership'
+  );
+end;
+$$;
+
+-- Interna: la llaman las RPC de partner y admin, que ya autorizan.
+revoke execute on function public.booking_visit_type(uuid) from public, anon, authenticated;

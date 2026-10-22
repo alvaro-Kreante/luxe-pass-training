@@ -114,6 +114,7 @@ describe("mapGuestRow — backend real (partner_guest_list → PartnerGuest)", (
     is_day_pass: false,
     visit_number: 3,
     emergency_contact: null,
+    visit_type: "annual" as const,
   };
 
   it("usa el LP# como id de UI y guarda el uuid real como bookingId", () => {
@@ -130,9 +131,11 @@ describe("mapGuestRow — backend real (partner_guest_list → PartnerGuest)", (
     expect(guest.visitLabel).toBe("3rd visit here");
   });
 
-  it("etiqueta day pass vs. membresía según is_day_pass", () => {
+  it("etiqueta el tipo de visita real: day pass cobrado, day pass de regalo o el plan del miembro", () => {
     expect(mapGuestRow(baseRow).membershipLabel).toBe("Annual member");
-    expect(mapGuestRow({ ...baseRow, is_day_pass: true }).membershipLabel).toBe("Day pass");
+    expect(mapGuestRow({ ...baseRow, visit_type: "monthly" }).membershipLabel).toBe("Monthly member");
+    expect(mapGuestRow({ ...baseRow, visit_type: "day_pass", is_day_pass: true }).membershipLabel).toBe("Day pass");
+    expect(mapGuestRow({ ...baseRow, visit_type: "complimentary" }).membershipLabel).toBe("Complimentary day pass");
   });
 
   it("mapea el estado de la reserva al status de PartnerGuest", () => {
@@ -183,6 +186,7 @@ describe("Story 7.3 — revenueBreakdownFor / totalRevenueAttributed (backend re
     cancellations: 7,
     day_pass_revenue_cents: 432798,
     no_show_fee_cents: 31500,
+    complimentary_visits: 4,
   };
 
   it("usa lo cobrado de verdad, no una tarifa por visita", () => {
@@ -268,6 +272,7 @@ describe("revenueBreakdownToCsv", () => {
       cancellations: 7,
       day_pass_revenue_cents: 432798,
       no_show_fee_cents: 31500,
+      complimentary_visits: 4,
     });
 
     expect(csv).toContain("Day passes");
@@ -277,6 +282,21 @@ describe("revenueBreakdownToCsv", () => {
     expect(csv).toContain("No-show fees");
     expect(csv).toContain("$315.00");
     expect(csv).toContain("$4,642.98");
+  });
+
+  it("separa los day passes de regalo, sin importe", () => {
+    const csv = revenueBreakdownToCsv({
+      bookings: 10,
+      day_pass_visits: 0,
+      membership_visits: 0,
+      no_shows: 0,
+      cancellations: 0,
+      day_pass_revenue_cents: 0,
+      no_show_fee_cents: 0,
+      complimentary_visits: 4,
+    });
+
+    expect(csv).toContain('"Complimentary day passes","4","$0.00"');
   });
 });
 
