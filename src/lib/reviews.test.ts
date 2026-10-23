@@ -2,7 +2,7 @@ import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { addDays, today } from "./availability";
-import { fetchLoungeReviews, fetchReviewableVisits, submitReview } from "./reviews";
+import { fetchLoungeReviews, submitReview } from "./reviews";
 import { signUpConfirmedMemberAndSignIn } from "./testing/confirmed-user";
 import { isolatedClient } from "./testing/partner-invite-fixture";
 
@@ -113,18 +113,14 @@ describe("dejar una reseña", () => {
 });
 
 describe("varias visitas al mismo lounge", () => {
-  it("cada visita tiene su propia reseña y las pendientes se listan por visita", async () => {
+  it("cada visita tiene su propia reseña, con su fecha", async () => {
     const { supabase, user } = await member("regular", "Marcus Chen");
     const older = await visit(user.id, { daysAgo: 20, checkedIn: true });
     const newer = await visit(user.id, { daysAgo: 8, checkedIn: true });
 
-    const pending = await fetchReviewableVisits(supabase, loungeId);
-    expect(pending.map((v) => v.bookingId)).toEqual([newer, older]);
-
     await submitReview(supabase, { bookingId: newer, rating: 5, body: "Second visit.", mentions: [] });
-    expect((await fetchReviewableVisits(supabase, loungeId)).map((v) => v.bookingId)).toEqual([older]);
-
     await submitReview(supabase, { bookingId: older, rating: 3, body: "First visit.", mentions: [] });
+
     const { reviews } = await fetchLoungeReviews(supabase, loungeId);
     const marcus = reviews.filter((review) => review.name === "Marcus C.");
     expect(marcus.map((review) => review.visitedOn)).toEqual([addDays(today(), -8), addDays(today(), -20)]);

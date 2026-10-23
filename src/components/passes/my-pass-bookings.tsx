@@ -297,6 +297,11 @@ function PastList({ bookings }: { bookings: PastBooking[] }) {
               >
                 {booking.outcome === "completed" ? "Completed" : booking.outcome === "no-show" ? "No-show" : "Cancelled"}
               </StatusChip>
+              {booking.passHref ? (
+                <Link href={booking.passHref} className={ROW_BUTTON}>
+                  View booking
+                </Link>
+              ) : null}
               <button type="button" className={ROW_BUTTON}>
                 {booking.outcome === "completed" ? "Email receipt" : booking.outcome === "no-show" ? "Dispute" : "Book again"}
               </button>

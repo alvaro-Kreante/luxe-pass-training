@@ -29,6 +29,20 @@ export const PASS_LIFECYCLE_STATES = ["upcoming", "today", "checked-in", "expire
 
 export type PassLifecycleState = (typeof PASS_LIFECYCLE_STATES)[number];
 
+/**
+ * El estado del pase sale de la reserva: `expire_finished_bookings`
+ * (pg_cron, `booking_expiry.sql`) la cierra al acabar la ventana; "hoy" es
+ * la fecha real en el huso del lounge.
+ */
+export function passStateOf(
+  pass: Pick<DigitalPass, "status" | "dateIso" | "loungeTimezone">,
+  now: Date = new Date(),
+): PassLifecycleState {
+  if (pass.status === "completed" || pass.status === "cancelled") return "expired";
+  if (pass.status === "in_progress") return "checked-in";
+  return pass.dateIso === today(pass.loungeTimezone, now) ? "today" : "upcoming";
+}
+
 export function isPassLifecycleState(value: unknown): value is PassLifecycleState {
   return (
     typeof value === "string" &&
@@ -78,6 +92,8 @@ export interface DigitalPass {
   bookingId: string;
   reference: string;
   loungeId: string;
+  /** IANA, `lounges.timezone`. */
+  loungeTimezone: string;
   memberName: string;
   memberEmail: string;
   loungeName: string;
@@ -110,6 +126,7 @@ export interface DigitalPass {
 
 interface LoungeEmbed {
   name: string;
+  timezone?: string;
   address: string;
   reception_note: string;
   partners: { name: string } | null;
@@ -137,7 +154,7 @@ interface BookingRow {
 }
 
 const BOOKING_SELECT =
-  "id, lounge_id, confirmation_code, date, slot_time, special_requests, status, checked_in_at, no_show, created_at, lounges(name, address, reception_note, partners(name)), payments(amount_cents, status), reviews(id)";
+  "id, lounge_id, confirmation_code, date, slot_time, special_requests, status, checked_in_at, no_show, created_at, lounges(name, address, reception_note, timezone, partners(name)), payments(amount_cents, status), reviews(id)";
 
 function amountPaidLabel(payments: PaymentEmbed[] | null): string {
   const succeeded = payments?.find((payment) => payment.status === "succeeded");
@@ -178,6 +195,7 @@ async function fromBookingRow(supabase: SupabaseClient, row: BookingRow): Promis
     bookingId: row.id,
     reference: row.confirmation_code,
     loungeId: row.lounge_id,
+    loungeTimezone: row.lounges?.timezone ?? "America/New_York",
     memberName,
     memberEmail,
     loungeName: row.lounges?.name ?? "",
@@ -225,6 +243,7 @@ export const AINSWORTH_PASS: DigitalPass = {
   bookingId: "00000000-0000-0000-0000-000000000000",
   reference: "LP-842193",
   loungeId: "the-ainsworth",
+  loungeTimezone: "America/New_York",
   memberName: "Alexandra Rivas",
   memberEmail: "alexandra.rivas@example.com",
   partnerName: "The Ainsworth Collection",
@@ -387,6 +406,8 @@ export interface PastBooking {
   dateTimeLabel: string;
   outcome: PastBookingOutcome;
   explanation?: string;
+  /** Detalle de la reserva (y su reseña); null en las canceladas. */
+  passHref: string | null;
 }
 
 function fromPastRow(row: BookingRow): PastBooking {
@@ -398,6 +419,7 @@ function fromPastRow(row: BookingRow): PastBooking {
       loungeName,
       dateTimeLabel: `${formatFullDate(row.date)} · cancelled`,
       outcome: "cancelled",
+      passHref: null,
     };
   }
 
@@ -407,6 +429,7 @@ function fromPastRow(row: BookingRow): PastBooking {
       loungeName,
       dateTimeLabel: `${formatFullDate(row.date)} · ${row.slot_time} · never checked in`,
       outcome: "no-show",
+      passHref: `/my-pass/${row.confirmation_code}`,
       explanation:
         "The booking window closed without a check-in. The visit still counted toward that month, and the day pass was not refunded — that is the cancellation policy you accepted at booking. Cancelling more than 24 hours ahead always avoids this.",
     };
@@ -417,6 +440,7 @@ function fromPastRow(row: BookingRow): PastBooking {
     loungeName,
     dateTimeLabel: `${formatFullDate(row.date)} · checked in ${row.checked_in_at ? formatClockTime(row.checked_in_at) : row.slot_time}`,
     outcome: "completed",
+    passHref: `/my-pass/${row.confirmation_code}`,
   };
 }
 

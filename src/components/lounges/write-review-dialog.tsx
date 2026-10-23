@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { AlertCircle, CalendarDays, Check, ChevronLeft, Loader2, Star, X } from "lucide-react";
+import { AlertCircle, CalendarDays, Check, Loader2, Star, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/eyebrow";
@@ -12,52 +12,44 @@ import {
   REVIEW_MENTIONS,
   REVIEW_MENTIONS_MAX,
   submitReview,
-  type ReviewableVisit,
+  type ReviewVisit,
 } from "@/lib/reviews";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
 /**
- * Story 3.1 — escribir la reseña de una visita. Artboards
- * `WriteReview{Empty,Filled,Submitting,Error,Sent,PickVisit}.dc.html`
- * (desktop, modal de 560px) y sus `…Mobile` (hoja desde abajo, sin
- * "Cancel"). Una reseña por visita: con varias visitas sin reseñar se
- * elige primero cuál.
+ * Story 3.1 — escribir la reseña de una visita, desde el detalle de esa
+ * reserva en My Pass. Artboards
+ * `WriteReview{Empty,Filled,Submitting,Error,Sent}.dc.html` (desktop, modal
+ * de 560px) y sus `…Mobile` (hoja desde abajo, sin "Cancel"). Una reseña por
+ * visita, así que no hace falta el paso de `WriteReviewPickVisit`.
  */
 
 const RATING_LABELS = ["Poor", "Fair", "Good", "Very good", "Excellent"] as const;
 
-type Step = "pick" | "form" | "sent";
+type Step = "form" | "sent";
 
 export function WriteReviewDialog({
   open,
   onOpenChange,
   loungeName,
-  visits: initialVisits,
+  visit,
   onPosted,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   loungeName: string;
-  /**
-   * Visitas con check-in sin reseñar, la más reciente primero. Se fijan al
-   * abrir: `onPosted` refresca la lista de quien abre el diálogo y no debe
-   * quitarle la visita al aviso de "Thank you".
-   */
-  visits: ReviewableVisit[];
+  /** La reserva con check-in que se reseña. */
+  visit: ReviewVisit;
   onPosted: () => void;
 }) {
-  const [visits] = React.useState(initialVisits);
-  const [step, setStep] = React.useState<Step>(visits.length > 1 ? "pick" : "form");
-  const [visitId, setVisitId] = React.useState(visits[0]?.bookingId ?? "");
+  const [step, setStep] = React.useState<Step>("form");
   const [rating, setRating] = React.useState(0);
   const [body, setBody] = React.useState("");
   const [mentions, setMentions] = React.useState<string[]>([]);
   const [submitting, setSubmitting] = React.useState(false);
   const [failed, setFailed] = React.useState(false);
 
-  const visit = visits.find((candidate) => candidate.bookingId === visitId) ?? visits[0];
-  const multiple = visits.length > 1;
 
   function toggleMention(label: string) {
     setMentions((current) =>
@@ -66,7 +58,7 @@ export function WriteReviewDialog({
   }
 
   async function post() {
-    if (!visit || rating === 0) return;
+    if (rating === 0) return;
     setSubmitting(true);
     setFailed(false);
     try {
@@ -80,9 +72,7 @@ export function WriteReviewDialog({
     }
   }
 
-  if (!visit) return null;
-
-  const title = step === "pick" ? "Which visit?" : step === "sent" ? "Thank you" : loungeName;
+  const title = step === "sent" ? "Thank you" : loungeName;
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -122,70 +112,9 @@ export function WriteReviewDialog({
                 </Button>
               </Dialog.Close>
             </div>
-          ) : step === "pick" ? (
-            <>
-              <div className="flex flex-col gap-1.5 pr-13">
-                <Eyebrow>Write a review</Eyebrow>
-                <Dialog.Title className="text-[30px] leading-[1.15] text-fg">{title}</Dialog.Title>
-                <p className="m-0 mt-1 text-sm leading-[1.55] text-fg-muted">
-                  You have {visits.length} visits to {loungeName} without a review. Choose the one
-                  you&apos;d like to review.
-                </p>
-              </div>
-              <fieldset className="m-0 flex flex-col gap-2.5 border-0 p-0">
-                <legend className="sr-only">Visit to review</legend>
-                {visits.map((candidate) => {
-                  const selected = candidate.bookingId === visitId;
-                  return (
-                    <label
-                      key={candidate.bookingId}
-                      className={cn(
-                        "flex min-h-16 cursor-pointer items-center gap-3.5 rounded-[14px] px-4 py-3 transition-colors duration-150",
-                        selected ? "border-[1.5px] border-gold-500 bg-blush-2" : "border border-line bg-surface",
-                      )}
-                    >
-                      <input
-                        type="radio"
-                        name="visit"
-                        checked={selected}
-                        onChange={() => setVisitId(candidate.bookingId)}
-                        className="m-0 size-4.5 accent-gold-600"
-                      />
-                      <span className="flex flex-1 flex-col gap-0.5">
-                        <span className="text-[15px] font-bold text-fg">{candidate.dateLabel}</span>
-                        <span className="text-[12.5px] text-fg-muted">{candidate.checkedInLabel}</span>
-                      </span>
-                      <span className="text-[12.5px] font-bold tracking-[0.04em] text-fg-muted">
-                        {candidate.reference}
-                      </span>
-                    </label>
-                  );
-                })}
-              </fieldset>
-              <div className="flex justify-end gap-3">
-                <Dialog.Close asChild>
-                  <Button variant="secondary" size="md" className="hidden sm:inline-flex">
-                    Cancel
-                  </Button>
-                </Dialog.Close>
-                <Button size="md" className="w-full sm:w-auto" onClick={() => setStep("form")}>
-                  Continue
-                </Button>
-              </div>
-            </>
           ) : (
             <>
               <div className="flex flex-col gap-1.5 pr-13">
-                {multiple ? (
-                  <button
-                    type="button"
-                    onClick={() => setStep("pick")}
-                    className="flex min-h-8 cursor-pointer items-center gap-1 self-start border-0 bg-transparent p-0 text-[13px] font-semibold text-gold-600"
-                  >
-                    <ChevronLeft size={14} strokeWidth={1.8} aria-hidden />
-                    Choose another visit
-                  </button>
-                ) : null}
                 <Eyebrow>Write a review</Eyebrow>
                 <Dialog.Title className="text-[30px] leading-[1.15] text-fg">{title}</Dialog.Title>
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13.5px] text-fg-muted">

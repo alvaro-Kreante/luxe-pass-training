@@ -1,6 +1,5 @@
 import { Star } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/eyebrow";
 import type { LoungeProfile } from "@/lib/lounge-profile";
 import type { LoungeReviews } from "@/lib/reviews";
@@ -15,12 +14,9 @@ import type { LoungeReviews } from "@/lib/reviews";
 export function RatingSummary({
   lounge,
   summary,
-  onWriteReview,
 }: {
   lounge: LoungeProfile;
   summary: Omit<LoungeReviews, "reviews">;
-  /** Solo si el miembro tiene una visita con check-in sin reseñar. */
-  onWriteReview?: () => void;
 }) {
   const count = summary.count;
 
@@ -100,12 +96,6 @@ export function RatingSummary({
           it on for now.
         </p>
       )}
-
-      {onWriteReview ? (
-        <Button variant="outline" block size="lg" className="mt-5.5" onClick={onWriteReview}>
-          Write a review
-        </Button>
-      ) : null}
     </div>
   );
 }

@@ -4,16 +4,18 @@ import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { addDays, today } from "@/lib/availability";
-import { fetchLoungeReviews, fetchReviewableVisits, type ReviewableVisit } from "@/lib/reviews";
+import { bookingReferenceFromId } from "@/lib/booking";
+import { formatFullDate } from "@/lib/passes";
+import { fetchLoungeReviews, type ReviewVisit } from "@/lib/reviews";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
 
 import { WriteReviewDialog } from "./write-review-dialog";
 
 /**
- * Story 3.1 — escribir la reseña de una visita (`WriteReview*.dc.html`).
- * Solo visitas con check-in; una reseña por visita, así que con varias
- * visitas sin reseñar se elige primero cuál (`WriteReviewPickVisit`).
+ * Story 3.1 — escribir la reseña de una visita (`WriteReview*.dc.html`),
+ * desde el detalle de esa reserva. Solo visitas con check-in; una reseña
+ * por visita.
  */
 
 vi.mock("next/navigation", () => ({
@@ -67,36 +69,31 @@ async function checkedInVisit(daysAgo: number): Promise<string> {
   return data.id as string;
 }
 
-async function visitsFor(ids: string[]): Promise<ReviewableVisit[]> {
-  const visits = await fetchReviewableVisits(createClient(), loungeId);
-  return visits.filter((visit) => ids.includes(visit.bookingId));
+async function visitOf(daysAgo: number): Promise<ReviewVisit & { id: string }> {
+  const id = await checkedInVisit(daysAgo);
+  return { id, bookingId: id, reference: bookingReferenceFromId(id), dateLabel: formatFullDate(addDays(today(), -daysAgo)) };
 }
 
-function renderDialog(visits: ReviewableVisit[], onPosted = vi.fn()) {
-  render(
-    <WriteReviewDialog open onOpenChange={vi.fn()} loungeName={loungeName} visits={visits} onPosted={onPosted} />,
-  );
+function renderDialog(visit: ReviewVisit, onPosted = vi.fn()) {
+  render(<WriteReviewDialog open onOpenChange={vi.fn()} loungeName={loungeName} visit={visit} onPosted={onPosted} />);
   return onPosted;
 }
 
-describe("una sola visita sin reseñar", () => {
-  it("va directo al formulario de esa visita y no deja publicar sin estrellas", async () => {
-    const id = await checkedInVisit(30);
-    const visits = await visitsFor([id]);
+describe("formulario de reseña", () => {
+  it("muestra la visita que se reseña y no deja publicar sin estrellas", async () => {
+    const visit = await visitOf(30);
 
-    renderDialog(visits);
+    renderDialog(visit);
 
     const dialog = await screen.findByRole("dialog", { name: loungeName });
-    expect(within(dialog).getByText(visits[0]!.dateLabel)).toBeInTheDocument();
-    expect(within(dialog).getByText(visits[0]!.reference)).toBeInTheDocument();
-    expect(within(dialog).queryByRole("button", { name: "Choose another visit" })).toBeNull();
+    expect(within(dialog).getByText(visit.dateLabel)).toBeInTheDocument();
+    expect(within(dialog).getByText(visit.reference)).toBeInTheDocument();
     expect(within(dialog).getByRole("button", { name: "Post review" })).toBeDisabled();
   });
 
   it("publica la reseña con nota, texto y etiquetas, y da las gracias", async () => {
     const user = userEvent.setup({ delay: null });
-    const id = await checkedInVisit(31);
-    const onPosted = renderDialog(await visitsFor([id]));
+    const onPosted = renderDialog(await visitOf(31));
 
     await user.click(await screen.findByRole("radio", { name: "4 stars" }));
     expect(screen.getByText("Very good")).toBeInTheDocument();
@@ -117,8 +114,7 @@ describe("una sola visita sin reseñar", () => {
 
   it("no deja marcar más de 5 etiquetas", async () => {
     const user = userEvent.setup({ delay: null });
-    const id = await checkedInVisit(32);
-    renderDialog(await visitsFor([id]));
+    renderDialog(await visitOf(32));
 
     for (const label of ["Quiet", "Fast WiFi", "Staff", "Coffee", "Food"]) {
       await user.click(await screen.findByRole("button", { name: label }));
@@ -130,11 +126,10 @@ describe("una sola visita sin reseñar", () => {
 
   it("si no se puede publicar, avisa y conserva lo escrito", async () => {
     const user = userEvent.setup({ delay: null });
-    const id = await checkedInVisit(33);
-    const visits = await visitsFor([id]);
-    renderDialog(visits);
+    const visit = await visitOf(33);
+    renderDialog(visit);
     // Otra pestaña ya la publicó: el insert choca con "una reseña por visita".
-    await admin.from("reviews").insert({ booking_id: id, member_id: memberId, rating: 5 });
+    await admin.from("reviews").insert({ booking_id: visit.id, member_id: memberId, rating: 5 });
 
     await user.click(await screen.findByRole("radio", { name: "3 stars" }));
     await user.type(screen.getByLabelText(/Tell other members about your visit/), "Kept text");
@@ -143,34 +138,5 @@ describe("una sola visita sin reseñar", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("We couldn't post your review.");
     expect(screen.getByLabelText(/Tell other members about your visit/)).toHaveValue("Kept text");
     expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
-  });
-});
-
-describe("varias visitas sin reseñar al mismo lounge", () => {
-  it("pide elegir la visita y reseña la elegida", async () => {
-    const user = userEvent.setup({ delay: null });
-    const newer = await checkedInVisit(40);
-    const older = await checkedInVisit(55);
-    const visits = await visitsFor([newer, older]);
-    renderDialog(visits);
-
-    expect(await screen.findByRole("heading", { name: "Which visit?" })).toBeInTheDocument();
-    expect(screen.getByText(/You have 2 visits to/)).toBeInTheDocument();
-    const olderVisit = visits.find((visit) => visit.bookingId === older)!;
-    await user.click(screen.getByRole("radio", { name: new RegExp(olderVisit.dateLabel) }));
-    await user.click(screen.getByRole("button", { name: "Continue" }));
-
-    expect(screen.getByText(olderVisit.dateLabel)).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Choose another visit" }));
-    expect(screen.getByRole("heading", { name: "Which visit?" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Continue" }));
-
-    await user.click(screen.getByRole("radio", { name: "5 stars" }));
-    await user.click(screen.getByRole("button", { name: "Post review" }));
-    await screen.findByRole("heading", { name: "Thank you" });
-
-    const remaining = (await fetchReviewableVisits(createClient(), loungeId)).map((visit) => visit.bookingId);
-    expect(remaining).toContain(newer);
-    expect(remaining).not.toContain(older);
   });
 });

@@ -31,6 +31,9 @@ create table if not exists public.lounges (
   -- Story 3.1 — agregado de reseñas, lo mantiene `refresh_lounge_rating`
   -- (`reviews.sql`) con cada reseña real.
   review_count         integer not null default 0,
+  -- Story 5.1 — huso IANA del lounge: la ventana de la visita (llegada + 4 h)
+  -- acaba en su hora local (`expire_finished_bookings`, `booking_expiry.sql`).
+  timezone             text not null default 'America/New_York',
   -- Story 3.2 — capacidad y restricciones estáticas por lounge.
   capacity             integer not null default 40,
   booking_restrictions text[] not null default '{}',

@@ -63,8 +63,10 @@ check-in). Abierto:
 - **Sin moderación ni respuesta del partner:** el admin no puede ocultar una
   reseña y el miembro no puede editarla ni borrarla.
 - **Sin aviso para reseñar:** el pase con check-in promete "We will ask how
-  it went", pero nadie lo pide; se reseña desde el pase caducado o desde
-  `/lounges/[id]/reviews`.
+  it went", pero nadie lo pide; se reseña entrando al detalle de la reserva
+  en My Pass.
+- **Partner y admin aún no ven las reseñas:** `lounge_reviews` ya se las
+  devuelve, faltan las pantallas (y sus artboards).
 - **Al subir a `staging`/`main`,** la migración `reset_seeded_lounge_ratings`
   deja a 0 la nota y el recuento de todos los lounges remotos (decisión del
   usuario: nada de cifras sembradas).
@@ -227,7 +229,6 @@ nada los hace cumplir.
 | 3.1 | Call and Directions quick action buttons (google maps url) | Enlaces reales (`tel:` y Google Maps con la dirección de muestra); no hay verificación de que el teléfono o la dirección existan |
 | 3.1 | Share lounge option via social/messaging apps | Los destinos (Messages, WhatsApp, Instagram…) son botones sin integración; solo "Copy" usa una API real del navegador (`navigator.clipboard`) |
 | 4.2 | Apple Pay and Google Pay integration | El Payment Element de Stripe los ofrece automáticamente, pero exigen dominio verificado que no funciona en `localhost` ni sin el rollout de Vercel (`docs/PENDIENTES.md` §4.4) — pueden quedar visualmente presentes pero inertes hasta ese rollout, no es una simulación sino un gap de infraestructura |
-| 5.1 | Booking expires automatically after booking window | **Sigue igual tras conectar Epic 5 y Epic 6 (21 sept 2026).** No hay cron que mueva una reserva vencida a completed/no-show por el paso del tiempo — ninguna historia de Epic 6 lo pedía como AC, así que no se construyó: los cuatro estados del pase se siguen eligiendo por `?state=` en `/my-pass/[reference]`, ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 5" |
 | 5.2 | Emergency contact information accessible to staff | **El mecanismo de acceso ya es real** (`reception_lookup_booking` lee `profiles.emergency_contact_*`) — lo que sigue sin ser real es el registro de "cada acceso queda registrado" (solo texto) y la propia captura del dato: `/profile/privacy` (Story 6.3, ya conectada) LEE el contacto real, pero "Edit" para escribirlo sigue inerte — sin artboard propio para ese formulario |
 | 6.1 | Support contact for booking issues - Admin | Las filas "Something wrong with a booking?" / "Disagree with a fee or a no-show?" siguen sin abrir ninguna conversación — la consola de soporte (Epic 8, ya conectada) no tiene un flujo de "abrir un caso desde la reserva del miembro", solo el "New case" inerte de `/admin/support` |
 | 6.2 | New lounge partner announcements / Membership renewal reminders / Special offers and promotions / Birthday month promotion | **Parcialmente resuelto tras conectar Epic 6 (21 sept 2026).** Dependen de datos que Epic 7/9 todavía no modelan de verdad, así que se siembran como notificaciones de muestra REALES (filas de verdad en `notifications`, no sintéticas del cliente) al crear el perfil — ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 6" |
@@ -514,6 +515,20 @@ reports with their cadence" falla aislado con "Found multiple elements with
 the text: Every day": la base local acumula informes programados que el test
 no espera (visto el 23 oct 2026, con y sin la rama de reseñas). Sin
 investigar.
+
+### 4.18 Cierre automático de reservas: lo que queda
+
+`expire_finished_bookings` (pg_cron, 23 oct 2026) cierra las reservas al
+acabar la ventana en el huso de `lounges.timezone`. Abierto:
+
+- **El alta de un lounge no pide el huso:** nace con `America/New_York`.
+  Google Places no lo trae; haría falta la Time Zone API o elegirlo en el
+  formulario. Hoy solo Tacna/Arequipa están en `America/Lima`.
+- **La lista de espera de una fecha pasada** no se cierra: sigue en
+  `waitlisted` (cancelarla avisaría al partner con
+  `notify_partner_cancellation`).
+- **En los remotos** el cron cerrará en su primera pasada todas las reservas
+  ya vencidas de `luxepass-dev`/`luxepass-prod`.
 
 ## 5. Decisiones abiertas
 

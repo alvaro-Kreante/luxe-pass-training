@@ -9,17 +9,11 @@ import { RequireSession } from "@/components/onboarding/require-session";
 import { LoungeSubviewHeader } from "@/components/lounges/lounge-subview-header";
 import { RatingSummary } from "@/components/lounges/rating-summary";
 import { ReviewCard } from "@/components/lounges/review-card";
-import { WriteReviewDialog } from "@/components/lounges/write-review-dialog";
 import { AppShell } from "@/components/patterns/app-shell";
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { fetchLoungeProfile, type LoungeProfile } from "@/lib/lounge-profile";
-import {
-  fetchLoungeReviews,
-  fetchReviewableVisits,
-  type LoungeReviews,
-  type ReviewableVisit,
-} from "@/lib/reviews";
+import { fetchLoungeReviews, type LoungeReviews } from "@/lib/reviews";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -44,33 +38,19 @@ function ReviewsScreen() {
     undefined,
   );
   const [summary, setSummary] = React.useState<LoungeReviews | null>(null);
-  const [visits, setVisits] = React.useState<ReviewableVisit[]>([]);
-  const [writing, setWriting] = React.useState(false);
 
-  const refreshReviews = React.useCallback(async () => {
-    const supabase = createClient();
-    const [reviews, pending] = await Promise.all([
-      fetchLoungeReviews(supabase, id),
-      fetchReviewableVisits(supabase, id),
-    ]);
-    setSummary(reviews);
-    setVisits(pending);
-  }, [id]);
 
   React.useEffect(() => {
     const supabase = createClient();
     let active = true;
 
-    Promise.all([
-      fetchLoungeProfile(supabase, id),
-      fetchLoungeReviews(supabase, id),
-      fetchReviewableVisits(supabase, id),
-    ]).then(([profile, reviews, pending]) => {
-      if (!active) return;
-      setLounge(profile);
-      setSummary(reviews);
-      setVisits(pending);
-    });
+    Promise.all([fetchLoungeProfile(supabase, id), fetchLoungeReviews(supabase, id)]).then(
+      ([profile, reviews]) => {
+        if (!active) return;
+        setLounge(profile);
+        setSummary(reviews);
+      },
+    );
 
     return () => {
       active = false;
@@ -109,20 +89,7 @@ function ReviewsScreen() {
 
         <div className="flex flex-1 gap-7 overflow-y-auto px-8 pb-7 pt-6">
           <div className="h-fit w-[344px] shrink-0 rounded-content border border-line bg-surface p-5.5 shadow-content">
-            <RatingSummary
-              lounge={lounge}
-              summary={summary}
-              onWriteReview={visits.length > 0 ? () => setWriting(true) : undefined}
-            />
-            {writing ? (
-              <WriteReviewDialog
-                open
-                onOpenChange={setWriting}
-                loungeName={lounge.name}
-                visits={visits}
-                onPosted={refreshReviews}
-              />
-            ) : null}
+            <RatingSummary lounge={lounge} summary={summary} />
           </div>
 
           <div className="min-w-0 flex-1">

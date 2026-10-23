@@ -240,6 +240,20 @@ describe("pestaña Past", () => {
     expect(screen.getByText(/booking window closed without a check-in/i)).toBeInTheDocument();
   });
 
+  it("cada visita pasada lleva a su detalle, donde se deja la reseña", async () => {
+    const user = userEvent.setup({ delay: null });
+    await renderMyPass();
+
+    await screen.findByText("In progress");
+    await user.click(screen.getByRole("tab", { name: /past/i }));
+    const row = (await screen.findByText("The Meridian Salon")).closest("li")!;
+
+    expect(within(row).getByRole("link", { name: "View booking" })).toHaveAttribute(
+      "href",
+      expect.stringMatching(/^\/my-pass\/LP-\d{6}$/),
+    );
+  });
+
   it("filtra el historial por estado", async () => {
     const user = userEvent.setup({ delay: null });
     await renderMyPass();

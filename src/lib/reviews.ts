@@ -1,6 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { formatClockTime, formatFullDate } from "./passes";
 
 /**
  * Story 3.1 — "User ratings and review count (if available)" con reseñas
@@ -133,57 +132,10 @@ export async function submitReview(supabase: SupabaseClient, input: ReviewInput)
   if (error) throw error;
 }
 
-export interface ReviewableVisit {
+/** La visita que se reseña, tal como la muestra el formulario. */
+export interface ReviewVisit {
   bookingId: string;
   reference: string;
-  loungeId: string;
-  loungeName: string;
-  date: string;
+  /** "Thu, Oct 16, 2026" */
   dateLabel: string;
-  /** "Checked in 10:12 AM" */
-  checkedInLabel: string;
-}
-
-interface VisitRow {
-  id: string;
-  confirmation_code: string;
-  lounge_id: string;
-  date: string;
-  checked_in_at: string;
-  lounges: { name: string } | null;
-  reviews: { id: string }[] | null;
-}
-
-/** Visitas con check-in del propio miembro que aún no tienen reseña, la más reciente primero. */
-export async function fetchReviewableVisits(
-  supabase: SupabaseClient,
-  loungeId?: string,
-): Promise<ReviewableVisit[]> {
-  let query = supabase
-    .from("bookings")
-    .select("id, confirmation_code, lounge_id, date, checked_in_at, lounges(name), reviews(id)")
-    .not("checked_in_at", "is", null)
-    .order("date", { ascending: false })
-    .order("slot_time", { ascending: false });
-  if (loungeId) query = query.eq("lounge_id", loungeId);
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return [];
-
-  const { data, error } = await query.eq("member_id", user.id);
-  if (error) throw error;
-
-  return ((data ?? []) as unknown as VisitRow[])
-    .filter((row) => !row.reviews || row.reviews.length === 0)
-    .map((row) => ({
-      bookingId: row.id,
-      reference: row.confirmation_code,
-      loungeId: row.lounge_id,
-      loungeName: row.lounges?.name ?? "",
-      date: row.date,
-      dateLabel: formatFullDate(row.date),
-      checkedInLabel: `Checked in ${formatClockTime(row.checked_in_at)}`,
-    }));
 }
