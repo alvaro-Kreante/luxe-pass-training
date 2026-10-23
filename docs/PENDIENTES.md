@@ -2,7 +2,8 @@
 
 Registro vivo de lo que queda abierto en el proyecto: lo que falta, lo que es
 provisional y lo que hay que decidir. **Al terminar una historia, revisar este
-archivo**: añadir lo que quede abierto y cerrar lo que se haya resuelto.
+archivo**: añadir lo que quede abierto y borrar lo que se haya resuelto (el
+historial queda en git).
 
 Aquí no van las tareas normales de implementación —para eso está el estado por
 epic en `CLAUDE.md`— ni las decisiones ya tomadas, que viven como desviaciones en
@@ -52,72 +53,15 @@ aceptación con fecha y versión.
 
 ## 2. Provisional — cae solo al avanzar los epics
 
-### 2.1 La nav del App shell apunta a pantallas que aún no existen
-
-El App shell (patrón 3) fija la navegación completa del área de miembro
-— Home · Explore · My Pass · Profile — porque así la declara el design system y
-así la dibujan todos los artboards de las Fases 1 y 3. Las cuatro ya existen
-desde el Epic 6.
-
-El link "Log out" del App shell sigue apuntando a `/login` en vez de cerrar una
-sesión real — nota desactualizada: Supabase Auth es real desde Epic 1, así
-que sí hay una sesión que cerrar (`supabase.auth.signOut()`, ya usado por el
-flujo de borrado de cuenta de la Story 6.3), simplemente nadie ha
-conectado todavía este link concreto.
-
-**Se resuelve:** ningún AC de ninguna historia pide "Log out" explícitamente
-(es un elemento fijo del App shell, patrón 3, no de una historia), así que
-queda fuera de esta rama por alcance — candidato obvio para la próxima vez
-que se toque el App shell.
-
-### 2.2 Enlace "I have verified my email"
-
-En `/verify-email` hay un enlace que avanza al alta manualmente. Sin backend, el
-enlace del correo de verificación no puede devolver al usuario a la app, y sin él
-el flujo quedaría cortado.
-
-**Se sustituye:** por la ruta `/verify-email/[token]` cuando exista la API de
-verificación.
-
-### 2.2 El proveedor de mapa real y sus dos estados de borde — resuelto
-
-**Resuelto** (sept 2026): Google Maps real (`@vis.gl/react-google-maps`),
-decisión tomada con el usuario. Los cuatro criterios de sistema/red de la
-Story 2.1 ya tienen su condición real:
-
-| Qué | Cómo está ahora |
-|---|---|
-| Permiso de ubicación | `lib/geolocation.ts` llama a `navigator.geolocation` de verdad |
-| Error de carga del mapa | `useMapLoadStatus` — timeout real de 3s + `onError` del `APIProvider`, ya no `?map=error` |
-| Modo offline | `useOnlineStatus` — `navigator.onLine` real + eventos `online`/`offline`, ya no `?offline=1`. El service worker real (qué queda "cacheado" de verdad) sigue sin construirse |
-| Carga de la lista | `LoungeList` recibe un `loading` real de `fetchLounges` |
-
-### 2.3 El plano de `\/explore` — resuelto
-
-**Resuelto** (sept 2026): `city-map-base.tsx` (el SVG de `Main.dc.html`) se
-sustituyó por Google Maps real, conservando `CityMap` — markers, controles,
-callout, escala — tal como anticipaba `DESIGN-SYSTEM.md` §6 (Fase 3). Detalle
-en `docs/design/COMPONENT-MAP.md` "Backend real — Epic 2".
-
-### 2.4 El perfil de lounge no tiene datos de detalle propios para 16 de los 17 lounges — resuelto
-
-**Resuelto** (sept 2026, Epic 3 conectado a Supabase local): contacto,
-horario, capacidad y restricciones son columnas reales de `public.lounges`
-para los 17 lounges — ver `docs/design/COMPONENT-MAP.md` "Backend real —
-Epic 3". Solo **The Ainsworth** (artboards de la Fase 4) y **Belmont
-Terrace** (`NoRatings.dc.html`) siguen con contacto literal citado del
-mockup; el resto recibe contacto plausible sembrado con la misma fórmula
-de antes — ya no derivado en cada carga, sembrado una vez en la migración.
-
-**Sigue sin resolver, a propósito:** el contenido de cada reseña individual
-(nombre, texto), el desglose por estrellas y "what members mention" siguen
-siendo datos de muestra — ninguna historia permite dejar una reseña, así
-que no hay tabla `reviews` (ver `docs/DATA-MODEL-MAP.md`).
-
 ### 2.5 "Write a review" no hace nada
 
 El botón de `RatingSummary` no tiene una pantalla de destino: ninguna historia
 de los 9 epics cubre redactar una reseña, solo leerlas (Story 3.1).
+
+Por lo mismo, el contenido de cada reseña individual (nombre, texto), el
+desglose por estrellas y "what members mention" siguen siendo datos de
+muestra: no hay tabla `reviews` (ver `docs/DATA-MODEL-MAP.md`). Rating y
+número de reseñas sí son reales.
 
 **Se resuelve:** cuando una historia futura defina esa pantalla.
 
@@ -130,15 +74,6 @@ recibe por prop, así que un lector real no obtendría nada útil de él.
 
 **Se resuelve:** añadiendo una librería de generación de QR cuando el pase
 tenga que ser escaneable de verdad, no solo mostrarse.
-
-### 2.7 `/reception` sin login de personal — resuelto
-
-Cerrado por SEC-01 (`docs/audit/seguridad-y-datos.md`, 12 oct 2026): las
-RPC `reception_*` ya no se conceden a `anon` y solo responden en los
-lounges del partner de quien llama (`partner_lounge_ids()`); `/reception`
-exige sesión de partner (`RequirePartnerSession`) y usa el lounge elegido
-en su contexto. La consola sigue en su URL propia, fuera del shell de
-`/partner`: ninguna historia pide fusionarla con el dashboard.
 
 ### 2.7b El bloqueo tras 5 intentos de login en remoto solo lo aplica `/login`
 
@@ -170,25 +105,12 @@ Sigue abierto, por decisión de coste:
 
 El sidebar de `/partner` (patrón 15) fija la nav completa — Today · Guests ·
 Analytics · Reports · Settings — porque así la declara `Main.dc.html`. Las
-cuatro primeras ya tienen ruta; **"Settings" queda inerte** (sin `href`), igual
-que "Membership" en el sub-nav de cuenta (ver 2.1b). Los tres emails del
+cuatro primeras ya tienen ruta; **"Settings" queda inerte** (sin `href`). Los tres emails del
 Epic 7 mencionan "Settings → Notifications" para elegir quién del equipo
 recibe cada aviso, pero esa vista no está diseñada — `DESIGN-SYSTEM.md` §6
 (Fase 2) ya la deja fuera de las tres historias.
 
 **Se resuelve:** cuando una historia futura diseñe esa pantalla.
-
-### 2.8b La flecha de las filas de `/partner/guests` no lleva a ningún sitio
-
-El ticket 002 hizo clicables las filas de las tablas de Admin y Partner
-(`TableRow`), pero en `/partner/guests` (Story 7.3, `RepeatGuests.dc.html`) la
-flecha de cada fila sigue siendo decorativa: no existe una pantalla de detalle
-de un invitado recurrente ni artboard para ella, y la ficha de Today es de una
-reserva concreta, no de un historial. Decisión (6 oct 2026): queda pendiente,
-sin quitar la flecha ni reutilizar otra ficha.
-
-**Se resuelve:** cuando se diseñe el detalle del invitado recurrente (o se
-decida quitar la flecha).
 
 ### 2.9 Mini-mapa embebido en el perfil de lounge sigue sin construirse
 
@@ -199,28 +121,6 @@ junto a los botones Call/Directions — el único motivo que queda es que no
 existe ningún artboard con un hueco de mapa en esa pantalla.
 
 **Desbloquea:** que una historia futura diseñe ese hueco en el artboard.
-
-### 2.10 `lounge_availability` (Epic 3) era un seed estático — **resuelto (25 sept 2026)**
-
-Señalado por el usuario al revisar Epic 3 (17 sept 2026): las plazas por
-lounge/fecha/franja eran un seed escrito una vez por
-`supabase/migrations/..._seed_lounge_profiles_story_3.sql` (18 semanas
-desde `TODAY`), así que un lounge dado de alta después no tendría
-disponibilidad sin otra migración. Se dejó como deuda consciente hasta que
-el alta de lounges (Story 8.3) lo necesitó.
-
-Resuelto en `refactor/live-lounge-availability`: la tabla se eliminó y la
-disponibilidad se calcula en vivo (`lounge_availability_range`, ver
-`docs/design/COMPONENT-MAP.md` "Backend real — Epic 3"): `capacity` (aforo
-**por franja**, confirmado por el usuario) − reservas que ocupan plaza,
-con la plantilla de `lounges` (`bands`/`closed_weekdays`) +
-`lounge_closures` para decidir qué franjas abren. Cualquier lounge, nuevo
-o viejo, es reservable sin sembrar nada. Consecuencia visible: los estados
-"Full"/"Filling fast" del demo ya no salen de valores sembrados, solo de
-reservas reales (aforo sembrado: 40 por franja).
-
-"Add lounge" (Story 8.3) ya no está bloqueado por disponibilidad; sigue
-sin formulario por falta de artboard (ver §3, fila 8.3).
 
 ### 2.11 La promoción automática de la waitlist no tiene mecanismo real en ningún epic
 
@@ -238,17 +138,6 @@ habría expandido el alcance del Epic 4 (dueño real de `bookings`), no del 7
 **Desbloquea:** que una historia futura (probablemente una extensión de
 Epic 4, "Waitlist management") defina y construya esa promoción automática.
 
-El cron de recordatorios de la Story 5.3 (`dispatch_booking_reminders()`,
-ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 5") sigue sin
-poder ejercitarse de punta a punta en este entorno: usa el reloj real
-(`now()`) para "24 horas antes", y aunque la disponibilidad ya se calcula
-en vivo para cualquier fecha, el calendario de reserva parte del `TODAY`
-fijo de la app (2025-09-09, `src/lib/availability.ts`) — ninguna reserva
-hecha desde la UI cae en esa ventana. Lo mismo el aviso de las 6 AM de la
-Story 6.2 (`dispatch_morning_notifications()`), el digest del partner
-(7.2) y los reportes programados (8.2). El único ancla que queda es ese
-`TODAY` fijo.
-
 ### 2.12 Epic 9: day passes sin gastar y otros huecos reales
 
 Conectado Epic 9 (23 sept 2026), quedan huecos conscientes — decisiones de
@@ -262,9 +151,7 @@ alcance tomadas con el usuario, no simulaciones:
   **Desbloquea:** decidir una política de reintentos/gracia.
 - **El límite de 10 day passes de referido por año (Terms §5) no se
   aplica.** Los day passes ya se gastan de verdad al reservar
-  (`booking_coverage.sql`), pero no hay tope anual. "Use a day pass" en
-  `/profile/membership/referrals` sigue sin destino propio — se gastan solos
-  al reservar, sin elegir cuál.
+  (`booking_coverage.sql`), pero no hay tope anual.
 - **Un pago reembolsado no retira el premio de referido** (Terms §3: "If
   that payment fails or is refunded, the pending reward is withdrawn") —
   un pago fallido nunca lo acredita, pero un reembolso posterior (Story
@@ -287,29 +174,11 @@ alcance tomadas con el usuario, no simulaciones:
   Retirarla rompe los tests de Story 6.2 que la usan como muestra; queda
   para una limpieza de Epic 6.
 
-### 2.13 Filas `payments` en `pending` que nunca se cierran
-
-Cada Checkout Session de tarjeta nueva nace con su fila `payments` en
-`pending` (`stripe-create-checkout-session`). Desde el ticket 001 hay una
-sola por intento, pero siguen quedando huérfanas las de los intentos
-abandonados: el miembro elige "Use a new card" y se va, o marca/desmarca
-"Save this card" (abre otra sesión, ver desviación en `COMPONENT-MAP.md`).
-No se cobran ni se ligan a ninguna reserva, pero nadie las pasa a un
-estado final ni expira la sesión en Stripe. **Desbloquea:** decidir si un
-cron las cierra (p. ej. al expirar la sesión, con
-`checkout.session.expired` en `stripe-webhook`) o si se filtran en los
-reportes de Epic 8.
-
 ### 2.14 Vista de reservas: lo que queda tras la Story 8.4 (13 oct 2026)
 
 `/admin/bookings` (Story 8.4, historia propuesta por el equipo, no del
 cliente) ya es real. Abierto:
 
-- **Filtro por fecha del partner: resuelto (13 oct 2026).** `/partner` usa
-  el mismo `DayStepper`; un día que no es hoy es de solo lectura (sin
-  check-in ni no-show, que se registran el propio día o los corrige el
-  admin). Decisión tomada sin consultar al cliente: confirmar que el
-  partner no necesita corregir días pasados él mismo.
 - **"Undo check-in" / "Undo no-show" del partner, solo hoy** (decidido con el
   usuario, 13 oct 2026, `partner_undo_booking_status`). Sin zona horaria en
   `lounges`, el servidor acepta ayer/hoy/mañana de su reloj y la pantalla lo
@@ -326,15 +195,6 @@ cliente) ya es real. Abierto:
   hay email ni notificación in-app para una corrección del admin.
 
 ---
-
-### 2.15 Barras de "Bookings per day" desbordadas con Month en `/admin/analytics`
-
-Con 14 días caben; con "Month" (30 barras) las etiquetas de día se salen por
-la derecha de la tarjeta y se pintan encima de "Revenue by partner" (visto a
-1440 px el 20 oct 2026, igual antes y después de PERF-02). Quarter (90
-barras) no se ha mirado, pero previsiblemente también. `Analytics.dc.html`
-solo dibuja la vista de 14 días: hace falta decidir cómo se resumen 30 y 90
-días (agrupar por semana, etiquetas cada N días…) antes de tocarlo.
 
 ### 2.16 La columna "Where the money comes from" de `/partner/analytics` queda fuera de pantalla
 
@@ -362,27 +222,12 @@ nada los hace cumplir.
 | 4.2 | Apple Pay and Google Pay integration | El Payment Element de Stripe los ofrece automáticamente, pero exigen dominio verificado que no funciona en `localhost` ni sin el rollout de Vercel (`docs/PENDIENTES.md` §4.4) — pueden quedar visualmente presentes pero inertes hasta ese rollout, no es una simulación sino un gap de infraestructura |
 | 5.1 | Booking expires automatically after booking window | **Sigue igual tras conectar Epic 5 y Epic 6 (21 sept 2026).** No hay cron que mueva una reserva vencida a completed/no-show por el paso del tiempo — ninguna historia de Epic 6 lo pedía como AC, así que no se construyó: los cuatro estados del pase se siguen eligiendo por `?state=` en `/my-pass/[reference]`, ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 5" |
 | 5.2 | Emergency contact information accessible to staff | **El mecanismo de acceso ya es real** (`reception_lookup_booking` lee `profiles.emergency_contact_*`) — lo que sigue sin ser real es el registro de "cada acceso queda registrado" (solo texto) y la propia captura del dato: `/profile/privacy` (Story 6.3, ya conectada) LEE el contacto real, pero "Edit" para escribirlo sigue inerte — sin artboard propio para ese formulario |
-| 6.1 | No show policy enforcement - flat fee | **Resuelto tras conectar Epic 6 (21 sept 2026), a medias a propósito.** El fee de $35.00 se registra de verdad (`bookings.cancellation_fee_cents`, tanto en `cancel_booking` como en `reception_report_no_show`) — decisión tomada con el usuario: no se cobra de verdad contra Stripe, solo se anota |
 | 6.1 | Support contact for booking issues - Admin | Las filas "Something wrong with a booking?" / "Disagree with a fee or a no-show?" siguen sin abrir ninguna conversación — la consola de soporte (Epic 8, ya conectada) no tiene un flujo de "abrir un caso desde la reserva del miembro", solo el "New case" inerte de `/admin/support` |
 | 6.2 | New lounge partner announcements / Membership renewal reminders / Special offers and promotions / Birthday month promotion | **Parcialmente resuelto tras conectar Epic 6 (21 sept 2026).** Dependen de datos que Epic 7/9 todavía no modelan de verdad, así que se siembran como notificaciones de muestra REALES (filas de verdad en `notifications`, no sintéticas del cliente) al crear el perfil — ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 6" |
 | 6.2 | Ajustes de canal (push/email/sms) | Los switches de `/profile/notifications` cambian solo el estado local del componente; ningún AC de la Story 6.2 pide persistirlos, así que se quedan de muestra a propósito (decisión tomada con el usuario) |
-
-| 7.1 | Real-time updates when new bookings are made | La reserva de Naomi Feldstein llega por un `setTimeout` determinista al entrar en `/partner` (`applyLiveBooking`), no por un canal en vivo contra un backend |
-| 7.1 | Check-in status tracking / no-show reporting | El estado de cada invitado vive en `useState` de `TodayDashboard`; no hay "app del miembro" real que reciba el check-in al marcar la casilla, solo el aviso de que lo haría |
-| 7.2 | Email notification for each new booking / morning digest / cancellation notifications | Las tres son pantallas del email tal como llegaría (`/partner/emails/*`), igual que `Receipt.dc.html`/`Reminder.dc.html`; no se envía ningún correo ni se programa el digest de las 6:30 AM |
-| 7.2 | Waitlist promotion alerts | La promoción de Victor Almeida es el mismo `setTimeout` determinista que la cancelación de Harriet Osei (`applyCancellationAndPromotion`), no una cola de espera real |
-| 7.3 | Weekly/monthly booking volume reports / revenue attribution / repeat guest identification | `lib/partner.ts` fija cifras de muestra que cuadran entre sí (187 reservas, $8,616.50, 412 miembros); no hay un almacén de reservas real del que agregarlas |
-| 7.3 | Downloadable reports in CSV | Las descargas de `/partner/guests`, `/partner/analytics` y `/partner/reports` son CSV reales generados en el cliente (`downloadTextFile`); **Resuelto (21 oct 2026):** los seis informes de `/partner/reports` salen de datos reales, "Email it to the team" envía el CSV por Brevo (`send-partner-report`) y "Downloaded recently" es el registro real `partner_report_exports` |
-
 | 8.1 | Escalation to manager functionality | **Sigue igual tras conectar Epic 8 (22 sept 2026).** "Escalate" cambia `support_tickets.status` a `escalated` de verdad, pero Dana Mbeki (`DUTY_MANAGER`) sigue siendo un dato de muestra fijo — no hay bandeja de manager real ni notificación |
 | 8.1 | Every action logged (audit trail) | **Sigue igual tras conectar Epic 8.** El chip "Every action logged" de la topbar es constante; no es un AC propio de ninguna historia (es chrome del patrón 21), así que no se construyó un registro de auditoría aparte — cada acción real (reembolso, cambio de reserva, mensaje) ya queda escrita en su propia tabla, solo no hay un log unificado que las muestre juntas |
-| 8.3 | Add lounge profile | **Resuelto (25 sept 2026).** Alta real en `/admin/lounges/new` (artboards 14 y 15 de la Fase 8): nace borrador, se publica directo sin cola de aprobación, la dirección sale de Google Places y solo se edita mientras es borrador. Queda pendiente activar la Places API en la clave de Google (§4.11) |
 | 8.3 | Image optimization and resizing | **Resuelto a medias tras conectar Epic 8.** La subida de foto ya es real (bucket de Storage `lounge-images`); el redimensionado a 1600/800/400 px que el artboard anuncia sigue sin tener nada detrás — no hay librería de procesamiento de imágenes en el stack |
-
-| 9.1 | Renewal date and auto-renewal settings — aviso por email un mes antes | **Resuelto tras conectar Epic 9 (23 sept 2026).** `dispatch_membership_renewals()` (pg_cron diario) inserta la notificación en la app y llama a `membership-renewal` (Brevo) para los anuales con auto-renovación en su último mes. La renovación en sí también cobra de verdad (misma function, `type: "charge"`) |
-| 9.1 | Upgrade options to monthly subscribers and pricing | **Resuelto tras conectar Epic 9.** "Pay … and switch" cobra de verdad con Stripe (modo test) el importe prorrateado de `membership_change_quote` y el trigger sobre `payments` sube el plan |
-| 9.2 | Reward crediting for successful referrals (pending) | **Resuelto tras conectar Epic 9.** "Reward pending" desde el alta del amigo; "Day pass credited" con su primer pago real liquidado (trigger `credit_referral_on_first_payment`). Gastar el day pass sigue sin conectar — ver §2.12 |
-| 9.2 | Friend's sign up confirmation notification | **Resuelto tras conectar Epic 9.** `create_referral_from_signup` inserta la notificación real "… joined" en cuanto el amigo crea su perfil con el código |
 
 Los enlaces de las tiendas de `/welcome` apuntan a `#`: no existen todavía las
 fichas de App Store ni Google Play.
@@ -490,72 +335,19 @@ existente (key/Map ID de `luxepass-dev` y de `luxepass-prod` pueden ser el
 mismo par o pares distintos — decisión pendiente, no técnica) antes de
 promover esta rama a `staging`.
 
-### 4.5 `supabase_edge_runtime` puede quedarse caído tras un rato con el stack local arriba — resuelto con `supabase stop && supabase start`
+### 4.6 Secretos de las Edge Functions de Epic 7/8 en los remotos
 
-Al conectar Epic 7 (22 sept 2026), un primer intento de verificar
-`send-partner-booking-event`/`send-partner-digest` de punta a punta con
-`supabase functions serve` falló: el contenedor `supabase_edge_runtime_Luxe_Pass`
-moría nada más crearse ("dead or marked for removal" en bucle), a la vez que
-`docker ps` mostraba `supabase_vector_Luxe_Pass` reiniciándose en bucle —
-ninguno de los dos tiene que ver con el código de las functions (mismo
-patrón exacto que las cuatro Edge Functions ya funcionando de epics
-anteriores). `supabase stop` + `supabase start` (recrea los contenedores
-conservando los datos, `backup: true` por defecto) lo resolvió: el edge
-runtime volvió a subir solo, sin necesidad de `supabase functions serve`
-aparte, y un `curl` directo contra `send-partner-digest`/
-`send-partner-booking-event` respondió `200` en las dos — verificadas de
-punta a punta. `supabase_vector` (un sidecar de logs) sigue reiniciándose en
-bucle incluso después del restart, pero no impide que el resto del stack
-(incluido el edge runtime) funcione.
+`deploy.yml` ya despliega `send-partner-booking-event`, `send-partner-digest`,
+`send-admin-report` y `stripe-refund-payment` (CI-03), pero **faltan en
+GitHub** `PARTNER_NOTIFICATION_WEBHOOK_SECRET`, `PARTNER_DIGEST_WEBHOOK_SECRET`
+y `ADMIN_REPORT_WEBHOOK_SECRET` con sufijo `_DEV`/`_PROD`, y su par en Vault
+de `luxepass-dev`/`luxepass-prod` (`docs/ci-cd/VAULT-SECRETS.md`). Sin ellos,
+los avisos al partner, su digest y los reportes programados no salen en
+remoto.
 
-**Si vuelve a pasar:** `supabase stop` seguido de `supabase start` antes de
-asumir que el código de una Edge Function nueva está roto.
+### 4.7 "Email it to me" de `/admin/reports` deshabilitado
 
-### 4.6 Epic 7 no tiene nada desplegado a `staging`/`main` todavía
-
-Mismo hueco que tuvieron Epic 5/Epic 6 antes de sus PR de despliegue
-dedicados (ver los dos "Resuelto" de `deploy.yml` en la tabla de abajo):
-`.github/workflows/deploy.yml` no conoce `send-partner-booking-event` ni
-`send-partner-digest`, y los 4 secretos de Vault
-(`partner_notification_webhook_url`/`_secret`,
-`partner_digest_webhook_url`/`_secret`) solo existen en el Docker local
-(dados de alta a mano en esta rama, ver `supabase/schemas/partner_notifications.sql`).
-
-**Desbloquea:** un PR aparte (mismo patrón que Epic 5/6) que amplíe
-`deploy.yml` con `supabase secrets set` + `supabase functions deploy
-send-partner-booking-event --no-verify-jwt` / `send-partner-digest
---no-verify-jwt` en `migrate-dev`/`migrate-prod`, más los secrets de GitHub
-correspondientes y el alta manual de los 4 secretos de Vault en
-`luxepass-dev`/`luxepass-prod` vía Studio.
-
-### 4.7 Epic 8 no tiene nada desplegado a `staging`/`main` todavía
-
-Mismo hueco que Epic 5/6/7 antes de sus PR de despliegue dedicados:
-`.github/workflows/deploy.yml` no conoce `stripe-refund-payment` ni
-`send-admin-report`. `stripe-refund-payment` no necesita un secreto de
-Vault propio — reutiliza `STRIPE_SECRET_KEY`, ya presente en `deploy.yml`
-desde Epic 4.
-
-`send-admin-report` sí necesita 2 secretos de Vault
-(`admin_report_webhook_url`/`_secret`) — ya dados de alta y verificados
-de punta a punta en el Docker local de esta rama (ver CLAUDE.md
-§"Reportes programados reales"). **Pendiente explícito: el alta manual
-de esos mismos 2 secretos en `luxepass-dev`/`luxepass-prod` vía Studio**
-— no se ha hecho todavía, y de nada sirve hasta que exista también el PR
-de `deploy.yml` de abajo (sin la Edge Function desplegada, el cron sigue
-sin nada que llamar). El SQL a correr en cada proyecto remoto está en
-`CLAUDE.md` §"Reportes programados reales (pg_cron, Story 8.2)".
-
-**Desbloquea (cron `dispatch_scheduled_reports`):** un PR aparte (mismo
-patrón que Epic 5/6/7) que amplíe `deploy.yml` con `supabase functions
-deploy stripe-refund-payment` + `supabase secrets set` + `supabase
-functions deploy send-admin-report --no-verify-jwt` en
-`migrate-dev`/`migrate-prod`, más el secret de GitHub
-`ADMIN_REPORT_WEBHOOK_SECRET_DEV`/`_PROD` y el alta manual de los 2
-secretos de Vault en `luxepass-dev`/`luxepass-prod` vía Studio.
-
-**"Email it to me" (`/admin/reports`) queda deshabilitado en la UI, no
-solo pendiente de despliegue.** A diferencia del cron (que sí puede leer
+Queda deshabilitado en la UI, no solo pendiente de despliegue. A diferencia del cron (que sí puede leer
 el secreto de Vault desde Postgres), este botón invocaría
 `send-admin-report` directamente desde el navegador del admin — y esa
 function solo acepta `x-webhook-secret`, un secreto que no puede vivir en
@@ -565,54 +357,25 @@ silencio. Arreglarlo de verdad implica una segunda vía de autenticación
 para `send-admin-report` (p. ej. una RPC `SECURITY DEFINER` que verifique
 `has_role('admin')` sobre el llamador y dispare el mismo `pg_net` que ya
 usa el cron, en vez de que el cliente invoque la Edge Function
-directamente) — no solo el alta de Vault de arriba. Ver
+directamente) — no solo el alta de Vault de §4.6. Ver
 `docs/design/COMPONENT-MAP.md` tabla de desviaciones.
 
 ### 4.8 Epic 9: despliegue a `staging`/`main` — faltan los pasos manuales
 
 `deploy.yml` ya despliega `stripe-membership-checkout` y
-`membership-renewal` en `migrate-dev`/`migrate-prod` (rama
-`feat/deploy-epic9-membership`, apilada sobre el PR de Epic 9) — mismo
-patrón que Epic 4–6. Antes de mergearla hacen falta, a mano:
+`membership-renewal` en `migrate-dev`/`migrate-prod` — mismo patrón que Epic 4–6. Faltan, a mano:
 
-1. ~~**Secrets de GitHub** `MEMBERSHIP_RENEWAL_WEBHOOK_SECRET_DEV` y
-   `MEMBERSHIP_RENEWAL_WEBHOOK_SECRET_PROD`~~ — hecho (23 sept 2026, valor
-   aleatorio distinto por ambiente, generado y dado de alta con `gh`).
-2. **Secretos de Vault** en `luxepass-dev` y `luxepass-prod` (Studio → SQL
+1. **Secretos de Vault** en `luxepass-dev` y `luxepass-prod` (Studio → SQL
    Editor): `membership_renewal_webhook_url` (la URL pública de
    `membership-renewal` de ese proyecto) y `membership_renewal_webhook_secret`
    (el mismo valor que el secret de GitHub de ese ambiente) — SQL en
    `CLAUDE.md` §"Membresía y referidos reales". Sin ellos, el cron no cobra
    renovaciones ni manda el aviso por email (sí vence los términos sin
    auto-renovación y avisa en la app).
-3. Después del primer deploy, **`scripts/sql/epic9-backfill-membership-status.sql`**
+2. Después del primer deploy, **`scripts/sql/epic9-backfill-membership-status.sql`**
    en cada proyecto (ver §2.12, opción A).
 
 ---
-
-### 4.9 El test del CSV de `/admin/reports` falla con la base local acumulada
-
-`src/app/admin/reports/page.test.tsx` → *"downloads a real CSV that includes
-the ephemeral booking's reference"* falla en local (detectado el 25 sept 2026,
-durante el PR #33; falla igual en `staging` sin ese PR). El CSV descargado
-no contiene la referencia `LP-######` de la reserva que crea el propio test.
-
-Hipótesis, sin confirmar: `admin_export_bookings`
-(`supabase/schemas/admin_reports.sql`) ordena por `b.date, b.slot_time`
-ascendente, y la base local ya acumula ~1.500 `bookings` de corridas
-anteriores, muchas con fecha anterior al `TODAY` que usa el test. Si el export
-se corta en las 1.000 filas de `max_rows` (`config.toml`), la reserva nueva
-queda fuera. Con una base limpia (`supabase db reset`) probablemente pasa.
-
-Opciones: que el test filtre por un rango de fechas propio, que el export no
-dependa del límite de PostgREST, o limpiar los datos de prueba entre corridas.
-Relacionado con la nota de recursos compartidos (Stripe). **Desde el 2 oct
-2026 la suite ya no deja datos de test en la base local**: `vitest.global-setup.ts`
-llama a `cleanTestData` (`src/lib/testing/clean-test-data.ts`) antes de
-empezar y al terminar, y borra las cuentas de dominios de test (con sus
-reservas, pagos y perfiles en cascada), los lounges `test-…` y los partners
-de test. Las reservas antiguas que hacían fallar este export desaparecen con
-ellas.
 
 ### 4.10 Auth local falla de forma intermitente con la suite completa en paralelo
 
@@ -668,7 +431,6 @@ no publicar el lounge; reenviarla vuelve con la Story 10.4.
 
 ### 4.14 Epic 10: historias 10.9–10.12
 
-- **10.12 (búsqueda en el detalle del partner):** hecha.
 - **10.9 hecha** (datos, UI de admin en vista live y borrador, ficha del
   miembro con el horario de la temporada vigente). Queda abierto:
   - Las tarjetas y el filtro de fecha de `/explore` siguen con
@@ -687,9 +449,6 @@ no publicar el lounge; reenviarla vuelve con la Story 10.4.
   masivos con confirmación y resultado parcial). Abierto: sin registro de
   auditoría de la acción masiva. El cierre masivo sigue la misma decisión
   que "Save anyway": las reservas confirmadas siguen vigentes, sin aviso.
-- **10.12:** su criterio de selección al buscar ya está cubierto (test de
-  `src/app/admin/partners/[id]/bulk.test.tsx`).
-
 ### 4.13 Epic 10: el modelo de partners cambió y los remotos no lo tienen
 
 Paso a paso para `staging` y `main`: `docs/ci-cd/EPIC-10-DESPLIEGUE.md`.
@@ -780,26 +539,11 @@ ventana de retención real.
 
 ### 5.3 Economía del partner del Epic 7 sin confirmar
 
-`DESIGN-SYSTEM.md` §6 (Fase 2) ya advertía estas cifras como una lectura
-asumida, no validada con En Soleil, que `lib/partner.ts` implementa tal cual:
+`DESIGN-SYSTEM.md` §6 (Fase 2) ya advertía estas lecturas como asumidas, no
+validadas con En Soleil. Las tarifas de partner se retiraron (21 oct 2026: se
+muestra lo cobrado real); si algún día hay que mostrar la parte del lounge
+según el acuerdo con En Soleil, falta ese dato. Siguen asumidas:
 
-- **Day pass a $75.00** (la tarifa de la Fase 5), **visita de membresía a
-  $38.00 de tarifa de partner** y **la mitad de la tarifa de no-show de $35.00**
-  ($17.50) para el partner (`DAY_PASS_PARTNER_RATE`,
-  `MEMBERSHIP_VISIT_PARTNER_RATE`, `NO_SHOW_PARTNER_SHARE`). Ninguna historia
-  fija esos números: la 7.3 solo pide "revenue attribution". Si el acuerdo real
-  es otro, cambian esas constantes y los importes de `Analytics.dc.html` /
-  `RepeatGuests.dc.html` / `NoShow.dc.html`, no la estructura.
-  **Resuelto (21 oct 2026, decisión del usuario): se muestra lo cobrado real,
-  no tarifas.** "Attributed" de `/partner/guests` suma los pagos `succeeded`
-  (`partner_repeat_guests`), y "Where the money comes from" de
-  `/partner/analytics` (y su CSV) usa `day_pass_revenue_cents`/
-  `no_show_fee_cents` de `partner_analytics_summary`: day passes = lo cobrado,
-  visitas de membresía = $0, no-shows = la tarifa completa registrada en la
-  reserva ($35). Las constantes `DAY_PASS_PARTNER_RATE`/
-  `MEMBERSHIP_VISIT_PARTNER_RATE`/`NO_SHOW_PARTNER_SHARE` se retiraron. Si
-  algún día hay que mostrar la parte del lounge según el acuerdo con En
-  Soleil, falta ese dato.
 - **Los niveles de lealtad** (Regular ≥5 visitas, Returning 2–4, First visit 1)
   se cuentan solo en el local de The Ainsworth — el flow habla de "loyalty
   trackers" sin definirlos, y contarlos por local es lo único que el partner
@@ -807,8 +551,8 @@ asumida, no validada con En Soleil, que `lib/partner.ts` implementa tal cual:
 - **La ventana de admisión son 4 horas** desde la hora reservada, coherente con
   la Fase 6.
 
-**Desbloquea:** que En Soleil confirme la tarifa de partner real y el reparto
-de la tarifa de no-show.
+**Desbloquea:** que En Soleil confirme los niveles de lealtad y la ventana de
+admisión (y, si se quiere mostrar, el reparto con el lounge).
 
 ---
 
@@ -823,74 +567,3 @@ es conservar `payments`/`bookings` anonimizados (FK `SET NULL`) por
 contabilidad y antifraude, y la fila de `referrals` con `referee_id` a
 `null` para que el referrer no pierda su historial. Pide definir el plazo
 de retención y reflejarlo en la política de privacidad.
-
-## Resueltos
-
-| Qué | Cuándo | Cómo |
-|---|---|---|
-| `tailwind.config.ts` no se leía: ninguna utilidad del tema existía | 30 ago 2026 | Tema migrado a `@theme inline` en `globals.css`; config muerto eliminado |
-| `next build` corrompía el dev server en marcha (500 / 404 falsos) | 30 ago 2026 | `distDir` separado: `.next-build` para producción, `.next` para dev |
-| `public/sw.js` y `workbox-*.js` reaparecían modificados tras cada build | 30 ago 2026 | Fuera del índice e ignorados; se regeneran solos |
-| 10 archivos de scaffolding sin usar en `public/`, incluido un `public/public/` duplicado | 30 ago 2026 | Eliminados |
-| Las 5 pantallas de la Story 1.1 repetían la frase de marca de `Main` | 30 ago 2026 | Cada pantalla usa la de su propio artboard |
-| `npm run lint` recorría `.next-build` y devolvía 4677 problemas tras cualquier build | 31 ago 2026 | `.next-build/**` añadido a los ignores de `eslint.config.mjs`; el ignore se quedó sin actualizar al separar los `distDir` |
-| No había suite de tests, con TDD ya declarado obligatorio | 31 ago 2026 | Vitest + Testing Library sobre jsdom; 60 tests cubren la lógica, los estados y la navegación del Epic 1 |
-| La ruta `/` era un índice provisional de pantallas, sin artboard | 31 ago 2026 | Sustituida por el Home del área de miembro (`Home.dc.html`) dentro del App shell del patrón 3 |
-| `/lounges/[id]` daba 404 desde cada "View details" del Epic 2 | 3 sept 2026 | Implementado el Epic 3: perfil de lounge, disponibilidad semanal y reseñas |
-| `/profile` daba 404 desde el ítem "Profile" del App shell | 4 sept 2026 | Implementado el Epic 6: sección de cuenta (patrón 13) con sus cuatro sub-vistas |
-| No existía el Partner Dashboard (Epic 7) | 5 sept 2026 | Implementadas las Stories 7.1/7.2/7.3: `/partner` (lista del día, en vivo), tres emails, Analytics, invitados recurrentes y Reports |
-| El sub-nav de Account tenía un ítem "Membership" sin pantalla propia | 6 sept 2026 | Implementado el Epic 9: `/profile/membership` (plan, beneficios, renovación), `/profile/membership/plans` (comparación) y `/profile/membership/referrals` (código, invitaciones, términos) |
-| La Story 1.1 (registro) no tenía backend: email duplicado y verificación de email eran simulados | 6 sept 2026 | Conectada a Supabase local real: Auth (signup + confirmación por email vía Mailpit), tabla `profiles` con RLS, RPC `email_exists` (excepción consciente al anti-enumeración de Supabase Auth) y bucket `profile-photos`. Ver `COMPONENT-MAP.md` §Backend real (Supabase local) |
-| La Story 1.2 (login) no tenía backend: credenciales, bloqueo y reset de contraseña eran simulados | 6 sept 2026 | Conectada a Supabase local real: `signInWithPassword`, tabla `login_attempts` + RPC para el bloqueo tras 5 intentos (Supabase Auth no lo tiene nativo), `resetPasswordForEmail` + `/reset-password` (pantalla nueva, sin artboard) para completar el reset de verdad. De paso se encontró y corrigió un bug real en `/auth/confirm`: en `next dev`, el origin calculado desde `request.url` podía ser "localhost" en vez del host real (127.0.0.1), perdiendo la cookie de sesión tras el redirect |
-| No había CI: nada ejecutaba `lint`/`tsc`/`test`/`build` en cada PR ni push | 8 sept 2026 | `.github/workflows/ci.yml` (lint, tipos, tests contra Supabase local levantado en el runner, y build en jobs paralelos) y `.github/workflows/deploy.yml` (migra `supabase/migrations` al Supabase remoto de dev/prod tras push a `staging`/`main`, excepción acotada a CLAUDE.md §Supabase Local Development). Confirmado en verde de punta a punta en el PR de prueba. Ver `docs/ci-cd/RESUMEN.md` — Vercel sigue pendiente de crear (Fase 3-4 de la guía) |
-| `npm test` fallaba en 8 archivos (login, signup, onboarding, require-session) con "URL and API key are required" | 8 sept 2026 | `.env.local` ya usaba el nombre nuevo de Supabase (`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) pero `client.ts`/`server.ts`/`middleware.ts` seguían leyendo `NEXT_PUBLIC_SUPABASE_ANON_KEY` (nombre viejo, deprecado por Supabase). Los tres archivos y `env.example` renombrados a `PUBLISHABLE_KEY` |
-| `npm run lint` daba 25 errores de `no-require-imports` en `scripts/playwright/**` | 8 sept 2026 | Son scripts CommonJS de verificación visual puntual (ver su `README.md`), no código de la app — añadidos a los ignores de `eslint.config.mjs` junto al resto de rutas generadas/no-fuente |
-| `package-lock.json` nunca se subió al repo (estaba en `.gitignore` desde el scaffolding inicial) | 8 sept 2026 | `npm ci` fallaba en CI con "Dependencies lock file is not found" — quitado del `.gitignore` y versionado el lockfile |
-| El job `build` de CI fallaba prerrenderizando `/forgot-password` ("URL and API key are required"); el job `test` parseaba `supabase status` como texto y el CLI cambió a tabla Unicode + JSON con claves nuevas | 8 sept 2026 | `build` recibe `NEXT_PUBLIC_SUPABASE_*` con un valor no vacío (no hace red en el prerender); extracción de credenciales del `test` cambiada a `supabase status -o json` con los paths correctos (`API_URL`, `PUBLISHABLE_KEY`, `SECRET_KEY`) |
-| `deploy.yml` migró `luxepass-dev` bien, pero `supabase db advisors` fallaba con ECONNREFUSED | 8 sept 2026 | Sin `--linked`, revisa la base local (que no existe en ese job) en vez del proyecto remoto recién enlazado. Con el fix, corrió contra `luxepass-dev` de verdad: 2 warnings de `SECURITY DEFINER` en `email_exists`/`check_login_lock`, ambos ya conocidos y deliberados (ver filas de Story 1.1/1.2 arriba) |
-| Story 1.1/1.2 mandaban el email de confirmación/recovery por el SMTP simulado (Inbucket/Mailpit), sin entrega real | 13 sept 2026 | Auth Hook `send_email` (`config.toml`) + Edge Function `supabase/functions/send-email`, que despacha vía Brevo. Subject con prefijo de ambiente (`[LOCAL]`/`[STAGING]`/`[PROD]`, secret `APP_ENV`). Probado de punta a punta (signup + forgot-password, email real) en local, `luxepass-dev` y `luxepass-prod`. Detalle en `docs/ci-cd/RESUMEN.md` y `CLAUDE.md` §Envío de email transaccional |
-| El signup en local daba `422 Failed to reach hook within maximum time of 5.000000 seconds` | 13 sept 2026 | `uri` de `[auth.hook.send_email]` tenía el puerto *default* de Supabase (`54321`, copiado literal de la doc) en vez del puerto real de este proyecto (`54331`, `[api] port`) |
-| El link de confirmación del correo apuntaba a `127.0.0.1:54331` (el API de Supabase) en vez del dev server de Next | 13 sept 2026 | `email_data.site_url` del payload del hook no es `auth.site_url` — la function ahora usa su propio secret `APP_URL`, explícito por ambiente |
-| El primer deploy real de `send-email` a `luxepass-dev` fallaba en `supabase db push` con `Invalid hook config: ... secrets must be formatted as v1,whsec_...` | 13 sept 2026 | El CLI valida todo `config.toml` en cualquier comando, no solo en los pasos que tocan la function — `SEND_EMAIL_HOOK_SECRET_DEV`/`_PROD` añadidos también al `env:` de cada job de `deploy.yml` (antes solo se pasaban a `supabase secrets set`, un mecanismo distinto) |
-| El forgot-password no llegaba ni en `luxepass-dev` ni en `luxepass-prod`, sin nada en los logs de la function | 13 sept 2026 | `Authentication → Rate Limits → Rate limit for sending emails` viene en 2/hora por defecto y aplica aunque el envío real vaya por Brevo — subido a mano en ambos dashboards |
-| Signup/login en `luxepass-prod` daban `Invalid API key` ("might be owned by another Supabase project") | 13 sept 2026 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` en el proyecto de Vercel `luxepass-prod` estaba desactualizada (no relacionado al trabajo de Brevo, ya estaba mal desde antes). Diagnosticado comparando el bundle JS de producción contra `supabase projects api-keys --project-ref` (de solo lectura). Corregida la env var en Vercel + redeploy manual (`gh workflow run deploy.yml --ref main`, necesario porque `NEXT_PUBLIC_*` se hornea en build time) |
-| Migrar `/explore` a Google Maps real: el clustering de markers no aparecía nunca, a ningún zoom, y el callout de un pin cerca del borde superior del mapa se recortaba contra el contenedor — ninguno de los dos lo detectaban los tests sobre jsdom | 16 sept 2026 | Verificación con Playwright contra el SDK real de Google Maps (`scripts/playwright/`), no cubierto por el stub de jsdom. Clustering: `MIN_ZOOM` de `city-map.tsx` estaba en 12 (rango de zoom donde nunca se alcanzaba el umbral de agrupado) y un bug real de timing — los refs de `AdvancedMarker` resuelven de forma asíncrona, después de que el efecto que alimenta a `MarkerClusterer` ya había corrido — dejaba el clustering en cero marcadores siempre; se bajó `MIN_ZOOM` a 10 y se añadió un contador `markerRegistrations` para re-sincronizar el clusterer cuando los markers montan de verdad. Callout: `lounge-callout.tsx` ahora mide su posición real con `useLayoutEffect` (vía el atributo `data-map-surface` del contenedor del mapa) y voltea a `top-full` en vez de `bottom-full` cuando el borde superior lo recortaría. Ambos con test de regresión (`city-map.test.tsx`, `lounge-callout.test.tsx`) |
-| El job `test` de `ci.yml` fallaba en `supabase start` con `Invalid hook config: ... secrets must be formatted as v1,whsec_...`, en todos los PR desde el 13 sept | 16 sept 2026 | El fix de `SEND_EMAIL_HOOK_SECRET_DEV`/`_PROD` de esa fecha solo tocó `deploy.yml`; `ci.yml` nunca recibió su propio secret. Añadirle uno con formato válido no bastaba — este runner no tiene `supabase/functions/.env` con Brevo real, y Auth corta `signUp`/`resetPasswordForEmail` entero si el hook falla. Decisión con el usuario: no mandar emails reales por Brevo en CI (riesgo de bounces); `ci.yml` desactiva el hook (`enabled = false`) solo en la copia efímera del checkout vía un `awk` antes de `supabase start` — Auth cae a Mailpit, que es lo que `forgot-password/page.test.tsx` ya esperaba. Detalle y verificación local en `docs/ci-cd/RESUMEN.md` |
-| 5 tests fallando en local (signup, login, registration, forgot-password) con "Service currently unavailable due to hook" | 17 sept 2026 | Causa 1 (4 tests): el contenedor `supabase_edge_runtime_<project_id>` se había caído solo (exit code 255, sin error en logs) — el Auth Hook `send_email` depende de él para cualquier signup/reset con el hook activo (dev local normal). `docker start supabase_edge_runtime_Luxe_Pass` los revive; no es un bug de la app, revisar el contenedor si vuelve a pasar. Causa 2 (el 5º test, forgot-password): cierra §2.10 de arriba — el test seguía buscando el correo de recovery en Mailpit, obsoleto en local/staging/main (donde el hook está activo de verdad) desde la migración a Brevo del 13 sept; solo "pasaba" en CI porque ahí el hook está desactivado. Se quitó esa aserción, dejando el acuse en pantalla como verificación. Corregido en `fix/forgot-password-mailpit-test` |
-| Story 4.2/5.1 (email de recibo de reserva, `Receipt.dc.html`) no tenía envío real: la pantalla de `/book/receipt` simulaba el email con `SAMPLE_MEMBER`, sin ningún disparador detrás | 18 sept 2026 | Database Webhook (nuevo mecanismo para este proyecto, distinto del Auth Hook de Epic 1): trigger `AFTER INSERT` en `bookings` (`supabase/schemas/booking_receipts.sql`), solo cuando `status = 'confirmed'`, que llama de forma asíncrona (`pg_net`) a la Edge Function `send-booking-receipt`, la cual despacha el correo real vía Brevo (mismo remitente que Epic 1, ahora factorizado en `supabase/functions/_shared/brevo.ts`, del que `send-email` también pasa a depender). Autenticado con un secreto compartido guardado en Supabase Vault (`booking_receipt_webhook_url`/`booking_receipt_webhook_secret`, uno por proyecto, nunca comiteado) en vez de un JWT — Postgres no tiene sesión de usuario. Sin esos dos secretos dados de alta (p. ej. un Postgres de CI recién levantado), el trigger no hace nada: **no hace falta desactivarlo a mano en CI**, a diferencia del Auth Hook de Epic 1. Encontrados y corregidos dos bugs reales al verificar de punta a punta con Playwright (no con curl/psql sueltos): (1) el timeout de `net.http_post` (5s por defecto) cortaba la llamada a mitad de camino — `findSettledPayment` en la function reintenta unos segundos si el pago de una tarjeta nueva sigue `pending` (el webhook de Stripe puede tardar en confirmar), así que se subió a 15s; (2) `.single()` al leer `profiles` fallaba entero si el miembro no tenía perfil completo (un fixture de test lo dejó en evidencia) — cambiado a `.maybeSingle()` con el email como nombre de respaldo. Ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 4" y `CLAUDE.md` §Email de recibo de reserva |
-| Epic 3 (Lounge Profiles & Details) no tenía backend: contacto, horario, capacidad, restricciones, fotos y disponibilidad semanal eran derivados por hash o estáticos del mock | 17 sept 2026 | Conectado a Supabase local real: `lounges` extendida (contacto/horario/capacidad/restricciones/rating agregado), `lounge_images` (fotos, contenido sigue siendo bloques de marca), `lounge_availability` + `lounge_closures` (disponibilidad y cierres, horizonte de 18 semanas sembrado con la misma fórmula que ya usaba el mock). `lib/lounge-profile.ts` queda híbrido a propósito: las funciones síncronas viejas (`contactFor`, `weeklyAvailability`, etc.) se conservan tal cual para Epic 4 (`lib/booking.ts`, sin conectar todavía), que las sigue necesitando. Sin tabla `reviews` (ninguna historia permite dejar una reseña): rating/review_count son reales, el contenido de cada reseña sigue siendo de muestra. Ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 3" |
-| "View details" del callout de un pin del mapa real (`/explore`) no navegaba nunca al perfil del lounge (bug reportado por el usuario al probar Epic 3 de punta a punta) | 17 sept 2026 | No era un bug de Epic 3: dos causas independientes en el `AdvancedMarker` de `city-map.tsx` (Epic 2) que envuelve el callout — (1) sin ningún handler interactivo, `@vis.gl/react-google-maps` le ponía `pointer-events: none` al contenido, dejando pasar el clic al mapa; (2) con eso corregido, Google Maps intercepta el foco de un hijo enfocable dentro de un `AdvancedMarker` (avisa "Focusable child elements... are not supported" en consola) y desmonta el callout a mitad del clic. Fix: `onClick={() => {}}` en el `AdvancedMarker` + `tabIndex={-1}` en el `Link` "View details" + `stopPropagation` en el callout para no burbujear hasta el `onClick` de deseleccionar del mapa. Invisible en jsdom (el stub de Google Maps no replica ninguna de las dos causas) — solo se reprodujo y verificó con Playwright real, con clics simulados de verdad, no solo comprobando el `href`. Detalle en `docs/design/COMPONENT-MAP.md` "Backend real — Epic 2", regresión en `lounge-callout.test.tsx` |
-| Story 4.1 (Seamless Booking Flow) no tenía backend: el calendario/slots derivaban de un hash sobre el catálogo mock, y el chequeo final de disponibilidad era un umbral artificial (`WAITLIST_THRESHOLD_SEATS`) sin tocar ningún dato real | 17 sept 2026 | Conectado a Supabase local real: tabla `bookings` (nace aquí) + RPC `confirm_booking`/`join_waitlist` (`SECURITY DEFINER`, con `FOR UPDATE` sobre `lounge_availability` para que dos confirmaciones casi simultáneas no decrementen ambas la última plaza). `fetchAvailability` (Epic 3) se generalizó de semana fija a rango arbitrario para traer un mes completo; `monthCalendar`/`slotsFor` pasan de mock+hash a agregar esas celdas reales. `contactFor`/`LoungeContact` (Epic 3, legacy) se retiraron — las pantallas de `/lounges/[id]/book/*` ya leen `lounge.address`/`phone` reales (`weeklyAvailability`/`closureCovering` sí se quedaron, los sigue usando el test de Story 3.2 como predictor de la semilla). La referencia de reserva pasa de un hash de lounge/fecha/hora a `bookingReferenceFromId`, derivada del `id` real. Ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 4" |
-| Story 4.2 (Payment Processing) simulaba el cobro: los métodos de pago eran `SAMPLE_PAYMENT_METHODS` y el "cargo" una comprobación local sin SDK ni llamada de red — decisión de alcance revertida el 17 sept 2026 (ver `CLAUDE.md` §Procesamiento de pagos real) | 18 sept 2026 | Conectado a Stripe real en modo test: tabla `payments` (nace aquí) + columna `profiles.stripe_customer_id`, y 4 Edge Functions (`stripe-create-checkout-session`, `stripe-charge-saved-method`, `stripe-payment-methods`, `stripe-webhook`) — mismo patrón sin route handlers que `send-email` de Epic 1. Tarjeta nueva: Checkout Session (`ui_mode: 'elements'`) + `<PaymentElement>`; tarjeta guardada: `PaymentIntent` directo servidor-a-servidor. El webhook es la única fuente de verdad del `status` de `payments`, nunca el cliente. `handleConfirm` en `summary/page.tsx` cobra antes de llamar a `confirmBooking`, igual que ya anticipaba la entrada de Story 4.1 de arriba. **Bug real encontrado y arreglado vía Playwright, invisible para jsdom** (mismo tipo que el del callout del mapa de Epic 2): portar `<PaymentElement>` de padre en el DOM entre el paso 2 y el paso 3 (con `createPortal`) recargaba su iframe y borraba la tarjeta ya escrita — `stripe-checkout-bridge.tsx` ahora vive en el layout y el elemento nunca cambia de padre real, solo se reposiciona con `position: fixed` sincronizado por `ResizeObserver`. Apple Pay/Google Pay quedan fuera (dominio no verificado, no viable en `localhost`) — ver fila de la tabla de desviaciones de arriba. Ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 4" |
-| El CI del PR #22 (Epic 4) fallaba en el job `test` con `Invalid API Key provided: undefined` en `src/lib/stripe-payments.test.ts` | 21 sept 2026 | No era un bug del código de Epic 4: `ci.yml` nunca se amplió para servir las Edge Functions — `supabase start` las instala pero no las sirve, hace falta `supabase functions serve` aparte (mismo matiz que ya advertía el comentario de cabecera del propio archivo de test). Arreglo: nuevo paso en el job `test` que levanta `supabase functions serve` en background con un `supabase/functions/.env` armado en el runner desde el secret `STRIPE_SECRET_KEY` (dado de alta en GitHub, misma clave de test de la sandbox de Epic 4 — sin riesgo real, modo test), con una espera activa (hasta 30s) a que las functions respondan antes de `npm test`. No hizo falta darle los demás secrets de `supabase/functions/.env` (Brevo, webhooks): ninguna function que los necesite se invoca en esta suite. Ver `docs/ci-cd/RESUMEN.md`. |
-| La sandbox de Stripe de Epic 4 expiraba el 24 sept 2026 si nadie la reclamaba (§4.5, ya retirada de este archivo) | 21 sept 2026 | Reclamada por el usuario con `stripe sandbox claim` + `stripe login --complete-device`, asociándola a una cuenta Stripe real — ya no expira. La CLI no ofrece forma de posponer el plazo (confirmado en `docs.stripe.com/cli/sandbox`: fijo a 7 días, solo `claim` o dejarla expirar). Verificado con una llamada real a la API tras reclamarla: la clave `rkcs_test_...` sigue siendo exactamente la misma (no rotó), así que no hizo falta tocar `.env.local`, el secret de GitHub, Supabase ni Vercel. |
-| Epic 4 (Stripe + recibo de reserva) no tenía nada desplegado a `staging`/`main` — `deploy.yml` solo desplegaba `send-email` (Epic 1), sin las 5 Edge Functions nuevas ni sus secrets (§4.6, ya retirada de este archivo) | 21 sept 2026 | `deploy.yml` ampliado (jobs `migrate-dev`/`migrate-prod`) con `supabase secrets set` + `supabase functions deploy` para las 5 functions nuevas, mismo patrón que `send-email`. Decisión del usuario durante el despliegue: **3 cuentas/sandboxes de Stripe separadas, una por ambiente** (local, `luxepass-dev`, `luxepass-prod`) — no solo el webhook secret, también `STRIPE_SECRET_KEY_DEV`/`_PROD` en vez de una sola compartida (la de `ci.yml`, sin sufijo, queda aparte: es la de local, solo para tests). Los 6 secrets de ambiente cargados en GitHub (`STRIPE_SECRET_KEY_DEV`/`_PROD`, `STRIPE_WEBHOOK_SECRET_DEV`/`_PROD`, `BOOKING_RECEIPT_WEBHOOK_SECRET_DEV`/`_PROD`), y confirmados los 3 pasos manuales en `luxepass-prod` (secretos de Vault, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` en Vercel, webhook de Stripe registrado) — mismos ya hechos antes en `luxepass-dev`. Epic 4 queda listo para promoverse a `staging` y eventualmente a `main`. |
-| Epic 5 (QR Code & Check-in) no tenía backend: My Pass, el pase digital y la consola de recepción eran datos de muestra fijos (`AINSWORTH_PASS`, `RECEPTION_VALID_BOOKING`) | 21 sept 2026 | Conectado a Supabase local real, decisiones tomadas con el usuario antes de implementar: Story 5.2 vía RPC "de kiosco" (`reception_*`, `SECURITY DEFINER`, concedidas a `anon` — sin esperar al login de staff de Epic 7) y Story 5.3 vía `pg_cron` real (primer job programado del proyecto) en vez de quedarse mockup. `bookings` gana `confirmation_code` (columna generada), `checked_in_at`, `no_show`, `reminder_sent_at`; `profiles` gana `emergency_contact_*`. **Bug real encontrado y corregido corriendo la suite localmente**: el hash de `bookingReferenceFromId` (Story 4.2/5.1, `31 * suma de códigos ASCII`) es conmutativo — dos UUID que son anagramas entre sí colisionan en el mismo LP#, invisible mientras era solo copy de un recibo, pero un bug funcional real en cuanto Epic 5 lo usa como clave de búsqueda (`reception_checkin_booking` fallaba con "query returned more than one row"). Corregido a un hash posicional en las tres implementaciones (TS, Deno, SQL) a la vez. Ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 5" y `docs/DATA-MODEL-MAP.md` §Epic 5. |
-| `supabase db diff --local -f <nombre>` (el comando que documenta `CLAUDE.md` §Supabase Local Development) ya no lee `supabase/schemas/*.sql` — CLI v2.116.0 lo cambió a comparar solo migraciones contra la base, con un aviso a mitad de la salida fácil de pasar por alto | 21 sept 2026 | El comando declarativo correcto en esta versión del CLI es `supabase db schema declarative sync --apply -f <nombre>` (o `--no-apply` para generar sin aplicar, como pedía el paso 4 de la receta de `CLAUDE.md` antes de aplicar). Mismo flujo de ahí en adelante (revisar el SQL generado, `supabase db advisors`). `CLAUDE.md` queda desactualizado en este punto — actualizarlo la próxima vez que se toque esa sección, no se corrigió en esta rama para no mezclarlo con el trabajo de Epic 5. |
-| Epic 5 (recordatorio de reserva, Story 5.3) no tenía nada desplegado a `staging`/`main` — `deploy.yml` solo desplegaba las 5 Edge Functions de Epic 4, sin `send-booking-reminder` ni sus secrets (§4.5, ya retirada de este archivo) | 22 sept 2026 | `deploy.yml` ampliado (mismo patrón que Epic 4) con `supabase secrets set BOOKING_REMINDER_WEBHOOK_SECRET` + `supabase functions deploy send-booking-reminder --no-verify-jwt` en `migrate-dev`/`migrate-prod`. Los 2 secrets de GitHub (`BOOKING_REMINDER_WEBHOOK_SECRET_DEV`/`_PROD`) dados de alta, y el usuario confirmó haber creado los 2 secretos de Vault (`booking_reminder_webhook_url`/`_secret`) en `luxepass-dev` y `luxepass-prod` a mano vía Studio. Epic 5 queda listo para promoverse a `staging` y eventualmente a `main`. |
-| Epic 6 (Member Experience & Notifications) no tenía backend: perfil, preferencias, favoritos, privacidad, notificaciones y cancelación de reserva eran datos de muestra fijos, y el corazón de favorito de `Preferences.dc.html` no tenía ningún lugar desde el que guardarse | 21 sept 2026 | Conectado a Supabase local real, decisiones tomadas con el usuario antes de implementar (ver `CLAUDE.md` §Alcance): `notifications`/`member_favorite_lounges` nacen aquí; `cancel_booking` (RPC) cierra Story 6.1; de los 6 tipos de notificación solo 2 tienen evento real (confirmación de reserva, aviso de las 6 AM vía `pg_cron`), el resto se siembra como muestra real al crear el perfil; el borrado de cuenta es un soft-delete reversible con `pg_cron` para el borrado físico a los 30 días, fiel a la promesa del artboard; el botón de favorito en `/lounges/[id]` se compuso reutilizando el botón de acción rápida existente (sin artboard propio, decisión tomada con el usuario). **Bug real encontrado y corregido con TDD**: el fetch inicial de favorito (parte del mismo `Promise.all` que fotos/disponibilidad, más lento) podía resolver DESPUÉS de un click muy temprano del miembro y pisar el toggle optimista con el valor previo — un `favoriteOverriddenRef` evita que ese fetch tardío sobrescriba un cambio ya hecho por el usuario. **Segundo bug real de la misma clase, encontrado por CI** (runner más lento que local): el fetch inicial de notificaciones podía resolver después de un "mark as read" temprano, mismo fix (`mutatedRef`) en `NotificationBellMenu` y `/notifications`. Ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 6" y `docs/DATA-MODEL-MAP.md` §Epic 6. |
-| Epic 6 (borrado de cuenta, Story 6.3) no tenía nada desplegado a `staging`/`main` — `deploy.yml` solo desplegaba las Edge Functions de Epic 4/5, sin `delete-account` ni sus secrets | 22 sept 2026 | `deploy.yml` ampliado (mismo patrón que Epic 4/5) con `supabase secrets set ACCOUNT_DELETION_WEBHOOK_SECRET` + `supabase functions deploy delete-account --no-verify-jwt` en `migrate-dev`/`migrate-prod`. Los 2 secrets de GitHub (`ACCOUNT_DELETION_WEBHOOK_SECRET_DEV`/`_PROD`) dados de alta, y el usuario confirmó haber creado los 2 secretos de Vault (`account_deletion_webhook_url`/`_secret`) en `luxepass-dev` y `luxepass-prod` a mano vía Studio. `delete-account` ya desplegada de verdad en `luxepass-dev` (confirmado en el run de `deploy.yml` del merge a `staging`); `luxepass-prod` la recibe en cuanto `staging` se promueva a `main`. Epic 6 queda listo para promoverse a `staging` (ya hecho) y eventualmente a `main`. |
-| Epic 7 (Partner Dashboard) era mockup puro: `/partner/login` validaba credenciales en el cliente, `/partner`/`/partner/analytics`/`/partner/guests`/`/partner/reports` corrían sobre datos de muestra fijos, y la decisión de rol member/partner/admin (`docs/DATA-MODEL-MAP.md`) seguía pospuesta | 22 sept 2026 | Conectado a Supabase local real, decisiones de arquitectura tomadas con el usuario antes de implementar: tabla `user_roles` (no custom claim ni esquema separado) para el rol, `partner_lounges` como tabla puente many-to-many (no FK directa en `lounges`). Story 7.1: `partner_guest_list`/`partner_checkin_booking`/`partner_report_no_show` (RPC autenticadas, no "de kiosco") + suscripción de Supabase Realtime en `/partner` reemplazando los temporizadores deterministas. Story 7.2: dos triggers (Database Webhook) + un `pg_cron` (digest 6:30 AM), mismo mecanismo que Story 4.2/5.1/5.3 — decisión consciente de **no** usar la tabla `notifications` de Epic 6 (el AC es "recibir un email", no una fila en el centro de notificaciones del miembro). Story 7.3: `partner_analytics_summary`/`partner_bookings_by_day`/`partner_repeat_guests`, agregando sobre todos los lounges reales del partner. **Bug real encontrado y corregido corriendo la suite localmente**: `partner_bookings_by_day` devolvía `timestamp with time zone` donde la función declaraba `date` (`generate_series` sobre un rango de fechas produce timestamps, no fechas) — Postgres lo rechazaba con "structure of query does not match function result type"; corregido con un cast `::date` explícito. Las dos Edge Functions nuevas se verificaron de punta a punta con un `curl` directo contra el edge runtime local (200 en ambas) tras resolver una caída puntual del contenedor con `supabase stop && supabase start` (§4.5). Ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 7" y `docs/DATA-MODEL-MAP.md` §Epic 7. |
-| Epic 8 (Admin & Support) era mockup puro: las 11 pantallas de `/admin/**` corrían sobre datos de muestra fijos (`SUPPORT_CASES`, `ADMIN_MEMBERS`, `NETWORK_METRICS`, `ADMIN_LOUNGES`...), sin login de admin ni forma de tocar Supabase | 22 sept 2026 | Conectado a Supabase local real, dos decisiones de alcance tomadas con el usuario antes de implementar que revierten la nota original de `docs/DATA-MODEL-MAP.md`: el reembolso (Story 8.1) es real vía Stripe (`stripe-refund-payment`) para un cargo `succeeded`, y los reportes programados (Story 8.2) son reales vía `pg_cron` + Brevo (`send-admin-report`, adjunto CSV real) — mismo nivel de realismo que el resto del proyecto. `/admin/login` nace sin artboard propio (la Fase 8 nunca dibujó ese nodo del flow) — decisión confirmada con el usuario: reutiliza el layout de `/partner/login`. Story 8.1: `support_tickets`/`support_ticket_messages` (nacen aquí), un no-show reportado por un partner abre un caso automáticamente; `BookingOverrideDrawer` reescrito sobre los 5 horarios reales del dominio (el artboard dibujaba horas ficticias). Story 8.2: analítica real sobre TODA la red (no un lounge elegido), export por dataset con columnas anonimizadas por defecto. Story 8.3: `lounges.content_status` (live/draft/archived) + `lounge_content_submissions` (nace aquí) generalizan el "Content approval workflow" a cualquier lounge, no solo The Vestry como el mock; bucket de Storage real `lounge-images`; de la barra de acción masiva, solo "Archive" quedó real. **Dos bugs reales encontrados y corregidos con TDD**: (1) `admin_search_members` trataba "4+ dígitos en la consulta" como rama excluyente de la búsqueda por nombre, así que un query con nombre y unos dígitos (p. ej. un email de test con timestamp) dejaba de buscar por nombre — la condición pasó a ser inclusiva (OR); (2) las RPC que reutiliza el cron de reportes (`admin_generate_report_csv` y las `admin_export_*`) rechazaban la llamada con "Not authorized" porque el guard exigía `has_role('admin')` incluso cuando el cron las llama sin sesión (`auth.uid()` nulo) — el guard pasó a `auth.uid() is not null and not has_role('admin')`, que sigue rechazando a un autenticado sin el rol pero deja pasar la llamada interna sin sesión. Verificado de punta a punta: `stripe-refund-payment` con un cargo real de la sandbox, `dispatch_scheduled_reports` disparado a mano con `200` confirmado en `net._http_response`. Ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 8" y `docs/DATA-MODEL-MAP.md` §Epic 8. |
-| Epic 9 (Membership & Referrals) era mockup puro: `/profile/membership/**` corría sobre las cuentas de muestra de Alexandra/Naomi (`?plan=monthly`, `?state=credited`), el código de referido era determinista sin persistir y "Pay … and switch" solo cerraba el modal | 23 sept 2026 | Conectado a Supabase local real + Stripe en modo test, decisiones de producto tomadas con el usuario antes de implementar: un miembro nace sin membresía hasta elegir plan (elección de plan sobre `Plans.dc.html` + el modal de `Upgrade.dc.html`, sin artboard propio); alta y subida mensual→anual son un cobro puntual real (no Stripe Billing), con tarjeta guardada o `<PaymentElement>` embebido; el premio de referido se acredita con el primer pago real liquidado del amigo; el amigo entra por `/join/[code]` → `/signup?ref=` (metadatos de Auth, sin campo nuevo). Nacen `memberships`, `referrals`, `referral_shares`; `profiles.membership_status` pasa a espejo de `memberships` y el miembro ya no puede escribirlo (ni `referral_code`/`stripe_customer_id`, `guard_profile_managed_columns`). Cuarto uso de `pg_cron` (`dispatch_membership_renewals`, aviso de un mes antes + vencimientos). Ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 9" y §2.12/§4.8 de este archivo para lo que queda abierto. |
-| La disponibilidad de los lounges (`lounge_availability`) era un seed estático de 18 semanas desde `TODAY`: un lounge nuevo no tenía plazas sin otra migración, y cancelar una reserva como miembro (`cancel_booking`) nunca devolvía la plaza | 25 sept 2026 | Tabla eliminada; disponibilidad en vivo con `lounge_availability_range` (`capacity` por franja − reservas `confirmed`/`in_progress`/`completed`), `confirm_booking`/`admin_reschedule_booking` serializados con `pg_advisory_xact_lock` por lounge/fecha/franja. Cancelar libera la plaza sola. Tests: `fillSlot` (`src/lib/testing/lounge-fixture.ts`) llena una franja con reservas reales y `vitest.global-setup.ts` borra las reservas de usuarios de test antes de cada corrida. Ver §2.10 y `docs/design/COMPONENT-MAP.md` "Backend real — Epic 3" |
-| SEC-01: las RPC de recepción (`reception_*`) eran invocables sin sesión y exponían nombre, email y contacto de emergencia de cualquier reserva, además de permitir check-in/no-show anónimos | 12 oct 2026 | Solo `authenticated` y filtradas por `partner_lounge_ids()`; `/reception` detrás de `RequirePartnerSession` con el lounge del contexto del partner. Tests de regresión en `src/lib/reception.test.ts` y `src/app/reception/page.test.tsx` |
-| E2E-01: un doble clic en "Confirm and pay" con tarjeta guardada cobraba dos veces y creaba dos reservas | 13 oct 2026 | Tres capas: el botón se bloquea mientras hay un cobro en curso; `stripe-charge-saved-method` exige una `idempotencyKey` por intento (Stripe + `payments` sin duplicar); `confirm_booking` bloquea la fila del pago (`for update`) para que un pago no confirme dos reservas. Tests en `summary/page.test.tsx` y `stripe-payments.test.ts` |
-| PAY-01 + SEC-02: los pagos con tarjeta nueva no guardaban su `payment_intent` (sin reembolso posible, eventos `payment_intent.*` sin fila) y una reserva confirmada con un pago `pending` seguía en pie aunque nunca se pagara | 13 oct 2026 | `stripe-webhook` delega en `settle_checkout_session` (solo `service_role`): guarda el `payment_intent` al cobrarse y solo sale de `pending`. `checkout.session.expired` marca el pago `failed`; las sesiones caducan a los 30 min, y el trigger `cancel_booking_of_failed_payment` cancela sin fee la reserva hecha con un pago que acaba `failed`. Los errores de base de datos en el webhook ahora devuelven 500 para que Stripe reintente. Tests en `src/lib/checkout-settlement.test.ts` |
-| E2E-07 / SPEC-04: cancelar con más de 24h una reserva pagada la marcaba cancelada sin reembolsar, aunque la UI promete "Free cancellation" | 13 oct 2026 | Decisión de producto: reembolso real en Stripe. `cancelBooking` pasa por la Edge Function nueva `stripe-cancel-booking`: llama a `cancel_booking` con la sesión del miembro (dueño, estado, fee) y, si fue gratis, reembolsa el day pass completo con clave de idempotencia por reserva; con un pago aún `pending` responde 409. Desplegada en `deploy.yml` (staging y prod). Tests en `src/lib/cancel-refund.test.ts`. Sigue abierto PAY-05 (`p_today` lo manda el cliente) |
-| PAY-02: una renovación cuyo cobro no se resolvía (error de Stripe, de red o de Vault) dejaba la membresía `active` para siempre sin cobrar | 14 oct 2026 | `dispatch_membership_renewals` reintenta el cobro una vez al día y vence toda membresía `active` con más de 3 días de término vencido; `membership-renewal` usa una `idempotencyKey` por miembro y término para que un reintento no cobre dos veces. Tests en `src/lib/membership-renewal-stuck.test.ts` |
-| PRIV-01: "Share your details with the lounge" apagado no tenía efecto: el lounge seguía viendo nombre, email, teléfono y contacto de emergencia | 14 oct 2026 | Con el toggle apagado el lounge ve solo el código de reserva ("check in by number only"): `partner_guest_list`, `reception_lookup_booking`, `partner_repeat_guests`, el resumen diario (`partner_digest_batches`) y el email `send-partner-booking-event` muestran "Private guest" y dejan email, teléfono y contacto de emergencia en `null`. Tests en `src/lib/privacy-share-with-lounge.test.ts` |
-| DB-01: `bookings` no estaba en la publicación `supabase_realtime`; el Today Dashboard del partner se suscribía pero nunca recibía reservas nuevas, cancelaciones ni check-ins | 15 oct 2026 | `alter publication supabase_realtime add table public.bookings` en `bookings.sql` (los eventos siguen filtrados por la policy de `bookings`). Test con una conexión de Realtime real en `src/lib/bookings-realtime.test.ts` (entorno `node`; `vitest.setup.ts` solo pone el WebSocket inerte y el canvas en jsdom). Antes de promover a `staging`/`main`, comprobar en cada remoto que `bookings` no se añadió ya a mano desde el Dashboard: si ya está, la migración falla con "already member of publication" |
-| CI-02 / CI-03 / CI-05: el deploy no esperaba al CI, 4 Edge Functions nunca se desplegaban y no había forma documentada de volver atrás | 15 oct 2026 | `deploy.yml` arranca con `workflow_run` cuando CI termina en verde sobre un push a `staging`/`main` y despliega ese mismo SHA; el lanzamiento manual solo vale desde esas ramas y si el CI de ese commit pasó. Despliega `stripe-refund-payment`, `send-partner-booking-event`, `send-partner-digest` y `send-admin-report`; **falta dar de alta en GitHub** `PARTNER_NOTIFICATION_WEBHOOK_SECRET`, `PARTNER_DIGEST_WEBHOOK_SECRET` y `ADMIN_REPORT_WEBHOOK_SECRET` con sufijo `_DEV`/`_PROD` (y su par en Vault, `docs/ci-cd/VAULT-SECRETS.md`). Cada release a prod deja un tag `release-…`; runbook en `docs/ci-cd/ROLLBACK.md`. **CI-04 sigue abierto:** la protección de ramas y los revisores del environment `production` necesitan GitHub Pro/Team |
-| SEC-04 + PAY-03 + PAY-04: un evento tardío del webhook podía devolver a cobrado un pago reembolsado; reembolsar no deshacía la reserva ni la membresía; el reembolso no validaba el importe y dos clics reembolsaban dos veces | 15 oct 2026 | `settle_payment_intent` solo saca pagos de `pending`; `record_payment_refund` guarda el total que dice Stripe y nunca lo deja bajar; el trigger `undo_purchase_of_refunded_payment` cancela sin fee la reserva y vence la membresía al reembolsarse por completo. `stripe-refund-payment` valida el importe (400) y usa una idempotency key por pago, total ya reembolsado e importe. **Abierto (decisión de producto):** si el pago reembolsado acreditó un referido, el premio se mantiene. Tests en `src/lib/refund-lifecycle.test.ts` |
-| PERF-10 (`/explore`): en móvil el panel de resultados, encima del mapa, crecía al llegar los lounges y empujaba el mapa fuera de pantalla (CLS 0,616–0,797) | 19 oct 2026 | Mientras `allLounges` es `null` el panel muestra "Finding lounges near you" y 12 `ResultCardSkeleton` con la caja de `ResultCard`. CLS 0,616 → 0 en tres cargas con `scripts/playwright/perf-10/cls-sources.mjs`. Test en `src/app/explore/page.test.tsx`. Siguen abiertos los dashboards de partner/admin |
-| PERF-10 (`/admin/analytics`): los KPI y los tiles de "Members" no se pintaban hasta llegar los datos y empujaban la vista (CLS 0,118) | 19 oct 2026 | `MetricTile` gana `loading` (etiqueta real, cifra y nota como barras skeleton en sus mismos párrafos); `AcquisitionTile` igual. CLS 0,015 a 390 px y 0 a 1440 px. `/admin/members` y `/admin/lounges/[id]` ya estaban bajo el umbral; `/partner/analytics` queda con A11Y-16 |
-| PERF-02 (piloto `/lounges/[id]`): la ficha cargaba todo en el navegador tras comprobar la sesión (13 peticiones, HTML vacío) | 20 oct 2026 | Server Component: `requireSession()` en `app/lounges/[id]/layout.tsx`, `loadLoungeProfile` en `src/lib/lounge-profile.ts` y la vista en servidor con tres islas cliente (acciones, galería, disponibilidad). Título visible ~2 s → ~0,75 s, 3 peticiones desde el navegador, TBT en rango parecido. La PWA no cachea esa ruta (datos personales en el HTML). Abierto: 404 servido con estado 200 (por `loading.tsx`) y el resto de rutas |
-| PERF-02 (`/my-pass`): la lista de reservas se cargaba en el navegador tras comprobar la sesión (9 peticiones, HTML vacío) | 20 oct 2026 | `loadMyPass` en `src/lib/passes.ts`, `MyPassView` en servidor con la isla `MyPassBookings` y los paneles laterales en servidor. LCP ~1 s → ~0,45 s, 4 peticiones desde el navegador, TBT sin cambio. `/my-pass` va `NetworkOnly` en la PWA |
-| PERF-02 (`/admin/analytics`): la analítica de red se cargaba en el navegador tras dos comprobaciones de sesión y rol (7 peticiones, HTML vacío) | 20 oct 2026 | `requireAdmin()` en `src/lib/supabase/server.ts`, `loadAdminAnalytics` en `src/lib/admin-analytics.ts` y la vista `AdminAnalyticsView`. LCP ~1,1 s → ~0,45 s, 1 petición desde el navegador. `/admin/analytics` va `NetworkOnly` en la PWA |
-| PERF-02 (`/partner/analytics`): la analítica del partner se cargaba en el navegador tras comprobar sesión, rol y suspensión (6 peticiones, HTML vacío) | 21 oct 2026 | `requirePartner()` en `src/lib/supabase/server.ts`, `loadPartnerAnalytics` en `src/lib/partner.ts`, `initialContext` en `PartnerContextProvider` y la vista `PartnerAnalyticsView`. El login de partner cierra la sesión al llegar con `?suspended`. LCP ~1,6 s → ~0,5 s, 0 peticiones desde el navegador. `/partner/analytics` va `NetworkOnly` en la PWA |
-| DEP-01: `next@15.5.25` tenía dos advisories de cache poisoning en SSG/ISR self-hosted (GHSA-4jqv-mc3x-m676, GHSA-mcj8-r9mp-w47p) | 15 oct 2026 | `next` → `^15.5.27` (patch). `npm audit --omit=dev` ya no lista `next`; `sharp 0.35.4` sigue llegando por `next` (DEP-03, abierto) |
-| A11Y-11: los errores de formulario (login, signup, onboarding, recuperar/restablecer contraseña, login partner/admin) no se anunciaban al lector de pantalla ni quedaban asociados al campo; el alta deshabilitada no explicaba por qué | 15 oct 2026 | `Field` gana la prop `error` (`role="alert"`) y enlaza hint/error al control con `aria-describedby`; los 10 errores que iban a mano en `hint` pasan a `error`. El botón "Create account" se describe con su texto de ayuda. Tests en `src/app/login/page.test.tsx` y `src/app/signup/page.test.tsx` |
-| QA-01: `stripe-webhook`, única fuente de verdad de `payments.status`, no tenía ningún test; los que decían "el webhook" liquidaban el pago con service role | 19 oct 2026 | `src/lib/stripe-webhook.test.ts` envía eventos firmados (HMAC como Stripe) a la function servida: 400 sin firma, 401 con firma ajena, sesión pagada → `succeeded` + membresía activa, sesión caducada → `failed`, reentrega y fallo tardío sin efectos. CI genera un `STRIPE_WEBHOOK_SECRET` efímero; los tests engañosos se renombraron |
-| PRIV-02 (parte técnica): el borrado de cuenta dejaba la foto en Storage y el Customer de Stripe con email y tarjetas | 19 oct 2026 | `delete-account` borra `profile-photos/<uid>/` y el Customer antes de borrar el usuario; si falla, 500 y reintento del cron. CI genera un `ACCOUNT_DELETION_WEBHOOK_SECRET` efímero. Test en `src/lib/account-deletion.test.ts`. La retención sigue en §5.4 |
-| PERF-11: Stripe.js (~289 KB) se descargaba en `/book` desde el paso 1 y en `/profile` sin llegar a cobrar | 19 oct 2026 | La entrada por defecto de `@stripe/stripe-js` inyecta Stripe.js al importarse; `src/lib/stripe-client.ts` importa `loadStripe` desde `@stripe/stripe-js/pure` y solo se carga con `getStripe()`. Medido con `scripts/playwright/perf-11/verify-stripe-lazy.mjs`: 0 peticiones a Stripe en `/book` paso 1 y `/profile/membership`; el Payment Element sigue cargando al elegir "Use a new card". Test en `src/lib/stripe-client.test.ts` |
