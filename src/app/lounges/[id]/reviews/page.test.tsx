@@ -1,5 +1,6 @@
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { addDays, today } from "@/lib/availability";
@@ -120,6 +121,47 @@ describe("con reseñas", () => {
     await waitFor(() => expect(screen.getByText("What members mention")).toBeInTheDocument());
     expect(screen.getByText("Quiet 2")).toBeInTheDocument();
     expect(screen.getByText("Coffee 1")).toBeInTheDocument();
+  });
+});
+
+describe("Write a review", () => {
+  it("no aparece si el miembro no tiene visitas con check-in sin reseñar", async () => {
+    render(<ReviewsPage />);
+
+    await screen.findByText("2 member reviews");
+    expect(screen.queryByRole("button", { name: "Write a review" })).toBeNull();
+  });
+
+  it("con una visita sin reseñar abre el formulario y, al publicar, la reseña sale en la lista", async () => {
+    const user = userEvent.setup({ delay: null });
+    const {
+      data: { user: me },
+    } = await createClient().auth.getUser();
+    const date = addDays(today(), -1);
+    await admin.from("bookings").insert({
+      member_id: me!.id,
+      lounge_id: reviewedId,
+      date,
+      band: "morning",
+      slot_time: "8:00 AM",
+      status: "completed",
+      checked_in_at: `${date}T08:02:00Z`,
+    });
+
+    render(<ReviewsPage />);
+    await user.click(await screen.findByRole("button", { name: "Write a review" }));
+    await user.click(await screen.findByRole("radio", { name: "5 stars" }));
+    await user.type(screen.getByLabelText(/Tell other members about your visit/), "My own visit.");
+    await user.click(screen.getByRole("button", { name: "Post review" }));
+    await screen.findByRole("heading", { name: "Thank you" });
+    // La lista de fondo se refresca (ya no quedan visitas): el aviso sigue ahí.
+    await waitFor(() => expect(screen.getByText("3 member reviews")).toBeInTheDocument());
+    expect(screen.getByRole("heading", { name: "Thank you" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Done" }));
+
+    const list = await screen.findByRole("list", { name: "Member reviews" });
+    await waitFor(() => expect(list).toHaveTextContent("My own visit."));
+    expect(screen.queryByRole("button", { name: "Write a review" })).toBeNull();
   });
 });
 

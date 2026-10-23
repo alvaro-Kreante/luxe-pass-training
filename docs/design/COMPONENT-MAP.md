@@ -193,7 +193,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `/explore` | `Main` + `LocationPermission` + `ManualLocation` + `MapError` + `Offline` + `Filters` + `NoResults` + `ListView` + `ListLoading` | 2.1 · 2.2 · 2.3 |
 | `/lounges/[id]` | `Main` + `Gallery` + `Share` + `NotAvailable` + `Loading` | 3.1 · 3.2 |
 | `/lounges/[id]/availability` | `Availability` + `Closure` | 3.2 |
-| `/lounges/[id]/reviews` | `Reviews` + `NoRatings` | 3.1 |
+| `/lounges/[id]/reviews` | `Reviews` + `NoRatings` + `WriteReview{Empty,Filled,Submitting,Error,Sent,PickVisit}` (y `…Mobile`) | 3.1 |
 | `/lounges/[id]/book` | `Main` (+ `MembershipCovered` cuando la visita la cubre el plan real o un day pass de regalo — `booking_coverage`, Epic 9) | 4.1 |
 | `/lounges/[id]/book/payment` | `Payment` + `MembershipCovered` | 4.2 |
 | `/lounges/[id]/book/summary` | `Summary` + `Waitlist` + `PaymentError` | 4.1 |
@@ -280,7 +280,8 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `lounges/lounge-subview-header.tsx` | Story 3.1 / 3.2 — cabecera de la sub-vista de lounge (patrón 8) |
 | `lounges/weekly-calendar.tsx` · `closure-banner.tsx` | Story 3.2 — el calendario semanal de franjas (recibe `cells` ya resueltas) y el aviso de cierre por festivo |
 | `lounges/lounge-schedule-sections.tsx` | Story 10.9 — "Seasonal hours" (tarjeta por temporada con In effect / Upcoming y `weekSummary`) y "Special closures" (un `ClosureBanner` por cierre) en la ficha del miembro (SeasonalHours.dc.html). Sin temporadas ni cierres no se pinta nada (NoSchedule.dc.html). El cierre que cubre hoy sube encima de las fotos y la `AvailabilityCard` pasa a "Closed today" (ClosedToday.dc.html). `OperatingHours` recibe las filas ya resueltas por `weekHoursFrom` (cierre → temporada → semana habitual) y, con temporada en curso, su nombre y la nota de vuelta al horario habitual |
-| `lounges/rating-summary.tsx` · `review-card.tsx` | Story 3.1 — el resumen de valoración (rating/recuento reales, desglose y reseñas de muestra) |
+| `lounges/rating-summary.tsx` · `review-card.tsx` | Story 3.1 — el resumen de valoración y cada reseña, todo de `reviews` real (`lib/reviews.ts`). Una tarjeta por visita reseñada, con su fecha |
+| `lounges/write-review-dialog.tsx` | Story 3.1 — `WriteReview*.dc.html`: modal de 560px en desktop, hoja desde abajo en mobile. Elige visita si hay varias sin reseñar. Se abre desde `RatingSummary` ("Write a review") y desde el pase caducado ("Leave a review") |
 | `lib/booking.ts` | Story 4.1 / 4.2 — date picker mensual, slots de llegada, precio (day pass vs. cubierto por membresía), wrappers de `confirmBooking`/`joinWaitlist` (RPC reales) y referencias de reserva reales (`bookingReferenceFromId`) |
 | `lib/calendar-export.ts` | Story 4.3 — `.ics` real y URL real de Google Calendar, con dirección y referencia de reserva reales (`LoungeProfile` + `bookingReferenceFromId`) — capacidades del navegador, sin tocar Supabase |
 | `booking/booking-context.tsx` | Borrador de reserva compartido por los 3 pasos y por `/book/confirmed`+`/book/receipt` (Context, sin persistencia); también la cuenta atrás compartida "Slot held for M:SS" |
@@ -507,12 +508,9 @@ dueño de la tabla) y añade tres tablas propias del Epic 3 — ver
 
 Desviaciones conscientes de esta parte:
 
-- **No hay tabla `reviews`.** Ninguna historia permite dejar una reseña
-  (ver `docs/DATA-MODEL-MAP.md`): `rating`/`review_count` son columnas reales
-  agregadas, pero el contenido de cada reseña, el desglose por estrellas y
-  "what members mention" (`reviewsFor`/`ratingBreakdownFor`/`mentionsFor`)
-  siguen siendo datos de muestra — mismo criterio que Camille Duforest
-  (Epic 8) o LP-842193 (Epic 5).
+- **Reseñas reales desde oct 2026** (`reviews`, `lib/reviews.ts`): una por
+  visita con check-in. Las cifras sembradas (4.9 · 128…) se pusieron a 0 con
+  la migración de datos `reset_seeded_lounge_ratings`.
 - **`lib/lounge-profile.ts` sigue siendo parcialmente híbrido, ahora a
   propósito por una razón distinta.** Al conectar Epic 4 (ver más abajo) se
   retiraron `contactFor`/`LoungeContact`/`CONTACT_OVERRIDES` (ya no las usa
@@ -1005,9 +1003,16 @@ extiende el existente con `data-theme` o una variante — **no se crea uno nuevo
 | Las amenities del perfil son las 6 de la Story 2.2 (`lib/amenities.ts`), no la lista propia de `Main.dc.html` (que incluye "Showers" y no incluye "Spa") | Una sola fuente de datos entre el filtro de Explore y el perfil evita que un lounge se anuncie con una amenity que el filtro dice que no tiene |
 | "Next available times" de la card de disponibilidad ofrece franjas (Morning/Afternoon/Evening), no horas exactas como "2:00 PM" | El catálogo solo modela franjas (Story 2.2); no hay una agenda con horas sueltas de la que sacar "2:00 PM" |
 | La capacidad "de 40" es una constante única para todo el catálogo | Ningún lounge trae su propio aforo; es la misma cifra que cita `Main.dc.html` para The Ainsworth |
-| El contacto (dirección, teléfono, email, web) y las reseñas son literales solo para The Ainsworth y Belmont Terrace; el resto del catálogo los deriva de su id | Son los dos únicos lounges que un artboard de la Fase 4 cita por nombre (`Main.dc.html`/`Reviews.dc.html` y `NoRatings.dc.html`). Ver `docs/PENDIENTES.md` §2.4 |
+| El contacto (dirección, teléfono, email, web) es literal solo para The Ainsworth y Belmont Terrace; el resto del catálogo lo deriva de su id | Son los dos únicos lounges que un artboard de la Fase 4 cita por nombre (`Main.dc.html` y `NoRatings.dc.html`) |
 | El aviso de cierre por festivo se calcula mirando los 7 días de la semana mostrada, no solo el lunes y el domingo | Thanksgiving cae a mitad de semana (jueves-viernes): mirar solo los extremos lo dejaría sin detectar |
-| "Write a review" no lleva a ninguna pantalla | Ninguna historia de los 9 epics cubre redactar una reseña. Ver `docs/PENDIENTES.md` §2.5 |
+| "Write a review" solo aparece si el miembro tiene una visita con check-in sin reseñar | Decisión del usuario (23 oct 2026): solo reseña quien hizo check-in, una reseña por visita |
+| `/lounges/[id]/reviews` lista todas las reseñas, sin "Showing 3 of 128" ni "Load more" | Con reseñas reales los lounges empiezan en 0; paginar no compensa todavía |
+| El error de `WriteReviewError` usa `Notice` (`attention`, borde discontinuo) en vez del fondo y texto terracota del artboard; el asterisco de "Your rating" va en `accent-strong` | §5 Estados prohíbe colores semánticos |
+| Los botones del formulario de reseña son `Button` `md` (mayúsculas, 44px) en vez de los de 48px en minúsculas del artboard | Reutilizar el botón existente antes que crear uno |
+| Las etiquetas de nota (Poor · Fair · Good · Very good · Excellent) solo tienen "Very good" fijado en el artboard | El resto se completa con la misma escala |
+| "Checked in 10:12 · 1 guest" de `WriteReviewPickVisit` se queda en "Checked in 10:12 AM" | La admisión es siempre de un miembro (`ADMISSION_COUNT`) |
+| En el pase caducado, "Leave a review" desaparece si no hubo check-in y pasa a "See your review" (→ `/lounges/[id]/reviews`) si la visita ya tiene reseña | `Expired.dc.html` solo dibuja el botón; una visita se reseña una vez |
+| `Rating` muestra "New" en vez de la cifra cuando el lounge no tiene reseñas | La nota media de reseñas 1–5 nunca es 0; "0.0" sería falso |
 | El date picker de `/lounges/[id]/book` es mensual (día a día) y distinto del calendario semanal (franjas) de la Story 3.2 | Son dos widgets del design system con geometría propia (§4 "Date picker mensual" vs. "Calendario de disponibilidad"). Ambos leen la misma fuente real, `fetchAvailability` de `lib/lounge-profile.ts` (Epic 4 conectado) — no hay dos modelos de disponibilidad, solo dos vistas |
 | Los cinco slots de llegada (`Main.dc.html`) reparten las plazas de su franja del catálogo, en vez de traer su propio número | El catálogo solo modela franjas (morning/afternoon/evening), no horas sueltas. `slotsFor` en `lib/booking.ts` divide `seatsLeft` de la franja entre sus slots, así que la suma nunca supera lo que ya declara `weeklyAvailability` |
 | El modelo de negocio de precio (8 visitas/mes incluidas, day pass de $75 a partir de la 9.ª) es una decisión de producto asumida, no confirmada | Así lo advierte ya `DESIGN-SYSTEM.md` §6 (Fase 5): es la lectura que cubre a la vez "subscription pricing" e "individual day-pass pricing" de la Story 4.2. Ver `docs/PENDIENTES.md` |

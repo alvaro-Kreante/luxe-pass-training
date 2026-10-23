@@ -1,8 +1,10 @@
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { bookingReferenceFromId, confirmBooking } from "@/lib/booking";
-import { today } from "@/lib/availability";
+import { addDays, today } from "@/lib/availability";
 import { LOUNGES } from "@/lib/lounges";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
@@ -126,5 +128,60 @@ describe("?state=expired", () => {
       "href",
       `/lounges/${ainsworth.id}/book`,
     );
+  });
+});
+
+describe("?state=expired — reseña de la visita", () => {
+  const admin = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+
+  async function pastVisit(checkedIn: boolean) {
+    const {
+      data: { user },
+    } = await createClient().auth.getUser();
+    const date = addDays(today(), checkedIn ? -2 : -3);
+    const { data, error } = await admin
+      .from("bookings")
+      .insert({
+        member_id: user!.id,
+        lounge_id: ainsworth.id,
+        date,
+        band: "morning",
+        slot_time: "8:00 AM",
+        status: "completed",
+        checked_in_at: checkedIn ? `${date}T08:04:00Z` : null,
+        no_show: !checkedIn,
+      })
+      .select("id")
+      .single();
+    if (error) throw error;
+    return data.id as string;
+  }
+
+  it("una visita sin check-in no se puede reseñar", async () => {
+    params.mockReturnValue({ reference: bookingReferenceFromId(await pastVisit(false)) });
+    query = new URLSearchParams("state=expired");
+
+    render(<PassDetailPage />);
+
+    await screen.findByRole("heading", { name: "This pass has expired" });
+    expect(screen.queryByRole("button", { name: "Leave a review" })).toBeNull();
+  });
+
+  it("'Leave a review' reseña esa visita y después lleva a verla", async () => {
+    const user = userEvent.setup({ delay: null });
+    params.mockReturnValue({ reference: bookingReferenceFromId(await pastVisit(true)) });
+    query = new URLSearchParams("state=expired");
+
+    render(<PassDetailPage />);
+    await user.click(await screen.findByRole("button", { name: "Leave a review" }));
+    await user.click(await screen.findByRole("radio", { name: "4 stars" }));
+    await user.click(screen.getByRole("button", { name: "Post review" }));
+    await user.click(await screen.findByRole("button", { name: "Done" }));
+
+    expect(await screen.findByRole("link", { name: "See your review" })).toHaveAttribute(
+      "href",
+      `/lounges/${ainsworth.id}/reviews`,
+    );
+    expect(screen.queryByRole("button", { name: "Leave a review" })).toBeNull();
   });
 });

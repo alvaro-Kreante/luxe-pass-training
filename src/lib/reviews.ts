@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { formatFullDate } from "./passes";
+import { formatClockTime, formatFullDate } from "./passes";
 
 /**
  * Story 3.1 — "User ratings and review count (if available)" con reseñas
@@ -140,6 +140,8 @@ export interface ReviewableVisit {
   loungeName: string;
   date: string;
   dateLabel: string;
+  /** "Checked in 10:12 AM" */
+  checkedInLabel: string;
 }
 
 interface VisitRow {
@@ -147,6 +149,7 @@ interface VisitRow {
   confirmation_code: string;
   lounge_id: string;
   date: string;
+  checked_in_at: string;
   lounges: { name: string } | null;
   reviews: { id: string }[] | null;
 }
@@ -158,7 +161,7 @@ export async function fetchReviewableVisits(
 ): Promise<ReviewableVisit[]> {
   let query = supabase
     .from("bookings")
-    .select("id, confirmation_code, lounge_id, date, lounges(name), reviews(id)")
+    .select("id, confirmation_code, lounge_id, date, checked_in_at, lounges(name), reviews(id)")
     .not("checked_in_at", "is", null)
     .order("date", { ascending: false })
     .order("slot_time", { ascending: false });
@@ -181,5 +184,6 @@ export async function fetchReviewableVisits(
       loungeName: row.lounges?.name ?? "",
       date: row.date,
       dateLabel: formatFullDate(row.date),
+      checkedInLabel: `Checked in ${formatClockTime(row.checked_in_at)}`,
     }));
 }

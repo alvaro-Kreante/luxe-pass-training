@@ -11,6 +11,7 @@ import { AppShell } from "@/components/patterns/app-shell";
 import { buttonVariants } from "@/components/ui/button";
 import { Notice } from "@/components/ui/notice";
 import { toneOf } from "@/components/lounges/lounge-thumb";
+import { WriteReviewDialog } from "@/components/lounges/write-review-dialog";
 import {
   fetchDigitalPass,
   isPassLifecycleState,
@@ -341,6 +342,9 @@ function CheckedInBody({ pass }: { pass: DigitalPass }) {
 }
 
 function ExpiredBody({ pass }: { pass: DigitalPass }) {
+  const [reviewed, setReviewed] = React.useState(pass.reviewed);
+  const [writing, setWriting] = React.useState(false);
+
   return (
     <>
       <div className="flex items-center gap-4.5">
@@ -379,10 +383,43 @@ function ExpiredBody({ pass }: { pass: DigitalPass }) {
         <Link href={`/lounges/${pass.loungeId}/book`} className={cn(buttonVariants({ size: "lg" }), "flex-1")}>
           Book {pass.loungeName} again
         </Link>
-        <button type="button" className={cn(buttonVariants({ variant: "secondary", size: "lg" }), "flex-1")}>
-          Leave a review
-        </button>
+        {reviewed ? (
+          <Link
+            href={`/lounges/${pass.loungeId}/reviews`}
+            className={cn(buttonVariants({ variant: "secondary", size: "lg" }), "flex-1")}
+          >
+            See your review
+          </Link>
+        ) : pass.checkedInLabel ? (
+          <button
+            type="button"
+            onClick={() => setWriting(true)}
+            className={cn(buttonVariants({ variant: "secondary", size: "lg" }), "flex-1")}
+          >
+            Leave a review
+          </button>
+        ) : null}
       </div>
+
+      {writing && pass.checkedInLabel ? (
+        <WriteReviewDialog
+          open
+          onOpenChange={setWriting}
+          loungeName={pass.loungeName}
+          visits={[
+            {
+              bookingId: pass.bookingId,
+              reference: pass.reference,
+              loungeId: pass.loungeId,
+              loungeName: pass.loungeName,
+              date: pass.dateIso,
+              dateLabel: pass.dateLabel,
+              checkedInLabel: pass.checkedInLabel,
+            },
+          ]}
+          onPosted={() => setReviewed(true)}
+        />
+      ) : null}
 
       <p className="m-0 mt-4.5 text-xs text-fg-subtle">
         Expired passes stay in your history for your records, but cannot be used for entry again.

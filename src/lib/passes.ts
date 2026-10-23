@@ -61,7 +61,7 @@ function formatMonthDay(dateIso: string): string {
 }
 
 /** `checked_in_at`/`created_at` son instantes reales (timestamptz) — se muestran como hora, igual que el resto de la app trata sus timestamps (UTC, sin huso real). */
-function formatClockTime(instantIso: string): string {
+export function formatClockTime(instantIso: string): string {
   return new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
     minute: "2-digit",
@@ -85,6 +85,7 @@ export interface DigitalPass {
   partnerName: string | null;
   address: string;
   receptionNote: string;
+  dateIso: string;
   dateLabel: string;
   /** "Sat, Sep 14" */
   shortDateLabel: string;
@@ -101,6 +102,10 @@ export interface DigitalPass {
   checkedInAt: string | null;
   status: string;
   noShow: boolean;
+  /** Story 3.1 — la visita ya tiene reseña (una por visita). */
+  reviewed: boolean;
+  /** "Checked in 10:12 AM", o null sin check-in. */
+  checkedInLabel: string | null;
 }
 
 interface LoungeEmbed {
@@ -128,10 +133,11 @@ interface BookingRow {
   created_at: string;
   lounges: LoungeEmbed | null;
   payments: PaymentEmbed[] | null;
+  reviews?: { id: string }[] | null;
 }
 
 const BOOKING_SELECT =
-  "id, lounge_id, confirmation_code, date, slot_time, special_requests, status, checked_in_at, no_show, created_at, lounges(name, address, reception_note, partners(name)), payments(amount_cents, status)";
+  "id, lounge_id, confirmation_code, date, slot_time, special_requests, status, checked_in_at, no_show, created_at, lounges(name, address, reception_note, partners(name)), payments(amount_cents, status), reviews(id)";
 
 function amountPaidLabel(payments: PaymentEmbed[] | null): string {
   const succeeded = payments?.find((payment) => payment.status === "succeeded");
@@ -178,6 +184,7 @@ async function fromBookingRow(supabase: SupabaseClient, row: BookingRow): Promis
     partnerName: row.lounges?.partners?.name ?? null,
     address: row.lounges?.address ?? "",
     receptionNote: row.lounges?.reception_note ?? "",
+    dateIso: row.date,
     dateLabel: formatFullDate(row.date),
     shortDateLabel: formatDateLabel(row.date),
     monthDayLabel: formatMonthDay(row.date),
@@ -191,6 +198,8 @@ async function fromBookingRow(supabase: SupabaseClient, row: BookingRow): Promis
     checkedInAt: row.checked_in_at ? formatClockTime(row.checked_in_at) : null,
     status: row.status,
     noShow: row.no_show,
+    reviewed: (row.reviews?.length ?? 0) > 0,
+    checkedInLabel: row.checked_in_at ? `Checked in ${formatClockTime(row.checked_in_at)}` : null,
   };
 }
 
@@ -222,6 +231,7 @@ export const AINSWORTH_PASS: DigitalPass = {
   loungeName: "The Ainsworth",
   address: "122 E 45th St, New York, NY 10017",
   receptionNote: "Reception on Level 2",
+  dateIso: "2025-09-14",
   dateLabel: "Saturday, September 14",
   shortDateLabel: "Sat, Sep 14",
   monthDayLabel: "September 14",
@@ -235,6 +245,8 @@ export const AINSWORTH_PASS: DigitalPass = {
   checkedInAt: "3:34 PM",
   status: "in_progress",
   noShow: false,
+  reviewed: false,
+  checkedInLabel: "Checked in 3:34 PM",
 };
 
 /* ------------------------------------------------------------------ */

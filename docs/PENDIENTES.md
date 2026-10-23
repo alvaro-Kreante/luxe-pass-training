@@ -53,17 +53,24 @@ aceptación con fecha y versión.
 
 ## 2. Provisional — cae solo al avanzar los epics
 
-### 2.5 "Write a review" no hace nada
+### 2.5 Reseñas: lo que queda abierto
 
-El botón de `RatingSummary` no tiene una pantalla de destino: ninguna historia
-de los 9 epics cubre redactar una reseña, solo leerlas (Story 3.1).
+Las reseñas son reales desde el 23 oct 2026 (`reviews`, una por visita con
+check-in). Abierto:
 
-Por lo mismo, el contenido de cada reseña individual (nombre, texto), el
-desglose por estrellas y "what members mention" siguen siendo datos de
-muestra: no hay tabla `reviews` (ver `docs/DATA-MODEL-MAP.md`). Rating y
-número de reseñas sí son reales.
+- **El Home sigue con notas inventadas:** sus tarjetas destacadas leen el
+  catálogo de muestra `src/lib/lounges.ts` (4.9, 4.8…), no `lounges`.
+- **Sin moderación ni respuesta del partner:** el admin no puede ocultar una
+  reseña y el miembro no puede editarla ni borrarla.
+- **Sin aviso para reseñar:** el pase con check-in promete "We will ask how
+  it went", pero nadie lo pide; se reseña desde el pase caducado o desde
+  `/lounges/[id]/reviews`.
+- **Al subir a `staging`/`main`,** la migración `reset_seeded_lounge_ratings`
+  deja a 0 la nota y el recuento de todos los lounges remotos (decisión del
+  usuario: nada de cifras sembradas).
 
-**Se resuelve:** cuando una historia futura defina esa pantalla.
+**Se resuelve:** con una historia de moderación o de recordatorio de reseña,
+y conectando el Home al catálogo real.
 
 ### 2.6 El QR del pase es decorativo
 
@@ -492,6 +499,21 @@ job pasa. No es una regresión: el test solo comprueba un 401.
 
 **Se resuelve:** subiéndole el timeout o haciendo que no dependa del
 arranque en frío de la Edge Function en CI.
+
+### 4.16 El perfil de un lounge sin fotos rompe
+
+`HeroCarousel` (`src/components/lounges/hero-carousel.tsx`) lee `images[0].url`
+sin comprobar que haya fotos: `/lounges/[id]` de un lounge live sin
+`lounge_images` falla al pintar (visto el 23 oct 2026 en un test). Publicar
+desde el admin exige fotos, así que hoy solo pasa con lounges creados a mano.
+
+### 4.17 Test de informes programados que falla en local
+
+`src/app/admin/reports/scheduled/page.test.tsx` → "lists the automated
+reports with their cadence" falla aislado con "Found multiple elements with
+the text: Every day": la base local acumula informes programados que el test
+no espera (visto el 23 oct 2026, con y sin la rama de reseñas). Sin
+investigar.
 
 ## 5. Decisiones abiertas
 

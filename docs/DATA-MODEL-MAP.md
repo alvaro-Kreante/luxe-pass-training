@@ -38,9 +38,8 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
   `lounges`, sin tabla propia — como ya anticipaba esta fila.
 - `open_now`/`slots_today` siguen siendo columnas reales pero **estáticas**
   (sembradas 1:1 del mock, no en vivo): maduran cuando Epic 4 aporte
-  disponibilidad real de bookings. `rating`/`review_count` sí son reales
-  ahora (Epic 3) — siguen sin ser una agregación en vivo porque no existe
-  tabla `reviews` (ver su fila más abajo), pero ya no son del mock.
+  disponibilidad real de bookings. `rating`/`review_count` son el agregado
+  de `reviews` (Epic 3), recalculado por trigger con cada reseña.
 - Sin tabla propia: 2.1 (el mapa dibujado sigue siendo cliente — proveedor
   real fuera de alcance, ver `docs/PENDIENTES.md` §2.3), 2.3 (vista de lista,
   paginada en cliente sobre el catálogo ya traído).
@@ -54,11 +53,15 @@ algo cambia de dueño o aparece una entidad que aquí no se previó.
 
 - Extiende `lounges` (mismo dueño, Epic 2) con `address`/`phone`/`email`/
   `website`/`reception_note`, `weekly_hours` (jsonb), `review_count`,
-  `capacity`, `booking_restrictions`. Ninguna historia permite *dejar* una
-  reseña, así que `rating`/`review_count` son columnas agregadas, no una
-  tabla `reviews` — el contenido de cada reseña sigue siendo dato de muestra
-  (`lib/lounge-profile.ts`) — señalar si aparece una historia futura de
-  reviews.
+  `capacity`, `booking_restrictions`.
+- `reviews` (**nace aquí**, oct 2026) — una reseña por reserva con check-in
+  (`booking_id` único): un miembro puede reseñar el mismo lounge una vez
+  por visita. `rating` 1–5, `body` ≤ 1000, `mentions` ≤ 5. RLS: el miembro
+  inserta solo la de su propia visita con check-in y lee solo las suyas;
+  las de los demás se leen con `lounge_reviews` (nombre abreviado + plan,
+  nunca email). El trigger `refresh_lounge_rating` mantiene
+  `lounges.rating`/`review_count`. Cruza con Epic 4 (`bookings`), Epic 1
+  (`profiles`) y Epic 9 (`memberships`, el plan del autor).
 - `lounge_images` (implementada, dueño Epic 3) — colección ordenada; Epic 8.3
   la gestionará desde admin, de ahí tabla propia en vez de array. La
   fotografía sigue sin ser real (bloques de marca, ver `DESIGN-SYSTEM.md`
