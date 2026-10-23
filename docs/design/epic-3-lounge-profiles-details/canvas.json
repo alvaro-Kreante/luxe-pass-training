@@ -95,6 +95,102 @@
       "w": 1440,
       "h": 900,
       "title": "12. Closed today"
+    },
+    {
+      "file": "WriteReviewEmpty.dc.html",
+      "x": 0,
+      "y": 4450,
+      "w": 1440,
+      "h": 900,
+      "title": "13. Write a review — empty"
+    },
+    {
+      "file": "WriteReviewFilled.dc.html",
+      "x": 1540,
+      "y": 4450,
+      "w": 1440,
+      "h": 900,
+      "title": "14. Write a review — filled"
+    },
+    {
+      "file": "WriteReviewSubmitting.dc.html",
+      "x": 3080,
+      "y": 4450,
+      "w": 1440,
+      "h": 900,
+      "title": "15. Write a review — submitting"
+    },
+    {
+      "file": "WriteReviewError.dc.html",
+      "x": 0,
+      "y": 5500,
+      "w": 1440,
+      "h": 900,
+      "title": "16. Write a review — error"
+    },
+    {
+      "file": "WriteReviewSent.dc.html",
+      "x": 1540,
+      "y": 5500,
+      "w": 1440,
+      "h": 900,
+      "title": "17. Write a review — sent"
+    },
+    {
+      "file": "WriteReviewPickVisit.dc.html",
+      "x": 3080,
+      "y": 5500,
+      "w": 1440,
+      "h": 900,
+      "title": "18. Write a review — pick a visit"
+    },
+    {
+      "file": "WriteReviewEmptyMobile.dc.html",
+      "x": 0,
+      "y": 6650,
+      "w": 390,
+      "h": 844,
+      "title": "19. Write a review — empty · mobile"
+    },
+    {
+      "file": "WriteReviewFilledMobile.dc.html",
+      "x": 490,
+      "y": 6650,
+      "w": 390,
+      "h": 844,
+      "title": "20. Write a review — filled · mobile"
+    },
+    {
+      "file": "WriteReviewSubmittingMobile.dc.html",
+      "x": 980,
+      "y": 6650,
+      "w": 390,
+      "h": 844,
+      "title": "21. Write a review — submitting · mobile"
+    },
+    {
+      "file": "WriteReviewErrorMobile.dc.html",
+      "x": 1470,
+      "y": 6650,
+      "w": 390,
+      "h": 844,
+      "title": "22. Write a review — error · mobile"
+    },
+    {
+      "file": "WriteReviewSentMobile.dc.html",
+      "x": 1960,
+      "y": 6650,
+      "w": 390,
+      "h": 844,
+      "title": "23. Write a review — sent · mobile"
+    },
+    {
+      "file": "WriteReviewPickVisitMobile.dc.html",
+      "x": 2450,
+      "y": 6650,
+      "w": 390,
+      "h": 844,
+      "title": "24. Write a review — pick a visit · mobile"
     }
   ],
   "annotations": [
@@ -146,6 +242,13 @@
       "y": 4105,
       "w": 900,
       "text": "Story 10.9 / 3.2 · Seasonal hours and special closures as the member reads them: the season in effect replaces the usual week in Operating hours, upcoming seasons are listed below, and each closure reuses the holiday closure notice. With no seasons or closures both sections are hidden. When today falls inside a closure the notice moves to the top and the card shows the reopening."
+    },
+    {
+      "id": "write-review-note",
+      "x": 0,
+      "y": 7600,
+      "w": 1400,
+      "text": "Write a review — desktop modal over the profile, mobile bottom sheet. Entry points: lounge profile › Reviews › \"Write a review\" (only with checked-in visits not yet reviewed; one visit opens on the form, several open on \"Which visit?\" with date + LP#, and the form then shows \"Choose another visit\"). Expired pass › \"Leave a review\" opens on the form with the visit known. 1–5 stars required; text optional, max 1000 chars; \"What stood out\" max 5 tags."
     }
   ],
   "launch": {
