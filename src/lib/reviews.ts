@@ -139,3 +139,50 @@ export interface ReviewVisit {
   /** "Thu, Oct 16, 2026" */
   dateLabel: string;
 }
+
+/** Una reseña tal como la ven el partner y el admin: con la visita (LP#). */
+export interface StaffReview extends LoungeReview {
+  reference: string;
+  /** Solo en la vista del partner con varios lounges. */
+  loungeName?: string;
+  /** Solo para el admin ("View member"). */
+  memberId?: string;
+}
+
+export interface StaffReviews extends Omit<LoungeReviews, "reviews"> {
+  reviews: StaffReview[];
+}
+
+interface StaffReviewRow extends ReviewRow {
+  confirmation_code: string;
+  lounge_name?: string;
+  member_id?: string;
+}
+
+function fromStaffRow(row: StaffReviewRow): StaffReview {
+  return {
+    ...fromRow(row),
+    reference: row.confirmation_code,
+    ...(row.lounge_name !== undefined ? { loungeName: row.lounge_name } : {}),
+    ...(row.member_id !== undefined ? { memberId: row.member_id } : {}),
+  };
+}
+
+function staffReviewsOf(rows: StaffReviewRow[]): StaffReviews {
+  const reviews = rows.map(fromStaffRow);
+  return { ...summarizeReviews(reviews), reviews };
+}
+
+/** PartnerReviews.dc.html — `loungeId` null = "All lounges". */
+export async function fetchPartnerReviews(supabase: SupabaseClient, loungeId: string | null): Promise<StaffReviews> {
+  const { data, error } = await supabase.rpc("partner_reviews", { p_lounge_id: loungeId });
+  if (error) throw error;
+  return staffReviewsOf((data ?? []) as StaffReviewRow[]);
+}
+
+/** LoungeReviews.dc.html — pestaña "Reviews" del detalle del lounge en admin. */
+export async function fetchAdminLoungeReviews(supabase: SupabaseClient, loungeId: string): Promise<StaffReviews> {
+  const { data, error } = await supabase.rpc("admin_lounge_reviews", { p_lounge_id: loungeId });
+  if (error) throw error;
+  return staffReviewsOf((data ?? []) as StaffReviewRow[]);
+}

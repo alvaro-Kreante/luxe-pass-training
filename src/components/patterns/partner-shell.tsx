@@ -4,7 +4,7 @@ import * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, RefreshCw, Settings, Ticket, UsersRound } from "lucide-react";
+import { LayoutGrid, RefreshCw, Settings, Star, Ticket, UsersRound } from "lucide-react";
 
 import { LogoutButton } from "@/components/patterns/logout-button";
 import { LoungeSwitcher } from "@/components/partner/lounge-switcher";
@@ -33,6 +33,7 @@ const NAV_ITEMS = [
   { href: "/partner", label: "Today", icon: Ticket },
   { href: "/partner/guests", label: "Guests", icon: UsersRound },
   { href: "/partner/analytics", label: "Analytics", icon: LayoutGrid },
+  { href: "/partner/reviews", label: "Reviews", icon: Star },
   { href: "/partner/reports", label: "Reports", icon: LayoutGrid },
   { href: null, label: "Settings", icon: Settings },
 ] as const;

@@ -4,6 +4,7 @@ import * as React from "react";
 import { Mail } from "lucide-react";
 
 import { Drawer } from "@/components/patterns/drawer";
+import { Stars } from "@/components/reviews/staff-reviews-board";
 import { StatusChip } from "@/components/ui/status-chip";
 import { today } from "@/lib/availability";
 import {
@@ -82,9 +83,16 @@ export function GuestHistoryDrawer({
 
       <div className="my-5.5 h-px bg-line" />
 
-      <p id="guest-visit-history" className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">
-        Visit history
-      </p>
+      <div className="flex items-center justify-between gap-3">
+        <p id="guest-visit-history" className="m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-subtle">
+          Visit history
+        </p>
+        {visits ? (
+          <span className="text-[11.5px] text-fg-subtle">
+            {visits.filter((visit) => visit.review).length} reviewed
+          </span>
+        ) : null}
+      </div>
       {visits === null ? (
         <p className="m-0 mt-3 text-[13px] text-fg-subtle">Loading…</p>
       ) : (
@@ -101,11 +109,34 @@ export function GuestHistoryDrawer({
                 </span>
                 <VisitStatusChip status={visit.status} />
               </div>
+              {visit.status === "arrived" ? <VisitReview visit={visit} /> : null}
             </li>
           ))}
         </ul>
       )}
     </Drawer>
+  );
+}
+
+/** GuestDetailReviews.dc.html — el LP# y la reseña de una visita con check-in. */
+function VisitReview({ visit }: { visit: GuestVisit }) {
+  return (
+    <div className="mt-2 flex items-center gap-3 border-t border-line pt-2">
+      <p className="m-0 min-w-0 flex-1 truncate text-[11.5px] text-fg-subtle">
+        {visit.reference}
+        {visit.review ? (
+          <>
+            {" · "}
+            {visit.review.text ? <span className="italic">“{visit.review.text}”</span> : "Rated without a comment"}
+          </>
+        ) : null}
+      </p>
+      {visit.review ? (
+        <Stars value={visit.review.rating} label={`Reviewed ${visit.review.rating} out of 5`} size={13} />
+      ) : (
+        <span className="text-[11.5px] text-fg-subtle">Not reviewed</span>
+      )}
+    </div>
   );
 }
 

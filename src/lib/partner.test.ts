@@ -351,7 +351,7 @@ describe("repeatGuestsSummary", () => {
 });
 
 describe("guestVisitStatus — estado de cada reserva en la ficha del invitado", () => {
-  const base = { booking_id: "b", lounge_name: "L", slot_time: "8:00 AM", status: "confirmed", checked_in: false, no_show: false, paid_cents: 0 };
+  const base = { booking_id: "b", lounge_name: "L", slot_time: "8:00 AM", status: "confirmed", checked_in: false, no_show: false, paid_cents: 0, confirmation_code: "LP-000001", review_rating: null, review_body: null };
 
   it("distingue arrived, no-show y cancelled", () => {
     expect(guestVisitStatus({ ...base, date: "2026-10-01", checked_in: true, status: "in_progress" }, "2026-10-21")).toBe("arrived");

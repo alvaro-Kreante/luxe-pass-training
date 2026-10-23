@@ -84,6 +84,20 @@ create or replace trigger reviews_refresh_lounge_rating
 after insert or update or delete on public.reviews
 for each row execute function public.refresh_lounge_rating();
 
+-- "Priya T." — el nombre que ven los miembros y el partner. El admin ve el
+-- completo (`admin_lounge_reviews`).
+create or replace function public.review_author_short(p_full_name text)
+returns text
+language sql
+immutable
+set search_path = ''
+as $$
+  select trim(
+    split_part(coalesce(nullif(trim(p_full_name), ''), 'Member'), ' ', 1)
+    || coalesce(' ' || nullif(left(split_part(trim(p_full_name), ' ', 2), 1), '') || '.', '')
+  );
+$$;
+
 -- Las reseñas de un lounge publicado (o del propio partner / admin), de la
 -- más reciente a la más antigua por fecha de visita. Del autor solo sale
 -- "Nombre I." y su plan, nunca el email ni el id.
@@ -114,10 +128,7 @@ begin
   return query
     select
       r.id,
-      trim(
-        split_part(coalesce(nullif(trim(p.full_name), ''), 'Member'), ' ', 1)
-        || coalesce(' ' || nullif(left(split_part(trim(p.full_name), ' ', 2), 1), '') || '.', '')
-      ),
+      public.review_author_short(p.full_name),
       m.plan,
       b.date,
       r.rating,
@@ -134,3 +145,96 @@ $$;
 
 revoke execute on function public.lounge_reviews(text) from public, anon;
 grant execute on function public.lounge_reviews(text) to authenticated;
+
+-- PartnerReviews.dc.html (Fase 2) — las reseñas de los lounges del partner
+-- que llama, de uno (`p_lounge_id`) o de todos ("All lounges", null). Con
+-- el lounge y el LP# de la visita; el autor, abreviado como en el perfil.
+create or replace function public.partner_reviews(p_lounge_id text default null)
+returns table (
+  id uuid,
+  author_name text,
+  plan text,
+  visited_on date,
+  lounge_name text,
+  confirmation_code text,
+  rating smallint,
+  body text,
+  mentions text[]
+)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  return query
+    select
+      r.id,
+      public.review_author_short(p.full_name),
+      m.plan,
+      b.date,
+      l.name,
+      b.confirmation_code,
+      r.rating,
+      r.body,
+      r.mentions
+    from public.reviews r
+    join public.bookings b on b.id = r.booking_id
+    join public.lounges l on l.id = r.lounge_id
+    left join public.profiles p on p.id = r.member_id
+    left join public.memberships m on m.member_id = r.member_id and m.status = 'active'
+    where r.lounge_id in (select public.partner_lounge_ids())
+      and (p_lounge_id is null or r.lounge_id = p_lounge_id)
+    order by b.date desc, r.created_at desc;
+end;
+$$;
+
+revoke execute on function public.partner_reviews(text) from public, anon;
+grant execute on function public.partner_reviews(text) to authenticated;
+
+-- LoungeReviews.dc.html (Fase 8) — todas las reseñas de un lounge para el
+-- admin, con el nombre completo del autor y su id ("View member").
+create or replace function public.admin_lounge_reviews(p_lounge_id text)
+returns table (
+  id uuid,
+  member_id uuid,
+  author_name text,
+  plan text,
+  visited_on date,
+  confirmation_code text,
+  rating smallint,
+  body text,
+  mentions text[]
+)
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.has_role('admin') then
+    raise exception 'Not authorized' using errcode = '42501';
+  end if;
+
+  return query
+    select
+      r.id,
+      r.member_id,
+      coalesce(nullif(trim(p.full_name), ''), 'Member'),
+      m.plan,
+      b.date,
+      b.confirmation_code,
+      r.rating,
+      r.body,
+      r.mentions
+    from public.reviews r
+    join public.bookings b on b.id = r.booking_id
+    left join public.profiles p on p.id = r.member_id
+    left join public.memberships m on m.member_id = r.member_id and m.status = 'active'
+    where r.lounge_id = p_lounge_id
+    order by b.date desc, r.created_at desc;
+end;
+$$;
+
+revoke execute on function public.admin_lounge_reviews(text) from public, anon;
+grant execute on function public.admin_lounge_reviews(text) to authenticated;

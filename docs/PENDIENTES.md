@@ -65,8 +65,6 @@ check-in). Abierto:
 - **Sin aviso para reseñar:** el pase con check-in promete "We will ask how
   it went", pero nadie lo pide; se reseña entrando al detalle de la reserva
   en My Pass.
-- **Partner y admin aún no ven las reseñas:** `lounge_reviews` ya se las
-  devuelve, faltan las pantallas (y sus artboards).
 - **Al subir a `staging`/`main`,** la migración `reset_seeded_lounge_ratings`
   deja a 0 la nota y el recuento de todos los lounges remotos (decisión del
   usuario: nada de cifras sembradas).

@@ -105,6 +105,7 @@ beforeAll(async () => {
   // Historial del drawer: un pase cobrado, un check-in, un no-show y una cancelación.
   const [paid, arrived] = returning.bookings;
   await admin.from("bookings").update({ checked_in_at: new Date().toISOString(), status: "in_progress" }).eq("id", arrived.id);
+  await admin.from("reviews").insert({ booking_id: arrived.id, member_id: returning.memberId, rating: 4, body: "Great espresso." });
   const { error: paymentError } = await admin.from("payments").insert({
     member_id: returning.memberId,
     booking_id: paid.id,
@@ -195,5 +196,20 @@ describe("Ficha del invitado (GuestDetail.dc.html reutilizado)", () => {
     expect(within(history).getByText("Arrived")).toBeVisible();
     expect(within(history).getByText("No-show")).toBeVisible();
     expect(within(history).getByText("Cancelled")).toBeVisible();
+  });
+
+  it("GuestDetailReviews.dc.html — cada visita con check-in muestra su reseña y su LP#", async () => {
+    const user = userEvent.setup({ delay: null });
+    render(<RepeatGuestsPage />);
+
+    await user.click(await screen.findByRole("button", { name: new RegExp(returningName) }));
+
+    const drawer = await screen.findByRole("dialog", { name: returningName });
+    const history = await within(drawer).findByRole("list", { name: "Visit history" });
+    const arrived = within(history).getByText("Arrived").closest("li")!;
+    expect(within(arrived).getByRole("img", { name: "Reviewed 4 out of 5" })).toBeInTheDocument();
+    expect(arrived).toHaveTextContent("“Great espresso.”");
+    expect(arrived).toHaveTextContent(/LP-\d{6}/);
+    expect(within(drawer).getByText("1 reviewed")).toBeInTheDocument();
   });
 });
