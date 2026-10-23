@@ -235,14 +235,26 @@ describe("valoración y reseñas", () => {
   });
 
   it("cuando el lounge no tiene reseñas, lo dice en vez de un recuento", async () => {
-    await renderProfile("belmont-terrace");
-
-    await waitFor(() =>
-      expect(screen.getByRole("link", { name: "No reviews yet" })).toHaveAttribute(
-        "href",
-        "/lounges/belmont-terrace/reviews",
-      ),
+    const admin = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const id = `test-lounge-profile-noreviews-${Date.now()}`;
+    await admin.from("lounges").insert({
+      id,
+      name: `No Reviews ${Date.now()}`,
+      neighborhood: "Test Neighborhood",
+      city: "Test City",
+      city_id: "test-city",
+      lat: 0,
+      lng: 0,
+      hours: "Open 24 hours",
+      content_status: "live",
+    });
+    await admin.from("lounge_images").insert(
+      [0, 1, 2].map((position) => ({ lounge_id: id, url: "/logo.png", caption: "Lounge", position })),
     );
+
+    await renderProfile(id);
+
+    expect(screen.getByRole("link", { name: "No reviews yet" })).toHaveAttribute("href", `/lounges/${id}/reviews`);
   });
 });
 
