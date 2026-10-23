@@ -376,9 +376,9 @@ function ExpiredBody({ pass }: { pass: DigitalPass }) {
       </div>
 
       <div className="mt-5 flex gap-3">
-        <button type="button" className={cn(buttonVariants({ size: "lg" }), "flex-1")}>
+        <Link href={`/lounges/${pass.loungeId}/book`} className={cn(buttonVariants({ size: "lg" }), "flex-1")}>
           Book {pass.loungeName} again
-        </button>
+        </Link>
         <button type="button" className={cn(buttonVariants({ variant: "secondary", size: "lg" }), "flex-1")}>
           Leave a review
         </button>

@@ -43,7 +43,7 @@ export const VISIT_WINDOW_HOURS = 4;
 /* Formato compartido                                                  */
 /* ------------------------------------------------------------------ */
 
-function formatFullDate(dateIso: string): string {
+export function formatFullDate(dateIso: string): string {
   return new Intl.DateTimeFormat("en-US", {
     weekday: "long",
     month: "long",
@@ -75,7 +75,9 @@ function formatClockTime(instantIso: string): string {
 /* ------------------------------------------------------------------ */
 
 export interface DigitalPass {
+  bookingId: string;
   reference: string;
+  loungeId: string;
   memberName: string;
   memberEmail: string;
   loungeName: string;
@@ -115,6 +117,7 @@ interface PaymentEmbed {
 
 interface BookingRow {
   id: string;
+  lounge_id: string;
   confirmation_code: string;
   date: string;
   slot_time: string;
@@ -128,7 +131,7 @@ interface BookingRow {
 }
 
 const BOOKING_SELECT =
-  "id, confirmation_code, date, slot_time, special_requests, status, checked_in_at, no_show, created_at, lounges(name, address, reception_note, partners(name)), payments(amount_cents, status)";
+  "id, lounge_id, confirmation_code, date, slot_time, special_requests, status, checked_in_at, no_show, created_at, lounges(name, address, reception_note, partners(name)), payments(amount_cents, status)";
 
 function amountPaidLabel(payments: PaymentEmbed[] | null): string {
   const succeeded = payments?.find((payment) => payment.status === "succeeded");
@@ -166,7 +169,9 @@ async function fromBookingRow(supabase: SupabaseClient, row: BookingRow): Promis
   const memberName = await fetchMemberDisplayName(supabase, memberEmail);
 
   return {
+    bookingId: row.id,
     reference: row.confirmation_code,
+    loungeId: row.lounge_id,
     memberName,
     memberEmail,
     loungeName: row.lounges?.name ?? "",
@@ -208,7 +213,9 @@ export async function fetchDigitalPass(
 
 /** Fixture pura para tests de componente (`digital-pass-card.test.tsx`) — no toca Supabase. */
 export const AINSWORTH_PASS: DigitalPass = {
+  bookingId: "00000000-0000-0000-0000-000000000000",
   reference: "LP-842193",
+  loungeId: "the-ainsworth",
   memberName: "Alexandra Rivas",
   memberEmail: "alexandra.rivas@example.com",
   partnerName: "The Ainsworth Collection",

@@ -28,8 +28,8 @@ create table if not exists public.lounges (
   -- Story 3.1 — horario semanal por lounge (domingo primero), sustituye el
   -- STANDARD_WEEK_HOURS compartido de lib/lounge-profile.ts.
   weekly_hours         jsonb not null default '[]',
-  -- Story 3.1 — agregado de reseñas; ninguna historia permite dejar una
-  -- reseña todavía, así que no hay tabla `reviews` (ver DATA-MODEL-MAP.md).
+  -- Story 3.1 — agregado de reseñas, lo mantiene `refresh_lounge_rating`
+  -- (`reviews.sql`) con cada reseña real.
   review_count         integer not null default 0,
   -- Story 3.2 — capacidad y restricciones estáticas por lounge.
   capacity             integer not null default 40,

@@ -2,11 +2,8 @@ import { Star } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Eyebrow } from "@/components/ui/eyebrow";
-import {
-  mentionsFor,
-  ratingBreakdownFor,
-  type LoungeProfile,
-} from "@/lib/lounge-profile";
+import type { LoungeProfile } from "@/lib/lounge-profile";
+import type { LoungeReviews } from "@/lib/reviews";
 
 /**
  * Story 3.1 — "User ratings and review count (if available)".
@@ -15,8 +12,17 @@ import {
  * un guion, estrellas vacías y una explicación — el resto de la pantalla lo
  * cubre `EmptyState` en la página.
  */
-export function RatingSummary({ lounge }: { lounge: LoungeProfile }) {
-  const count = lounge.reviewCount;
+export function RatingSummary({
+  lounge,
+  summary,
+  onWriteReview,
+}: {
+  lounge: LoungeProfile;
+  summary: Omit<LoungeReviews, "reviews">;
+  /** Solo si el miembro tiene una visita con check-in sin reseñar. */
+  onWriteReview?: () => void;
+}) {
+  const count = summary.count;
 
   return (
     <div>
@@ -24,7 +30,7 @@ export function RatingSummary({ lounge }: { lounge: LoungeProfile }) {
 
       <div className="mt-2.5 flex items-end gap-3">
         <h1 className="font-display text-[44px] leading-none text-fg">
-          {count > 0 ? lounge.rating.toFixed(1) : "—"}
+          {count > 0 ? summary.rating.toFixed(1) : "—"}
         </h1>
         <div className="pb-1.5">
           <div className="flex gap-0.5">
@@ -41,7 +47,7 @@ export function RatingSummary({ lounge }: { lounge: LoungeProfile }) {
             ))}
           </div>
           <p className="m-0 mt-1.5 text-[12.5px] text-fg-subtle">
-            {count > 0 ? `${count} member reviews` : "No reviews yet"}
+            {count > 0 ? `${count} member ${count === 1 ? "review" : "reviews"}` : "No reviews yet"}
           </p>
         </div>
       </div>
@@ -49,7 +55,7 @@ export function RatingSummary({ lounge }: { lounge: LoungeProfile }) {
       {count > 0 ? (
         <>
           <div className="mt-5 flex flex-col gap-2">
-            {ratingBreakdownFor(lounge).map((row) => (
+            {summary.breakdown.map((row) => (
               <div key={row.stars} className="flex items-center gap-2.5">
                 <span className="w-5.5 text-xs font-semibold text-fg-muted">
                   {row.stars}
@@ -67,25 +73,25 @@ export function RatingSummary({ lounge }: { lounge: LoungeProfile }) {
             ))}
           </div>
 
-          <div className="my-5 h-px bg-line" />
+          {summary.mentions.length > 0 ? (
+            <>
+              <div className="my-5 h-px bg-line" />
 
-          <p className="m-0 mb-3 text-[12.5px] font-bold text-fg">
-            What members mention
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {mentionsFor(lounge).map((mention) => (
-              <span
-                key={mention.label}
-                className="rounded-pill border border-line px-4 py-2 text-[12.5px] font-semibold text-fg-muted"
-              >
-                {mention.label} {mention.count}
-              </span>
-            ))}
-          </div>
-
-          <Button variant="outline" block size="lg" className="mt-5.5">
-            Write a review
-          </Button>
+              <p className="m-0 mb-3 text-[12.5px] font-bold text-fg">
+                What members mention
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {summary.mentions.map((mention) => (
+                  <span
+                    key={mention.label}
+                    className="rounded-pill border border-line px-4 py-2 text-[12.5px] font-semibold text-fg-muted"
+                  >
+                    {mention.label} {mention.count}
+                  </span>
+                ))}
+              </div>
+            </>
+          ) : null}
         </>
       ) : (
         <p className="mt-5 text-[12.5px] leading-[1.6] text-fg-muted">
@@ -94,6 +100,12 @@ export function RatingSummary({ lounge }: { lounge: LoungeProfile }) {
           it on for now.
         </p>
       )}
+
+      {onWriteReview ? (
+        <Button variant="outline" block size="lg" className="mt-5.5" onClick={onWriteReview}>
+          Write a review
+        </Button>
+      ) : null}
     </div>
   );
 }

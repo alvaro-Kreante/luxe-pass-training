@@ -12,11 +12,8 @@ import {
   fetchLoungeProfile,
   fetchNextAvailableSlot,
   fetchWeeklyAvailability,
-  mentionsFor,
   mondayOf,
   operatingHoursFor,
-  ratingBreakdownFor,
-  reviewsFor,
   type LoungeProfile,
 } from "./lounge-profile";
 
@@ -56,7 +53,6 @@ describe("fetchLoungeProfile", () => {
       website: "ainsworth.example",
       receptionNote:
         "Reception is on Level 2. Show your booking confirmation on arrival.",
-      reviewCount: 128,
       capacity: 40,
     });
     expect(lounge.bookingRestrictions).toContain("Admission for one member");
@@ -129,24 +125,6 @@ describe("horario de apertura", () => {
     }, 0);
 
     expect(daysCovered).toBe(7);
-  });
-});
-
-describe("reseñas (datos de muestra — sin tabla, ver DATA-MODEL-MAP.md)", () => {
-  it("The Ainsworth tiene las reseñas del artboard Reviews.dc.html", async () => {
-    const lounge = await ainsworth();
-
-    expect(reviewsFor(lounge)).toHaveLength(3);
-    expect(
-      ratingBreakdownFor(lounge).reduce((sum, row) => sum + row.count, 0),
-    ).toBe(128);
-  });
-
-  it("Belmont Terrace no tiene reseñas ni menciones", async () => {
-    const lounge = await belmont();
-
-    expect(reviewsFor(lounge)).toHaveLength(0);
-    expect(mentionsFor(lounge)).toHaveLength(0);
   });
 });
 

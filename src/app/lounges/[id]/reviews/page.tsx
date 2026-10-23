@@ -12,11 +12,8 @@ import { ReviewCard } from "@/components/lounges/review-card";
 import { AppShell } from "@/components/patterns/app-shell";
 import { buttonVariants } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import {
-  fetchLoungeProfile,
-  reviewsFor,
-  type LoungeProfile,
-} from "@/lib/lounge-profile";
+import { fetchLoungeProfile, type LoungeProfile } from "@/lib/lounge-profile";
+import { fetchLoungeReviews, type LoungeReviews } from "@/lib/reviews";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -24,8 +21,8 @@ import { cn } from "@/lib/utils";
  * Story 3.1 — "User ratings and review count (if available)".
  * Sub-vista de lounge (DESIGN-SYSTEM.md §5 patrón 8).
  * Artboards: `Reviews.dc.html` y `NoRatings.dc.html`.
- * `reviewCount` es real (`lounges.review_count`); el contenido de cada
- * reseña sigue siendo dato de muestra — ver docs/DATA-MODEL-MAP.md.
+ * Reseñas reales (`reviews`, `lounge_reviews`): una por visita con check-in,
+ * así que un miembro que vuelve aparece una vez por visita reseñada.
  */
 export default function ReviewsPage() {
   return (
@@ -40,14 +37,19 @@ function ReviewsScreen() {
   const [lounge, setLounge] = React.useState<LoungeProfile | null | undefined>(
     undefined,
   );
+  const [summary, setSummary] = React.useState<LoungeReviews | null>(null);
 
   React.useEffect(() => {
     const supabase = createClient();
     let active = true;
 
-    fetchLoungeProfile(supabase, id).then((profile) => {
-      if (active) setLounge(profile);
-    });
+    Promise.all([fetchLoungeProfile(supabase, id), fetchLoungeReviews(supabase, id)]).then(
+      ([profile, reviews]) => {
+        if (!active) return;
+        setLounge(profile);
+        setSummary(reviews);
+      },
+    );
 
     return () => {
       active = false;
@@ -59,12 +61,12 @@ function ReviewsScreen() {
     return null;
   }
 
-  if (!lounge) {
+  if (!lounge || !summary) {
     return <AppShell padded={false}>{null}</AppShell>;
   }
 
-  const reviewCount = lounge.reviewCount;
-  const reviews = reviewsFor(lounge);
+  const reviewCount = summary.count;
+  const reviews = summary.reviews;
   const badge =
     reviewCount === 0 ? (
       <span className="rounded-pill bg-accent-soft px-2.5 py-1 text-[11.5px] font-bold text-fg">
@@ -86,7 +88,7 @@ function ReviewsScreen() {
 
         <div className="flex flex-1 gap-7 overflow-y-auto px-8 pb-7 pt-6">
           <div className="h-fit w-[344px] shrink-0 rounded-content border border-line bg-surface p-5.5 shadow-content">
-            <RatingSummary lounge={lounge} />
+            <RatingSummary lounge={lounge} summary={summary} />
           </div>
 
           <div className="min-w-0 flex-1">
@@ -125,15 +127,13 @@ function ReviewsScreen() {
                   </p>
                 </div>
 
-                <div className="flex flex-col gap-3">
+                <ul aria-label="Member reviews" className="m-0 flex list-none flex-col gap-3 p-0">
                   {reviews.map((review) => (
-                    <ReviewCard key={review.name} review={review} />
+                    <li key={review.id}>
+                      <ReviewCard review={review} />
+                    </li>
                   ))}
-                </div>
-
-                <p className="m-0 mt-4 text-[12.5px] text-fg-subtle">
-                  Showing {reviews.length} of {reviewCount} reviews
-                </p>
+                </ul>
               </>
             )}
           </div>

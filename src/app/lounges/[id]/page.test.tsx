@@ -1,3 +1,4 @@
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -191,15 +192,46 @@ describe("horario", () => {
 });
 
 describe("valoración y reseñas", () => {
-  it("enlaza el recuento de reseñas a la pantalla de reseñas", async () => {
-    await renderProfile();
-
-    await waitFor(() =>
-      expect(screen.getByRole("link", { name: "128 reviews" })).toHaveAttribute(
-        "href",
-        "/lounges/the-ainsworth/reviews",
-      ),
+  it("enlaza el recuento de reseñas reales a la pantalla de reseñas", async () => {
+    const admin = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const id = `test-lounge-profile-reviews-${Date.now()}`;
+    await admin.from("lounges").insert({
+      id,
+      name: `Profile Reviews ${Date.now()}`,
+      neighborhood: "Test Neighborhood",
+      city: "Test City",
+      city_id: "test-city",
+      lat: 0,
+      lng: 0,
+      hours: "Open 24 hours",
+      content_status: "live",
+    });
+    await admin.from("lounge_images").insert(
+      [0, 1, 2].map((position) => ({ lounge_id: id, url: "/logo.png", caption: "Lounge", position })),
     );
+    const { data: created } = await admin.auth.admin.createUser({
+      email: `profile-reviewer-${Date.now()}@ensoleil-test.example`,
+      password: "EnSoleil!2026",
+      email_confirm: true,
+    });
+    const { data: booking } = await admin
+      .from("bookings")
+      .insert({
+        member_id: created.user!.id,
+        lounge_id: id,
+        date: today(),
+        band: "morning",
+        slot_time: "8:00 AM",
+        status: "completed",
+        checked_in_at: new Date().toISOString(),
+      })
+      .select("id")
+      .single();
+    await admin.from("reviews").insert({ booking_id: booking!.id, member_id: created.user!.id, rating: 4 });
+
+    await renderProfile(id);
+
+    expect(screen.getByRole("link", { name: "1 review" })).toHaveAttribute("href", `/lounges/${id}/reviews`);
   });
 
   it("cuando el lounge no tiene reseñas, lo dice en vez de un recuento", async () => {

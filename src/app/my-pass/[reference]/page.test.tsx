@@ -116,4 +116,15 @@ describe("?state=expired", () => {
     );
     expect(screen.getByText(/never checked in|checked in at reception/i)).toBeInTheDocument();
   });
+
+  it("'Book … again' lleva a reservar otra visita en el mismo lounge", async () => {
+    query = new URLSearchParams("state=expired");
+
+    render(<PassDetailPage />);
+
+    expect(await screen.findByRole("link", { name: `Book ${ainsworth.name} again` })).toHaveAttribute(
+      "href",
+      `/lounges/${ainsworth.id}/book`,
+    );
+  });
 });

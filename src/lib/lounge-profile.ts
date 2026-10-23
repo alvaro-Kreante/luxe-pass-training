@@ -1,6 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { amenityLabel } from "./amenities";
 import { listLoungeSchedule, type LoungeSchedule } from "./lounge-schedule";
 import { isFavoriteLounge } from "./profile";
 import { addDays, isPast, minutesNow, parseDate, today, weekdayOf } from "./availability";
@@ -13,9 +12,7 @@ import type { Lounge } from "./lounges";
  * vivo de `lounge_availability_range`).
  * Sustituye la capa de derivación por hash que vivía aquí (ver historial de
  * este archivo): contacto, horario, capacidad y restricciones ya son
- * columnas reales; `reviewsFor`/`ratingBreakdownFor`/`mentionsFor` siguen
- * siendo datos de muestra a propósito — ninguna historia permite dejar una
- * reseña, así que no hay tabla `reviews` (ver docs/DATA-MODEL-MAP.md).
+ * columnas reales. Las reseñas viven en `src/lib/reviews.ts`.
  */
 
 const WEEKDAY_NAMES = [
@@ -228,142 +225,6 @@ export function operatingHoursFor(weeklyHours: string[]): HoursRow[] {
   }
 
   return rows;
-}
-
-/* ------------------------------------------------------------------ */
-/* Reseñas — datos de muestra (sin tabla, ver cabecera del archivo)     */
-/* ------------------------------------------------------------------ */
-
-export interface RatingBreakdownRow {
-  stars: 5 | 4 | 3 | 2 | 1;
-  count: number;
-}
-
-export interface LoungeReview {
-  initials: string;
-  name: string;
-  tier: string;
-  visitedOn: string;
-  rating: number;
-  text: string;
-}
-
-const AINSWORTH_BREAKDOWN: RatingBreakdownRow[] = [
-  { stars: 5, count: 96 },
-  { stars: 4, count: 24 },
-  { stars: 3, count: 5 },
-  { stars: 2, count: 2 },
-  { stars: 1, count: 1 },
-];
-
-/** Reparto plausible a partir de la valoración media: cuanto más alta, más se concentra en 5★. */
-function genericBreakdown(rating: number, total: number): RatingBreakdownRow[] {
-  if (total === 0) return [5, 4, 3, 2, 1].map((stars) => ({ stars: stars as 1|2|3|4|5, count: 0 }));
-
-  const weights = {
-    5: Math.max(0, rating - 3.5),
-    4: 1,
-    3: 0.4,
-    2: 0.15,
-    1: 0.08,
-  };
-  const weightSum = weights[5] + weights[4] + weights[3] + weights[2] + weights[1];
-
-  const rows: RatingBreakdownRow[] = [5, 4, 3, 2, 1].map(
-    (stars) => ({
-      stars: stars as 5 | 4 | 3 | 2 | 1,
-      count: Math.round((weights[stars as 5 | 4 | 3 | 2 | 1] / weightSum) * total),
-    }),
-  );
-
-  const rounded = rows.reduce((sum, row) => sum + row.count, 0);
-  rows[0].count += total - rounded;
-
-  return rows;
-}
-
-export function ratingBreakdownFor(lounge: LoungeProfile): RatingBreakdownRow[] {
-  if (lounge.id === "the-ainsworth") return AINSWORTH_BREAKDOWN;
-
-  return genericBreakdown(lounge.rating, lounge.reviewCount);
-}
-
-const AINSWORTH_MENTIONS = [
-  { label: "Quiet", count: 62 },
-  { label: "Fast WiFi", count: 48 },
-  { label: "Staff", count: 41 },
-  { label: "Coffee", count: 33 },
-  { label: "Showers", count: 21 },
-];
-
-export function mentionsFor(lounge: LoungeProfile): { label: string; count: number }[] {
-  const total = lounge.reviewCount;
-  if (total === 0) return [];
-  if (lounge.id === "the-ainsworth") return AINSWORTH_MENTIONS;
-
-  const hash = hashOf(lounge.id);
-
-  return [
-    { label: "Staff", count: Math.max(1, Math.round(total * 0.32)) },
-    ...lounge.amenities.slice(0, 2).map((amenity, index) => ({
-      label: amenityLabel(amenity),
-      count: Math.max(1, Math.round(total * (0.24 - index * 0.08))),
-    })),
-  ].map((mention) => ({ ...mention, count: mention.count + (hash % 2) }));
-}
-
-const AINSWORTH_REVIEWS: LoungeReview[] = [
-  {
-    initials: "MC",
-    name: "Marcus C.",
-    tier: "Signature member",
-    visitedOn: "Sep 4",
-    rating: 5,
-    text: "Took two calls from a quiet booth on Level 3 and nobody heard a thing. The espresso is better than most cafés around Grand Central, and reception held my bag until my evening train.",
-  },
-  {
-    initials: "PN",
-    name: "Priya N.",
-    tier: "Annual member",
-    visitedOn: "Aug 29",
-    rating: 4,
-    text: "Lovely space and the shower suites are spotless. Only note: the afternoon band fills fast, so book the moment you land.",
-  },
-  {
-    initials: "EL",
-    name: "Elena L.",
-    tier: "Annual member",
-    visitedOn: "Aug 21",
-    rating: 5,
-    text: "Checked in with the confirmation on my phone in under a minute. Staff walked me to a day room without me having to ask twice.",
-  },
-];
-
-/** Genérica y neutra a propósito — no cita nada específico de un lounge en particular. */
-const GENERIC_REVIEWS: LoungeReview[] = [
-  {
-    initials: "JR",
-    name: "Jordan R.",
-    tier: "Annual member",
-    visitedOn: "Aug 30",
-    rating: 5,
-    text: "Checked in without any friction and the staff were attentive the whole visit. Would book again on a work trip.",
-  },
-  {
-    initials: "SK",
-    name: "Sam K.",
-    tier: "Signature member",
-    visitedOn: "Aug 12",
-    rating: 4,
-    text: "Comfortable space and quieter than I expected. The only downside is that the popular time bands fill up fast.",
-  },
-];
-
-export function reviewsFor(lounge: LoungeProfile): LoungeReview[] {
-  if (lounge.reviewCount === 0) return [];
-  if (lounge.id === "the-ainsworth") return AINSWORTH_REVIEWS;
-
-  return GENERIC_REVIEWS;
 }
 
 /* ------------------------------------------------------------------ */
