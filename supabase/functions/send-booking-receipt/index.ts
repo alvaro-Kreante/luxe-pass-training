@@ -62,8 +62,10 @@ interface BookingRecord {
 
 interface WebhookPayload {
   type: string;
-  table: string;
+  table?: string;
   record: BookingRecord;
+  /** Story 6.1 — "Email receipt" de My Pass › Past (`resend_booking_receipt`). */
+  resend?: boolean;
 }
 
 interface PaymentRow {
@@ -152,9 +154,12 @@ Deno.serve(async (req) => {
     });
   }
 
-  const { record: booking } = (await req.json()) as WebhookPayload;
+  const { record: booking, resend = false } = (await req.json()) as WebhookPayload;
 
-  if (booking.status !== "confirmed") {
+  // El reenvío vale también para una visita en curso o ya completada; el
+  // recibo original, solo al confirmarse. Una cancelada nunca.
+  const sendable = resend ? ["confirmed", "in_progress", "completed"] : ["confirmed"];
+  if (!sendable.includes(booking.status)) {
     return new Response(JSON.stringify({ skipped: true }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
@@ -192,7 +197,7 @@ Deno.serve(async (req) => {
   try {
     await sendBrevoEmail(
       authUser.user.email,
-      `Your visit at ${lounge.name} is confirmed — ${reference}`,
+      resend ? `Your receipt for ${lounge.name} — ${reference}` : `Your visit at ${lounge.name} is confirmed — ${reference}`,
       renderReceiptHtml({
         memberFirstName,
         // Story 10.8 — el partner (hotel, spa…) como contexto: "Tower A at Halcyon Hotels".

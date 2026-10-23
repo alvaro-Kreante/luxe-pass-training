@@ -1,3 +1,4 @@
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeAll, describe, expect, it, vi } from "vitest";
@@ -265,5 +266,36 @@ describe("pestaña Past", () => {
     await user.click(screen.getByRole("button", { name: /^completed/i }));
 
     expect(screen.queryByText("The Meridian Salon")).not.toBeInTheDocument();
+  });
+});
+
+describe("Email receipt", () => {
+  it("reenvía el recibo de una visita completada y no deja repetirlo enseguida", async () => {
+    const user = userEvent.setup({ delay: null });
+    const admin = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const {
+      data: { user: me },
+    } = await createClient().auth.getUser();
+    const date = addDays(today(), -6);
+    await admin.from("bookings").insert({
+      member_id: me!.id,
+      lounge_id: "the-pelham-room",
+      date,
+      band: "morning",
+      slot_time: "8:00 AM",
+      status: "completed",
+      checked_in_at: `${date}T08:03:00Z`,
+    });
+
+    await renderMyPass();
+    await screen.findByText("In progress");
+    await user.click(screen.getByRole("tab", { name: /past/i }));
+    const row = (await screen.findByText("The Pelham Room")).closest("li")!;
+
+    await user.click(within(row).getByRole("button", { name: "Email receipt" }));
+    expect(await screen.findByText("Receipt on its way")).toBeInTheDocument();
+
+    await user.click(within(row).getByRole("button", { name: "Email receipt" }));
+    expect(await screen.findByText(/try again in a few minutes/i)).toBeInTheDocument();
   });
 });

@@ -401,6 +401,7 @@ export async function fetchUpcomingBookings(supabase: SupabaseClient): Promise<U
 export type PastBookingOutcome = "completed" | "no-show" | "cancelled";
 
 export interface PastBooking {
+  id: string;
   reference: string;
   loungeName: string;
   dateTimeLabel: string;
@@ -415,6 +416,7 @@ function fromPastRow(row: BookingRow): PastBooking {
 
   if (row.status === "cancelled") {
     return {
+      id: row.id,
       reference: row.confirmation_code,
       loungeName,
       dateTimeLabel: `${formatFullDate(row.date)} · cancelled`,
@@ -425,6 +427,7 @@ function fromPastRow(row: BookingRow): PastBooking {
 
   if (row.no_show) {
     return {
+      id: row.id,
       reference: row.confirmation_code,
       loungeName,
       dateTimeLabel: `${formatFullDate(row.date)} · ${row.slot_time} · never checked in`,
@@ -436,6 +439,7 @@ function fromPastRow(row: BookingRow): PastBooking {
   }
 
   return {
+    id: row.id,
     reference: row.confirmation_code,
     loungeName,
     dateTimeLabel: `${formatFullDate(row.date)} · checked in ${row.checked_in_at ? formatClockTime(row.checked_in_at) : row.slot_time}`,
@@ -529,4 +533,13 @@ export async function loadMyPass(supabase: SupabaseClient): Promise<MyPassData> 
     visits,
     memberSince: membership.startedAt ? formatMonthYear(membership.startedAt) : null,
   };
+}
+
+/**
+ * Story 6.1 — "Email receipt" de My Pass › Past: reenvía el recibo de la
+ * reserva por email (`resend_booking_receipt`, como mucho uno cada 5 minutos).
+ */
+export async function resendBookingReceipt(supabase: SupabaseClient, bookingId: string): Promise<void> {
+  const { error } = await supabase.rpc("resend_booking_receipt", { p_booking_id: bookingId });
+  if (error) throw new Error(error.message);
 }

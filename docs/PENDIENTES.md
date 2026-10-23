@@ -353,7 +353,10 @@ remoto.
 
 ### 4.7 "Email it to me" de `/admin/reports` deshabilitado
 
-Queda deshabilitado en la UI, no solo pendiente de despliegue. A diferencia del cron (que sí puede leer
+Queda deshabilitado en la UI, no solo pendiente de despliegue. (El "Email receipt" de My Pass ya resolvió
+este mismo problema para el miembro: RPC que valida y marca la petición +
+trigger con el secreto de Vault — `resend_booking_receipt`,
+`booking_receipts.sql`. Es el patrón a copiar aquí.) A diferencia del cron (que sí puede leer
 el secreto de Vault desde Postgres), este botón invocaría
 `send-admin-report` directamente desde el navegador del admin — y esa
 function solo acepta `x-webhook-secret`, un secreto que no puede vivir en

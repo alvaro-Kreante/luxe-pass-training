@@ -13,6 +13,7 @@ import { today } from "@/lib/availability";
 import {
   cancelBooking,
   fetchPastBookings,
+  resendBookingReceipt,
   type MyPassData,
   type PastBooking,
   type PastBookingOutcome,
@@ -245,6 +246,24 @@ const PAST_FILTERS: { value: PastBookingOutcome | "all"; label: string }[] = [
 
 function PastList({ bookings }: { bookings: PastBooking[] }) {
   const [filter, setFilter] = React.useState<PastBookingOutcome | "all">("all");
+  /** "Email receipt" — el resultado del último reenvío, por reserva. */
+  const [receipts, setReceipts] = React.useState<Record<string, { sending: boolean; message: string }>>({});
+
+  async function emailReceipt(booking: PastBooking) {
+    setReceipts((current) => ({ ...current, [booking.id]: { sending: true, message: "" } }));
+    try {
+      await resendBookingReceipt(createClient(), booking.id);
+      setReceipts((current) => ({
+        ...current,
+        [booking.id]: { sending: false, message: "Receipt on its way" },
+      }));
+    } catch (cause) {
+      setReceipts((current) => ({
+        ...current,
+        [booking.id]: { sending: false, message: cause instanceof Error ? cause.message : "Could not send the receipt" },
+      }));
+    }
+  }
   const visible = bookings.filter((booking) => filter === "all" || booking.outcome === filter);
 
   return (
@@ -302,10 +321,28 @@ function PastList({ bookings }: { bookings: PastBooking[] }) {
                   View booking
                 </Link>
               ) : null}
-              <button type="button" className={ROW_BUTTON}>
-                {booking.outcome === "completed" ? "Email receipt" : booking.outcome === "no-show" ? "Dispute" : "Book again"}
-              </button>
+              {booking.outcome === "completed" ? (
+                <button
+                  type="button"
+                  className={ROW_BUTTON}
+                  disabled={receipts[booking.id]?.sending}
+                  onClick={() => emailReceipt(booking)}
+                >
+                  Email receipt
+                </button>
+              ) : (
+                <button type="button" className={ROW_BUTTON}>
+                  {booking.outcome === "no-show" ? "Dispute" : "Book again"}
+                </button>
+              )}
             </div>
+
+            {receipts[booking.id]?.message ? (
+              <p role="status" className="m-0 mt-3 flex items-center gap-2 text-[12.5px] text-fg-muted">
+                <Mail size={15} strokeWidth={1.8} className="text-accent" aria-hidden />
+                {receipts[booking.id]!.message}
+              </p>
+            ) : null}
 
             {booking.explanation && (
               <Notice tone="muted" icon={<CircleAlert size={18} strokeWidth={1.8} />} className="mt-3.5">
