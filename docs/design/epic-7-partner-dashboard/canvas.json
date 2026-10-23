@@ -119,6 +119,46 @@
       "w": 1440,
       "h": 900,
       "title": "15. The link has expired"
+    },
+    {
+      "file": "PartnerReviews.dc.html",
+      "x": 0,
+      "y": 5500,
+      "w": 1440,
+      "h": 900,
+      "title": "16. Reviews — all lounges"
+    },
+    {
+      "file": "PartnerReviewsEmpty.dc.html",
+      "x": 1540,
+      "y": 5500,
+      "w": 1440,
+      "h": 900,
+      "title": "17. Reviews — none yet"
+    },
+    {
+      "file": "PartnerReviewsMobile.dc.html",
+      "x": 3080,
+      "y": 5500,
+      "w": 390,
+      "h": 844,
+      "title": "18. Reviews — mobile"
+    },
+    {
+      "file": "GuestDetailReviews.dc.html",
+      "x": 0,
+      "y": 6550,
+      "w": 1440,
+      "h": 900,
+      "title": "19. Guest drawer — visit history with reviews"
+    },
+    {
+      "file": "GuestDetailMobile.dc.html",
+      "x": 1540,
+      "y": 6550,
+      "w": 390,
+      "h": 844,
+      "title": "20. Guest drawer — mobile"
     }
   ],
   "annotations": [
@@ -163,6 +203,13 @@
       "y": 4205,
       "w": 940,
       "text": "Invitation · A partner account is born in the admin console, together with its lounge (Epic 8, screen 16). The email carries a one-time link to /partner/welcome that works for 24 hours; there the partner confirms what the admin typed — name and mobile editable, the work email fixed — adds a photo and sets a password, and lands on today's guest list. A used or late link ends on screen 15."
+    },
+    {
+      "id": "reviews-note",
+      "x": 2070,
+      "y": 6550,
+      "w": 940,
+      "text": "Reviews · Read only. Reviews get their own sidebar item between Analytics and Reports, not a card in Analytics: the list grows without end and needs its own scroll, while Analytics stays a one-screen summary. The lounge picker is the same 'All lounges' menu as Analytics (Epic 10); with one lounge picked the lounge name drops from each row. Members appear abbreviated (Marcus C.) with plan, visit date, stars, comment, mentions and the booking's LP#. In the guest drawer, each past visit shows its stars, or 'Not reviewed'."
     }
   ],
   "launch": {

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Guest drawer — mobile</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,500&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap">
+<style>
+:root{--gold-500:#C9A876;--gold-600:#AD8A5C;--white:#FFFFFF;--panel-black:#15110D;--dark-ink-100:#F1E3D0;--dark-ink-300:#C9BDAF;--dark-ink-500:#8A7C6C;--dark-border:#3A322A;--dark-card:#1E1813;--dark-hover:#241D17}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Manrope','Segoe UI',sans-serif;color:#F1E3D0}
+h1,h2{font-family:'Bodoni Moda',Georgia,serif;margin:0;font-weight:500}
+a{color:#AD8A5C;text-decoration:none}a:hover{color:#C9A876}
+</style>
+</helmet>
+<div role="dialog" aria-label="Guest details" style="width:390px; height:844px; display:flex; flex-direction:column; background:var(--dark-card); overflow:hidden; font-family:'Manrope',sans-serif; color:var(--dark-ink-100);">
+  <div style="display:flex; align-items:center; gap:14px; padding:20px 16px 18px; border-bottom:1px solid var(--dark-border);">
+    <div aria-hidden="true" style="width:46px; height:46px; min-width:46px; border-radius:50%; background:var(--gold-500); display:flex; align-items:center; justify-content:center; color:var(--white); font-family:'Bodoni Moda',serif; font-size:18px; font-weight:700;">IF</div>
+    <div style="flex:1; min-width:0;">
+      <h2 style="font-size:22px;">Idris Fontaine</h2>
+      <p style="font-size:11.5px; color:var(--dark-ink-500); margin:4px 0 0;">Annual member · 18 visits · 4th here</p>
+    </div>
+    <button type="button" aria-label="Close" style="width:44px; height:44px; min-width:44px; border-radius:11px; background:transparent; border:1.5px solid var(--dark-border); display:flex; align-items:center; justify-content:center; cursor:pointer;"><svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#8A7C6C" stroke-width="1.9" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  </div>
+  <div style="flex:1; min-height:0; overflow:auto; padding:18px 16px;">
+    <span style="display:inline-flex; align-items:center; gap:7px; padding:6px 13px; border-radius:20px; border:1px solid var(--dark-border);"><span style="width:6px; height:6px; border-radius:50%; background:var(--dark-ink-500);"></span><span style="font-size:11.5px; font-weight:700; color:var(--dark-ink-300);">Still to arrive</span></span>
+    <div style="display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:16px; margin-top:18px;">
+      <div><p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Reference</p><p style="font-size:14px; font-weight:700; margin:6px 0 0;">LP-842407</p></div>
+      <div><p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Booked arrival</p><p style="font-size:14px; font-weight:700; margin:6px 0 0;">4:30 PM</p></div>
+    </div>
+      <div style="height:1px; background:var(--dark-border); margin:22px 0 18px;"></div>
+
+      <div style="display:flex; align-items:center;">
+        <p style="flex:1; font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Visit history · 3 before today</p>
+        <span style="font-size:11.5px; color:var(--dark-ink-500);">2 reviewed</span>
+      </div>
+      <div style="margin-top:6px;">
+        <div style="display:flex; align-items:center; gap:14px; padding:12px 0; border-bottom:1px solid rgba(58,50,42,0.6);">
+          <div style="flex:1; min-width:0;">
+            <p style="font-size:13px; font-weight:700; color:var(--dark-ink-100); margin:0;">Sep 28 · 2:15 PM</p>
+            <p style="font-size:11.5px; color:var(--dark-ink-500); margin:2px 0 0;">LP-829114 · <span style="font-style:italic;">“Quiet, and the coffee is the real thing.”</span></p>
+          </div>
+          <div role="img" aria-label="Reviewed 5 out of 5" style="display:flex; gap:2px;"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg></div>
+        </div>
+        <div style="display:flex; align-items:center; gap:14px; padding:12px 0; border-bottom:1px solid rgba(58,50,42,0.6);">
+          <div style="flex:1; min-width:0;">
+            <p style="font-size:13px; font-weight:700; color:var(--dark-ink-100); margin:0;">Aug 14 · 11:00 AM</p>
+            <p style="font-size:11.5px; color:var(--dark-ink-500); margin:2px 0 0;">LP-812760 · Rated without a comment</p>
+          </div>
+          <div role="img" aria-label="Reviewed 4 out of 5" style="display:flex; gap:2px;"><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg></div>
+        </div>
+        <div style="display:flex; align-items:center; gap:14px; padding:12px 0;">
+          <div style="flex:1; min-width:0;">
+            <p style="font-size:13px; font-weight:700; color:var(--dark-ink-100); margin:0;">Jul 3 · 6:40 PM</p>
+            <p style="font-size:11.5px; color:var(--dark-ink-500); margin:2px 0 0;">LP-796305</p>
+          </div>
+          <span style="font-size:11.5px; color:var(--dark-ink-500);">Not reviewed</span>
+        </div>
+      </div>
+  </div>
+  <div style="padding:14px 16px 18px; border-top:1px solid var(--dark-border); display:flex; gap:10px;">
+    <button type="button" style="flex:1; height:52px; background:var(--gold-500); border:none; border-radius:12px; font-family:inherit; font-size:13px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--white); cursor:pointer;">Mark as arrived</button>
+    <button type="button" style="width:112px; height:52px; background:transparent; border:1.5px solid var(--dark-border); border-radius:11px; font-family:inherit; font-size:12.5px; font-weight:700; color:var(--dark-ink-300); cursor:pointer;">No-show</button>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

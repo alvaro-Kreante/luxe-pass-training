@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Admin — lounge reviews, mobile</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,500&amp;family=Manrope:wght@400;500;600;700;800&amp;display=swap">
+<style>
+:root{--gold-500:#C9A876;--gold-600:#AD8A5C;--white:#FFFFFF;--panel-black:#15110D;--dark-ink-100:#F1E3D0;--dark-ink-300:#C9BDAF;--dark-ink-500:#8A7C6C;--dark-border:#3A322A;--dark-card:#1E1813;--dark-hover:#241D17}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Manrope','Segoe UI',sans-serif;color:#F1E3D0}
+h1,h2{font-family:'Bodoni Moda',Georgia,serif;margin:0;font-weight:500}
+a{color:#AD8A5C;text-decoration:none}a:hover{color:#C9A876}
+</style>
+</helmet>
+<div style="position:relative; width:390px; height:844px; display:flex; flex-direction:column; background:radial-gradient(circle at 30% 0%, #2c241c, #15110d 62%); overflow:hidden; font-family:'Manrope',sans-serif; color:var(--dark-ink-100);">
+
+  <header style="display:flex; align-items:center; gap:10px; height:60px; min-height:60px; padding:0 16px; background:rgba(21,17,13,0.72); border-bottom:1px solid var(--dark-border);">
+    <a href="Lounges.dc.html" aria-label="Back to lounges" style="width:44px; height:44px; border-radius:11px; border:1.5px solid var(--dark-border); display:flex; align-items:center; justify-content:center;"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C9BDAF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m14 7-5 5 5 5"/></svg></a>
+    <div style="flex:1; min-width:0;">
+      <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:0;">Admin · Lounges</p>
+      <p style="font-family:'Bodoni Moda',serif; font-size:18px; margin:2px 0 0;">The Larkspur</p>
+    </div>
+    <span style="display:inline-flex; align-items:center; gap:6px; padding:5px 11px; border-radius:20px; background:rgba(201,168,118,0.16); border:1px solid var(--gold-600); font-size:11px; font-weight:700; color:var(--dark-ink-300);"><span style="width:6px; height:6px; border-radius:50%; background:var(--gold-500);"></span>Live</span>
+  </header>
+  <div role="tablist" aria-label="Lounge" style="display:flex; gap:24px; height:48px; min-height:48px; padding:0 16px; border-bottom:1px solid var(--dark-border);">
+    <a href="LoungeLive.dc.html" role="tab" aria-selected="false" style="display:flex; align-items:center; font-size:13.5px; font-weight:600; color:var(--dark-ink-300); border-bottom:2px solid transparent;">Details</a>
+    <a href="#" role="tab" aria-selected="true" style="display:flex; align-items:center; gap:8px; font-size:13.5px; font-weight:700; color:var(--dark-ink-100); border-bottom:2px solid var(--gold-500);">Reviews <span style="min-width:22px; height:20px; padding:0 7px; border-radius:10px; background:var(--gold-500); color:var(--panel-black); font-size:11px; font-weight:800; display:flex; align-items:center; justify-content:center;">128</span></a>
+  </div>
+
+  <div style="flex:1; min-height:0; overflow:auto; padding:16px 16px 24px;">
+    <section aria-label="Rating summary" style=" padding:18px; background:var(--dark-card); border:1px solid var(--dark-border); border-radius:18px;">
+      <div style="display:flex; align-items:center; gap:14px;">
+        <p style="font-family:'Bodoni Moda',serif; font-size:44px; line-height:1; margin:0;">4.6</p>
+        <div>
+          <div role="img" aria-label="4.6 out of 5" style="display:flex; gap:3px;">
+            <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg><svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg>
+          </div>
+          <p style="font-size:11.5px; color:var(--dark-ink-500); margin:5px 0 0;">From 128 reviewed visits</p>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:8px; margin-top:16px;">
+        
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="width:22px; font-size:12px; font-weight:600; color:var(--dark-ink-300);">5★</span>
+            <span style="flex:1; height:9px; border-radius:5px; background:var(--panel-black); overflow:hidden;"><span style="display:block; height:9px; border-radius:5px; background:var(--gold-500); width:67%;"></span></span>
+            <span style="width:28px; text-align:right; font-size:12px; color:var(--dark-ink-500);">86</span>
+          </div>
+        
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="width:22px; font-size:12px; font-weight:600; color:var(--dark-ink-300);">4★</span>
+            <span style="flex:1; height:9px; border-radius:5px; background:var(--panel-black); overflow:hidden;"><span style="display:block; height:9px; border-radius:5px; background:var(--gold-500); width:23%;"></span></span>
+            <span style="width:28px; text-align:right; font-size:12px; color:var(--dark-ink-500);">29</span>
+          </div>
+        
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="width:22px; font-size:12px; font-weight:600; color:var(--dark-ink-300);">3★</span>
+            <span style="flex:1; height:9px; border-radius:5px; background:var(--panel-black); overflow:hidden;"><span style="display:block; height:9px; border-radius:5px; background:var(--gold-500); width:7%;"></span></span>
+            <span style="width:28px; text-align:right; font-size:12px; color:var(--dark-ink-500);">9</span>
+          </div>
+        
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="width:22px; font-size:12px; font-weight:600; color:var(--dark-ink-300);">2★</span>
+            <span style="flex:1; height:9px; border-radius:5px; background:var(--panel-black); overflow:hidden;"><span style="display:block; height:9px; border-radius:5px; background:var(--gold-500); width:2%;"></span></span>
+            <span style="width:28px; text-align:right; font-size:12px; color:var(--dark-ink-500);">3</span>
+          </div>
+        
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span style="width:22px; font-size:12px; font-weight:600; color:var(--dark-ink-300);">1★</span>
+            <span style="flex:1; height:9px; border-radius:5px; background:var(--panel-black); overflow:hidden;"><span style="display:block; height:9px; border-radius:5px; background:var(--gold-500); width:1%;"></span></span>
+            <span style="width:28px; text-align:right; font-size:12px; color:var(--dark-ink-500);">1</span>
+          </div>
+        
+      </div>
+      <div style="height:1px; background:var(--dark-border); margin:16px 0;"></div>
+      <p style="font-size:12.5px; font-weight:700; margin:0;">What members mention</p>
+      <div style="display:flex; flex-wrap:wrap; gap:7px; margin-top:10px;">
+        <span style="padding:6px 11px; border-radius:20px; border:1px solid var(--dark-border); font-size:11.5px; font-weight:600; color:var(--dark-ink-300);">Quiet <span style="color:var(--gold-500); font-weight:800;">54</span></span><span style="padding:6px 11px; border-radius:20px; border:1px solid var(--dark-border); font-size:11.5px; font-weight:600; color:var(--dark-ink-300);">Staff <span style="color:var(--gold-500); font-weight:800;">41</span></span><span style="padding:6px 11px; border-radius:20px; border:1px solid var(--dark-border); font-size:11.5px; font-weight:600; color:var(--dark-ink-300);">Coffee <span style="color:var(--gold-500); font-weight:800;">38</span></span><span style="padding:6px 11px; border-radius:20px; border:1px solid var(--dark-border); font-size:11.5px; font-weight:600; color:var(--dark-ink-300);">Fast WiFi <span style="color:var(--gold-500); font-weight:800;">27</span></span><span style="padding:6px 11px; border-radius:20px; border:1px solid var(--dark-border); font-size:11.5px; font-weight:600; color:var(--dark-ink-300);">Workspace <span style="color:var(--gold-500); font-weight:800;">19</span></span><span style="padding:6px 11px; border-radius:20px; border:1px solid var(--dark-border); font-size:11.5px; font-weight:600; color:var(--dark-ink-300);">Showers <span style="color:var(--gold-500); font-weight:800;">12</span></span><span style="padding:6px 11px; border-radius:20px; border:1px solid var(--dark-border); font-size:11.5px; font-weight:600; color:var(--dark-ink-300);">Food <span style="color:var(--gold-500); font-weight:800;">8</span></span>
+      </div>
+    </section>
+
+    <p style="font-size:11px; font-weight:700; letter-spacing:0.1em; text-transform:uppercase; color:var(--dark-ink-500); margin:22px 0 10px;">128 reviews · newest first</p>
+    <section aria-label="Reviews" style="display:flex; flex-direction:column; gap:10px;">
+      
+        <article style="padding:16px; background:var(--dark-card); border:1px solid var(--dark-border); border-radius:16px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <p style="flex:1; min-width:0; font-size:13.5px; font-weight:700; margin:0;">Marcus Chen <span style="font-weight:500; font-size:12px; color:var(--dark-ink-500);">· Annual member</span></p>
+            <div role="img" aria-label="5 out of 5" style="display:flex; gap:2px;">
+              <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg>
+            </div>
+          </div>
+          <p style="font-size:11.5px; color:var(--dark-ink-500); margin:4px 0 0;">Visited Oct 21 · <a href="MemberProfile.dc.html">View member</a></p>
+          <p style="font-size:11.5px; margin:2px 0 0;">Booking <a href="Bookings.dc.html" style="font-weight:700; letter-spacing:0.04em;">LP-842407</a></p>
+          <p style="font-size:13px; line-height:1.6; color:var(--dark-ink-300); margin:10px 0 0;">Quietest corner I have found in midtown — two calls back to back and nobody blinked.</p>
+          
+        </article>
+      
+        <article style="padding:16px; background:var(--dark-card); border:1px solid var(--dark-border); border-radius:16px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <p style="flex:1; min-width:0; font-size:13.5px; font-weight:700; margin:0;">Amara Okafor <span style="font-weight:500; font-size:12px; color:var(--dark-ink-500);">· Monthly member</span></p>
+            <div role="img" aria-label="4 out of 5" style="display:flex; gap:2px;">
+              <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg>
+            </div>
+          </div>
+          <p style="font-size:11.5px; color:var(--dark-ink-500); margin:4px 0 0;">Visited Oct 20 · <a href="MemberProfile.dc.html">View member</a></p>
+          <p style="font-size:11.5px; margin:2px 0 0;">Booking <a href="Bookings.dc.html" style="font-weight:700; letter-spacing:0.04em;">LP-841955</a></p>
+          <p style="font-size:13px; line-height:1.6; color:var(--dark-ink-300); margin:10px 0 0;">Showers were spotless and the team found me a towel without asking.</p>
+          
+        </article>
+      
+        <article style="padding:16px; background:var(--dark-card); border:1px solid var(--dark-border); border-radius:16px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <p style="flex:1; min-width:0; font-size:13.5px; font-weight:700; margin:0;">Jules Renard <span style="font-weight:500; font-size:12px; color:var(--dark-ink-500);">· Annual member</span></p>
+            <div role="img" aria-label="5 out of 5" style="display:flex; gap:2px;">
+              <svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg><svg aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="#C9A876" stroke="#C9A876" stroke-width="1.6" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.8-5.2 2.8 1-5.8-4.3-4.1 5.9-.9z"/></svg>
+            </div>
+          </div>
+          <p style="font-size:11.5px; color:var(--dark-ink-500); margin:4px 0 0;">Visited Oct 19 · <a href="MemberProfile.dc.html">View member</a></p>
+          <p style="font-size:11.5px; margin:2px 0 0;">Booking <a href="Bookings.dc.html" style="font-weight:700; letter-spacing:0.04em;">LP-840317</a></p>
+          
+          <p style="font-size:12.5px; font-style:italic; color:var(--dark-ink-500); margin:10px 0 0;">Rated without a comment</p>
+        </article>
+      
+    </section>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

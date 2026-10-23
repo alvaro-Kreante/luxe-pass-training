@@ -231,6 +231,30 @@
       "w": 1440,
       "h": 900,
       "title": "29. Who is coming, across the network"
+    },
+    {
+      "file": "LoungeReviews.dc.html",
+      "x": 0,
+      "y": 10500,
+      "w": 1440,
+      "h": 900,
+      "title": "Lounge detail — Reviews tab"
+    },
+    {
+      "file": "LoungeReviewsEmpty.dc.html",
+      "x": 1540,
+      "y": 10500,
+      "w": 1440,
+      "h": 900,
+      "title": "Lounge detail — Reviews, none yet"
+    },
+    {
+      "file": "LoungeReviewsMobile.dc.html",
+      "x": 3080,
+      "y": 10500,
+      "w": 390,
+      "h": 844,
+      "title": "Lounge detail — Reviews, mobile"
     }
   ],
   "annotations": [
@@ -310,6 +334,13 @@
       "y": 9285,
       "w": 1400,
       "text": "Lounge filters · The list is newest first. Live and Draft are quick filters: one press shows only that status, a second press clears it. The city button opens a search over the cities that already have a lounge — typing narrows the list, picking one filters the table and becomes the button's label. Status and city combine; Clear filters drops both."
+    },
+    {
+      "id": "lounge-reviews-note",
+      "x": 3570,
+      "y": 10500,
+      "w": 940,
+      "text": "Lounge reviews · A Reviews tab next to Details on /admin/lounges/[id]. Same summary and list as the partner's, but the admin sees the member's full name with a link to their profile and the LP# links to the booking. Read only: no moderation in this version."
     }
   ],
   "launch": {
