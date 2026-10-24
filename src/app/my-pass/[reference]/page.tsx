@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { ChevronRight, CircleCheck, Clock, FileText, MapPin, Navigation2, PhoneCall, Share2, Star } from "lucide-react";
 
 import { RequireSession } from "@/components/onboarding/require-session";
@@ -11,9 +11,10 @@ import { AppShell } from "@/components/patterns/app-shell";
 import { buttonVariants } from "@/components/ui/button";
 import { Notice } from "@/components/ui/notice";
 import { toneOf } from "@/components/lounges/lounge-thumb";
+import { WriteReviewDialog } from "@/components/lounges/write-review-dialog";
 import {
   fetchDigitalPass,
-  isPassLifecycleState,
+  passStateOf,
   type DigitalPass,
   type PassLifecycleState,
 } from "@/lib/passes";
@@ -46,12 +47,6 @@ export default function PassDetailPage() {
 function PassDetailScreen() {
   const router = useRouter();
   const { reference } = useParams<{ reference: string }>();
-  const searchParams = useSearchParams();
-  const requestedState = searchParams.get("state");
-  const state: PassLifecycleState = isPassLifecycleState(requestedState)
-    ? requestedState
-    : "upcoming";
-
   const [pass, setPass] = React.useState<DigitalPass | null | undefined>(undefined);
 
   React.useEffect(() => {
@@ -72,6 +67,8 @@ function PassDetailScreen() {
   }, [pass, router]);
 
   if (!pass) return null;
+
+  const state = passStateOf(pass);
 
   return (
     <AppShell padded={false}>
@@ -336,6 +333,10 @@ function CheckedInBody({ pass }: { pass: DigitalPass }) {
         <Step icon={FileText} text="This visit moves to Past visits and counts as your 4th of 8 this month." />
         <Step icon={Star} text="We will ask how it went — reviews help other members choose." />
       </div>
+
+      <div className="mt-5 flex">
+        <ReviewAction pass={pass} />
+      </div>
     </>
   );
 }
@@ -376,17 +377,61 @@ function ExpiredBody({ pass }: { pass: DigitalPass }) {
       </div>
 
       <div className="mt-5 flex gap-3">
-        <button type="button" className={cn(buttonVariants({ size: "lg" }), "flex-1")}>
+        <Link href={`/lounges/${pass.loungeId}/book`} className={cn(buttonVariants({ size: "lg" }), "flex-1")}>
           Book {pass.loungeName} again
-        </button>
-        <button type="button" className={cn(buttonVariants({ variant: "secondary", size: "lg" }), "flex-1")}>
-          Leave a review
-        </button>
+        </Link>
+        <ReviewAction pass={pass} />
       </div>
 
       <p className="m-0 mt-4.5 text-xs text-fg-subtle">
         Expired passes stay in your history for your records, but cannot be used for entry again.
       </p>
+    </>
+  );
+}
+
+/**
+ * Story 3.1 — una reseña por visita, desde el detalle de la reserva: solo con
+ * check-in. Ya reseñada, lleva a las reseñas del lounge.
+ */
+function ReviewAction({ pass }: { pass: DigitalPass }) {
+  const [reviewed, setReviewed] = React.useState(pass.reviewed);
+  const [writing, setWriting] = React.useState(false);
+
+  if (!reviewed && !pass.checkedInLabel) return null;
+
+  return (
+    <>
+      {reviewed ? (
+        <Link
+          href={`/lounges/${pass.loungeId}/reviews`}
+          className={cn(buttonVariants({ variant: "secondary", size: "lg" }), "flex-1")}
+        >
+          See your review
+        </Link>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setWriting(true)}
+          className={cn(buttonVariants({ variant: "secondary", size: "lg" }), "flex-1")}
+        >
+          Leave a review
+        </button>
+      )}
+      {/* Montado aparte del botón: al publicar, el botón cambia pero el "Thank you" sigue. */}
+      {writing ? (
+        <WriteReviewDialog
+          open
+          onOpenChange={setWriting}
+          loungeName={pass.loungeName}
+          visit={{
+            bookingId: pass.bookingId,
+            reference: pass.reference,
+            dateLabel: pass.dateLabel,
+          }}
+          onPosted={() => setReviewed(true)}
+        />
+      ) : null}
     </>
   );
 }

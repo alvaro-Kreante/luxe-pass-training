@@ -53,17 +53,24 @@ aceptación con fecha y versión.
 
 ## 2. Provisional — cae solo al avanzar los epics
 
-### 2.5 "Write a review" no hace nada
+### 2.5 Reseñas: lo que queda abierto
 
-El botón de `RatingSummary` no tiene una pantalla de destino: ninguna historia
-de los 9 epics cubre redactar una reseña, solo leerlas (Story 3.1).
+Las reseñas son reales desde el 23 oct 2026 (`reviews`, una por visita con
+check-in). Abierto:
 
-Por lo mismo, el contenido de cada reseña individual (nombre, texto), el
-desglose por estrellas y "what members mention" siguen siendo datos de
-muestra: no hay tabla `reviews` (ver `docs/DATA-MODEL-MAP.md`). Rating y
-número de reseñas sí son reales.
+- **El Home sigue con notas inventadas:** sus tarjetas destacadas leen el
+  catálogo de muestra `src/lib/lounges.ts` (4.9, 4.8…), no `lounges`.
+- **Sin moderación ni respuesta del partner:** el admin no puede ocultar una
+  reseña y el miembro no puede editarla ni borrarla.
+- **Sin aviso para reseñar:** el pase con check-in promete "We will ask how
+  it went", pero nadie lo pide; se reseña entrando al detalle de la reserva
+  en My Pass.
+- **Al subir a `staging`/`main`,** la migración `reset_seeded_lounge_ratings`
+  deja a 0 la nota y el recuento de todos los lounges remotos (decisión del
+  usuario: nada de cifras sembradas).
 
-**Se resuelve:** cuando una historia futura defina esa pantalla.
+**Se resuelve:** con una historia de moderación o de recordatorio de reseña,
+y conectando el Home al catálogo real.
 
 ### 2.6 El QR del pase es decorativo
 
@@ -220,7 +227,6 @@ nada los hace cumplir.
 | 3.1 | Call and Directions quick action buttons (google maps url) | Enlaces reales (`tel:` y Google Maps con la dirección de muestra); no hay verificación de que el teléfono o la dirección existan |
 | 3.1 | Share lounge option via social/messaging apps | Los destinos (Messages, WhatsApp, Instagram…) son botones sin integración; solo "Copy" usa una API real del navegador (`navigator.clipboard`) |
 | 4.2 | Apple Pay and Google Pay integration | El Payment Element de Stripe los ofrece automáticamente, pero exigen dominio verificado que no funciona en `localhost` ni sin el rollout de Vercel (`docs/PENDIENTES.md` §4.4) — pueden quedar visualmente presentes pero inertes hasta ese rollout, no es una simulación sino un gap de infraestructura |
-| 5.1 | Booking expires automatically after booking window | **Sigue igual tras conectar Epic 5 y Epic 6 (21 sept 2026).** No hay cron que mueva una reserva vencida a completed/no-show por el paso del tiempo — ninguna historia de Epic 6 lo pedía como AC, así que no se construyó: los cuatro estados del pase se siguen eligiendo por `?state=` en `/my-pass/[reference]`, ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 5" |
 | 5.2 | Emergency contact information accessible to staff | **El mecanismo de acceso ya es real** (`reception_lookup_booking` lee `profiles.emergency_contact_*`) — lo que sigue sin ser real es el registro de "cada acceso queda registrado" (solo texto) y la propia captura del dato: `/profile/privacy` (Story 6.3, ya conectada) LEE el contacto real, pero "Edit" para escribirlo sigue inerte — sin artboard propio para ese formulario |
 | 6.1 | Support contact for booking issues - Admin | Las filas "Something wrong with a booking?" / "Disagree with a fee or a no-show?" siguen sin abrir ninguna conversación — la consola de soporte (Epic 8, ya conectada) no tiene un flujo de "abrir un caso desde la reserva del miembro", solo el "New case" inerte de `/admin/support` |
 | 6.2 | New lounge partner announcements / Membership renewal reminders / Special offers and promotions / Birthday month promotion | **Parcialmente resuelto tras conectar Epic 6 (21 sept 2026).** Dependen de datos que Epic 7/9 todavía no modelan de verdad, así que se siembran como notificaciones de muestra REALES (filas de verdad en `notifications`, no sintéticas del cliente) al crear el perfil — ver `docs/design/COMPONENT-MAP.md` "Backend real — Epic 6" |
@@ -347,7 +353,10 @@ remoto.
 
 ### 4.7 "Email it to me" de `/admin/reports` deshabilitado
 
-Queda deshabilitado en la UI, no solo pendiente de despliegue. A diferencia del cron (que sí puede leer
+Queda deshabilitado en la UI, no solo pendiente de despliegue. (El "Email receipt" de My Pass ya resolvió
+este mismo problema para el miembro: RPC que valida y marca la petición +
+trigger con el secreto de Vault — `resend_booking_receipt`,
+`booking_receipts.sql`. Es el patrón a copiar aquí.) A diferencia del cron (que sí puede leer
 el secreto de Vault desde Postgres), este botón invocaría
 `send-admin-report` directamente desde el navegador del admin — y esa
 function solo acepta `x-webhook-secret`, un secreto que no puede vivir en
@@ -492,6 +501,35 @@ job pasa. No es una regresión: el test solo comprueba un 401.
 
 **Se resuelve:** subiéndole el timeout o haciendo que no dependa del
 arranque en frío de la Edge Function en CI.
+
+### 4.16 El perfil de un lounge sin fotos rompe
+
+`HeroCarousel` (`src/components/lounges/hero-carousel.tsx`) lee `images[0].url`
+sin comprobar que haya fotos: `/lounges/[id]` de un lounge live sin
+`lounge_images` falla al pintar (visto el 23 oct 2026 en un test). Publicar
+desde el admin exige fotos, así que hoy solo pasa con lounges creados a mano.
+
+### 4.17 Test de informes programados que falla en local
+
+`src/app/admin/reports/scheduled/page.test.tsx` → "lists the automated
+reports with their cadence" falla aislado con "Found multiple elements with
+the text: Every day": la base local acumula informes programados que el test
+no espera (visto el 23 oct 2026, con y sin la rama de reseñas). Sin
+investigar.
+
+### 4.18 Cierre automático de reservas: lo que queda
+
+`expire_finished_bookings` (pg_cron, 23 oct 2026) cierra las reservas al
+acabar la ventana en el huso de `lounges.timezone`. Abierto:
+
+- **El alta de un lounge no pide el huso:** nace con `America/New_York`.
+  Google Places no lo trae; haría falta la Time Zone API o elegirlo en el
+  formulario. Hoy solo Tacna/Arequipa están en `America/Lima`.
+- **La lista de espera de una fecha pasada** no se cierra: sigue en
+  `waitlisted` (cancelarla avisaría al partner con
+  `notify_partner_cancellation`).
+- **En los remotos** el cron cerrará en su primera pasada todas las reservas
+  ya vencidas de `luxepass-dev`/`luxepass-prod`.
 
 ## 5. Decisiones abiertas
 

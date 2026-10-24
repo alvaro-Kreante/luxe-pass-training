@@ -92,7 +92,7 @@ export function LoungeProfileView({
                     className="flex items-center gap-1.5 rounded-pill border-[1.5px] border-line px-3 py-1.5 text-[12.5px] font-bold text-fg-muted transition-colors duration-150 hover:border-accent hover:text-accent-strong"
                   >
                     {lounge.reviewCount > 0
-                      ? `${lounge.reviewCount} reviews`
+                      ? `${lounge.reviewCount} ${lounge.reviewCount === 1 ? "review" : "reviews"}`
                       : "No reviews yet"}
                     <ChevronRight size={14} strokeWidth={2} aria-hidden />
                   </Link>

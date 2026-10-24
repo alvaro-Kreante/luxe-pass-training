@@ -78,3 +78,91 @@ create trigger booking_confirmed_send_receipt
   after insert on public.bookings
   for each row
   execute function public.notify_booking_confirmed();
+
+-- Story 6.1 — "Email receipt" de My Pass › Past (`History.dc.html`: "Send
+-- any of them again from here"). El navegador no puede llamar a
+-- `send-booking-receipt` (su secreto vive en Vault), así que pide el
+-- reenvío aquí: se valida que la reserva es suya y no está cancelada, con un
+-- máximo de uno cada 5 minutos por reserva, y el trigger de abajo lo manda
+-- por el mismo camino que el recibo original (`resend: true`).
+create or replace function public.resend_booking_receipt(p_booking_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_booking public.bookings%rowtype;
+begin
+  select * into v_booking
+  from public.bookings b
+  where b.id = p_booking_id and b.member_id = (select auth.uid())
+  for update;
+
+  if not found then
+    raise exception 'Booking not found' using errcode = 'P0002';
+  end if;
+
+  if v_booking.status not in ('confirmed', 'in_progress', 'completed') then
+    raise exception 'This booking has no receipt to send' using errcode = 'P0001';
+  end if;
+
+  if v_booking.receipt_requested_at > now() - interval '5 minutes' then
+    raise exception 'Receipt already sent — try again in a few minutes' using errcode = 'P0001';
+  end if;
+
+  update public.bookings set receipt_requested_at = now() where id = p_booking_id;
+end;
+$$;
+
+revoke execute on function public.resend_booking_receipt(uuid) from public, anon;
+grant execute on function public.resend_booking_receipt(uuid) to authenticated;
+
+create or replace function public.notify_booking_receipt_requested()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_url text;
+  v_secret text;
+begin
+  if new.receipt_requested_at is not distinct from old.receipt_requested_at then
+    return new;
+  end if;
+
+  select decrypted_secret into v_url
+  from vault.decrypted_secrets
+  where name = 'booking_receipt_webhook_url';
+
+  select decrypted_secret into v_secret
+  from vault.decrypted_secrets
+  where name = 'booking_receipt_webhook_secret';
+
+  if v_url is null or v_secret is null then
+    return new;
+  end if;
+
+  perform net.http_post(
+    url := v_url,
+    body := jsonb_build_object('type', 'RESEND', 'resend', true, 'record', to_jsonb(new)),
+    headers := jsonb_build_object(
+      'Content-Type', 'application/json',
+      'x-webhook-secret', v_secret
+    ),
+    timeout_milliseconds := 15000
+  );
+
+  return new;
+end;
+$$;
+
+revoke execute on function public.notify_booking_receipt_requested() from public;
+
+drop trigger if exists booking_receipt_requested_send on public.bookings;
+
+create trigger booking_receipt_requested_send
+  after update of receipt_requested_at on public.bookings
+  for each row
+  execute function public.notify_booking_receipt_requested();

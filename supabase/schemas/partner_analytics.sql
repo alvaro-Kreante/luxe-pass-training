@@ -158,7 +158,11 @@ returns table (
   status text,
   checked_in boolean,
   no_show boolean,
-  paid_cents int
+  paid_cents int,
+  -- GuestDetailReviews.dc.html — el LP# y la reseña de la visita, si la hay.
+  confirmation_code text,
+  review_rating smallint,
+  review_body text
 )
 language plpgsql
 security definer
@@ -174,9 +178,13 @@ begin
       b.status,
       b.checked_in_at is not null,
       b.no_show,
-      coalesce((select sum(pm.amount_cents) from public.payments pm where pm.booking_id = b.id and pm.status = 'succeeded'), 0)::int
+      coalesce((select sum(pm.amount_cents) from public.payments pm where pm.booking_id = b.id and pm.status = 'succeeded'), 0)::int,
+      b.confirmation_code,
+      r.rating,
+      r.body
     from public.bookings b
     join public.lounges l on l.id = b.lounge_id
+    left join public.reviews r on r.booking_id = b.id
     where b.member_id = p_member_id
       and b.lounge_id in (select public.partner_lounge_ids())
       and (p_lounge_id is null or b.lounge_id = p_lounge_id)

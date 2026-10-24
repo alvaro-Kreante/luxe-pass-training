@@ -1,9 +1,12 @@
 import { Star } from "lucide-react";
 
 import { Card } from "@/components/ui/card";
-import type { LoungeReview } from "@/lib/lounge-profile";
+import { formatVisitDate, type LoungeReview } from "@/lib/reviews";
 
-/** Story 3.1 — una reseña de `Reviews.dc.html`: avatar, autor, estrellas y texto. */
+/**
+ * Story 3.1 — una reseña de `Reviews.dc.html`: avatar, autor, estrellas y
+ * texto. Una por visita: la fecha distingue las de un mismo miembro.
+ */
 export function ReviewCard({ review }: { review: LoungeReview }) {
   return (
     <Card variant="content" className="border border-line p-5">
@@ -14,10 +17,10 @@ export function ReviewCard({ review }: { review: LoungeReview }) {
         <div className="flex-1">
           <p className="m-0 text-[13.5px] font-bold text-fg">{review.name}</p>
           <p className="m-0 mt-0.5 text-[11.5px] text-fg-subtle">
-            {review.tier} · Visited {review.visitedOn}
+            {review.tier} · Visited {formatVisitDate(review.visitedOn)}
           </p>
         </div>
-        <div className="flex gap-0.5">
+        <div className="flex gap-0.5" role="img" aria-label={`${review.rating} out of 5 stars`}>
           {Array.from({ length: 5 }, (_, index) => (
             <Star
               key={index}
@@ -33,9 +36,11 @@ export function ReviewCard({ review }: { review: LoungeReview }) {
           ))}
         </div>
       </div>
-      <p className="m-0 mt-3.5 text-[13px] leading-[1.6] text-fg-muted">
-        {review.text}
-      </p>
+      {review.text ? (
+        <p className="m-0 mt-3.5 text-[13px] leading-[1.6] text-fg-muted">
+          {review.text}
+        </p>
+      ) : null}
     </Card>
   );
 }

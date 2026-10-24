@@ -12,6 +12,8 @@ import { LoungePartnerCard } from "@/components/admin/lounge-partner-card";
 import { ModalPoint } from "@/components/admin/lounge-saved-notice";
 import { PhotoViewer } from "@/components/admin/photo-viewer";
 import { AdminShell } from "@/components/patterns/admin-shell";
+import { LoungeReviewsTab } from "@/components/admin/lounge-reviews-tab";
+import { fetchAdminLoungeReviews, type StaffReviews } from "@/lib/reviews";
 import { Modal } from "@/components/patterns/modal";
 import { Button } from "@/components/ui/button";
 import { amenityLabel, type AmenityId } from "@/lib/amenities";
@@ -25,6 +27,31 @@ const EYEBROW = "m-0 text-[11px] font-bold uppercase tracking-[0.1em] text-fg-su
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 // Lunes primero, como el artboard.
 const WEEK_ORDER = [1, 2, 3, 4, 5, 6, 0];
+
+function LoungeTab({
+  selected,
+  onSelect,
+  children,
+}: {
+  selected: boolean;
+  onSelect: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={selected}
+      onClick={onSelect}
+      className={cn(
+        "-mb-px flex h-12.5 cursor-pointer items-center gap-2 border-b-2 bg-transparent px-0 text-[13.5px] transition-colors duration-150",
+        selected ? "border-gold-500 font-bold text-fg" : "border-transparent font-semibold text-fg-muted hover:text-fg",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
 
 function Locked() {
   return (
@@ -81,6 +108,18 @@ export function LoungeLiveView({
   const [suspending, setSuspending] = React.useState(false);
   const suspended = lounge.contentStatus === "suspended";
   const schedule = useLoungeSchedule(lounge.id);
+  const [tab, setTab] = React.useState<"details" | "reviews">("details");
+  const [reviews, setReviews] = React.useState<StaffReviews | null>(null);
+
+  React.useEffect(() => {
+    let active = true;
+    fetchAdminLoungeReviews(supabase, lounge.id).then((next) => {
+      if (active) setReviews(next);
+    });
+    return () => {
+      active = false;
+    };
+  }, [supabase, lounge.id]);
 
   async function changeStatus(action: () => Promise<void>) {
     setBusy(true);
@@ -178,6 +217,22 @@ export function LoungeLiveView({
         </p>
       ) : null}
 
+      {/* LoungeReviews.dc.html — Details | Reviews bajo la cabecera del lounge. */}
+      <div role="tablist" aria-label="Lounge" className="flex items-end gap-7 border-b border-line">
+        <LoungeTab selected={tab === "details"} onSelect={() => setTab("details")}>
+          Details
+        </LoungeTab>
+        <LoungeTab selected={tab === "reviews"} onSelect={() => setTab("reviews")}>
+          Reviews{" "}
+          <span className="flex h-5 min-w-5.5 items-center justify-center rounded-[10px] bg-gold-500 px-1.5 text-[11px] font-extrabold text-panel-black">
+            {reviews?.count ?? 0}
+          </span>
+        </LoungeTab>
+      </div>
+
+      {tab === "reviews" ? (
+        <LoungeReviewsTab loungeName={lounge.name} reviews={reviews} />
+      ) : (
       <div className="mt-4.5 flex min-h-0 gap-4">
         <div className="flex min-w-0 flex-1 flex-col gap-3">
           <div className={CARD}>
@@ -293,6 +348,7 @@ export function LoungeLiveView({
           </div>
         </div>
       </div>
+      )}
 
       <PhotoViewer photos={photos} index={viewing} onIndexChange={setViewing} onClose={() => setViewing(null)} />
 

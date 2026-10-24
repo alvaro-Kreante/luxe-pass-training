@@ -16,6 +16,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { addDays, today } from "./availability";
 import { analyticsLoungeId, loadPartnerContext, type PartnerContext } from "./partner-lounges";
+import { fetchPartnerReviews, type StaffReviews } from "./reviews";
 
 export const PARTNER_VENUE = {
   name: "The Ainsworth",
@@ -971,6 +972,22 @@ export async function loadPartnerAnalytics(
   return { context, loungeId, ...(await fetchPartnerAnalytics(supabase, loungeId)) };
 }
 
+export interface PartnerReviewsData {
+  context: PartnerContext | null;
+  loungeId: string | null;
+  reviews: StaffReviews;
+}
+
+/** PartnerReviews.dc.html — PERF-02, mismo patrón que `loadPartnerAnalytics`. */
+export async function loadPartnerReviews(
+  supabase: SupabaseClient,
+  knownContext?: PartnerContext | null,
+): Promise<PartnerReviewsData> {
+  const context = knownContext !== undefined ? knownContext : await loadPartnerContext(supabase);
+  const loungeId = analyticsLoungeId(context);
+  return { context, loungeId, reviews: await fetchPartnerReviews(supabase, loungeId) };
+}
+
 /** Fila cruda de `partner_guest_history` (`supabase/schemas/partner_analytics.sql`). */
 export interface PartnerGuestHistoryRow {
   booking_id: string;
@@ -981,6 +998,9 @@ export interface PartnerGuestHistoryRow {
   checked_in: boolean;
   no_show: boolean;
   paid_cents: number;
+  confirmation_code: string;
+  review_rating: number | null;
+  review_body: string | null;
 }
 
 export type GuestVisitStatus = "arrived" | "no-show" | "cancelled" | "upcoming" | "not-checked-in" | "waitlisted";
@@ -992,6 +1012,10 @@ export interface GuestVisit {
   slotTime: string;
   status: GuestVisitStatus;
   paid: number;
+  /** LP# de la visita (GuestDetailReviews.dc.html). */
+  reference: string;
+  /** La reseña del miembro para esta visita, si la dejó. */
+  review: { rating: number; text: string } | null;
 }
 
 /** El estado de la reserva en el lounge; `todayIso` decide si una reserva sin check-in está por venir o ya pasó. */
@@ -1011,5 +1035,7 @@ export function mapGuestHistoryRow(row: PartnerGuestHistoryRow, todayIso: string
     slotTime: row.slot_time,
     status: guestVisitStatus(row, todayIso),
     paid: row.paid_cents / 100,
+    reference: row.confirmation_code,
+    review: row.review_rating ? { rating: row.review_rating, text: row.review_body ?? "" } : null,
   };
 }

@@ -43,6 +43,9 @@ create table if not exists public.bookings (
   -- diferencia del pago de la reserva (Story 4.2).
   cancellation_fee_cents integer,
   cancelled_at      timestamptz,
+  -- Story 6.1 — "Email receipt" de My Pass › Past: última vez que el miembro
+  -- pidió reenviar el recibo (`resend_booking_receipt`, `booking_receipts.sql`).
+  receipt_requested_at timestamptz,
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now()
 );

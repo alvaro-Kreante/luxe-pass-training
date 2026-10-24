@@ -54,8 +54,9 @@ La tabla completa ruta → artboard → story vive en `docs/design/COMPONENT-MAP
 (capa 3). Es la fuente única: no duplicarla aquí.
 
 Varias pantallas reúnen varios artboards como estados de la misma vista,
-alcanzados por query param (`?map=error`, `?state=today`…). Qué estado usa qué
-param: `docs/PENDIENTES.md` §2.2 y la tabla de desviaciones de `COMPONENT-MAP.md`.
+alcanzados por query param (`?map=error`…) o por el estado real de los datos
+(el pase de `/my-pass/[reference]` sale del estado de la reserva). Qué estado
+usa qué: la tabla de desviaciones de `COMPONENT-MAP.md`.
 
 **Cada artboard tiene su propia frase de marca** en el panel izquierdo del patrón 1 (`Join a community of discerning travelers.`, `Your next moment of calm is waiting.`…). No reutilizar la de otra pantalla: extraerla del `.dc.html` correspondiente.
 

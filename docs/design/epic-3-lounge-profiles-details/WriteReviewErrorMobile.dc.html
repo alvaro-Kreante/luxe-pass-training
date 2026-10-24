@@ -1,0 +1,130 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400;0,6..96,500;0,6..96,600;1,6..96,500&family=Manrope:wght@400;500;600;700;800&display=swap">
+  <style>
+    :root {
+      --bg-blush-1: #F8EAE1; --bg-blush-2: #FCF4EE;
+      --ink-900: #221A14; --ink-700: #55483D; --ink-400: #9C8D80;
+      --gold-500: #C9A876; --gold-600: #AD8A5C; --gold-100: #F1E3D0;
+      --border: #E7D9C9; --white: #FFFFFF; --panel-black: #15110D;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Manrope', 'Segoe UI', sans-serif; color: var(--ink-900); }
+    h1, h2, h3 { font-family: 'Bodoni Moda', Georgia, 'Times New Roman', serif; margin: 0; font-weight: 500; }
+    a { color: var(--gold-600); text-decoration: none; }
+    a:hover { color: var(--ink-900); }
+    .amn { width: 17px; height: 17px; fill: none; stroke: var(--gold-600); stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+    .nav-item { transition: background .15s ease; }
+    .nav-item:hover { background: var(--gold-100); }
+    .btn-gold { transition: background .15s ease; }
+    .btn-gold:hover { background: var(--gold-600) !important; }
+    .btn-outline { transition: background .15s ease, border-color .15s ease; }
+    .btn-outline:hover { background: var(--gold-100); }
+    .carousel-arrow { transition: background .15s ease; }
+    .carousel-arrow:hover { background: var(--white); }
+    .slot { transition: border-color .15s ease, background .15s ease; }
+    .slot:hover { border-color: var(--gold-500); }
+    .cal-cell { height: 104px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; transition: border-color .15s ease; }
+    .cal-cell:hover { border-color: var(--gold-500); }
+    .cell-ok { background: var(--gold-100); border: 1px solid transparent; }
+    .cell-low { background: var(--white); border: 1.5px solid var(--gold-500); }
+    .cell-full { background: var(--white); border: 1px solid var(--border); }
+    .cell-closed { background: var(--bg-blush-1); border: 1px dashed var(--border); }
+    .cell-past { background: var(--bg-blush-1); border: 1px solid transparent; }
+    .cv { font-size: 15px; font-weight: 700; color: var(--ink-900); }
+    .cl { font-size: 11px; color: var(--ink-700); }
+    .cd { font-size: 12.5px; font-weight: 700; color: var(--ink-400); }
+    .panel-scroll { overflow-y: auto; }
+    .panel-scroll::-webkit-scrollbar { width: 6px; }
+    .panel-scroll::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    @keyframes shimmer { 0% { background-position: -420px 0; } 100% { background-position: 420px 0; } }
+    .skeleton { background: linear-gradient(90deg, #F1E7DD 0%, #F8F1EA 50%, #F1E7DD 100%); background-size: 420px 100%; animation: shimmer 1.4s linear infinite; border-radius: 8px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner { animation: spin 1s linear infinite; }
+  </style>
+</helmet>
+
+
+<!-- Write a review · error · mobile — bottom sheet over the lounge profile -->
+<div style="position:relative; width:390px; height:844px; background:var(--bg-blush-2); overflow:hidden; font-family:'Manrope',sans-serif;">
+
+  <!-- Profile behind (blurred): hero + title -->
+  <div aria-hidden="true" style="position:absolute; inset:0; filter:blur(3px);">
+    <div style="position:relative; height:260px; background:radial-gradient(circle at 30% 20%, #3a3128, #15110d 72%);">
+      <div style="position:absolute; inset:0; background-image:radial-gradient(rgba(201,168,118,0.20) 1px, transparent 1.5px); background-size:16px 16px;"></div>
+    </div>
+    <div style="padding:20px;"><h1 style="font-size:28px;">The Ainsworth</h1></div>
+  </div>
+
+  <!-- Scrim -->
+  <div style="position:absolute; inset:0; background:rgba(21,17,13,0.55);"></div>
+
+  <!-- Write a review sheet -->
+  <div role="dialog" aria-modal="true" aria-labelledby="rv-title" style="position:absolute; left:0; right:0; bottom:0; max-height:800px; overflow-y:auto; background:var(--white); border-radius:24px 24px 0 0; box-shadow:0 -20px 50px -20px rgba(34,26,20,0.45); padding:12px 20px 28px; display:flex; flex-direction:column; gap:20px;">
+    <div aria-hidden="true" style="align-self:center; width:40px; height:4px; border-radius:2px; background:var(--border);"></div>
+<button type="button" aria-label="Close" style="position:absolute; top:20px; right:12px; width:44px; height:44px; border:none; border-radius:12px; background:var(--bg-blush-1); display:flex; align-items:center; justify-content:center; cursor:pointer;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-700)" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+<div style="display:flex; flex-direction:column; gap:6px; padding-right:52px;">
+
+<span style="font-size:11.5px; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:#8A6A40;">Write a review</span>
+<h2 id="rv-title" style="font-size:26px; line-height:1.15;">The Ainsworth</h2>
+<div style="display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; font-size:13.5px; color:var(--ink-700);">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--gold-600)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>
+<span>Visit on <strong style="color:var(--ink-900);">Oct 16, 2026</strong></span><span aria-hidden="true">·</span><span style="font-weight:700; letter-spacing:0.04em;">LP-842193</span>
+</div>
+</div>
+<div style="display:flex; flex-direction:column; gap:22px; ">
+<div style="display:flex; flex-direction:column; gap:8px;">
+<span id="rv-rating" style="font-size:14px; font-weight:700;">Your rating <span style="color:#9A4A2E;">*</span></span>
+<div style="display:flex; flex-wrap:wrap; align-items:center; gap:4px 12px;">
+<div role="radiogroup" aria-labelledby="rv-rating" style="display:flex; gap:2px;">
+<button type="button" role="radio" aria-checked="false" aria-label="1 star"  style="width:44px; height:44px; border:none; background:transparent; padding:0; display:flex; align-items:center; justify-content:center; cursor:pointer;"><svg width="30" height="30" viewBox="0 0 24 24" fill="var(--gold-500)" stroke="var(--gold-600)" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.2l2.6 5.5 6 .8-4.4 4.1 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 9.5l6-.8z"/></svg></button>
+<button type="button" role="radio" aria-checked="false" aria-label="2 stars"  style="width:44px; height:44px; border:none; background:transparent; padding:0; display:flex; align-items:center; justify-content:center; cursor:pointer;"><svg width="30" height="30" viewBox="0 0 24 24" fill="var(--gold-500)" stroke="var(--gold-600)" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.2l2.6 5.5 6 .8-4.4 4.1 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 9.5l6-.8z"/></svg></button>
+<button type="button" role="radio" aria-checked="false" aria-label="3 stars"  style="width:44px; height:44px; border:none; background:transparent; padding:0; display:flex; align-items:center; justify-content:center; cursor:pointer;"><svg width="30" height="30" viewBox="0 0 24 24" fill="var(--gold-500)" stroke="var(--gold-600)" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.2l2.6 5.5 6 .8-4.4 4.1 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 9.5l6-.8z"/></svg></button>
+<button type="button" role="radio" aria-checked="true" aria-label="4 stars"  style="width:44px; height:44px; border:none; background:transparent; padding:0; display:flex; align-items:center; justify-content:center; cursor:pointer;"><svg width="30" height="30" viewBox="0 0 24 24" fill="var(--gold-500)" stroke="var(--gold-600)" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.2l2.6 5.5 6 .8-4.4 4.1 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 9.5l6-.8z"/></svg></button>
+<button type="button" role="radio" aria-checked="false" aria-label="5 stars"  style="width:44px; height:44px; border:none; background:transparent; padding:0; display:flex; align-items:center; justify-content:center; cursor:pointer;"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#B9AA9C" stroke-width="1.4" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.2l2.6 5.5 6 .8-4.4 4.1 1.1 6-5.3-2.9-5.3 2.9 1.1-6L3.4 9.5l6-.8z"/></svg></button>
+</div>
+<span style="font-size:14px; font-weight:600; color:var(--ink-700);">Very good</span>
+</div>
+</div>
+<div style="display:flex; flex-direction:column; gap:8px;">
+<label for="rv-text" style="font-size:14px; font-weight:700;">Tell other members about your visit <span style="font-weight:500; color:#6B5D51;">(optional)</span></label>
+<textarea id="rv-text" maxlength="1000" rows="4"  placeholder="The atmosphere, the service, what made it worth it…" style="width:100%; min-height:120px; resize:vertical; border:1px solid var(--border); border-radius:12px; padding:14px 16px; font:400 14.5px/1.55 'Manrope',sans-serif; color:var(--ink-900); background:var(--bg-blush-2);">Quiet corner seats by the window and a proper flat white. Check-in took under a minute; the showers were spotless.</textarea>
+<span style="align-self:flex-end; font-size:12px; color:#6B5D51;">114 / 1000</span>
+</div>
+<div style="display:flex; flex-direction:column; gap:10px;">
+<div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px;">
+<span id="rv-tags" style="font-size:14px; font-weight:700;">What stood out</span>
+<span style="font-size:12px; color:#6B5D51;">Up to 5 · 3 selected</span>
+</div>
+<div role="group" aria-labelledby="rv-tags" style="display:flex; flex-wrap:wrap; gap:8px;">
+<button type="button" aria-pressed="true"  style="height:40px; padding:0 16px; border-radius:999px; font:600 13.5px 'Manrope',sans-serif; cursor:pointer; background:var(--ink-900); color:var(--white); border:1px solid var(--ink-900);">Quiet</button>
+<button type="button" aria-pressed="false"  style="height:40px; padding:0 16px; border-radius:999px; font:600 13.5px 'Manrope',sans-serif; cursor:pointer; background:var(--white); color:var(--ink-900); border:1px solid var(--border);">Fast WiFi</button>
+<button type="button" aria-pressed="false"  style="height:40px; padding:0 16px; border-radius:999px; font:600 13.5px 'Manrope',sans-serif; cursor:pointer; background:var(--white); color:var(--ink-900); border:1px solid var(--border);">Staff</button>
+<button type="button" aria-pressed="true"  style="height:40px; padding:0 16px; border-radius:999px; font:600 13.5px 'Manrope',sans-serif; cursor:pointer; background:var(--ink-900); color:var(--white); border:1px solid var(--ink-900);">Coffee</button>
+<button type="button" aria-pressed="false"  style="height:40px; padding:0 16px; border-radius:999px; font:600 13.5px 'Manrope',sans-serif; cursor:pointer; background:var(--white); color:var(--ink-900); border:1px solid var(--border);">Food</button>
+<button type="button" aria-pressed="true"  style="height:40px; padding:0 16px; border-radius:999px; font:600 13.5px 'Manrope',sans-serif; cursor:pointer; background:var(--ink-900); color:var(--white); border:1px solid var(--ink-900);">Showers</button>
+<button type="button" aria-pressed="false"  style="height:40px; padding:0 16px; border-radius:999px; font:600 13.5px 'Manrope',sans-serif; cursor:pointer; background:var(--white); color:var(--ink-900); border:1px solid var(--border);">Workspace</button>
+</div>
+</div>
+</div>
+<div role="alert" style="display:flex; gap:10px; align-items:flex-start; background:#FBEDE6; border:1px solid #EBC7B5; border-radius:12px; padding:12px 14px; font-size:13.5px; line-height:1.5; color:#7A3A22;">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#9A4A2E" stroke-width="1.6" stroke-linecap="round" aria-hidden="true" style="flex:none; margin-top:1px;"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5M12 16.5v.01"/></svg>
+<span>We couldn't post your review. Your text is kept — please try again.</span>
+</div>
+<div style="display:flex; gap:12px; justify-content:flex-end; border-top:1px solid var(--border); padding-top:16px;">
+
+<button type="button"  style="height:48px; padding:0 26px; border-radius:12px; border:none; display:flex; align-items:center; justify-content:center; gap:8px; flex:1; font:700 14px 'Manrope',sans-serif; background:var(--gold-500); color:var(--ink-900); cursor:pointer;" class="btn-gold">Try again</button>
+</div>
+  </div>
+</div>
+
+</x-dc>
+</body>
+</html>

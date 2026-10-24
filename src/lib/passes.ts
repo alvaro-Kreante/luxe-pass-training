@@ -29,6 +29,20 @@ export const PASS_LIFECYCLE_STATES = ["upcoming", "today", "checked-in", "expire
 
 export type PassLifecycleState = (typeof PASS_LIFECYCLE_STATES)[number];
 
+/**
+ * El estado del pase sale de la reserva: `expire_finished_bookings`
+ * (pg_cron, `booking_expiry.sql`) la cierra al acabar la ventana; "hoy" es
+ * la fecha real en el huso del lounge.
+ */
+export function passStateOf(
+  pass: Pick<DigitalPass, "status" | "dateIso" | "loungeTimezone">,
+  now: Date = new Date(),
+): PassLifecycleState {
+  if (pass.status === "completed" || pass.status === "cancelled") return "expired";
+  if (pass.status === "in_progress") return "checked-in";
+  return pass.dateIso === today(pass.loungeTimezone, now) ? "today" : "upcoming";
+}
+
 export function isPassLifecycleState(value: unknown): value is PassLifecycleState {
   return (
     typeof value === "string" &&
@@ -43,7 +57,7 @@ export const VISIT_WINDOW_HOURS = 4;
 /* Formato compartido                                                  */
 /* ------------------------------------------------------------------ */
 
-function formatFullDate(dateIso: string): string {
+export function formatFullDate(dateIso: string): string {
   return new Intl.DateTimeFormat("en-US", {
     weekday: "long",
     month: "long",
@@ -61,7 +75,7 @@ function formatMonthDay(dateIso: string): string {
 }
 
 /** `checked_in_at`/`created_at` son instantes reales (timestamptz) — se muestran como hora, igual que el resto de la app trata sus timestamps (UTC, sin huso real). */
-function formatClockTime(instantIso: string): string {
+export function formatClockTime(instantIso: string): string {
   return new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
     minute: "2-digit",
@@ -75,7 +89,11 @@ function formatClockTime(instantIso: string): string {
 /* ------------------------------------------------------------------ */
 
 export interface DigitalPass {
+  bookingId: string;
   reference: string;
+  loungeId: string;
+  /** IANA, `lounges.timezone`. */
+  loungeTimezone: string;
   memberName: string;
   memberEmail: string;
   loungeName: string;
@@ -83,6 +101,7 @@ export interface DigitalPass {
   partnerName: string | null;
   address: string;
   receptionNote: string;
+  dateIso: string;
   dateLabel: string;
   /** "Sat, Sep 14" */
   shortDateLabel: string;
@@ -99,10 +118,15 @@ export interface DigitalPass {
   checkedInAt: string | null;
   status: string;
   noShow: boolean;
+  /** Story 3.1 — la visita ya tiene reseña (una por visita). */
+  reviewed: boolean;
+  /** "Checked in 10:12 AM", o null sin check-in. */
+  checkedInLabel: string | null;
 }
 
 interface LoungeEmbed {
   name: string;
+  timezone?: string;
   address: string;
   reception_note: string;
   partners: { name: string } | null;
@@ -115,6 +139,7 @@ interface PaymentEmbed {
 
 interface BookingRow {
   id: string;
+  lounge_id: string;
   confirmation_code: string;
   date: string;
   slot_time: string;
@@ -125,10 +150,11 @@ interface BookingRow {
   created_at: string;
   lounges: LoungeEmbed | null;
   payments: PaymentEmbed[] | null;
+  reviews?: { id: string }[] | null;
 }
 
 const BOOKING_SELECT =
-  "id, confirmation_code, date, slot_time, special_requests, status, checked_in_at, no_show, created_at, lounges(name, address, reception_note, partners(name)), payments(amount_cents, status)";
+  "id, lounge_id, confirmation_code, date, slot_time, special_requests, status, checked_in_at, no_show, created_at, lounges(name, address, reception_note, timezone, partners(name)), payments(amount_cents, status), reviews(id)";
 
 function amountPaidLabel(payments: PaymentEmbed[] | null): string {
   const succeeded = payments?.find((payment) => payment.status === "succeeded");
@@ -166,13 +192,17 @@ async function fromBookingRow(supabase: SupabaseClient, row: BookingRow): Promis
   const memberName = await fetchMemberDisplayName(supabase, memberEmail);
 
   return {
+    bookingId: row.id,
     reference: row.confirmation_code,
+    loungeId: row.lounge_id,
+    loungeTimezone: row.lounges?.timezone ?? "America/New_York",
     memberName,
     memberEmail,
     loungeName: row.lounges?.name ?? "",
     partnerName: row.lounges?.partners?.name ?? null,
     address: row.lounges?.address ?? "",
     receptionNote: row.lounges?.reception_note ?? "",
+    dateIso: row.date,
     dateLabel: formatFullDate(row.date),
     shortDateLabel: formatDateLabel(row.date),
     monthDayLabel: formatMonthDay(row.date),
@@ -186,6 +216,8 @@ async function fromBookingRow(supabase: SupabaseClient, row: BookingRow): Promis
     checkedInAt: row.checked_in_at ? formatClockTime(row.checked_in_at) : null,
     status: row.status,
     noShow: row.no_show,
+    reviewed: (row.reviews?.length ?? 0) > 0,
+    checkedInLabel: row.checked_in_at ? `Checked in ${formatClockTime(row.checked_in_at)}` : null,
   };
 }
 
@@ -208,13 +240,17 @@ export async function fetchDigitalPass(
 
 /** Fixture pura para tests de componente (`digital-pass-card.test.tsx`) — no toca Supabase. */
 export const AINSWORTH_PASS: DigitalPass = {
+  bookingId: "00000000-0000-0000-0000-000000000000",
   reference: "LP-842193",
+  loungeId: "the-ainsworth",
+  loungeTimezone: "America/New_York",
   memberName: "Alexandra Rivas",
   memberEmail: "alexandra.rivas@example.com",
   partnerName: "The Ainsworth Collection",
   loungeName: "The Ainsworth",
   address: "122 E 45th St, New York, NY 10017",
   receptionNote: "Reception on Level 2",
+  dateIso: "2025-09-14",
   dateLabel: "Saturday, September 14",
   shortDateLabel: "Sat, Sep 14",
   monthDayLabel: "September 14",
@@ -228,6 +264,8 @@ export const AINSWORTH_PASS: DigitalPass = {
   checkedInAt: "3:34 PM",
   status: "in_progress",
   noShow: false,
+  reviewed: false,
+  checkedInLabel: "Checked in 3:34 PM",
 };
 
 /* ------------------------------------------------------------------ */
@@ -363,11 +401,14 @@ export async function fetchUpcomingBookings(supabase: SupabaseClient): Promise<U
 export type PastBookingOutcome = "completed" | "no-show" | "cancelled";
 
 export interface PastBooking {
+  id: string;
   reference: string;
   loungeName: string;
   dateTimeLabel: string;
   outcome: PastBookingOutcome;
   explanation?: string;
+  /** Detalle de la reserva (y su reseña); null en las canceladas. */
+  passHref: string | null;
 }
 
 function fromPastRow(row: BookingRow): PastBooking {
@@ -375,29 +416,35 @@ function fromPastRow(row: BookingRow): PastBooking {
 
   if (row.status === "cancelled") {
     return {
+      id: row.id,
       reference: row.confirmation_code,
       loungeName,
       dateTimeLabel: `${formatFullDate(row.date)} · cancelled`,
       outcome: "cancelled",
+      passHref: null,
     };
   }
 
   if (row.no_show) {
     return {
+      id: row.id,
       reference: row.confirmation_code,
       loungeName,
       dateTimeLabel: `${formatFullDate(row.date)} · ${row.slot_time} · never checked in`,
       outcome: "no-show",
+      passHref: `/my-pass/${row.confirmation_code}`,
       explanation:
         "The booking window closed without a check-in. The visit still counted toward that month, and the day pass was not refunded — that is the cancellation policy you accepted at booking. Cancelling more than 24 hours ahead always avoids this.",
     };
   }
 
   return {
+    id: row.id,
     reference: row.confirmation_code,
     loungeName,
     dateTimeLabel: `${formatFullDate(row.date)} · checked in ${row.checked_in_at ? formatClockTime(row.checked_in_at) : row.slot_time}`,
     outcome: "completed",
+    passHref: `/my-pass/${row.confirmation_code}`,
   };
 }
 
@@ -486,4 +533,13 @@ export async function loadMyPass(supabase: SupabaseClient): Promise<MyPassData> 
     visits,
     memberSince: membership.startedAt ? formatMonthYear(membership.startedAt) : null,
   };
+}
+
+/**
+ * Story 6.1 — "Email receipt" de My Pass › Past: reenvía el recibo de la
+ * reserva por email (`resend_booking_receipt`, como mucho uno cada 5 minutos).
+ */
+export async function resendBookingReceipt(supabase: SupabaseClient, bookingId: string): Promise<void> {
+  const { error } = await supabase.rpc("resend_booking_receipt", { p_booking_id: bookingId });
+  if (error) throw new Error(error.message);
 }

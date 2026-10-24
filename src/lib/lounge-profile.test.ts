@@ -1,3 +1,4 @@
+import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { beforeAll, describe, expect, it } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -12,11 +13,8 @@ import {
   fetchLoungeProfile,
   fetchNextAvailableSlot,
   fetchWeeklyAvailability,
-  mentionsFor,
   mondayOf,
   operatingHoursFor,
-  ratingBreakdownFor,
-  reviewsFor,
   type LoungeProfile,
 } from "./lounge-profile";
 
@@ -40,9 +38,6 @@ async function ainsworth(): Promise<LoungeProfile> {
   return (await fetchLoungeProfile(supabase, "the-ainsworth"))!;
 }
 
-async function belmont(): Promise<LoungeProfile> {
-  return (await fetchLoungeProfile(supabase, "belmont-terrace"))!;
-}
 
 describe("fetchLoungeProfile", () => {
   it("trae el contacto real de The Ainsworth, tal como lo cita Main.dc.html", async () => {
@@ -56,15 +51,18 @@ describe("fetchLoungeProfile", () => {
       website: "ainsworth.example",
       receptionNote:
         "Reception is on Level 2. Show your booking confirmation on arrival.",
-      reviewCount: 128,
       capacity: 40,
     });
     expect(lounge.bookingRestrictions).toContain("Admission for one member");
     expect(lounge.weeklyHours).toHaveLength(7);
   });
 
-  it("Belmont Terrace no tiene reseñas todavía, como en NoRatings.dc.html", async () => {
-    const lounge = await belmont();
+  it("un lounge sin reseñas da 0, como en NoRatings.dc.html", async () => {
+    const admin = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+    const id = `test-lounge-profile-noreviews-${Date.now()}`;
+    await admin.from("lounges").insert({ id, name: "No Reviews", neighborhood: "Test", city: "Test City", city_id: "test-city", lat: 0, lng: 0, hours: "Open 24 hours", content_status: "live" });
+
+    const lounge = (await fetchLoungeProfile(supabase, id))!;
 
     expect(lounge.reviewCount).toBe(0);
   });
@@ -129,24 +127,6 @@ describe("horario de apertura", () => {
     }, 0);
 
     expect(daysCovered).toBe(7);
-  });
-});
-
-describe("reseñas (datos de muestra — sin tabla, ver DATA-MODEL-MAP.md)", () => {
-  it("The Ainsworth tiene las reseñas del artboard Reviews.dc.html", async () => {
-    const lounge = await ainsworth();
-
-    expect(reviewsFor(lounge)).toHaveLength(3);
-    expect(
-      ratingBreakdownFor(lounge).reduce((sum, row) => sum + row.count, 0),
-    ).toBe(128);
-  });
-
-  it("Belmont Terrace no tiene reseñas ni menciones", async () => {
-    const lounge = await belmont();
-
-    expect(reviewsFor(lounge)).toHaveLength(0);
-    expect(mentionsFor(lounge)).toHaveLength(0);
   });
 });
 
