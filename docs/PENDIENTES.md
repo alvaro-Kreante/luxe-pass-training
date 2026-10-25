@@ -533,6 +533,12 @@ acabar la ventana en el huso de `lounges.timezone`. Abierto:
 
 ## 5. Decisiones abiertas
 
+### 5.00 SEO: `NEXT_PUBLIC_SITE_URL` al promover a `staging` / `main` (25 oct 2026)
+
+**Hacer en el pase a `staging` y en el pase a `main`:** dar de alta `NEXT_PUBLIC_SITE_URL` en el proyecto de Vercel correspondiente con su dominio público, y redeployar. Se fija en build: sin ella, canonical, `sitemap.xml` y `robots.txt` salen con `http://localhost:3000`. `public/llms.txt` usa rutas relativas por la misma razón.
+
+Solo `/signup` y `/login` se indexan; el resto lleva `noindex` por defecto (layout raíz) y está en `Disallow` de `robots.txt` (`src/lib/site.ts`).
+
 ### 5.0 Filtro por país en `/admin/lounges`
 
 Pedido el 1 oct 2026 junto al filtro de ciudad. `lounges` no tiene columna de país (solo `city`/`city_id`), así que quedó fuera: hacerlo pide una columna `country` en `supabase/schemas/lounges.sql`, rellenarla para los lounges existentes y pedirla en el alta/edición (la dirección elegida en Google Places ya trae el país en `address_components`). Hasta entonces solo se filtra por ciudad (artboards 27–28).

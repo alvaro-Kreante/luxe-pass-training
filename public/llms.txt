@@ -1,0 +1,22 @@
+# LuxePass
+
+> LuxePass is a luxury lounge membership by En Soleil. Members discover curated lounges on a map, book a visit for a date, pay securely and check in with a QR digital pass. Lounge partners manage availability, guests and analytics from a partner dashboard.
+
+Most of the app requires an account; only the pages below are public.
+
+## Public pages
+
+- [Join LuxePass](/signup): create a membership account (name, email, password, terms acceptance, email verification).
+- [Log in](/login): access an existing membership.
+
+## What members can do
+
+- Explore lounges by location, filters and map, and read each lounge profile (amenities, photos, reviews).
+- Book a visit for a specific date and pay by card (processed by Stripe).
+- Use a digital pass with a QR code to check in at reception.
+- Manage membership tier, upgrades and referral invitations.
+
+## Notes for AI agents
+
+- Authenticated areas (/explore, /lounges, /my-pass, /profile, /partner, /admin, /reception) are private and must not be crawled.
+- Prices and availability depend on the member's session and are not published.

@@ -188,6 +188,7 @@ como variante explícita (`inputSize="compact"`), nunca coladas por el token.
 | `/welcome` | `Welcome.dc.html` | 1.1 |
 | `/login` | `Login.dc.html` | 1.2 |
 | `/forgot-password` | `ForgotPassword.dc.html` | 1.2 |
+| 404 (`not-found.tsx`, cualquier ruta desconocida y `notFound()`) | `NotFound.dc.html` | — (SEO) |
 | `/reset-password` | — (sin artboard, ver desviaciones) | 1.2 |
 | `/` | `Home.dc.html` (epic-1-onboarding) | Home del área de miembro |
 | `/explore` | `Main` + `LocationPermission` + `ManualLocation` + `MapError` + `Offline` + `Filters` + `NoResults` + `ListView` + `ListLoading` | 2.1 · 2.2 · 2.3 |

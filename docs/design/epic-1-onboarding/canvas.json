@@ -9,14 +9,16 @@
     { "file": "Welcome.dc.html", "x": 0, "y": 2100, "w": 1440, "h": 900, "title": "7. Welcome" },
     { "file": "Login.dc.html", "x": 1540, "y": 2100, "w": 1440, "h": 900, "title": "8. Log in" },
     { "file": "ForgotPassword.dc.html", "x": 3080, "y": 2100, "w": 1440, "h": 900, "title": "9. Reset password" },
-    { "file": "Home.dc.html", "x": 0, "y": 3150, "w": 1440, "h": 900, "title": "10. Home / Dashboard" }
+    { "file": "Home.dc.html", "x": 0, "y": 3150, "w": 1440, "h": 900, "title": "10. Home / Dashboard" },
+    { "file": "NotFound.dc.html", "x": 1540, "y": 3150, "w": 1440, "h": 900, "title": "11. Not found (404)" }
   ],
   "annotations": [
     { "id": "phase-note", "x": 0, "y": -140, "w": 760, "text": "LuxePass — Phase 1: light design system\nEpic 1, User Onboarding & Authentication\nUI copy in English. Sign up → Terms acceptance → Email verification → Profile (3 steps) → Welcome." },
     { "id": "terms-note", "x": 1540, "y": -90, "w": 620, "text": "Story 1.1 · AC \"Terms of service and privacy policy acceptance required\": the sign-up checkbox starts unchecked and opens this modal. Both documents must be accepted explicitly; acceptance is stored with date + document version." },
     { "id": "row2-note", "x": 0, "y": 960, "w": 320, "text": "Profile creation — Story 1.1 fields" },
     { "id": "row3-note", "x": 0, "y": 2010, "w": 340, "text": "Confirmation + returning-user login (Story 1.2)" },
-    { "id": "row4-note", "x": 0, "y": 3060, "w": 380, "text": "App shell — sets the navigation for Epics 2–6 (light theme)" }
+    { "id": "row4-note", "x": 0, "y": 3060, "w": 380, "text": "App shell — sets the navigation for Epics 2–6 (light theme)" },
+    { "id": "notfound-note", "x": 1540, "y": 3060, "w": 560, "text": "Global 404 (app/not-found.tsx) — pattern 1, light theme. Shared by every unknown route and notFound() calls." }
   ],
   "launch": { "view": "canvas" }
 }

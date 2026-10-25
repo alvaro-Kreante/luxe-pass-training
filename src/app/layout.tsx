@@ -2,6 +2,8 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 
+import { siteUrl } from "@/lib/site";
+
 /*
  * DESIGN-SYSTEM.md §3 — Display: Bodoni Moda · Texto: Manrope. Archivos
  * variables (subset latin, licencia SIL OFL) servidos desde el repo: con
@@ -24,12 +26,28 @@ const manrope = localFont({
   display: "swap",
 });
 
+const description =
+  "LuxePass by En Soleil: a luxury lounge membership. Discover, book and check in to exclusive lounges with a single digital pass.";
+
 export const metadata: Metadata = {
-  title: "LuxePass - Luxury Lounge Membership",
-  description: "Premium membership platform for exclusive luxury lounges",
+  metadataBase: new URL(siteUrl()),
+  title: { default: "LuxePass - Luxury Lounge Membership", template: "%s | LuxePass" },
+  description,
+  applicationName: "LuxePass",
   manifest: "/manifest.json",
-  keywords: ["luxury", "lounge", "membership", "travel"],
+  keywords: ["luxury", "lounge", "membership", "travel", "En Soleil"],
   authors: [{ name: "Kreante" }],
+  // Casi toda la app vive tras la sesión: por defecto no se indexa y cada
+  // ruta pública (signup, login) lo reabre con su canonical.
+  robots: { index: false, follow: false },
+  openGraph: {
+    type: "website",
+    siteName: "LuxePass",
+    title: "LuxePass - Luxury Lounge Membership",
+    description,
+    images: [{ url: "/icons/icon-512.png", width: 512, height: 512, alt: "En Soleil" }],
+  },
+  twitter: { card: "summary", title: "LuxePass - Luxury Lounge Membership", description },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
