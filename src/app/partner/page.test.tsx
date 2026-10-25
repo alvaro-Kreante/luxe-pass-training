@@ -14,6 +14,7 @@ import {
 
 import PartnerTodayPage from "./page";
 import { findDialog } from "@/lib/testing/find-dialog";
+import { OPEN_EVERY_DAY_LOUNGE } from "@/lib/testing/lounge-fixture";
 
 /**
  * Story 7.1 — Daily Guest Management. Story 7.2 — Booking Notifications for
@@ -23,7 +24,7 @@ import { findDialog } from "@/lib/testing/find-dialog";
  *
  * Backend real (22 sept 2026): cada guest de prueba es una reserva real
  * confirmada contra Supabase local (`confirmBooking`, mismo helper que
- * `/reception`) para The Ainsworth en `TODAY` — el mismo "hoy" fijo de
+ * `/reception`) para Verandah No. 9 (`OPEN_EVERY_DAY_LOUNGE`) en `TODAY` — el mismo "hoy" fijo de
  * mockup que usa el resto del proyecto (`src/lib/availability.ts`), no el
  * reloj real. Como la lista del día acumula reservas de ejecuciones
  * anteriores de esta suite (no hay `supabase db reset` entre corridas), los
@@ -54,7 +55,7 @@ async function createTestGuest(name: string, band: WeekBandId, slotTime: string,
   await member.from("profiles").update({ full_name: name }).eq("id", user!.id);
 
   const booking = await confirmBooking(member, {
-    loungeId: "the-ainsworth",
+    loungeId: OPEN_EVERY_DAY_LOUNGE,
     dateIso,
     band,
     time: slotTime,
@@ -82,9 +83,9 @@ beforeAll(async () => {
   const partner = createClient();
   await signUpConfirmedPartnerAndSignIn(
     partner,
-    `partner-today-${stamp}@theainsworth-test.example`,
-    "AinsworthFOH!24",
-    { businessName: "The Ainsworth", loungeIds: ["the-ainsworth"] },
+    `partner-today-${stamp}@verandah-test.example`,
+    "VerandahFOH!24",
+    { businessName: "Verandah No. 9", loungeIds: [OPEN_EVERY_DAY_LOUNGE] },
   );
   await partner.auth.signOut();
 
@@ -107,8 +108,8 @@ beforeAll(async () => {
 
   const partnerSession = createClient();
   await partnerSession.auth.signInWithPassword({
-    email: `partner-today-${stamp}@theainsworth-test.example`,
-    password: "AinsworthFOH!24",
+    email: `partner-today-${stamp}@verandah-test.example`,
+    password: "VerandahFOH!24",
   });
 });
 

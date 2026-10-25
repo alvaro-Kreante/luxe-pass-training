@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { today } from "./availability";
 import { confirmBooking } from "./booking";
 import { signUpConfirmedMemberAndSignIn, signUpConfirmedPartnerAndSignIn } from "./testing/confirmed-user";
+import { OPEN_EVERY_DAY_LOUNGE } from "./testing/lounge-fixture";
 import { isolatedClient } from "./testing/partner-invite-fixture";
 
 /**
@@ -15,7 +16,7 @@ import { isolatedClient } from "./testing/partner-invite-fixture";
  * para usar el `WebSocket` nativo y una conexión de Realtime real.
  */
 
-const LOUNGE = "the-ainsworth";
+const LOUNGE = OPEN_EVERY_DAY_LOUNGE;
 let channel: RealtimeChannel | undefined;
 
 afterEach(async () => {
@@ -26,7 +27,7 @@ describe("Realtime de reservas para el partner", () => {
   it("el partner recibe en vivo una reserva nueva de su lounge", async () => {
     const partner = isolatedClient();
     await signUpConfirmedPartnerAndSignIn(partner, `realtime-staff-${Date.now()}@ensoleil-test.example`, "EnSoleil!2026", {
-      businessName: "Ainsworth Hospitality",
+      businessName: "Verandah Hospitality",
       loungeIds: [LOUNGE],
     });
     const { data: session } = await partner.auth.getSession();

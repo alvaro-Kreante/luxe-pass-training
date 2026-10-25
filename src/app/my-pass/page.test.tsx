@@ -11,7 +11,7 @@ import { checkInReceptionBooking, reportReceptionNoShow } from "@/lib/reception"
 import { createClient } from "@/lib/supabase/client";
 import { LOUNGES } from "@/lib/lounges";
 import { signInReceptionStaff, signUpConfirmedMemberAndSignIn } from "@/lib/testing/confirmed-user";
-import { findPredictedSlot } from "@/lib/testing/lounge-fixture";
+import { findPredictedSlot, OPEN_EVERY_DAY_LOUNGE } from "@/lib/testing/lounge-fixture";
 
 import { MyPassView } from "@/components/passes/my-pass-view";
 
@@ -53,18 +53,19 @@ beforeAll(async () => {
 
   // In progress: check-in ya hecho hoy.
   const inProgress = await confirmBooking(supabase, {
-    loungeId: "the-ainsworth",
+    loungeId: OPEN_EVERY_DAY_LOUNGE,
     dateIso: today(),
     band: "morning",
     time: "8:00 AM",
     specialRequests: "",
   });
   if (!inProgress) throw new Error("No se pudo confirmar la reserva in-progress de prueba");
-  await checkInReceptionBooking(await signInReceptionStaff("the-ainsworth"), "the-ainsworth", today(), bookingReferenceFromId(inProgress.id));
+  await checkInReceptionBooking(await signInReceptionStaff(OPEN_EVERY_DAY_LOUNGE), OPEN_EVERY_DAY_LOUNGE, today(), bookingReferenceFromId(inProgress.id));
 
   // Confirmada, dentro de las 24 horas (hoy mismo) — tarifa de cancelación.
   const withinWindow = await confirmBooking(supabase, {
-    loungeId: "belmont-terrace",
+    // Abre los 7 días, como OPEN_EVERY_DAY_LOUNGE: Belmont Terrace cierra los domingos.
+    loungeId: "aurora-gate-lounge",
     dateIso: today(),
     band: "afternoon",
     time: "1:00 PM",
@@ -145,7 +146,7 @@ describe("pestaña Upcoming (por defecto)", () => {
   it("no ofrece cancelar una reserva en progreso — ya se hizo el check-in", async () => {
     await renderMyPass();
 
-    const row = await screen.findByRole("heading", { name: "The Ainsworth", level: 2 });
+    const row = await screen.findByRole("heading", { name: "Verandah No. 9", level: 2 });
     const li = row.closest("li") as HTMLElement;
     expect(within(li).queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
   });
@@ -204,12 +205,12 @@ describe("cancelar una reserva dentro de las 24 horas", () => {
     const user = userEvent.setup({ delay: null });
     await renderMyPass();
 
-    const heading = await screen.findByRole("heading", { name: "Belmont Terrace", level: 2 });
+    const heading = await screen.findByRole("heading", { name: "Aurora Gate Lounge", level: 2 });
     const row = heading.closest("li") as HTMLElement;
     await user.click(within(row).getByRole("button", { name: "Cancel" }));
     await user.click(screen.getByRole("button", { name: "Keep booking" }));
 
-    expect(screen.getByRole("heading", { name: "Belmont Terrace", level: 2 })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Aurora Gate Lounge", level: 2 })).toBeInTheDocument();
   });
 });
 

@@ -18,7 +18,7 @@ import {
 import { checkInReceptionBooking, reportReceptionNoShow } from "./reception";
 import { createClient } from "./supabase/client";
 import { signInReceptionStaff, signUpConfirmedMemberAndSignIn } from "./testing/confirmed-user";
-import { findPredictedSlot } from "./testing/lounge-fixture";
+import { findPredictedSlot, OPEN_EVERY_DAY_LOUNGE } from "./testing/lounge-fixture";
 
 /**
  * Story 5.1 (Digital Pass Generation). Criterios en
@@ -72,7 +72,7 @@ async function bookAndSignIn(label: string, dateIso: string, band: BookingReques
   );
 
   const booking = await confirmBooking(supabase, {
-    loungeId: ainsworth.id,
+    loungeId: OPEN_EVERY_DAY_LOUNGE,
     dateIso,
     band,
     time,
@@ -90,7 +90,7 @@ describe("fetchDigitalPass", () => {
     const pass = await fetchDigitalPass(supabase, reference);
 
     expect(pass?.reference).toBe(reference);
-    expect(pass?.loungeName).toBe("The Ainsworth");
+    expect(pass?.loungeName).toBe("Verandah No. 9");
     expect(pass?.arrivalTime).toBe("8:00 AM");
     expect(pass?.stayHours).toBe(4);
     expect(pass?.windowCloseTime).toBe("12:00 PM");
@@ -136,8 +136,8 @@ describe("fetchUpcomingBookings", () => {
 
   it("una reserva de hoy con check-in aparece como 'in-progress'", async () => {
     const { supabase, reference } = await bookAndSignIn("upcoming-2", today(), "afternoon", "3:30 PM");
-    const kiosk = await signInReceptionStaff(ainsworth.id);
-    await checkInReceptionBooking(kiosk, ainsworth.id, today(), reference);
+    const kiosk = await signInReceptionStaff(OPEN_EVERY_DAY_LOUNGE);
+    await checkInReceptionBooking(kiosk, OPEN_EVERY_DAY_LOUNGE, today(), reference);
 
     const upcoming = await fetchUpcomingBookings(supabase);
 
@@ -149,8 +149,8 @@ describe("fetchUpcomingBookings", () => {
 describe("fetchPastBookings", () => {
   it("AC 'No-show tracking for booking history' — un no-show aparece como outcome 'no-show'", async () => {
     const { supabase, reference } = await bookAndSignIn("past-1", today(), "afternoon", "1:00 PM");
-    const kiosk = await signInReceptionStaff(ainsworth.id);
-    await reportReceptionNoShow(kiosk, ainsworth.id, today(), reference);
+    const kiosk = await signInReceptionStaff(OPEN_EVERY_DAY_LOUNGE);
+    await reportReceptionNoShow(kiosk, OPEN_EVERY_DAY_LOUNGE, today(), reference);
 
     const past = await fetchPastBookings(supabase);
 

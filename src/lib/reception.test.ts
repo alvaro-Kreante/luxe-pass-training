@@ -2,7 +2,6 @@ import { beforeAll, describe, expect, it } from "vitest";
 
 import { bookingReferenceFromId, confirmBooking, type BookingRequest } from "./booking";
 import { today } from "./availability";
-import { LOUNGES } from "./lounges";
 import {
   RECEPTION_CLOSE_MATCHES,
   checkInReceptionBooking,
@@ -11,6 +10,7 @@ import {
   reportReceptionNoShow,
 } from "./reception";
 import { signUpConfirmedMemberAndSignIn, signUpConfirmedPartnerAndSignIn } from "./testing/confirmed-user";
+import { OPEN_EVERY_DAY_LOUNGE } from "./testing/lounge-fixture";
 import { isolatedClient } from "./testing/partner-invite-fixture";
 
 /**
@@ -18,16 +18,16 @@ import { isolatedClient } from "./testing/partner-invite-fixture";
  * docs/specs/epic-5-qr-code-check-in/story-5.2-lounge-check-in-process.md.
  * Corre contra Supabase local real. SEC-01 (docs/audit/seguridad-y-datos.md):
  * las RPC de recepción solo responden al personal del partner dueño del
- * lounge — `kiosk` es una sesión real de partner de The Ainsworth.
+ * lounge — `kiosk` es una sesión real de partner de Verandah No. 9.
  */
 
-const ainsworth = LOUNGES.find((lounge) => lounge.id === "the-ainsworth")!;
+const LOUNGE = OPEN_EVERY_DAY_LOUNGE;
 const kiosk = isolatedClient();
 
 beforeAll(async () => {
   await signUpConfirmedPartnerAndSignIn(kiosk, `reception-staff-${Date.now()}@ensoleil-test.example`, "EnSoleil!2026", {
-    businessName: "Ainsworth Hospitality",
-    loungeIds: [ainsworth.id],
+    businessName: "Verandah Hospitality",
+    loungeIds: [LOUNGE],
   });
 });
 
@@ -55,7 +55,7 @@ async function bookTodayForReception(label: number) {
   );
 
   const request: BookingRequest = {
-    loungeId: ainsworth.id,
+    loungeId: LOUNGE,
     dateIso: today(),
     ...BANDS[label % BANDS.length]!,
     specialRequests: "",
@@ -71,7 +71,7 @@ describe("lookupReceptionBooking", () => {
   it("AC 'Instant verification of booking validity' — encuentra una reserva confirmada de hoy", async () => {
     const { reference } = await bookTodayForReception(10);
 
-    const found = await lookupReceptionBooking(kiosk, ainsworth.id, today(), reference);
+    const found = await lookupReceptionBooking(kiosk, LOUNGE, today(), reference);
 
     expect(found?.reference).toBe(reference);
     expect(found?.status).toBe("confirmed");
@@ -81,13 +81,13 @@ describe("lookupReceptionBooking", () => {
   it("no distingue mayúsculas ni espacios sobrantes en el código", async () => {
     const { reference } = await bookTodayForReception(11);
 
-    const found = await lookupReceptionBooking(kiosk, ainsworth.id, today(), `  ${reference.toLowerCase()}  `);
+    const found = await lookupReceptionBooking(kiosk, LOUNGE, today(), `  ${reference.toLowerCase()}  `);
 
     expect(found?.reference).toBe(reference);
   });
 
   it("devuelve null para un código que no existe hoy en ese lounge", async () => {
-    const found = await lookupReceptionBooking(kiosk, ainsworth.id, today(), "LP-000000");
+    const found = await lookupReceptionBooking(kiosk, LOUNGE, today(), "LP-000000");
 
     expect(found).toBeNull();
   });
@@ -95,7 +95,7 @@ describe("lookupReceptionBooking", () => {
   it("AC 'Emergency contact information accessible to staff' — expone el contacto cuando el perfil lo tiene", async () => {
     const { reference } = await bookTodayForReception(12);
 
-    const found = await lookupReceptionBooking(kiosk, ainsworth.id, today(), reference);
+    const found = await lookupReceptionBooking(kiosk, LOUNGE, today(), reference);
 
     // Story 1.1 no pide contacto de emergencia en el alta (gap anticipado en
     // docs/DATA-MODEL-MAP.md) — un miembro recién creado no lo tiene, así
@@ -108,18 +108,18 @@ describe("checkInReceptionBooking", () => {
   it("AC 'Instant verification' + 'Check-in confirmation to member's app' — marca la reserva como in_progress", async () => {
     const { reference } = await bookTodayForReception(13);
 
-    await checkInReceptionBooking(kiosk, ainsworth.id, today(), reference);
+    await checkInReceptionBooking(kiosk, LOUNGE, today(), reference);
 
-    const found = await lookupReceptionBooking(kiosk, ainsworth.id, today(), reference);
+    const found = await lookupReceptionBooking(kiosk, LOUNGE, today(), reference);
     expect(found?.status).toBe("in_progress");
     expect(found?.checkedInAt).not.toBeNull();
   });
 
   it("es idempotente por construcción: un segundo check-in falla en vez de reescribir", async () => {
     const { reference } = await bookTodayForReception(14);
-    await checkInReceptionBooking(kiosk, ainsworth.id, today(), reference);
+    await checkInReceptionBooking(kiosk, LOUNGE, today(), reference);
 
-    await expect(checkInReceptionBooking(kiosk, ainsworth.id, today(), reference)).rejects.toThrow();
+    await expect(checkInReceptionBooking(kiosk, LOUNGE, today(), reference)).rejects.toThrow();
   });
 });
 
@@ -127,18 +127,18 @@ describe("reportReceptionNoShow", () => {
   it("AC 'No-show tracking for booking history' — cierra la reserva como completed + no_show", async () => {
     const { reference } = await bookTodayForReception(15);
 
-    await reportReceptionNoShow(kiosk, ainsworth.id, today(), reference);
+    await reportReceptionNoShow(kiosk, LOUNGE, today(), reference);
 
-    const found = await lookupReceptionBooking(kiosk, ainsworth.id, today(), reference);
+    const found = await lookupReceptionBooking(kiosk, LOUNGE, today(), reference);
     expect(found?.status).toBe("completed");
     expect(found?.noShow).toBe(true);
   });
 
   it("no se puede reportar no-show de una reserva ya checked-in", async () => {
     const { reference } = await bookTodayForReception(16);
-    await checkInReceptionBooking(kiosk, ainsworth.id, today(), reference);
+    await checkInReceptionBooking(kiosk, LOUNGE, today(), reference);
 
-    await expect(reportReceptionNoShow(kiosk, ainsworth.id, today(), reference)).rejects.toThrow();
+    await expect(reportReceptionNoShow(kiosk, LOUNGE, today(), reference)).rejects.toThrow();
   });
 });
 
@@ -147,19 +147,19 @@ describe("fetchReceptionTodaySummary", () => {
     // >= y no === : otros archivos de test corren en paralelo y también
     // confirman reservas reales de hoy en este mismo lounge — el conteo es
     // un agregado global, no aislado a este test.
-    const before = await fetchReceptionTodaySummary(kiosk, ainsworth.id, today());
+    const before = await fetchReceptionTodaySummary(kiosk, LOUNGE, today());
     await bookTodayForReception(17);
-    const after = await fetchReceptionTodaySummary(kiosk, ainsworth.id, today());
+    const after = await fetchReceptionTodaySummary(kiosk, LOUNGE, today());
 
     expect(after.expected).toBeGreaterThanOrEqual(before.expected + 1);
   });
 
   it("cuenta un check-in nuevo", async () => {
     const { reference } = await bookTodayForReception(18);
-    const before = await fetchReceptionTodaySummary(kiosk, ainsworth.id, today());
+    const before = await fetchReceptionTodaySummary(kiosk, LOUNGE, today());
 
-    await checkInReceptionBooking(kiosk, ainsworth.id, today(), reference);
-    const after = await fetchReceptionTodaySummary(kiosk, ainsworth.id, today());
+    await checkInReceptionBooking(kiosk, LOUNGE, today(), reference);
+    const after = await fetchReceptionTodaySummary(kiosk, LOUNGE, today());
 
     expect(after.checkedIn).toBeGreaterThanOrEqual(before.checkedIn + 1);
   });
@@ -169,23 +169,23 @@ describe("SEC-01 — solo el personal del lounge usa la recepción", () => {
   it("sin sesión no puede buscar una reserva", async () => {
     const { reference } = await bookTodayForReception(20);
 
-    await expect(lookupReceptionBooking(isolatedClient(), ainsworth.id, today(), reference)).rejects.toThrow();
+    await expect(lookupReceptionBooking(isolatedClient(), LOUNGE, today(), reference)).rejects.toThrow();
   });
 
   it("sin sesión no puede hacer check-in ni marcar no-show", async () => {
     const { reference } = await bookTodayForReception(21);
     const anonymous = isolatedClient();
 
-    await expect(checkInReceptionBooking(anonymous, ainsworth.id, today(), reference)).rejects.toThrow();
-    await expect(reportReceptionNoShow(anonymous, ainsworth.id, today(), reference)).rejects.toThrow();
+    await expect(checkInReceptionBooking(anonymous, LOUNGE, today(), reference)).rejects.toThrow();
+    await expect(reportReceptionNoShow(anonymous, LOUNGE, today(), reference)).rejects.toThrow();
 
-    const found = await lookupReceptionBooking(kiosk, ainsworth.id, today(), reference);
+    const found = await lookupReceptionBooking(kiosk, LOUNGE, today(), reference);
     expect(found?.status).toBe("confirmed");
     expect(found?.noShow).toBe(false);
   });
 
   it("sin sesión no puede leer el resumen del día", async () => {
-    await expect(fetchReceptionTodaySummary(isolatedClient(), ainsworth.id, today())).rejects.toThrow();
+    await expect(fetchReceptionTodaySummary(isolatedClient(), LOUNGE, today())).rejects.toThrow();
   });
 
   it("un miembro con sesión no ve las reservas de otros", async () => {
@@ -193,8 +193,8 @@ describe("SEC-01 — solo el personal del lounge usa la recepción", () => {
     const otherMember = isolatedClient();
     await signUpConfirmedMemberAndSignIn(otherMember, `reception-other-${Date.now()}@ensoleil-test.example`, "EnSoleil!2026");
 
-    expect(await lookupReceptionBooking(otherMember, ainsworth.id, today(), reference)).toBeNull();
-    await expect(checkInReceptionBooking(otherMember, ainsworth.id, today(), reference)).rejects.toThrow();
+    expect(await lookupReceptionBooking(otherMember, LOUNGE, today(), reference)).toBeNull();
+    await expect(checkInReceptionBooking(otherMember, LOUNGE, today(), reference)).rejects.toThrow();
   });
 
   it("el personal de otro lounge no ve ni toca las reservas de este", async () => {
@@ -205,9 +205,9 @@ describe("SEC-01 — solo el personal del lounge usa la recepción", () => {
       loungeIds: ["the-cordelia"],
     });
 
-    expect(await lookupReceptionBooking(otherStaff, ainsworth.id, today(), reference)).toBeNull();
-    await expect(reportReceptionNoShow(otherStaff, ainsworth.id, today(), reference)).rejects.toThrow();
-    expect(await fetchReceptionTodaySummary(otherStaff, ainsworth.id, today())).toEqual({ expected: 0, checkedIn: 0 });
+    expect(await lookupReceptionBooking(otherStaff, LOUNGE, today(), reference)).toBeNull();
+    await expect(reportReceptionNoShow(otherStaff, LOUNGE, today(), reference)).rejects.toThrow();
+    expect(await fetchReceptionTodaySummary(otherStaff, LOUNGE, today())).toEqual({ expected: 0, checkedIn: 0 });
   });
 });
 

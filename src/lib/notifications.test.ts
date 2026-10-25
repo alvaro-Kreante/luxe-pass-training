@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import { bookingReferenceFromId, confirmBooking } from "./booking";
-import { LOUNGES } from "./lounges";
 import {
   NOTIFICATION_CHANNEL_SETTINGS,
   QUIET_HOURS_END_OPTIONS,
@@ -15,6 +14,7 @@ import {
 import { today } from "./availability";
 import { createClient } from "./supabase/client";
 import { signUpConfirmedMemberAndSignIn } from "./testing/confirmed-user";
+import { OPEN_EVERY_DAY_LOUNGE } from "./testing/lounge-fixture";
 
 /**
  * Story 6.2 (In-app Notifications). Criterios en
@@ -25,7 +25,6 @@ import { signUpConfirmedMemberAndSignIn } from "./testing/confirmed-user";
  * la metodología de test del proyecto. `unreadNotificationCount` es pura.
  */
 
-const ainsworth = LOUNGES.find((lounge) => lounge.id === "the-ainsworth")!;
 
 describe("unreadNotificationCount", () => {
   it("cuenta solo las notificaciones sin leer", () => {
@@ -71,7 +70,7 @@ describe("fetchNotifications", () => {
     const before = await fetchNotifications(supabase);
 
     const booking = await confirmBooking(supabase, {
-      loungeId: ainsworth.id,
+      loungeId: OPEN_EVERY_DAY_LOUNGE,
       dateIso: today(),
       band: "morning",
       time: "8:00 AM",

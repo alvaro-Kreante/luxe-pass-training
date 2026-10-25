@@ -25,6 +25,15 @@ export async function fetchAinsworthProfile(
   return profile;
 }
 
+/**
+ * Lounge de los tests que reservan con fecha de hoy (recepción, pases,
+ * Partner Dashboard, cancelación con fee…). Verandah No. 9 abre los 7 días
+ * con las 4 franjas y ningún test lo llena: The Ainsworth cierra los domingos
+ * (`closed_weekdays = {0}`) y esos tests fallaban todos los domingos
+ * (CI del PR #100, 25 oct 2026).
+ */
+export const OPEN_EVERY_DAY_LOUNGE = "verandah-no-9";
+
 /** Uno de los cinco horarios fijos de `Main.dc.html` por franja (`SLOT_DEFS` en `booking.ts`). */
 const TIME_BY_BAND: Record<WeekBandId, string> = {
   morning: "8:00 AM",

@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { today } from "./availability";
 import { confirmBooking } from "./booking";
 import { signUpConfirmedMemberAndSignIn, signUpConfirmedPartnerAndSignIn } from "./testing/confirmed-user";
+import { OPEN_EVERY_DAY_LOUNGE } from "./testing/lounge-fixture";
 import { isolatedClient } from "./testing/partner-invite-fixture";
 
 /**
@@ -13,12 +14,12 @@ import { isolatedClient } from "./testing/partner-invite-fixture";
  */
 
 const admin = createAdminClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-const LOUNGE = "the-ainsworth";
+const LOUNGE = OPEN_EVERY_DAY_LOUNGE;
 const staff = isolatedClient();
 
 beforeAll(async () => {
   await signUpConfirmedPartnerAndSignIn(staff, `attributed-staff-${Date.now()}@ensoleil-test.example`, "EnSoleil!2026", {
-    businessName: "Ainsworth Hospitality",
+    businessName: "Verandah Hospitality",
     loungeIds: [LOUNGE],
   });
 });
