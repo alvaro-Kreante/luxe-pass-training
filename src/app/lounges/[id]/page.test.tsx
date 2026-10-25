@@ -8,7 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import { today } from "@/lib/availability";
 import { loadLoungeProfile } from "@/lib/lounge-profile";
 import { signUpConfirmedAndSignIn } from "@/lib/testing/confirmed-user";
-import { fillSlot } from "@/lib/testing/lounge-fixture";
+import { fillSlot, OPEN_EVERY_DAY_LOUNGE } from "@/lib/testing/lounge-fixture";
 
 /**
  * Story 3.1 — Detailed Lounge Information.
@@ -260,19 +260,19 @@ describe("valoración y reseñas", () => {
 
 describe("disponibilidad en tiempo real", () => {
   it("muestra Available y el botón de reserva cuando hay plazas", async () => {
-    await renderProfile();
+    await renderProfile(OPEN_EVERY_DAY_LOUNGE);
 
     await waitFor(() => expect(screen.getByText("Available")).toBeInTheDocument());
     expect(screen.getByRole("link", { name: "Book now" })).toBeInTheDocument();
   });
 
   it("enlaza la disponibilidad semanal", async () => {
-    await renderProfile();
+    await renderProfile(OPEN_EVERY_DAY_LOUNGE);
 
     await waitFor(() =>
       expect(
         screen.getByRole("link", { name: "View weekly availability" }),
-      ).toHaveAttribute("href", "/lounges/the-ainsworth/availability"),
+      ).toHaveAttribute("href", `/lounges/${OPEN_EVERY_DAY_LOUNGE}/availability`),
     );
   });
 

@@ -4,6 +4,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedAndSignIn } from "@/lib/testing/confirmed-user";
+import { OPEN_EVERY_DAY_LOUNGE } from "@/lib/testing/lounge-fixture";
 
 import AvailabilityPage from "./page";
 
@@ -14,7 +15,9 @@ import AvailabilityPage from "./page";
  *
  * Backend real: las plazas se calculan en vivo (`capacity` − reservas,
  * `lounge_availability_range`), así que los tests no fijan un número de
- * plazas concreto.
+ * plazas concreto. Los casos que necesitan un hueco libre esta semana usan
+ * `OPEN_EVERY_DAY_LOUNGE`: un domingo, el único día que le queda a la
+ * semana está cerrado en The Ainsworth.
  */
 
 const params = vi.fn(() => ({ id: "the-ainsworth" }));
@@ -55,6 +58,7 @@ describe("calendario semanal", () => {
   });
 
   it("preselecciona un hueco libre y ofrece reservarlo", async () => {
+    params.mockReturnValue({ id: OPEN_EVERY_DAY_LOUNGE });
     render(<AvailabilityPage />);
 
     await waitFor(() => expect(screen.getByText("Your selection")).toBeInTheDocument());
@@ -62,6 +66,7 @@ describe("calendario semanal", () => {
   });
 
   it("cambia la selección al hacer clic en otra celda libre", async () => {
+    params.mockReturnValue({ id: OPEN_EVERY_DAY_LOUNGE });
     const user = userEvent.setup({ delay: null });
 
     render(<AvailabilityPage />);

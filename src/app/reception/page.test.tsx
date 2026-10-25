@@ -7,6 +7,7 @@ import { today } from "@/lib/availability";
 import { createClient } from "@/lib/supabase/client";
 import { signUpConfirmedMemberAndSignIn, signUpConfirmedPartnerAndSignIn } from "@/lib/testing/confirmed-user";
 import { isolatedClient } from "@/lib/testing/partner-invite-fixture";
+import { OPEN_EVERY_DAY_LOUNGE } from "@/lib/testing/lounge-fixture";
 
 import ReceptionPage from "./page";
 
@@ -19,8 +20,8 @@ import ReceptionPage from "./page";
  *
  * Backend real (Supabase local). SEC-01: la consola exige sesión de
  * personal del partner dueño del lounge — cada test confirma una reserva
- * real de The Ainsworth para hoy con un miembro (cliente aislado) y la
- * busca desde la consola con la sesión de un partner de The Ainsworth.
+ * real de Verandah No. 9 (`OPEN_EVERY_DAY_LOUNGE`) para hoy con un miembro (cliente aislado) y la
+ * busca desde la consola con la sesión de un partner de ese lounge.
  */
 const replace = vi.fn();
 
@@ -54,7 +55,7 @@ beforeAll(async () => {
     .eq("id", user!.id);
 
   const booking = await confirmBooking(member, {
-    loungeId: "the-ainsworth",
+    loungeId: OPEN_EVERY_DAY_LOUNGE,
     dateIso: today(),
     band: "morning",
     time: "8:00 AM",
@@ -68,7 +69,7 @@ beforeAll(async () => {
     createClient(),
     `reception-page-staff-${Date.now()}@ensoleil-test.example`,
     "EnSoleil!2026",
-    { businessName: "Ainsworth Hospitality", loungeIds: ["the-ainsworth"] },
+    { businessName: "Verandah Hospitality", loungeIds: [OPEN_EVERY_DAY_LOUNGE] },
   );
 });
 

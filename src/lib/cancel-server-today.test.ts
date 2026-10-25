@@ -5,6 +5,7 @@ import { confirmBooking } from "./booking";
 import { LATE_CANCELLATION_FEE_CENTS } from "./passes";
 import { signUpConfirmedMemberAndSignIn } from "./testing/confirmed-user";
 import { isolatedClient } from "./testing/partner-invite-fixture";
+import { OPEN_EVERY_DAY_LOUNGE } from "./testing/lounge-fixture";
 
 /**
  * Story 6.1 — "24-hour advance notice requirement for cancellation".
@@ -19,7 +20,7 @@ describe("cancel_booking mide el plazo con el reloj del servidor", () => {
       membership: "annual",
     });
     const booking = await confirmBooking(supabase, {
-      loungeId: "the-ainsworth",
+      loungeId: OPEN_EVERY_DAY_LOUNGE,
       dateIso: today("America/New_York"),
       band: "morning",
       time: "8:00 AM",
