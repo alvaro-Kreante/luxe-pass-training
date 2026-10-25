@@ -533,11 +533,11 @@ acabar la ventana en el huso de `lounges.timezone`. Abierto:
 
 ## 5. Decisiones abiertas
 
-### 5.00 SEO: página 404 y dominio público (25 oct 2026)
+### 5.00 SEO: `NEXT_PUBLIC_SITE_URL` al promover a `staging` / `main` (25 oct 2026)
 
-- **404 global:** artboard nuevo `docs/design/epic-1-onboarding/NotFound.dc.html` (canvas 11), pendiente de revisión. Con su aprobación se implementa `src/app/not-found.tsx` sobre el patrón 1 y se anota en `COMPONENT-MAP.md`.
-- **`NEXT_PUBLIC_SITE_URL`:** dar de alta en cada proyecto de Vercel con su dominio. Sin ella, canonical, `sitemap.xml` y `robots.txt` salen con `http://localhost:3000` (se fijan en build). `public/llms.txt` usa rutas relativas por la misma razón.
-- Solo `/signup` y `/login` se indexan; el resto lleva `noindex` por defecto (layout raíz) y está en `Disallow` de `robots.txt` (`src/lib/site.ts`).
+**Hacer en el pase a `staging` y en el pase a `main`:** dar de alta `NEXT_PUBLIC_SITE_URL` en el proyecto de Vercel correspondiente con su dominio público, y redeployar. Se fija en build: sin ella, canonical, `sitemap.xml` y `robots.txt` salen con `http://localhost:3000`. `public/llms.txt` usa rutas relativas por la misma razón.
+
+Solo `/signup` y `/login` se indexan; el resto lleva `noindex` por defecto (layout raíz) y está en `Disallow` de `robots.txt` (`src/lib/site.ts`).
 
 ### 5.0 Filtro por país en `/admin/lounges`
 
